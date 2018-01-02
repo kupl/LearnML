@@ -1,0 +1,35 @@
+type exp = 
+	| Num of int 
+	| Plus of exp * exp 
+	| Minus of exp * exp 
+type formula =
+	| True
+	| False 
+	| Not of formula 
+	| AndAlso of formula * formula 
+	| OrElse of formula * formula 
+	| Imply of formula * formula 
+	| Equal of exp * exp
+
+
+let rec exp_to_int : exp -> int
+= fun e ->
+	match e with
+	| Num n -> n
+	| Plus (n1, n2) -> exp_to_int n1 + exp_to_int n2
+	| Minus (n1, n2) -> exp_to_int n1 - exp_to_int n2 ;;
+
+let rec f : formula -> bool
+= fun form -> 
+	match form with
+	| True -> true
+	| False -> false
+	| Not f1 -> not (f f1)
+	| AndAlso (f1, f2) -> f f1 && f f2
+	| OrElse (f1, f2) -> f f1 || f f2
+	| Imply (f1, f2) -> 
+		(match (f1, f2) with
+			|(True, False) -> false
+			|_ -> true)
+	|Equal (e1, e2) -> exp_to_int e1 = exp_to_int e2
+;;

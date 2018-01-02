@@ -1,0 +1,1 @@
+let rec f n = if(n=0) then 1 else (n-1)*(f (n-1));; 

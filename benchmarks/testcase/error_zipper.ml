@@ -1,0 +1,1 @@
+let rec f a b = match a with |[] -> b | h::t -> a;;
