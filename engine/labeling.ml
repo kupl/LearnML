@@ -272,9 +272,6 @@ let rec unlabeling_exp : labeled_exp -> exp
 	|EFun (a,e) -> 
 		let unlabeled_e1 = unlabeling_exp e in
 		EFun (a, unlabeled_e1)
-	|EFix (f, arg, typ, e) ->
-		let unlabeled_e1 = unlabeling_exp e in
-		EFix (f, arg, typ, unlabeled_e1)
 	|ELet (x,is_rec,args,t,e1,e2) -> 
 		let unlabeled_e1 = unlabeling_exp e1 in
 		let unlabeled_e2 = unlabeling_exp e2 in

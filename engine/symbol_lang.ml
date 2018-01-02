@@ -59,20 +59,16 @@ type labeled_decl =
   | DLet  of id * bool * arg list * typ * labeled_exp
 type labeled_prog = labeled_decl list
 
-(*
-  symbolic variable
-*)
-type symbolic_variable = int
-
+(* symbolic variable *)
 type symbolic_value = 
   | Int of int
   | Bool of bool
-  | Symbol of int
+  | Str of string
   | List of symbolic_value list
   | Tuple of symbolic_value list
   | Ctor of id * symbolic_value list
-  | Fun of id * labeled_exp
-  | FunRec of id * id * labeled_exp
+  | Fun of id * exp * symbolic_env
+  | FunRec of id * id * exp * symbolic_env
   | Add of symbolic_value * symbolic_value                                
   | Sub of symbolic_value * symbolic_value                                
   | Mul of symbolic_value * symbolic_value                                
@@ -91,20 +87,9 @@ type symbolic_value =
   | At of symbolic_value * symbolic_value
   | Cons of symbolic_value * symbolic_value
   | If of symbolic_value * symbolic_value * symbolic_value
-  | Unknown
-
-type symbol_set = symbolic_variable BatSet.t
-
+  | Symbol of int
 (* variable to symbolic variable ex. x -> e1 *)
-type symbolic_env = (id, symbolic_variable) BatMap.t
-(* equation formula with variable and value ex. e1 = (e2+e3) *)
-type formula = (symbolic_variable * symbolic_value) BatSet.t
-(* type for symbolic variable ex. e1 -> int*)
-type symbol_type_table = (symbolic_variable, typ) BatMap.t
-(* symbol variable to label *)
-type symbol2label = (symbolic_variable, int) BatMap.t
-(* label to symbol variable set*)
-type label2symbol = (int, symbol_set) BatMap.t
+and symbolic_env = (id, symbolic_value) BatMap.t
 
 type rank = int 
 

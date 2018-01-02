@@ -17,17 +17,17 @@ type typ =
 
 type ctor = id * typ list           (* C t1 .. tn *)
 
-type pat = PCtor of id * pat list (*pval*) 
-          | Pats of pat list
-          | PInt of int
-          | PVar of id
-          | PBool of bool
-          | PList of pat list  (*pval*)
-          | PTuple of pat list  (*pval*)
-          | PUnder
-          | PCons of pat list  (*pval*)
-          | PHole of int
-          (*| pvalue *)
+type pat = 
+  | PInt of int
+  | PBool of bool
+  | PVar of id
+  | PList of pat list
+  | PTuple of pat list
+  | PCtor of id * pat list
+  | PCons of pat list
+  | PUnder 
+  | PHole of int
+  | Pats of pat list
 
 type arg = id * typ
 
@@ -65,8 +65,6 @@ and exp =
   | ELet of id * bool * arg list * typ * exp * exp  (* let [rec] (x1:t1) .. (xn:tn) : t = e1 in e2 *)
   | ECtor of id * exp list                          (* C (e1, .., en) *)
   | EMatch of exp * branch list                     (* match e with bs *)
-  | EPFun of (exp * exp) list                       (* v11 => v21 | .. | v1n => v2n *)
-  | EFix  of id * arg * typ * exp                   (* fix f (x:t1) : t2 = e *)
   (**)
   | IF of exp * exp * exp
   (*List operation*)
@@ -89,7 +87,6 @@ type value =
   | VCtor of id * value list
   | VFun  of id * exp * env
   | VFunRec of id * id * exp * env
-  | VPFun of (value * value) list
   | VHole of int
 
 and env = (id, value) BatMap.t
@@ -224,8 +221,6 @@ let gen_pat_hole : unit -> pat
 let empty_env = BatMap.empty
 let lookup_env = BatMap.find
 let update_env = BatMap.add
-let update_env_a ids vals env = 
-  list_fold (fun (x,v) -> update_env x v) (List.combine ids vals) env
 
 let rec appify : exp -> exp list -> exp
 = fun exp exp_list ->

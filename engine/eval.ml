@@ -1,12 +1,7 @@
 open Lang
 open Util
 
-let rec types_to_arr (ts:typ list) =
-  match ts with
-  | []  -> raise (Failure "(types_to_arr) empty type list provided")
-  | [t] -> t
-  | t :: ts -> TArr (t, types_to_arr ts)
-
+(*
 let rec find_first_branch : value -> branch list -> branch 
 = fun v bs ->
   match bs with  
@@ -135,11 +130,55 @@ and env_of_cons : value list -> pat list -> env -> env
       env_of_cons vtl ptl new_env
     end
   | _ -> raise (Failure "Pattern matching failure")
+*)
+
+(* Pattern Matching *)
+let rec find_first_branch : value -> branch list -> (pat * exp)
+= fun v bs -> 
+  match bs with 
+  | [] -> raise (Failure "Pattern matching failure")
+  | (p, e)::tl -> if (pattern_match v p) then (p, e) else find_first_branch v tl
+
+and pattern_match : value -> pat -> bool
+= fun v p ->
+  match (v, p) with
+  | VInt n1, PInt n2 -> n1 = n2
+  | VBool b1, PBool b2 -> b1 = b2
+  | VList l1, PList l2 -> pattern_match_list l1 l2
+  | VTuple l1, PTuple l2 -> pattern_match_list l1 l2
+  | VCtor (x1, l1), PCtor (x2, l2) -> (x1 = x2) && pattern_match_list l1 l2
+  | VList [], PCons (phd::ptl) -> if ptl = [] then (pattern_match v phd) else false
+  | VList (vhd::vtl), PCons (phd::ptl) -> if ptl = [] then (pattern_match v phd) else (pattern_match vhd phd) && (pattern_match (VList vtl) (PCons ptl))
+  | _, PVar x -> true
+  | _, PUnder -> true
+  | _, Pats pl -> (try List.exists (pattern_match v) pl with _ -> false)
+  | _ -> false
+
+and pattern_match_list : value list -> pat list -> bool
+= fun vs ps -> try List.for_all2 pattern_match vs ps with _ -> false
+
+let rec bind_pat : env -> value -> pat -> env
+= fun env v p ->
+  match (v, p) with
+  | _, PInt n2 -> env
+  | _, PBool b2 -> env
+  | _, PUnder -> env
+  | _, PVar x -> update_env x v env
+  | VList l1, PList l2 -> bind_pat_list env l1 l2 
+  | VTuple l1, PTuple l2 -> bind_pat_list env l1 l2
+  | VCtor (x1, l1), PCtor (x2, l2) -> bind_pat_list env l1 l2
+  | VList [], PCons (phd::ptl) ->  if ptl = [] then (bind_pat env v phd) else raise (Failure "Pattern binding failure")
+  | VList (vhd::vtl), PCons (phd::ptl) -> if ptl = [] then bind_pat env v phd else bind_pat (bind_pat env vhd phd) (VList vtl) (PCons ptl)
+  | _ -> raise (Failure "Pattern binding failure")
+
+and bind_pat_list : env -> value list -> pat list -> env
+= fun env vs ps -> List.fold_left2 bind_pat env vs ps
 
 let count = ref 0
 let infinite_count = ref 0
 let start_time = ref 0.0
 
+(* exp evaluation *)
 let rec eval : env -> exp -> value
 =fun env e -> 
   if(Unix.gettimeofday() -. !start_time >0.05) then let _ = (infinite_count:=!(infinite_count)+1) in raise (Failure "Timeout")
@@ -147,149 +186,58 @@ let rec eval : env -> exp -> value
   match e with   
   (* base *)
   | Const n -> VInt n
-  | String id -> VString id
   | TRUE -> VBool true
   | FALSE -> VBool false
-  | EVar x -> lookup_env x env 
-  | EList (l1) -> VList (List.map (eval env) l1)
-  | ETuple (l1) -> VTuple (List.map (eval env) l1)
+  | String id -> VString id
+  | EVar x -> lookup_env x env
+  | EList es -> VList (List.map (eval env) es)
+  | ETuple es -> VTuple (List.map (eval env) es)
   | ECtor (c, es) ->  VCtor (c, List.map (eval env) es)
   (* aop *)
-  | ADD (x1,x2) -> 
-    let v1= eval env x1 in
-    let v2= eval env x2 in
-    begin match v1,v2 with
-    | VInt n1,VInt n2 -> VInt (n1+n2)
-    |_ -> raise (Failure "Integer type error")
-    end
-  | SUB (x1,x2) -> 
-    let v1= eval env x1 in
-    let v2= eval env x2 in
-    begin match v1,v2 with
-    | VInt n1,VInt n2 -> VInt (n1-n2)
-    |_ -> raise (Failure "Integer type error")
-    end
-  | MUL (x1,x2) -> 
-    let v1= eval env x1 in
-    let v2= eval env x2 in
-    begin match v1,v2 with
-    | VInt n1,VInt n2 -> VInt (n1*n2)
-    |_ -> raise (Failure "Integer type error")
-    end
-  | DIV (x1,x2) -> 
-    let v1= eval env x1 in
-    let v2= eval env x2 in
-    begin match v1,v2 with
-    | VInt n1,VInt n2 -> VInt (n1/n2)
-    |_ -> raise (Failure "Integer type error")
-    end
-  | MOD (x1,x2) -> 
-    let v1= eval env x1 in
-    let v2= eval env x2 in
-    begin match v1,v2 with
-    | VInt n1,VInt n2 -> VInt (n1 mod n2)
-    |_ -> raise (Failure "Integer type error")
-    end
+  | ADD (e1, e2) -> VInt (eval_abop env e1 e2 (+)) 
+  | SUB (e1, e2) -> VInt (eval_abop env e1 e2 (-))
+  | MUL (e1, e2) -> VInt (eval_abop env e1 e2 ( * ))
+  | DIV (e1, e2) -> VInt (eval_abop env e1 e2 (/))
+  | MOD (e1, e2) -> VInt (eval_abop env e1 e2 (mod))
   | MINUS e ->
-    let v = eval env e in
-    begin match v with
-    |VInt n -> VInt (-n)
-    |_ -> raise (Failure "Integer type error")
+    begin match (eval env e) with
+    | VInt n -> VInt (-n)
+    | _ -> raise (Failure "arithmetic_operation error")
     end
   (*bexp*)
-  | NOT x1 -> 
-    let v1= eval env x1 in
-    begin match v1 with
-    | VBool b1 -> VBool (not b1)
-    |_ -> raise (Failure "Boolean type error")
+  | NOT e -> 
+    begin match (eval env e) with
+    | VBool b -> VBool (not b)
+    | _ -> raise (Failure "boolean_operation error")
     end
-  | OR (x1,x2) -> 
-    let v1= eval env x1 in
-    let v2= eval env x2 in
-    begin match v1,v2 with
-    | VBool b1,VBool b2 -> VBool (b1 || b2)
-    |_ -> raise (Failure "Boolean type error")
-    end 
-  | AND (x1,x2) -> 
-    let v1= eval env x1 in
-    let v2= eval env x2 in
-    begin match v1,v2 with
-    | VBool b1,VBool b2 -> VBool (b1 && b2)
-    |_ -> raise (Failure "Boolean type error")
-    end
-  | LESS (x1,x2) -> 
-    let v1= eval env x1 in
-    let v2= eval env x2 in
-    begin match v1,v2 with
-    | VInt n1,VInt n2 -> VBool (n1 < n2)
-    |_ -> raise (Failure "Boolean type error")
-    end
-  | LARGER (x1,x2) -> 
-    let v1= eval env x1 in
-    let v2= eval env x2 in
-    begin match v1,v2 with
-    | VInt n1,VInt n2 -> VBool (n1 > n2)
-    |_ -> raise (Failure "Boolean type error")
-    end
-  | LESSEQ (x1,x2) -> 
-    let v1= eval env x1 in
-    let v2= eval env x2 in
-    begin match v1,v2 with
-    | VInt n1,VInt n2 -> VBool (n1 <= n2)
-    |_ -> raise (Failure "Boolean type error")
-    end
-  | LARGEREQ (x1,x2) -> 
-    let v1= eval env x1 in
-    let v2= eval env x2 in
-    begin match v1,v2 with
-    | VInt n1,VInt n2 -> VBool (n1 >= n2)
-    |_ -> raise (Failure "Boolean type error")
-    end
-  | EQUAL (x1,x2) -> 
-    let v1= eval env x1 in
-    let v2= eval env x2 in
-    begin match v1,v2 with
-    | VInt n1, VInt n2 -> VBool (n1 = n2)
-    | VBool b1, VBool b2 -> VBool (b1 = b2)
-    | VList l1, VList l2 -> VBool (l1 = l2)
-    | VTuple l1, VTuple l2 -> VBool (l1 = l2)
-    | VCtor (x1, l1), VCtor(x2, l2) -> VBool ((x1 = x2) && (l1 = l2))
-    | VString s1, VString s2 -> VBool (s1 = s2)
-    |_ -> raise (Failure "Boolean type error")
-    end
-  | NOTEQ (x1,x2) -> 
-    let v1= eval env x1 in
-    let v2= eval env x2 in
-    begin match v1,v2 with
-    | VInt n1,VInt n2 -> VBool (n1 <> n2)
-    | VBool b1,VBool b2 -> VBool (b1 <> b2)
-    | VList l1, VList l2 -> VBool (l1 <> l2)
-    | VTuple l1, VTuple l2 -> VBool (l1 <> l2)
-    | VCtor (x1, l1), VCtor(x2, l2) -> VBool ((x1 <> x2) || (l1 <> l2))
-    | VString s1, VString s2 -> VBool (s1 <> s2)
-    |_ -> raise (Failure "Boolean type error")
-    end
+  | OR (e1, e2) -> VBool (eval_bbop env e1 e2 (||))
+  | AND (e1, e2) -> VBool (eval_bbop env e1 e2 (&&))
+  | LESS (e1, e2) -> VBool (eval_abbop env e1 e2 (<))
+  | LARGER (e1, e2) -> VBool (eval_abbop env e1 e2 (>))
+  | LESSEQ (e1, e2) -> VBool (eval_abbop env e1 e2 (<=))
+  | LARGEREQ (e1, e2) -> VBool (eval_abbop env e1 e2 (>=))
+  | EQUAL (e1, e2) -> VBool ((eval env e1) = (eval env e2))
+  | NOTEQ (e1, e2) -> VBool ((eval env e1) = (eval env e2))
   (* lop *)
-  | AT (x1,x2) ->
-    let v1= eval env x1 in
-    let v2= eval env x2 in
-    begin match v1,v2 with
-    | VList l1, VList l2 -> VList (l1 @ l2)
-    |_ -> raise (Failure "List type error")
+  | AT (e1, e2) ->
+    begin match (eval env e1, eval env e2) with
+    | VList vs1, VList vs2 -> VList (vs1 @ vs2)
+    | _ -> raise (Failure "list_operation error")
     end
-  | DOUBLECOLON (x1,x2) ->
-    let v1= eval env x1 in
-    let v2= eval env x2 in
-    begin match v2 with
-    | VList l2 -> VList (v1:: l2) 
-    | _ -> raise (Failure "List type error")
+  | DOUBLECOLON (e1, e2) ->
+    begin match (eval env e2) with
+    | VList vs -> VList ((eval env e1)::vs) 
+    | _ -> raise (Failure "list_operation error")
     end
   (* else *)
-  | IF (e1,e2,e3) ->
-    let v1= eval env e1 in
-    if v1 = (VBool true) then eval env e2 else eval env e3
-  | ELet (f, is_rec, xs, t, e1, e2) ->
-    begin match xs with
+  | IF (e1, e2, e3) ->
+    begin match (eval env e1) with
+    | VBool true -> eval env e2
+    | VBool false -> eval env e3
+    | _ -> raise (Failure "if_type error")
+    end
+  | ELet (f, is_rec, args, typ, e1, e2) -> 
+    begin match args with
     | [] ->
       (* Value binding *)
       if is_rec then
@@ -298,57 +246,55 @@ let rec eval : env -> exp -> value
         | VFun (x, e, closure) -> eval (update_env f (VFunRec (f, x, e, closure)) env) e2
         | _ -> eval (update_env f v1 env) e2
         end
-      else 
-        let v1 = eval env e1 in
-        eval (update_env f v1 env) e2
+      else eval (update_env f (eval env e1) env) e2
     | _ ->
       (* Function binding *)
-      let rec binding_to_funs xs e =
+      let rec binding : arg list -> exp -> exp 
+      = fun xs e -> 
         begin match xs with
-        | []      -> e
-        | x :: xs -> EFun (x, binding_to_funs xs e)
+        | [] -> e
+        | hd::tl -> EFun (hd, binding tl e)
         end 
       in
-      let (x1, t1) = List.hd xs in
-      let fn = 
-        if is_rec then 
-          let e1 = binding_to_funs (List.tl xs) e1 in
-          EFix (f, (x1, t1), (List.map snd (List.tl xs)) @ [t] |> types_to_arr, e1)
+      let (x1, t1) = List.hd args in
+      let vf = 
+        if is_rec then
+          VFunRec (f, x1, (binding (List.tl args) e1), env)
         else 
-          binding_to_funs xs e1 
+          VFun (x1, (binding (List.tl args) e1), env)
       in
-        eval (update_env f (eval env fn)  env) e2
-    end 
+      eval (update_env f vf env) e2
+    end
   | EMatch (e, bs) ->
     let v = eval env e in
     let (p, ex) = find_first_branch v bs in
-    (*
-    let _ = print_endline("Pattern : " ^ Print.pat_to_string p) in
-    *)
-    let new_env = env_of_pat v p env in
-    eval new_env ex
+    eval (bind_pat env v p) ex
   | EFun ((x, _), e) -> VFun (x, e, env)  
-  | EPFun ios -> VPFun (List.map (fun (e1, e2) -> (eval env e1, eval env e2)) ios)
   | EApp (e1, e2) ->
-    let v1 = eval env e1 in
-    let v2 = eval env e2 in
-    begin match v1 with
-    | VFun (x, e, closure) ->
-      eval (update_env x v2 closure) e
-    | VFunRec (f, x, e, closure) ->
-      eval (update_env f (VFunRec (f,x,e,closure)) (update_env x v2 closure)) e
-    | VPFun vps ->
-      begin match Util.find_first (fun (v1, _) -> v1 = v2) vps with
-      | Some (_, v) -> v
-      | None ->
-          raise @@ Eval_error (Printf.sprintf "Non-matched value %s found with partial function:\n%s"
-            (Print.string_of_value v2) (Print.string_of_value v1))
-      end
-    | VCtor (c,_) -> raise @@ Eval_error ("Constructor " ^ c ^ " is used in call expression")
-    | _ -> raise (Failure "Function type error")
+    begin match (eval env e1) with
+    | VFun (x, e, closure) -> eval (update_env x (eval env e2) closure) e
+    | VFunRec (f, x, e, closure) -> eval (update_env f (VFunRec (f,x,e,closure)) (update_env x (eval env e2) closure)) e
+    | _ -> raise (Failure "function_call error")
     end
-  | EFix (f, (x, _), _, e) -> VFunRec (f, x, e, env)
   | Hole n -> VHole n
+
+and eval_abop : env -> exp -> exp -> (int -> int -> int) -> int
+= fun env e1 e2 op ->
+  match (eval env e1, eval env e2) with
+  | VInt n1, VInt n2 -> op n1 n2
+  | _ -> raise (Failure "arithmetic_operation error")
+
+and eval_abbop : env -> exp -> exp -> (int -> int -> bool) -> bool
+= fun env e1 e2 op ->
+  match (eval env e1, eval env e2) with
+  | VInt n1, VInt n2 -> op n1 n2
+  | _ -> raise (Failure "int_relation error")
+
+and eval_bbop : env -> exp -> exp -> (bool -> bool -> bool) -> bool
+= fun env e1 e2 op ->
+  match (eval env e1, eval env e2) with
+  | VBool b1, VBool b2 -> op b1 b2
+  | _ -> raise (Failure "boolean_operation error")
     
 let eval_decl : decl -> env -> env
 =fun decl env -> 

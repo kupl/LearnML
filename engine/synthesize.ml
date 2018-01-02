@@ -898,8 +898,10 @@ let hole_synthesize : prog -> Workset.work BatSet.t -> components -> examples ->
 	let _ = print_endline(string_of_int (!Eval.count)) in
 	let _ = print_endline("--------infinite count--------") in
 	let _ = print_endline(string_of_int (!Eval.infinite_count)) in
+	(*
 	let _ = print_endline("--------SAT memory size-------") in
-	let _ = print_endline(string_of_int (BatMap.cardinal !Localize.store)) in
-(*	let _ = print_endline ("--------SAT overhead---------") in
+	let _ = print_endline(string_of_int (BatMap.cardinal !Sat_pruning.store)) in
+	let _ = print_endline ("--------SAT overhead---------") in
 	let _ = print_endline(string_of_float (!New_localization.result_sat)) in
-*)	result 
+	*)
+	result 

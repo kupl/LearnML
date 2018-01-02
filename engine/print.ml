@@ -208,7 +208,6 @@ let rec string_of_value : value -> string
   | VCtor (id,l1) -> "VCtor " ^ id ^ "(" ^ string_of_tuple l1 ^ ")"
   | VFun  (id,exp,env) -> "VFun " ^ id  ^ " [env" ^ env_to_string env ^"]"
   | VFunRec (id1,id2,exp,env) -> "VFunRec " ^ id1 ^ " " ^ id2 ^ " [env" ^ env_to_string env ^"]"
-  | VPFun l1 -> "VPFun " ^ fun_to_string l1 
 
 and string_of_list l1 =
   match l1 with
@@ -490,8 +489,8 @@ let rec string_of_symbol : symbolic_value -> string
       |hd::tl -> string_of_symbol hd ^ "," ^ (f tl)
     in
     x ^ " (" ^ f es ^ ")"
-  | Fun (x, e) -> "Fun " ^ x
-  | FunRec (f, x, e) -> "FunRec " ^ f ^ " " ^ x
+  | Fun (x, e, closure) -> "Fun " ^ x
+  | FunRec (f, x, e, closure) -> "FunRec " ^ f ^ " " ^ x
   | Add (e1, e2) -> "(" ^ string_of_symbol e1 ^ " + " ^ string_of_symbol e2 ^ ")"
   | Sub (e1, e2) -> "(" ^ string_of_symbol e1 ^ " - " ^ string_of_symbol e2 ^ ")"
   | Mul (e1, e2) -> "(" ^ string_of_symbol e1 ^ " * " ^ string_of_symbol e2 ^ ")"
@@ -510,15 +509,6 @@ let rec string_of_symbol : symbolic_value -> string
   | At (e1, e2) -> string_of_symbol e1 ^ " @ " ^ string_of_symbol e2
   | Cons (e1, e2) -> string_of_symbol e1 ^ " :: " ^ string_of_symbol e2
   | If (e1, e2, e3) -> "if (" ^ string_of_symbol e1 ^ ", " ^ string_of_symbol e2 ^ ", " ^ string_of_symbol e3 ^ ")"
-  | Unknown -> "Unknown"
-
-let print_formula : formula -> symbol_type_table -> unit
-=fun formula type_table -> 
-  BatSet.iter (
-    fun (symbol, value) -> 
-    let typ = BatMap.find symbol type_table in
-    print_endline ("S" ^ (string_of_int symbol) ^ " := " ^ string_of_symbol value ^ " -> " ^ string_of_type typ )
-  ) formula
 
 let print_header str = 
  let _ = print_endline "-----------------------------" in
