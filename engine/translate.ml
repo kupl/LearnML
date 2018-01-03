@@ -7,20 +7,6 @@ let is_hole : exp -> bool
 	| Hole _ -> true
 	|_ -> false
 
-let rec pat_is_hole : pat -> bool -> bool
-= fun pat b ->
-	match pat with
-    | PInt n -> true && b 
-    | PVar id -> true && b 
-    | PBool b -> true && b 
-    | PUnder -> true && b 
-    | PCtor (id,pl) -> list_fold pat_is_hole pl b
-    | Pats pl
-    | PList pl
-    | PTuple pl
-    | PCons pl -> list_fold pat_is_hole pl b
-    | PHole n -> false
-
 let rec exp_is_closed : exp -> bool -> bool
 = fun exp b ->
 	match exp with
@@ -63,9 +49,8 @@ let rec exp_is_closed : exp -> bool -> bool
 	| ETuple l-> list_fold exp_is_closed l b
 	| EFun (a,e) -> (exp_is_closed e b)
 	| EMatch (e,bl) ->
-		let (pl,el) = List.split bl in
-		let pb = list_fold pat_is_hole pl b in
-		let eb = list_fold exp_is_closed el pb in
+		let (_,el) = List.split bl in
+		let eb = list_fold exp_is_closed el b in
 		exp_is_closed e eb
 	| Hole (_) -> false
 

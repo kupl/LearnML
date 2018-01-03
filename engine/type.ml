@@ -283,10 +283,6 @@ and pat_to_eqn : pat -> typ -> TEnv.t -> (typ_eqn * TEnv.t)
       let (eqn2, env2) = pat_to_eqn (Pats tl) ty env1 in
       ((eqn1@eqn2), env2)
     end
-  | PHole n -> 
-      let t1 = fresh_tvar() in
-      let _ = hole_map := BatMap.add n t1 (!hole_map) in
-      ([(ty, t1)]@[(t1,TPoly)],tenv)
       
 (*make type equations of branch*)
 and branch_to_eqn : branch list -> typ -> typ -> TEnv.t -> typ_eqn
@@ -399,22 +395,15 @@ and gen_equations : TEnv.t -> exp -> typ -> typ_eqn
 let rec extract_tvar : id -> typ -> bool
 = fun x t ->
   match t with
-  |TInt -> false
-  |TBool -> false
-  |TString -> false
-  |TPoly -> false
-  |TBase id -> false (*?*)
   |TList t -> extract_tvar x t
-  |TTuple l -> extract_tvar2 x l
-  |TCtor (id, l) -> extract_tvar2 x l
+  |TTuple l 
+  |TCtor (_, l) -> extract_tvar2 x l
   |TArr (t1, t2) -> (extract_tvar x t1) || (extract_tvar x t2)
-  |TVar y -> if x = y then true else false
+  |TVar y -> (x=y)
+  |_ -> false
 
 and extract_tvar2 : id -> typ list -> bool
-= fun x lst ->
-  match lst with
-  | [] -> false
-  | hd::tl -> if (extract_tvar x hd) then true else (extract_tvar2 x tl)
+= fun x lst -> List.exists (fun t -> extract_tvar x t) lst
 
 let rec unify : typ -> typ -> Subst.t -> Subst.t
 = fun typ1 typ2 subst ->

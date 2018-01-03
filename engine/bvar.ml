@@ -84,8 +84,6 @@ and add_var_pat p env map=
     | PVar x -> (BatSet.add x env,map)
     | PUnder -> (env,map)
     | Pats pl -> pat_list_env pl env map
-    | PHole n ->
-      (env,BatMap.add n env map)
 
 and pat_list_env l env map =
   match l with

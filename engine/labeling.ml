@@ -20,7 +20,6 @@ let rec labeling_pat : pat -> labeled_pat
 	|PTuple pl -> (label,PTuple (labeling_patlist pl))
 	|PUnder -> (label,PUnder)
 	|PCons pl -> (label,PCons (labeling_patlist pl))
-	|PHole n -> (label, PHole n)
 
 and labeling_patlist : pat list -> labeled_pat list
 = fun pl ->
@@ -37,6 +36,7 @@ let rec labeling_exp : exp -> labeled_exp
 	|Const n -> (label,Const (n))
 	|TRUE -> (label,TRUE)
 	|FALSE -> (label,FALSE)
+	|String id -> (label,String id)
 	|EVar x -> (label,EVar (x))
 	|ADD (e1,e2) -> 
 		let labeled_e1 = labeling_exp e1 in
@@ -182,7 +182,6 @@ let rec unlabeling_pat : labeled_pat -> pat
 	|PTuple pl -> PTuple (unlabeling_patlist pl)
 	|PUnder -> PUnder
 	|PCons pl -> PCons (unlabeling_patlist pl)
-	|PHole n -> PHole n
 
 and unlabeling_patlist : labeled_pat list -> pat list
 = fun pl ->
@@ -198,6 +197,7 @@ let rec unlabeling_exp : labeled_exp -> exp
 	|Const n -> Const n
 	|TRUE -> TRUE
 	|FALSE -> FALSE
+	|String id -> String id
 	|EVar x -> EVar x
 	|ADD (e1,e2) -> 
 		let unlabeled_e1 = unlabeling_exp e1 in
@@ -335,9 +335,6 @@ let rec unlabeling_value : labeled_value -> value
 	| VCtor (x, vs) -> VCtor (x, List.map unlabeling_value vs) 
 	| VFun (x, exp, lenv, senv) -> VFun (x, unlabeling_exp exp, unlabeling_env lenv)
 	| VFunRec (f, x, exp, lenv, senv) -> VFunRec (f, x, unlabeling_exp exp, unlabeling_env lenv)
-	(*
-	| VPFun (of (labeled_value * labeled_value)) list
-	*)
 	| VHole n -> VHole n
 	
 and unlabeling_env : labeled_env -> env
@@ -356,36 +353,6 @@ let gen_labeled_hole : unit -> lexp
 	exp_hole_count:=!exp_hole_count+1;
 	Hole(!labeled_hole_count)
 
-let labeled_pat_hole_count = ref 0
-let gen_labeled_pat_hole : unit -> lpat
-= fun () -> 
-	labeled_pat_hole_count:=!labeled_pat_hole_count+1;
-	pat_hole_count:=!pat_hole_count+1; 
-	PHole(!labeled_pat_hole_count)
-
-let rec gen_hole_pat : labeled_pat -> int -> labeled_pat
-= fun (label, p) n ->
-	if label = n then (label, gen_labeled_pat_hole()) else
-	match p with
-	|PCtor (x,pl) -> (label,PCtor(x, gen_hole_patlist pl n))
-	|Pats pl -> (label,Pats (gen_hole_patlist pl n))
-	|PInt n -> (label,PInt (n))
-	|PVar x -> (label,PVar (x))
-	|PBool b -> (label,PBool (b))
-	|PList pl -> (label,PList (gen_hole_patlist pl n))
-	|PTuple pl -> (label,PTuple (gen_hole_patlist pl n))
-	|PUnder -> (label,PUnder)
-	|PCons pl -> (label,PCons (gen_hole_patlist pl n))
-	|PHole n -> (label, PHole n)
-
-and gen_hole_patlist : labeled_pat list -> int -> labeled_pat list
-= fun pl n ->
-	match pl with
-	|[] -> []
-	|hd::tl ->  
-		let partial_p = gen_hole_pat hd n in
-		(partial_p)::(gen_hole_patlist tl n)
-
 let rec gen_hole_exp : labeled_exp -> int -> labeled_exp
 = fun (label, exp) n ->
 	if label = n then (label, gen_labeled_hole()) else 
@@ -393,6 +360,7 @@ let rec gen_hole_exp : labeled_exp -> int -> labeled_exp
 	|Const n -> (label, Const (n))
 	|TRUE -> (label, TRUE)
 	|FALSE -> (label, FALSE)
+	|String id -> (label, String id)
 	|EVar x -> (label, EVar (x))
 	|ADD (e1,e2) -> 
 		let partial_e1 = gen_hole_exp e1 n in
@@ -497,9 +465,8 @@ and gen_hole_blist : l_bl list -> int -> l_bl list
 	match bl with
 	| [] -> []
 	| (p,e)::tl -> 
-		let partial_p = gen_hole_pat p n in
 		let partial_e = gen_hole_exp e n in
-		(partial_p, partial_e) :: (gen_hole_blist tl n)
+		(p, partial_e) :: (gen_hole_blist tl n)
 
 let rec gen_hole_decl : labeled_decl -> int -> labeled_decl
 = fun decl n ->

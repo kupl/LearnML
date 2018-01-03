@@ -48,7 +48,6 @@ let rec pat_to_string : pat -> string
     |[] -> (*"\b\b"*)""
     |hd::tl -> pat_to_string hd ^ "::" ^ (f tl)
   in (f lst)
-  | PHole n -> "?"
 
 let rec typ_list_to_string : typ list -> string
 = fun lst -> 
@@ -64,6 +63,8 @@ let rec typ_list_to_string : typ list -> string
     |TBase x -> x ^ ","
     |TArr (t1,t2) -> typ_list_to_string [t1] ^ "->" ^ typ_list_to_string[t2] ^ ","
     |TTuple lst -> "("^ typ_list_to_string lst ^"),"
+    |TCtor (id,_) -> typ_list_to_string [id]
+    |TVar x -> x^","
   end ^ typ_list_to_string tl
 
 let rec ctor_list_to_string : ctor list -> string
@@ -172,7 +173,6 @@ let rec exp_to_string : exp -> string
     |(pat,exp)::tl -> "\n|" ^ pat_to_string pat ^ " -> " ^ exp_to_string exp ^ (f tl)
   in "match " ^ exp_to_string e ^ " with " ^ f lst
   |Hole n -> "?"
-  |_ -> ""
 
 let rec decl_to_string : decl -> string -> string
 = fun decl str ->
@@ -208,6 +208,7 @@ let rec string_of_value : value -> string
   | VCtor (id,l1) -> "VCtor " ^ id ^ "(" ^ string_of_tuple l1 ^ ")"
   | VFun  (id,exp,env) -> "VFun " ^ id  ^ " [env" ^ env_to_string env ^"]"
   | VFunRec (id1,id2,exp,env) -> "VFunRec " ^ id1 ^ " " ^ id2 ^ " [env" ^ env_to_string env ^"]"
+  | _ -> "?"
 
 and string_of_list l1 =
   match l1 with
@@ -263,16 +264,12 @@ let rec print_pgm : prog -> unit
   print_endline (program_to_string pgm)
 
 let print_component : components -> unit
-= fun (exp_set,pat_set) ->
-  let _ = print_endline ("-----------------------------") in
-  let _ = print_endline ("expression component set is below") in
-  let _ = print_endline ("-----------------------------") in
-  let _ = print_exp_set exp_set in
-  let _ = print_endline ("-----------------------------") in
-  let _ = print_endline ("pattern component set is below") in
-  let _ = print_endline ("-----------------------------") in
-  let _ = print_pat_set pat_set in
-  ()
+= fun exp_set ->
+  print_endline ("-----------------------------");
+  print_endline ("expression component set is below");
+  print_endline ("-----------------------------");
+  print_exp_set exp_set
+  
 
 let rec print_examples : examples -> unit
 = fun examples ->
@@ -464,6 +461,7 @@ let rec string_of_symbol : symbolic_value -> string
   match symbol with
   | Int n -> string_of_int n
   | Bool b -> string_of_bool b
+  | Str x -> x
   | Symbol n -> "e" ^ string_of_int n
   | List es -> 
     let rec f lst =

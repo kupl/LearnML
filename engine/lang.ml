@@ -26,7 +26,6 @@ type pat =
   | PCtor of id * pat list
   | PCons of pat list
   | PUnder 
-  | PHole of int
   | Pats of pat list
 
 type arg = id * typ
@@ -90,7 +89,7 @@ type value =
   | VHole of int
 
 and env = (id, value) BatMap.t
-and components = exp BatSet.t * pat BatSet.t
+and components = exp BatSet.t
 
 type example = (exp list * value)
 type examples = (exp list* value) list
@@ -193,7 +192,6 @@ and pat_cost : pat -> int
       [] -> 0
       |hd::tl -> (pat_cost hd) + (f tl)
     in 20 + f lst
-    | PHole _ -> 50
 
 
 let cost_decl : decl -> int -> int
@@ -213,10 +211,6 @@ let cost : prog -> int
 let exp_hole_count = ref 0
 let gen_hole : unit -> exp
 = fun () -> exp_hole_count:=!exp_hole_count+1; Hole(!exp_hole_count)
-
-let pat_hole_count = ref 0
-let gen_pat_hole : unit -> pat
-= fun () -> pat_hole_count:=!pat_hole_count+1; PHole(!pat_hole_count)
 
 let empty_env = BatMap.empty
 let lookup_env = BatMap.find

@@ -17,11 +17,11 @@ and lpat =
   | PTuple of labeled_pat list
   | PUnder
   | PCons of labeled_pat list
-  | PHole of int
 
 type labeled_exp = int * lexp
 and lexp =
   | Const of int
+  | String of id
   | ADD of labeled_exp * labeled_exp
   | SUB of labeled_exp * labeled_exp
   | MUL of labeled_exp * labeled_exp
@@ -50,7 +50,6 @@ and lexp =
   | EList of labeled_exp list
   | ETuple of labeled_exp list
   | EFun of arg * labeled_exp
-  | EFix  of id * arg * typ * labeled_exp
   | Hole of int
 and l_bl = labeled_pat * labeled_exp
 
@@ -104,7 +103,6 @@ type labeled_value =
   | VCtor of id * labeled_value list
   | VFun  of id * labeled_exp * labeled_env * symbolic_env
   | VFunRec of id * id * labeled_exp * labeled_env * symbolic_env
-  | VPFun of (labeled_value * labeled_value) list
   | VHole of int
 and labeled_env = (id, labeled_value) BatMap.t
 
