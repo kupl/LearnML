@@ -7,7 +7,7 @@ open Util
 *)
 
 module Workset = struct
-  type work = int * prog * Extract_from_error.hole_var_map * Type.hole_table * Type.at_hole_env
+  type work = int * prog * Bvar.variable_map * Type.hole_table * Type.at_hole_env
 
   module OrderedType = struct
     type t = work
@@ -85,19 +85,18 @@ let rec is_exist t1 t2 =
 	|TArr (t3,t4) -> (is_exist t3 t2) || (is_exist t4 t2)
 	|_ -> false
 
-let rec print_var_set set = 
-	if(BatSet.is_empty set) then ()
-	else 
-		let(x,remain) = BatSet.pop set in
-		print_endline(x);print_var_set remain
+let update_sets hole typ env var_set h_t h_e v =
+	let h_t' = BatMap.add hole typ h_t in
+	let h_e' = BatMap.add hole env h_e in
+	let v' = BatMap.add hole var_set v in
+	(h_t',h_e',v')
 
-let rec type_directed_set : exp BatSet.t -> typ -> Type.TEnv.t -> id BatSet.t -> Workset.work ->(exp * Extract_from_error.hole_var_map * Type.hole_table * Type.at_hole_env) BatSet.t
+let rec type_directed_set : exp BatSet.t -> typ -> Type.TEnv.t -> id BatSet.t -> Workset.work ->(exp * Bvar.variable_map * Type.hole_table * Type.at_hole_env) BatSet.t
 = fun exp_set hole_typ env var_set (rank,prog,v,h_t,h_e)->
 	if(BatSet.is_empty exp_set) then BatSet.empty
 	else
 	(
 		let (exp,remain_set) = (BatSet.pop exp_set) in
-		(*let _ = print_endline(Print.exp_to_string exp) in*)
 		match exp with
 		| Const n -> 
 			begin match hole_typ with
@@ -126,22 +125,14 @@ let rec type_directed_set : exp BatSet.t -> typ -> Type.TEnv.t -> id BatSet.t ->
 			let (Hole n1,Hole n2) = (e1,e2) in 
 			begin match hole_typ with
 			|TInt ->
-				let h_t' = BatMap.add n1 TInt h_t in
-				let h_t' = BatMap.add n2 TInt h_t' in
-				let h_e' = BatMap.add n1 env h_e in
-				let h_e' = BatMap.add n2 env h_e' in
-				let v' = BatMap.add n1 var_set v in
-				let v' = BatMap.add n2 var_set v' in				
+				let (h_t',h_e',v') = update_sets n1 TInt env var_set h_t h_e v in
+				let (h_t',h_e',v') = update_sets n2 TInt env var_set h_t' h_e' v' in				
 				BatSet.add (exp,v',h_t',h_e') (type_directed_set remain_set hole_typ env var_set (rank,prog,v,h_t,h_e))
 			|TVar _ -> 
 				let h_t' = update_hole_type hole_typ TInt h_t in
 				let env' = update_env hole_typ TInt env in
-				let h_e' = BatMap.add n1 env' h_e in
-				let h_e' = BatMap.add n2 env' h_e' in
-				let h_t' = BatMap.add n1 TInt h_t' in
-				let h_t' = BatMap.add n2 TInt h_t' in
-				let v' = BatMap.add n1 var_set v in
-				let v' = BatMap.add n2 var_set v' in 
+				let (h_t',h_e',v') = update_sets n1 TInt env' var_set h_t' h_e v in
+				let (h_t',h_e',v') = update_sets n2 TInt env' var_set h_t' h_e' v' in
 				BatSet.add (exp,v',h_t',h_e') (type_directed_set remain_set hole_typ env var_set (rank,prog,v,h_t,h_e))
 			|_ -> type_directed_set remain_set hole_typ env var_set (rank,prog,v,h_t,h_e)
 			end
@@ -149,16 +140,12 @@ let rec type_directed_set : exp BatSet.t -> typ -> Type.TEnv.t -> id BatSet.t ->
 			let (Hole n1) = e1 in 			
 			begin match hole_typ with
 			|TInt ->
-				let h_t' = BatMap.add n1 TInt h_t in
-				let h_e' = BatMap.add n1 env h_e in
-				let v' = BatMap.add n1 var_set v in
+				let (h_t',h_e',v') = update_sets n1 TInt env var_set h_t h_e v in
 				BatSet.add (exp,v',h_t',h_e') (type_directed_set remain_set hole_typ env var_set (rank,prog,v,h_t,h_e))
 			|TVar _ -> 
 				let h_t' = update_hole_type hole_typ TInt h_t in
 				let env' = update_env hole_typ TInt env in
-				let h_t' = BatMap.add n1 TInt h_t' in
-				let h_e' = BatMap.add n1 env' h_e in
-				let v' = BatMap.add n1 var_set v in
+				let (h_t',h_e',v') = update_sets n1 TInt env' var_set h_t' h_e v in
 				BatSet.add (exp,v',h_t',h_e') (type_directed_set remain_set hole_typ env var_set (rank,prog,v,h_t,h_e))
 			|_ -> type_directed_set remain_set hole_typ env var_set (rank,prog,v,h_t,h_e)
 			end
@@ -167,22 +154,14 @@ let rec type_directed_set : exp BatSet.t -> typ -> Type.TEnv.t -> id BatSet.t ->
 			let (Hole n1,Hole n2) = (e1,e2) in
 			begin match hole_typ with
 			|TBool -> 
-				let h_t' = BatMap.add n1 TBool h_t in
-				let h_t' = BatMap.add n2 TBool h_t' in
-				let h_e' = BatMap.add n1 env h_e in
-				let h_e' = BatMap.add n2 env h_e' in
-				let v' = BatMap.add n1 var_set v in
-				let v' = BatMap.add n2 var_set v' in
+				let (h_t',h_e',v') = update_sets n1 TBool env var_set h_t h_e v in
+				let (h_t',h_e',v') = update_sets n1 TBool env var_set h_t' h_e' v' in
 				BatSet.add (exp,v',h_t',h_e') (type_directed_set remain_set hole_typ env var_set (rank,prog,v,h_t,h_e))
 			|TVar _ -> 
 				let h_t' = update_hole_type hole_typ TBool h_t in
 				let env' = update_env hole_typ TBool env in
-				let h_t' = BatMap.add n1 TBool h_t' in
-				let h_t' = BatMap.add n2 TBool h_t' in
-				let h_e' = BatMap.add n1 env' h_e in
-				let h_e' = BatMap.add n2 env' h_e' in
-				let v' = BatMap.add n1 var_set v in
-				let v' = BatMap.add n2 var_set v' in
+				let (h_t',h_e',v') = update_sets n1 TBool env' var_set h_t' h_e v in
+				let (h_t',h_e',v') = update_sets n2 TBool env' var_set h_t' h_e' v' in
 				BatSet.add (exp,v',h_t',h_e') (type_directed_set remain_set hole_typ env var_set (rank,prog,v,h_t,h_e))
 			|_ -> type_directed_set remain_set hole_typ env var_set (rank,prog,v,h_t,h_e)
 			end
@@ -192,23 +171,15 @@ let rec type_directed_set : exp BatSet.t -> typ -> Type.TEnv.t -> id BatSet.t ->
 			begin match hole_typ with
 			|TBool -> 
 				let tv = fresh_tvar () in
-				let h_t' = BatMap.add n1 tv h_t in
-				let h_t' = BatMap.add n2 tv h_t' in
-				let h_e' = BatMap.add n1 env h_e in
-				let h_e' = BatMap.add n2 env h_e' in
-				let v' = BatMap.add n1 var_set v in
-				let v' = BatMap.add n2 var_set v' in
+				let (h_t',h_e',v') = update_sets n1 tv env var_set h_t h_e v in
+				let (h_t',h_e',v') = update_sets n1 tv env var_set h_t' h_e' v' in
 				BatSet.add (exp,v',h_t',h_e') (type_directed_set remain_set hole_typ env var_set (rank,prog,v,h_t,h_e))
 			|TVar _ -> 
 				let tv = fresh_tvar () in
 				let h_t' = update_hole_type hole_typ TBool h_t in
 				let env' = update_env hole_typ TBool env in
-				let h_t' = BatMap.add n1 tv h_t' in
-				let h_t' = BatMap.add n2 tv h_t' in
-				let h_e' = BatMap.add n1 env' h_e in
-				let h_e' = BatMap.add n2 env' h_e' in
-				let v' = BatMap.add n1 var_set v in
-				let v' = BatMap.add n2 var_set v' in
+				let (h_t',h_e',v') = update_sets n1 tv env' var_set h_t' h_e v in
+				let (h_t',h_e',v') = update_sets n2 tv env' var_set h_t' h_e' v' in
 				BatSet.add (exp,v',h_t',h_e') (type_directed_set remain_set hole_typ env var_set (rank,prog,v,h_t,h_e))
 			|_ -> type_directed_set remain_set hole_typ env var_set (rank,prog,v,h_t,h_e)
 			end
@@ -219,22 +190,14 @@ let rec type_directed_set : exp BatSet.t -> typ -> Type.TEnv.t -> id BatSet.t ->
 			let (Hole n1,Hole n2) = (e1,e2) in
 			begin match hole_typ with
 			|TBool -> 
-				let h_t' = BatMap.add n1 TInt h_t in
-				let h_t' = BatMap.add n2 TInt h_t' in
-				let h_e' = BatMap.add n1 env h_e in
-				let h_e' = BatMap.add n2 env h_e' in
-				let v' = BatMap.add n1 var_set v in
-				let v' = BatMap.add n2 var_set v' in
+				let (h_t',h_e',v') = update_sets n1 TInt env var_set h_t h_e v in
+				let (h_t',h_e',v') = update_sets n1 TInt env var_set h_t' h_e' v' in
 				BatSet.add (exp,v',h_t',h_e') (type_directed_set remain_set hole_typ env var_set (rank,prog,v,h_t,h_e))
 			|TVar _ -> 
 				let h_t' = update_hole_type hole_typ TBool h_t in
 				let env' = update_env hole_typ TBool env in
-				let h_e' = BatMap.add n1 env' h_e in
-				let h_e' = BatMap.add n2 env' h_e' in
-				let h_t' = BatMap.add n1 TInt h_t' in
-				let h_t' = BatMap.add n2 TInt h_t' in
-				let v' = BatMap.add n1 var_set v in
-				let v' = BatMap.add n2 var_set v' in
+				let (h_t',h_e',v') = update_sets n1 TInt env' var_set h_t' h_e v in
+				let (h_t',h_e',v') = update_sets n2 TInt env' var_set h_t' h_e' v' in
 				BatSet.add (exp,v',h_t',h_e') (type_directed_set remain_set hole_typ env var_set (rank,prog,v,h_t,h_e))
 			|_ -> type_directed_set remain_set hole_typ env var_set (rank,prog,v,h_t,h_e)
 			end
@@ -242,16 +205,12 @@ let rec type_directed_set : exp BatSet.t -> typ -> Type.TEnv.t -> id BatSet.t ->
 			let (Hole n1) = e1 in
 			begin match hole_typ with
 			|TBool -> 
-				let h_t' = BatMap.add n1 TBool h_t in
-				let h_e' = BatMap.add n1 env h_e in
-				let v' = BatMap.add n1 var_set v in
+				let (h_t',h_e',v') = update_sets n1 TBool env var_set h_t h_e v in
 				BatSet.add (exp,v',h_t',h_e') (type_directed_set remain_set hole_typ env var_set (rank,prog,v,h_t,h_e))
 			|TVar _ -> 
 				let h_t' = update_hole_type hole_typ TBool h_t in
 				let env' = update_env hole_typ TBool env in
-				let h_e' = BatMap.add n1 env' h_e in
-				let h_t' = BatMap.add n1 TBool h_t' in
-				let v' = BatMap.add n1 var_set v in
+				let (h_t',h_e',v') = update_sets n1 TBool env' var_set h_t' h_e v in
 				BatSet.add (exp,v',h_t',h_e') (type_directed_set remain_set hole_typ env var_set (rank,prog,v,h_t,h_e))
 			|_ -> type_directed_set remain_set hole_typ env var_set (rank,prog,v,h_t,h_e)
 			end
@@ -259,23 +218,15 @@ let rec type_directed_set : exp BatSet.t -> typ -> Type.TEnv.t -> id BatSet.t ->
 			let (Hole n1,Hole n2) = (e1,e2) in
 			begin match hole_typ with
 			|TList (t) -> 
-				let h_t' = BatMap.add n1 (TList(t)) h_t in
-				let h_t' = BatMap.add n2 (TList(t)) h_t' in
-				let h_e' = BatMap.add n1 env h_e in
-				let h_e' = BatMap.add n2 env h_e' in
-				let v' = BatMap.add n1 var_set v in
-				let v' = BatMap.add n2 var_set v' in
+				let (h_t',h_e',v') = update_sets n1 (TList(t)) env var_set h_t h_e v in
+				let (h_t',h_e',v') = update_sets n2 (TList(t)) env var_set h_t' h_e' v' in
 				BatSet.add (exp,v',h_t',h_e') (type_directed_set remain_set hole_typ env var_set (rank,prog,v,h_t,h_e))
 			|TVar _ -> 
 				let tv = fresh_tvar () in
 				let h_t' = update_hole_type hole_typ (TList(tv)) h_t in
 				let env' = update_env hole_typ (TList(tv)) env in
-				let h_t' = BatMap.add n1 (TList(tv)) h_t' in
-				let h_t' = BatMap.add n2 (TList(tv)) h_t' in
-				let h_e' = BatMap.add n1 env' h_e in
-				let h_e' = BatMap.add n2 env' h_e' in 
-				let v' = BatMap.add n1 var_set v in
-				let v' = BatMap.add n2 var_set v' in
+				let (h_t',h_e',v') = update_sets n1 (TList(tv)) env' var_set h_t' h_e v in
+				let (h_t',h_e',v') = update_sets n2 (TList(tv)) env' var_set h_t' h_e' v' in
 				BatSet.add (exp,v',h_t',h_e') (type_directed_set remain_set hole_typ env var_set (rank,prog,v,h_t,h_e))
 			|_ -> type_directed_set remain_set hole_typ env var_set (rank,prog,v,h_t,h_e)
 			end
@@ -283,23 +234,15 @@ let rec type_directed_set : exp BatSet.t -> typ -> Type.TEnv.t -> id BatSet.t ->
 			let (Hole n1,Hole n2) = (e1,e2) in
 			begin match hole_typ with
 			|TList (t) ->
-				let h_t' = BatMap.add n1 t h_t in
-				let h_t' = BatMap.add n2 (TList(t)) h_t' in
-				let h_e' = BatMap.add n1 env h_e in
-				let h_e' = BatMap.add n2 env h_e' in
-				let v' = BatMap.add n1 var_set v in
-				let v' = BatMap.add n2 var_set v' in 
+				let (h_t',h_e',v') = update_sets n1 t env var_set h_t h_e v in
+				let (h_t',h_e',v') = update_sets n2 (TList(t)) env var_set h_t' h_e' v' in
 				BatSet.add (exp,v',h_t',h_e') (type_directed_set remain_set hole_typ env var_set (rank,prog,v,h_t,h_e))
 			|TVar _ -> 
 				let tv = fresh_tvar () in
 				let h_t' = update_hole_type hole_typ (TList(tv)) h_t in
 				let env' = update_env hole_typ (TList(tv)) env in
-				let h_t' = BatMap.add n1 tv h_t' in
-				let h_t' = BatMap.add n2 (TList(tv)) h_t' in
-				let h_e' = BatMap.add n1 env' h_e in
-				let h_e' = BatMap.add n2 env' h_e' in 
-				let v' = BatMap.add n1 var_set v in
-				let v' = BatMap.add n2 var_set v' in
+				let (h_t',h_e',v') = update_sets n1 tv env' var_set h_t' h_e v in
+				let (h_t',h_e',v') = update_sets n2 (TList(tv)) env' var_set h_t' h_e' v' in
 				BatSet.add (exp,v',h_t',h_e') (type_directed_set remain_set hole_typ env var_set (rank,prog,v,h_t,h_e))
 			|_ -> type_directed_set remain_set hole_typ env var_set (rank,prog,v,h_t,h_e)
 			end
@@ -337,21 +280,15 @@ let rec type_directed_set : exp BatSet.t -> typ -> Type.TEnv.t -> id BatSet.t ->
 				let t = TTuple(t_l) in
 				let h_t' = update_hole_type hole_typ t h_t in
 				let env' = update_env hole_typ t env in
-				let (h_t',h_e',v') = List.fold_right2 (fun h t (h_t,h_e,v) -> let Hole n = h in (BatMap.add n t h_t,BatMap.add n env h_e,BatMap.add n var_set v)) l t_l (h_t',h_e,v) in
+				let (h_t',h_e',v') = List.fold_right2 (fun h t (h_t,h_e,v) -> let Hole n = h in (BatMap.add n t h_t,BatMap.add n env' h_e,BatMap.add n var_set v)) l t_l (h_t',h_e,v) in
 				BatSet.add (exp,v',h_t',h_e') (type_directed_set remain_set hole_typ env var_set (rank,prog,v,h_t,h_e))
 			|_ -> type_directed_set remain_set hole_typ env var_set (rank,prog,v,h_t,h_e)
 			end
 		| IF (e1,e2,e3) ->
 			let (Hole n1,Hole n2,Hole n3) = (e1,e2,e3) in
-			let h_t' = BatMap.add n1 TBool h_t in
-			let h_t' = BatMap.add n2 hole_typ h_t' in
-			let h_t' = BatMap.add n3 hole_typ h_t' in
-			let h_e' = BatMap.add n1 env h_e in
-			let h_e' = BatMap.add n2 env h_e' in
-			let h_e' = BatMap.add n3 env h_e' in
-			let v' = BatMap.add n1 var_set v in
-			let v' = BatMap.add n2 var_set v' in
-			let v' = BatMap.add n3 var_set v' in 
+			let (h_t',h_e',v') = update_sets n1 TBool env var_set h_t h_e v in
+			let (h_t',h_e',v') = update_sets n2 hole_typ env var_set h_t' h_e' v' in
+			let (h_t',h_e',v') = update_sets n3 hole_typ env var_set h_t' h_e' v' in
 			BatSet.add (exp,v',h_t',h_e') (type_directed_set remain_set hole_typ env var_set (rank,prog,v,h_t,h_e))
 		| ELet (f, is_rec, xs, t, e1, e2) ->
 			let (Hole n1,Hole n2) = (e1,e2) in
@@ -433,21 +370,15 @@ let rec type_directed_set : exp BatSet.t -> typ -> Type.TEnv.t -> id BatSet.t ->
 					else check_correct t2 t4 h_t env
 				|_ -> if(typ=x_t) then (true,h_t,env) else (false,h_t,env)
 			end in
-			(*let _ = print_endline(Type.string_of_type x_t) in
-			let _ = print_endline(Type.string_of_type hole_typ) in
-			*)let (result,h_t',h_e')=check_correct hole_typ x_t h_t h_e in
+			let (result,h_t',h_e')=check_correct hole_typ x_t h_t h_e in
 			if result then BatSet.add (exp,v,h_t',h_e') (type_directed_set remain_set hole_typ env var_set (rank,prog,v,h_t,h_e))
 			else type_directed_set remain_set hole_typ env var_set (rank,prog,v,h_t,h_e)
 
 		| EApp (e1,e2) -> 
 			let (Hole n1,Hole n2) = (e1,e2) in
 			let tv = fresh_tvar() in
-			let h_t' = BatMap.add n1 (TArr(tv,hole_typ)) h_t in
-			let h_t' = BatMap.add n2 tv h_t' in
-			let h_e' = BatMap.add n1 env h_e in
-			let h_e' = BatMap.add n2 env h_e' in
-			let v' = BatMap.add n1 var_set v in
-			let v' = BatMap.add n2 var_set v' in
+			let (h_t',h_e',v') = update_sets n1 (TArr(tv,hole_typ)) env var_set h_t h_e v in
+			let (h_t',h_e',v') = update_sets n2 tv env var_set h_t' h_e' v' in
 			BatSet.add (exp,v',h_t',h_e') (type_directed_set remain_set hole_typ env var_set (rank,prog,v,h_t,h_e))
 	)
 
@@ -479,108 +410,15 @@ let rec update_exp_components : exp BatSet.t -> exp BatSet.t -> exp BatSet.t
 		| MINUS e1 -> BatSet.add (MINUS (gen_hole())) (update_exp_components exp_set result_exp)
 		| NOT e1 -> BatSet.add (NOT (gen_hole())) (update_exp_components exp_set result_exp)
 		| IF (e1,e2,e3) -> BatSet.add (IF (gen_hole(),gen_hole(),gen_hole())) (update_exp_components exp_set result_exp)
-		| ECtor (x,l) -> 
-			let rec f lst = 
-			match lst with
-			| [] -> []
-			| hd::tl -> gen_hole() :: (f tl)
-		in BatSet.add (ECtor(x,(f l))) (update_exp_components exp_set result_exp)
-		| EList l ->
-			let rec f lst = 
-			match lst with
-			| [] -> []
-			| hd::tl -> gen_hole() :: (f tl)
-		in BatSet.add (EList (f l)) (update_exp_components exp_set result_exp)
-		| ETuple l-> 
-			let rec f lst = 
-			match lst with
-			| [] -> []
-			| hd::tl -> gen_hole() :: (f tl)
-		in BatSet.add (ETuple (f l)) (update_exp_components exp_set result_exp)
+		| ECtor (x,l) -> BatSet.add (ECtor(x,(list_map (fun _ -> gen_hole()) l))) (update_exp_components exp_set result_exp)
+		| EList l -> BatSet.add (EList (list_map (fun _ -> gen_hole()) l)) (update_exp_components exp_set result_exp)
+		| ETuple l-> BatSet.add (ETuple (list_map (fun _ -> gen_hole()) l)) (update_exp_components exp_set result_exp)
 		| EFun (a,e) -> BatSet.add (EFun (a,gen_hole())) (update_exp_components exp_set result_exp)
 		| EMatch (e,bl) ->
-			let (pl,el) = List.split bl in
-			let rec f lst =
-			match lst with
-			|[] -> []
-			| hd::tl -> gen_hole() :: (f tl)
-		in BatSet.add (EMatch (gen_hole(),(List.combine pl (f el)))) (update_exp_components exp_set result_exp)
+			let (pl,el) = list_split bl in
+			BatSet.add (EMatch (gen_hole(),(List.combine pl (list_map (fun _ -> gen_hole()) el)))) (update_exp_components exp_set result_exp)
 		| x -> BatSet.add x (update_exp_components exp_set result_exp)
 	)
-
-
-let rec pat_is_hole : pat -> bool -> bool
-= fun pat b ->
-	match pat with
-    | PInt n -> true && b 
-    | PVar id -> true && b 
-    | PBool b -> true && b 
-    | PUnder -> true && b 
-    | PCtor (id,pl) -> list_fold pat_is_hole pl b
-    | Pats pl
-    | PList pl
-    | PTuple pl
-    | PCons pl -> list_fold pat_is_hole pl b
-    | PHole n -> false
-
-let rec exp_is_hole : exp -> bool -> bool
-= fun exp b ->
-	match exp with
-	| Const n -> b && true
-	| TRUE -> b && true
-	| FALSE -> b && true
-	| String x-> b && true
-	| EVar x -> b && true
-	| ADD (e1,e2) 
-	| SUB (e1,e2)
-	| MUL (e1,e2)
-	| DIV (e1,e2)
-	| MOD (e1,e2)
-	| OR (e1,e2)
-	| AND (e1,e2)	
-	| LESS (e1,e2)
-	| LARGER (e1,e2)
-	| EQUAL (e1,e2)
-	| NOTEQ (e1,e2)
-	| LESSEQ (e1,e2)
-	| LARGEREQ (e1,e2) 
-	| AT (e1,e2) 
-	| DOUBLECOLON (e1,e2) ->
-		let b1 = (exp_is_hole e1 b) in
-		let b2 = (exp_is_hole e2 b1) in
-		b2
-	| ELet (_,_,_,_,e1,e2) 
-	| EApp (e1,e2) ->
-		let b1 = (exp_is_hole e1 b) in
-		let b2 = (exp_is_hole e2 b1) in
-		b2
-  | MINUS e1 
-	| NOT e1 -> (exp_is_hole e1 b)
-	| IF (e1,e2,e3) ->
-		let b1 = (exp_is_hole e1 b) in
-		let b2 = (exp_is_hole e2 b1) in
-		(exp_is_hole e3 b2)
-	| ECtor (x,l) -> list_fold exp_is_hole l b
-	| EList l 
-	| ETuple l-> list_fold exp_is_hole l b
-	| EFun (a,e) -> (exp_is_hole e b)
-	| EMatch (e,bl) ->
-		let (pl,el) = List.split bl in
-		let pb = list_fold pat_is_hole pl b in
-		let eb = list_fold exp_is_hole el pb in
-		exp_is_hole e eb
-	| Hole (_) -> false
-
-let check_closed : decl -> bool -> bool
-= fun decl b ->
-	match decl with
-	| DData _ -> b
-	| DLet (x,is_rec,args,typ,exp) ->
-		exp_is_hole exp b
-
-let is_closed : prog -> bool
-= fun decls -> list_fold check_closed decls true
-
 
 let rec expholes : exp -> exp BatSet.t -> exp BatSet.t
 = fun exp set ->
@@ -608,7 +446,7 @@ let rec expholes : exp -> exp BatSet.t -> exp BatSet.t
 	| ELet (_,_,_,_,e1,e2)  -> BatSet.union (expholes e1 set) (expholes e2 set)
 	| EApp (e1,e2) -> BatSet.union (expholes e1 set) (expholes e2 set)
 	| MINUS e1
-  | NOT e1 -> expholes e1 set
+  	| NOT e1 -> expholes e1 set
 	| IF (e1,e2,e3) -> 
 		let set = expholes e1 set in
 		let set = expholes e2 set in
@@ -621,7 +459,7 @@ let rec expholes : exp -> exp BatSet.t -> exp BatSet.t
 		let set = list_fold expholes el set in
 		expholes e set
 	| EFun (a,e) -> expholes e set
-	| Hole (n) -> BatSet.union set (BatSet.singleton (Hole n))
+	| Hole _ -> BatSet.add exp set
 
 let rec patholes : exp -> pat BatSet.t->pat BatSet.t
 = fun exp set->
@@ -633,15 +471,15 @@ let rec patholes : exp -> pat BatSet.t->pat BatSet.t
 		(
 			match p with
 			| PInt n -> s
-		    | PVar id -> s
-		    | PBool b -> s
-		    | PUnder -> s
-		    | PCtor (id,pl) -> list_fold pat_holes pl s
-		    | Pats pl
-		    | PList pl
-		    | PTuple pl
-		    | PCons pl -> list_fold pat_holes pl s
-		    | PHole n -> BatSet.union set (BatSet.singleton (PHole n))
+		  | PVar id -> s
+		  | PBool b -> s
+		  | PUnder -> s
+		  | PCtor (id,pl) -> list_fold pat_holes pl s
+		  | Pats pl
+		  | PList pl
+		  | PTuple pl
+		  | PCons pl -> list_fold pat_holes pl s
+		  | PHole _ -> BatSet.add p set
 		) in
 		list_fold pat_holes pl set
 	|_ -> BatSet.empty
@@ -665,11 +503,8 @@ let find_patholes : prog -> pat BatSet.t
 		| DLet (x,is_rec,args,typ,exp) -> patholes exp set
 	in (list_fold f decls BatSet.empty)
 
-let rec list_to_hole_list : exp list -> exp list
-= fun exps ->
-	match exps with
-	[] -> []
-	|hd::tl -> gen_hole() :: (list_to_hole_list tl)
+let is_closed : prog -> bool
+= fun decls -> BatSet.is_empty (find_expholes decls) && BatSet.is_empty (find_patholes decls)
 
 let rec replace_exp' : exp -> exp -> exp -> exp
 = fun e hole candidate ->
@@ -722,10 +557,11 @@ let rec replace_pat' : exp -> pat -> pat -> exp
 		begin match lst with
 		|[] -> []
 		|hd::tl ->
-		begin match hd with
-		| PHole n -> if ((PHole (n)) = hole) then candidate :: (f tl) else (PHole n) :: (f tl)
-		| x -> x :: (f tl)
-		end end in EMatch (e,(List.combine (f pl) el))
+			begin match hd with
+			| PHole n -> if ((PHole (n)) = hole) then candidate :: (f tl) else (PHole n) :: (f tl)
+			| x -> x :: (f tl)
+			end 
+		end in EMatch (e,(List.combine (f pl) el))
 	| x -> x
 
 let rec replace_exp : prog -> exp -> exp -> prog
@@ -753,14 +589,11 @@ let rec replace_pat : prog-> pat -> pat -> prog
 
 let gen_exp_nextstates : exp BatSet.t -> (Workset.work * exp) -> Workset.work BatSet.t
 = fun candidates ((rank,prog,v,h_t,h_e),hole) ->
-	(*let _ = Print.print_pgm prog in*)
 	let Hole n = hole in
 	let var_set = BatMap.find n v in
 	let hole_type = BatMap.find n h_t in
 	let env = BatMap.find n h_e in
 	let candidates = BatSet.fold (fun v r -> BatSet.add (EVar v) r) var_set candidates in
-	(*let _ = print_endline("------------------") in
-	let _ = Print.print_pgm prog in*)
 	let nextstates = type_directed_set candidates hole_type env var_set (rank,prog,v,h_t,h_e) in
 	let candidates = BatSet.fold (fun (e,_,_,_) result-> BatSet.add e result ) nextstates BatSet.empty in
 	let nextstates = BatSet.map (fun (e,v,h_t,h_e)-> (rank,replace_exp prog hole e,BatMap.remove n v,BatMap.remove n h_t,BatMap.remove n h_e)) nextstates in
@@ -785,12 +618,10 @@ let next : Workset.work -> components -> Workset.work BatSet.t
 	let exp_holes = find_expholes prog in
 	let pat_holes = find_patholes prog in
 	let next_exp = BatSet.fold (fun exp_hole set -> BatSet.union set (next_of_exp components ((rank,prog,v,h_t,h_e),exp_hole))) exp_holes BatSet.empty in
-	(*let next_pat = BatSet.fold (fun pat_hole set -> BatSet.union set (next_of_pat components ((rank,prog),pat_hole))) pat_holes BatSet.empty in*)
 	next_exp
 
 let start_time = ref 0.0
 let iter = ref 0
-let type_pruning_time = ref 0.0
 	
 let rec is_solution : prog -> examples -> bool
 = fun prog examples ->
@@ -809,39 +640,15 @@ let rec is_solution : prog -> examples -> bool
 	)
 )
 
-
-let rec string_of_tenv env = 
-	if(BatMap.is_empty env) then ""
-	else
-		let ((n,typ),remain) = BatMap.pop env in
-		("Hole "^ (string_of_int n) ^":" ^ Type.string_of_type typ) ^ (string_of_tenv remain)
-
 let rec print_whole_set pgm_set =
 	if (BatSet.is_empty pgm_set) then ()
 	else
 		let ((rank,pgm),remain)=BatSet.pop pgm_set in
 		let _ = Printf.fprintf oc "%s\n" ("-------------------------") in
 		let _ = Printf.fprintf oc "%s\n" (Print.program_to_string pgm) in
-		(*let _ = Printf.fprintf oc "%s\n" (string_of_tenv !hole_tbl) in*)
 		let _ = Printf.fprintf oc "%s\n" ("-------------------------") in
 		print_whole_set remain
 
-
-let rec remove_temp : prog -> prog
-= fun pgm ->
-  match pgm with
-  |[] -> []
-  |hd::tl -> 
-  begin match hd with
-  | DData (id,lst) -> 
-    hd::(remove_temp tl)
-  | DLet (x,is_rec,args,typ,exp) -> 
-  	if(x="@") then (remove_temp tl)
-    else
-      hd::(remove_temp tl)
- end
-
-let eval_time= ref 0.0
 let count = ref 0
 
 let rec work : Workset.t -> components -> examples -> prog option
@@ -860,30 +667,28 @@ let rec work : Workset.t -> components -> examples -> prog option
 	| Some ((rank,prog,v,h_t,h_e),remaining_workset) ->
 		let _ = Printf.fprintf oc "%s\n" ("-------------------------") in
 		let _ = Printf.fprintf oc "%s\n" (Print.program_to_string prog) in
-		(*let _ = Printf.fprintf oc "%s\n" (string_of_tenv !hole_tbl) in*)
 		let _ = Printf.fprintf oc "%s\n" ("-------------------------") in
 	  if is_closed prog then
 	  	let _ = count := !count +1 in
 	  	if is_solution prog examples then Some prog
-		  else
-		  	work remaining_workset (exp_set,pat_set) examples
+			else
+				work remaining_workset (exp_set,pat_set) examples
 	  else
-	  	let exp_set = (update_exp_components exp_set BatSet.empty) in
-      let nextstates = next (rank,prog,v,h_t,h_e) (exp_set,pat_set) in
-	  	let new_workset = BatSet.fold Workset.add nextstates remaining_workset in
+	  let exp_set = (update_exp_components exp_set BatSet.empty) in
+    let nextstates = next (rank,prog,v,h_t,h_e) (exp_set,pat_set) in
+	  let new_workset = BatSet.fold Workset.add nextstates remaining_workset in
 	  	work new_workset (exp_set,pat_set) examples
 
 let hole_synthesize : prog -> Workset.work BatSet.t -> components -> examples ->prog option
 = fun pgm pgm_set components examples -> 
 	let _ = oc in
 	let _ = Print.print_component components in
-	let _ = eval_time:=0.0 in 
 	let workset = BatSet.fold (fun t set-> Workset.add t set) pgm_set Workset.empty in
 	let result = work workset components examples in
 	let result_prog_string = 
 	match result with
 	|None -> "None"
-	|Some prog -> Print.program_to_string (remove_temp prog) in
+	|Some prog -> Print.program_to_string (prog) in
   let _ = print_endline("--------------------------") in
 	let _ = print_endline("---------original---------") in
 	let _ = print_endline("--------------------------") in
@@ -898,10 +703,4 @@ let hole_synthesize : prog -> Workset.work BatSet.t -> components -> examples ->
 	let _ = print_endline(string_of_int (!Eval.count)) in
 	let _ = print_endline("--------infinite count--------") in
 	let _ = print_endline(string_of_int (!Eval.infinite_count)) in
-	(*
-	let _ = print_endline("--------SAT memory size-------") in
-	let _ = print_endline(string_of_int (BatMap.cardinal !Sat_pruning.store)) in
-	let _ = print_endline ("--------SAT overhead---------") in
-	let _ = print_endline(string_of_float (!New_localization.result_sat)) in
-	*)
 	result 

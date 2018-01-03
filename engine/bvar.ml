@@ -1,6 +1,8 @@
 open Lang
 open Util
 
+type variable_map = (int,(id BatSet.t)) BatMap.t
+
 let rec update_var_set xs env =
   match xs with
   |[] -> env
