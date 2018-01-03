@@ -37,24 +37,14 @@ let fix_with_solution : prog -> prog -> examples -> unit
   let initial_set = BatSet.map
    (
       fun (n,prog)->
-        let (entry_input,_) = List.hd examples in
-        let entry_exp = Lang.appify (EVar !opt_entry_func) entry_input in
-        let pgm = prog@[DLet ("@",false,[],TPoly,entry_exp)] in
-        let _ = Type.run pgm in
-        let _ = Extract_from_error.run prog in
-        let pgm_hole_table = !Type.hole_tbl in
-        let pgm_at_hole_table = !Type.at_hole_ttbl in
-        let pgm_hole_var_table = !(Extract_from_error.var_table) in
-        let _ = print_endline("------------------------") in
-        let _ = Print.print_pgm prog in
-        let _ = print_endline (BatMap.fold (fun v_set s-> BatSet.fold (fun v s-> v^" "^s) v_set s) pgm_hole_var_table "") in
-        let _ = print_endline (BatMap.fold (fun t s-> (Type.string_of_type t)^s) pgm_hole_table "") in
-        let _ = print_endline (BatMap.fold (fun env s -> BatMap.foldi (fun x t r-> r^ x ^ "|->" ^ (Type.string_of_type t) ^ " ") env "") pgm_at_hole_table "") in
-        let _ = print_endline("------------------------") in
-        (n,prog,pgm_hole_var_table,pgm_hole_table,pgm_at_hole_table)
+        let bounded_var = Bvar.run prog in
+        let _ = Type.run prog in 
+        let hole_type = !Type.hole_tbl in
+        let variable_type = !Type.at_hole_ttbl in
+        (n,prog,bounded_var,hole_type,variable_type)
     ) ranked_prog_set in
-  let components_from_correct = Extract.extract_component solution in
-  let correct_program = Synthesize.hole_synthesize submission initial_set components_from_correct examples in
+  let components = Comp.extract_component solution in
+  let correct_program = Synthesize.hole_synthesize submission initial_set components examples in
   ()
  
 let fix_without_solution : prog -> examples -> unit
