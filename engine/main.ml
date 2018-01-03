@@ -41,6 +41,7 @@ let fix_with_solution : prog -> prog -> examples -> unit
         let _ = Type.run prog in 
         let hole_type = !Type.hole_tbl in
         let variable_type = !Type.at_hole_ttbl in
+        (*let (hole_type,variable_type) = Type.run prog in*)
         (n,prog,bounded_var,hole_type,variable_type)
     ) ranked_prog_set in
   let components = Comp.extract_component solution in
