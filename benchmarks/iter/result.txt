@@ -1,6 +1,0 @@
-09 => correct:19 partial:2 exact:7 type:4 syntax:1
-11 => correct:36 partial:0 exact:2 type:2 syntax:0
-12 => correct:50 partial:1 exact:1 type:0 syntax:0
-15 => correct:70 partial:8 exact:8 type:8 syntax:0
-17 => correct:148 partial:8 exact:6 type:5 syntax:0
-
