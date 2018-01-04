@@ -1,0 +1,15 @@
+{
+	
+	LEAF Korea -> "Korea";
+	NODE(LEAF Korea, LEAF Brazil) -> "(Korea Brazil)";
+	NODE(NODE(NODE(LEAF Korea, NODE(LEAF France, LEAF Usa)), LEAF Brazil), LEAF Japan) -> "(((Korea (France Usa)) Brazil) Japan)";
+	NODE(NODE(LEAF England, LEAF Italy), NODE(LEAF Poland, LEAF Croatia)) -> "((England Italy) (Poland Croatia))";
+	NODE(NODE(NODE(NODE(LEAF Korea, LEAF Argentina), NODE(LEAF France, LEAF Croatia)), (NODE(NODE(LEAF Usa, LEAF England), NODE(LEAF Brazil, LEAF Sweden)))), NODE(NODE(NODE(LEAF Japan, LEAF Germany), NODE(LEAF Nigeria, LEAF Italy)), (NODE(NODE(LEAF Cameroon, LEAF Portugal), LEAF Poland)))) -> "((((Korea Argentina) (France Croatia)) ((Usa England) (Brazil Sweden))) (((Japan Germany) (Nigeria Italy)) ((Cameroon Portugal) Poland)))";
+	NODE(NODE(NODE(NODE(NODE(NODE(LEAF Germany, LEAF Nigeria), LEAF Croatia), LEAF Argentina), LEAF Poland), LEAF Japan), LEAF Usa) -> "((((((Germany Nigeria) Croatia) Argentina) Poland) Japan) Usa)";
+	NODE(LEAF Korea, NODE(LEAF Nigeria, NODE(LEAF Germany, NODE(LEAF Japan , NODE(LEAF Croatia, NODE(LEAF Argentina, LEAF Poland)))))) -> "(Korea (Nigeria (Germany (Japan (Croatia (Argentina Poland))))))";
+	NODE(NODE(NODE(LEAF Sweden , LEAF England) , NODE(LEAF Portugal, LEAF Brazil)), NODE(NODE(LEAF France , LEAF Cameroon) , NODE(LEAF Japan, LEAF Argentina))) -> "(((Sweden England) (Portugal Brazil)) ((France Cameroon) (Japan Argentina)))";
+	NODE(NODE(LEAF Korea, LEAF France), NODE(NODE(LEAF Poland, LEAF Japan), LEAF Croatia)) -> "(((Sweden England) (Portugal Brazil)) ((France Cameroon) (Japan Argentina)))";
+	NODE(NODE(LEAF Korea, LEAF France), NODE(NODE(LEAF Poland, NODE(LEAF Usa, LEAF Italy)), LEAF Croatia)) -> "((Korea France) ((Poland (Usa Italy)) Croatia))";
+	NODE(NODE(LEAF Korea, NODE(NODE(LEAF Japan, LEAF Sweden), LEAF England)), NODE(NODE(LEAF Poland, NODE(LEAF Usa, LEAF Italy)), LEAF Croatia)) -> "((Korea ((Japan Sweden) England)) ((Poland (Usa Italy)) Croatia))";
+
+}
