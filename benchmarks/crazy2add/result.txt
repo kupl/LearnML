@@ -1,0 +1,3 @@
+09 => correct:15 partial:6 exact:7 type:7 syntax:0
+15 => correct:75 partial:5 exact:1 type:1 syntax:0
+17 => correct:132 partial:3 exact:6 type:2 syntax:4
