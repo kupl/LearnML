@@ -1,6 +1,13 @@
 # LearnML
 A framework for generating personalized feedbacks on functional programming assignments
 
+## Install
+```sh
+$ opam install core
+$ opam install batteries
+$ opam install menhir
+```
+
 ## Running
 ```sh
 $ cd engine
