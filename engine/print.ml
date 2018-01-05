@@ -11,34 +11,31 @@ let rec tab_to_string : int -> string
   | 0 -> ""
   | _ -> "  " ^ tab_to_string (n-1)
 
+let pp_tuple func tup =
+  match tup with
+  |[] -> "()"
+  |hd::tl -> 
+    "(" ^ (func hd) ^
+    (list_fold (fun elem r -> r ^ "," ^ (func elem)) tl "") ^ ")"
+
+let pp_list func lst =
+  match lst with
+  |[] -> "[]"
+  |hd::tl ->
+    "[" ^ (func hd) ^
+    (list_fold (fun elem r -> r ^ ";" ^ (func elem)) tl "") ^ "]"
+
 let rec pat_to_string : pat -> string
 = fun pat ->
   match pat with
-  |PCtor (x,lst) ->
-    begin match lst with
-      |[] -> x
-      |hd::tl ->
-        x ^ "(" ^ pat_to_string hd ^
-        (list_fold (fun p r -> r^","^(pat_to_string p)) tl "") ^ ")"
-    end
+  |PCtor (x,lst) -> x ^ (if lst=[] then "" else pp_tuple pat_to_string lst)
   | Pats lst ->
     list_fold (fun p r -> r ^ "|"^(pat_to_string p)^" ") lst ""
   | PInt n -> string_of_int n
   | PVar x -> x
   | PBool b -> if (b) then "true" else "false"
-  | PList lst -> 
-    begin match lst with
-      |[] -> "[]"
-      |hd::tl -> "["^(pat_to_string hd)^
-      (list_fold (fun p r -> r^";"^(pat_to_string) p) tl "")^"]"
-    end
-  | PTuple lst -> 
-    begin match lst with
-      |[] -> "()"
-      |hd::tl ->
-        "(" ^ pat_to_string hd ^
-        (list_fold (fun p r -> r^","^(pat_to_string p)) tl "") ^ ")"
-    end
+  | PList lst -> pp_list pat_to_string lst
+  | PTuple lst -> pp_tuple pat_to_string lst
   | PUnder -> "_"
   | PCons lst ->
     begin match lst with
@@ -56,18 +53,8 @@ let rec type_to_string : typ -> string
   | TPoly -> "poly"
   | TBase id -> id
   | TList t -> type_to_string t ^ " list"
-  | TTuple l -> 
-    begin match l with
-      | [] -> "unit"
-      | hd::tl -> "(" ^ type_to_string hd ^
-        (list_fold (fun t r -> r^ "," ^ type_to_string t) tl "")^ ")"
-    end
-  | TCtor (t, l) -> type_to_string t ^ 
-    begin match l with
-      | [] -> ""
-      | hd::tl -> "(" ^ type_to_string hd ^
-        (list_fold (fun t r -> r ^ "," ^ type_to_string t) tl "")^ ")"
-    end
+  | TTuple l -> if(l=[]) then "unit" else pp_tuple type_to_string l
+  | TCtor (t, l) -> type_to_string t ^ (if(l=[]) then "" else pp_tuple type_to_string l)
   | TArr (t1,t2) -> "(" ^ type_to_string t1 ^ " -> " ^ type_to_string t2 ^ ")"
   | TVar x -> x
 
@@ -96,27 +83,9 @@ let rec exp_to_string : exp -> string
   |TRUE -> "true"
   |FALSE -> "false"
   |EVar x -> x
-  |EList lst ->
-    begin match lst with
-    |[] -> "[]"
-    |hd::tl ->
-      "[" ^ exp_to_string hd ^
-      (list_fold (fun t r -> r^";"^ exp_to_string t) tl "") ^ "]"
-    end
-  |ETuple lst ->
-    begin match lst with
-    |[] -> "()"
-    |hd::tl -> 
-      "(" ^ exp_to_string hd ^
-      (list_fold (fun t r -> r^","^ exp_to_string t) tl "") ^ ")"
-    end
-  |ECtor (x,lst) ->  
-    begin match lst with
-    |[] -> x
-    |hd::tl -> 
-      x ^ " (" ^ exp_to_string hd ^
-      (list_fold (fun t r -> r^","^ exp_to_string t) tl "") ^ ")"
-    end
+  |EList lst -> pp_list exp_to_string lst
+  |ETuple lst -> pp_tuple exp_to_string lst
+  |ECtor (x,lst) -> x^ (if lst=[] then "" else pp_tuple exp_to_string lst)
   |ADD (e1,e2) -> "(" ^ exp_to_string e1 ^ " + " ^ exp_to_string e2 ^")"  
   |SUB (e1,e2) -> "(" ^ exp_to_string e1 ^ " - " ^ exp_to_string e2 ^")"  
   |MUL (e1,e2) -> "(" ^ exp_to_string e1 ^ " * " ^ exp_to_string e2 ^")"  
@@ -135,7 +104,7 @@ let rec exp_to_string : exp -> string
   |DOUBLECOLON (e1,e2) -> "(" ^ exp_to_string e1 ^ " :: " ^ exp_to_string e2 ^")"
   |NOT e -> "not (" ^ exp_to_string e ^ ")"
   |EApp (e1,e2) -> 
-     exp_to_string e1 ^ " " ^
+    exp_to_string e1 ^ " " ^
     begin match e2 with
     |EApp _ -> "(" ^ exp_to_string e2 ^ ")"
     |_ -> exp_to_string e2
