@@ -503,8 +503,8 @@ let rec replace_exp' : exp -> exp -> exp -> exp
 	| EFun (a,e) -> EFun(a,replace_exp' e h c)
 	| Hole (n) -> if (e = h) then c else Hole(n)
 	| _ -> e
-and replace_exp_list : exp list -> exp -> exp -> exp list
-= fun lst hole candidate -> list_map (fun e -> replace_exp' e hole candidate) lst
+and replace_exp_list lst hole candidate = 
+	list_map (fun e -> replace_exp' e hole candidate) lst
 
 let rec replace_exp : prog -> exp -> exp -> prog
 = fun decls hole candidate ->
@@ -550,9 +550,12 @@ let rec is_solution : prog -> examples -> bool
 	List.for_all (fun (inputs,output) ->
 		let res_var = "__res__" in
 		let prog' = prog @ [(DLet (res_var,false,[],TPoly,(appify (EVar !Options.opt_entry_func) inputs)))] in
-		let env = Eval.run prog' false in
-		let result = lookup_env res_var env in
-		(result=output)
+		try
+			let env = Eval.run prog' in
+			let result = lookup_env res_var env in
+			(result=output)
+		with 
+		|_ -> false
 	) examples
 )
 
