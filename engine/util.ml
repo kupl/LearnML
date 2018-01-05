@@ -46,6 +46,10 @@ let list_split = List.split
 
 let list_combine = List.combine
 
+let list_hd = List.hd
+
+let list_tl = List.tl
+
 let list_fold2 : ('a -> 'b -> 'c -> 'c) -> 'a list -> 'b list -> 'c -> 'c
 = fun f list1 list2 init ->
   let f' acc a b = f a b acc in

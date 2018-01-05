@@ -9,45 +9,43 @@ let rec tab_to_string : int -> string
   "" ^
   match n with
   | 0 -> ""
-  | _ -> "\t" ^ tab_to_string (n-1)
+  | _ -> "  " ^ tab_to_string (n-1)
 
 let rec pat_to_string : pat -> string
 = fun pat ->
   match pat with
-  PCtor (x,lst) ->
-    let rec f lst =
-    match lst with
-    |[] -> ")"
-    |hd::tl -> pat_to_string hd ^ "," ^ (f tl)
-  in x ^ "(" ^ f lst
+  |PCtor (x,lst) ->
+    begin match lst with
+      |[] -> x
+      |hd::tl ->
+        x ^ "(" ^ pat_to_string hd ^
+        (list_fold (fun p r -> r^","^(pat_to_string p)) tl "") ^ ")"
+    end
   | Pats lst ->
-    let rec f lst =
-    match lst with
-    |[] -> ""
-    |hd::tl -> pat_to_string hd ^ "|" ^ (f tl)
-  in " " ^ f lst
+    list_fold (fun p r -> r ^ "|"^(pat_to_string p)^" ") lst ""
   | PInt n -> string_of_int n
   | PVar x -> x
   | PBool b -> if (b) then "true" else "false"
   | PList lst -> 
-    let rec f lst =
-    match lst with
-    |[] -> "]"
-    |hd::tl -> pat_to_string hd ^ ";" ^ (f tl)
-  in "[" ^ f lst
+    begin match lst with
+      |[] -> "[]"
+      |hd::tl -> "["^(pat_to_string hd)^
+      (list_fold (fun p r -> r^";"^(pat_to_string) p) tl "")^"]"
+    end
   | PTuple lst -> 
-    let rec f lst =
-    match lst with
-    |[] -> ")"
-    |hd::tl -> pat_to_string hd ^ "," ^ (f tl)
-  in "PTuple (" ^ f lst
+    begin match lst with
+      |[] -> "()"
+      |hd::tl ->
+        "(" ^ pat_to_string hd ^
+        (list_fold (fun p r -> r^","^(pat_to_string p)) tl "") ^ ")"
+    end
   | PUnder -> "_"
   | PCons lst ->
-    let rec f lst =
-    match lst with
-    |[] -> (*"\b\b"*)""
-    |hd::tl -> pat_to_string hd ^ "::" ^ (f tl)
-  in (f lst)
+    begin match lst with
+      |[] -> raise (Failure "Pattern Cons does not have arguments")
+      |hd::tl ->
+        (pat_to_string hd)^(list_fold (fun p r -> r^"::"^(pat_to_string p)) tl "")
+    end
 
 let rec typ_list_to_string : typ list -> string
 = fun lst -> 
@@ -67,12 +65,6 @@ let rec typ_list_to_string : typ list -> string
     |TVar x -> x^","
   end ^ typ_list_to_string tl
 
-let rec ctor_list_to_string : ctor list -> string
-= fun lst -> 
-  match lst with
-  |[] -> ""
-  |(id,type_lst)::tl -> "\n|" ^ id ^ " ("^ (typ_list_to_string type_lst)^ ") "^ (ctor_list_to_string tl) 
-
 let rec string_of_type : typ -> string
 = fun ty -> 
   match ty with
@@ -82,26 +74,35 @@ let rec string_of_type : typ -> string
   | TPoly -> "poly"
   | TBase id -> id
   | TList t -> string_of_type t ^ " list"
-  | TTuple l -> string_of_type_list l
-  | TCtor (t, l) -> string_of_type t ^ string_of_type_list l
+  | TTuple l -> 
+    begin match l with
+      | [] -> "unit"
+      | hd::tl -> "(" ^ string_of_type hd ^
+        (list_fold (fun t r -> r^ "," ^ string_of_type t) tl "")^ ")"
+    end
+  | TCtor (t, l) -> string_of_type t ^ 
+    begin match l with
+      | [] -> ""
+      | hd::tl -> "(" ^ string_of_type hd ^
+        (list_fold (fun t r -> r ^ "," ^ string_of_type t) tl "")^ ")"
+    end
   | TArr (t1,t2) -> "(" ^ string_of_type t1 ^ " -> " ^ string_of_type t2 ^ ")"
   | TVar x -> x
 
-and string_of_type_list : typ list -> string
-= fun tl ->
-  "(" ^
-  match tl with
-  | [] -> "\b\b)"
-  | hd::tl -> string_of_type hd ^ ", " ^ string_of_type_list tl
 let rec args_to_string : arg list -> string -> string
 = fun args str ->
-  match args with
-  | [] -> str
-  | (arg, ty)::tl -> 
-    let str = 
-      if (ty=TPoly) then str ^ " " ^ arg
-      else str ^ " (" ^ arg ^ " : " ^ string_of_type ty ^ ")" in
-    args_to_string tl str
+  list_fold (fun (arg,ty) r -> r ^
+    begin match ty with
+      |TPoly -> arg
+      |_ -> " (" ^ arg ^ " : " ^ string_of_type ty ^ ")"
+    end 
+  ) args str
+
+let rec ctor_list_to_string : ctor list -> string
+= fun lst -> 
+  match lst with
+  |[] -> ""
+  |(id,type_lst)::tl -> "\n|" ^ id ^ " ("^ (typ_list_to_string type_lst)^ ") "^ (ctor_list_to_string tl) 
 
 let rec exp_to_string : exp -> string
 = fun exp ->

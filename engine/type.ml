@@ -228,6 +228,7 @@ and cons_to_eqn : pat list -> typ -> TEnv.t -> typ_eqn -> (typ_eqn * TEnv.t)
 =fun pl ty tenv eqns->
   (*pl has two or more elements, its last element is list*)
   match pl with
+  |[] -> raise (Failure "Pattern cons does not have args")
   |[p] -> 
     let (new_eqn, new_env) = pat_to_eqn p (TList ty) tenv in
     (new_eqn@eqns, new_env)
@@ -458,10 +459,10 @@ let rec unify : typ -> typ -> Subst.t -> Subst.t
 
 and unify_list : typ list -> typ list -> Subst.t -> Subst.t
 = fun l1 l2 subst ->
-  if (List.length l1) <> (List.length l2) then raise TypeError else 
   begin match (l1, l2) with
   | ([], []) -> subst
   | ((hd1::tl1),(hd2::tl2)) -> unify_list tl1 tl2 (unify hd1 hd2 subst)
+  | _ -> raise TypeError
   end
 
 let rec unify_all : typ_eqn -> Subst.t -> Subst.t
@@ -584,7 +585,7 @@ let run : prog -> prog
   let _ = start_time:=Sys.time() in
   let _ = tvar_num:=0 in
   let _ = global_pgm:=decls in
-  let tenv = (list_fold type_decl decls TEnv.empty) in
+  let _ = (list_fold type_decl decls TEnv.empty) in
   let _ = hole_tbl:=(table_remove_tpoly !hole_tbl BatMap.empty) in
   let _ = at_hole_ttbl:= (hole_env_remove_tpoly !at_hole_ttbl BatMap.empty) in
 (*  let _ = TEnv.print tenv in*)

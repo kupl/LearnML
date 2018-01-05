@@ -50,10 +50,10 @@ let rec binding_args : arg list -> exp -> exp
 %token TString
 
 %token HOLE       (* ? *)
-%token IMPLIES    (* |> *)
+(* %token IMPLIES    (* |> *) *)
 %token EQ         (* = *)
 %token ARR        (* -> *)
-%token FATARR     (* => *)
+(* %token FATARR     (* => *) *)
 %token COMMA      (* , *)
 %token COLON      (* : *)
 %token SEMI       (* ; *)
@@ -86,8 +86,7 @@ let rec binding_args : arg list -> exp -> exp
 
 %token EOF
 
-%nonassoc ASSIGN MATCH FUN
-%nonassoc IF
+%nonassoc ASSIGN
 %left OR
 %left AND
 %left LESS LESSEQ LARGER LARGEREQ EQ NOTEQ
@@ -95,7 +94,7 @@ let rec binding_args : arg list -> exp -> exp
 %right DOUBLECOLON
 %left PLUS MINUS
 %left STAR DIVIDE MOD
-%left PIPE COMMA
+%left PIPE
 %right UNARY
 
 %start prog
@@ -137,9 +136,9 @@ value:
 value_base:
   | c=INT
     { VInt (c) }
-  | c=TRUE
+  | TRUE
     { VBool (true) }
-  | c=FALSE
+  | FALSE
     { VBool (false) }
   | c=UID
     { VCtor (c, []) }
@@ -208,9 +207,6 @@ letbind:
   | e=exp SEMI SEMI
     { DLet ("@", false, [], TPoly, e)}
 
-user_type:
-  | {}
-
 ctors:  (* NOTE: reversed *)
   | (* empty *)
     { [] }
@@ -246,11 +242,11 @@ typ:
     { t }
 
 typ_base:
-  | d=TBool
+  | TBool
     { TBool }
-  | d=TInt
+  | TInt
     { TInt }
-  | d=TString
+  | TString
     { TString}
   | d=LID
     { TBase d }
@@ -344,9 +340,9 @@ exp_base:
     { Const c }
   | c=STRING
     { String c }
-  | c=TRUE
+  | TRUE
     { TRUE }
-  | c=FALSE
+  | FALSE
     { FALSE }
   | x=LID
     { EVar x }
@@ -410,9 +406,9 @@ branch:
 pat:
   | c=INT
     { PInt (c) }
-  | c=TRUE
+  | TRUE
     { PBool (true) }
-  | c=FALSE
+  | FALSE
     { PBool (false) }
   | c=LID
     { PVar (c) }

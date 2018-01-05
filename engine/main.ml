@@ -13,13 +13,13 @@ let parse_file (f:string) : (examples * prog) =
 
 let run_testcases : prog -> examples -> unit
 =fun prog examples ->
-  List.iter (fun (exps, value) ->
+  List.iter (fun (inputs, output) ->
     let res_var = "__res__" in
-    let prog' = prog @ [(DLet (res_var,false,[],TPoly,(Lang.appify (EVar !opt_entry_func) exps)))] in
+    let prog' = prog @ [(DLet (res_var,false,[],TPoly,(Lang.appify (EVar !opt_entry_func) inputs)))] in
 		let env = Eval.run prog' false in
 		let result_value = Lang.lookup_env res_var env in
       print_endline ("Result: " ^ Print.string_of_value result_value ^ " " ^  
-                     "Expected: " ^ Print.string_of_value value);
+                     "Expected: " ^ Print.string_of_value output);
   ) examples 
 
 let run_prog : prog -> examples -> unit

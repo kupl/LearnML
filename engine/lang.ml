@@ -153,7 +153,6 @@ let rec exp_cost : exp -> int
     |hd::tl -> (exp_cost hd) + (f tl) 
   in 20+ (f l) 
   | Hole n-> 15
-  | _ -> 0
 
 and pat_cost : pat -> int
 = fun pat ->

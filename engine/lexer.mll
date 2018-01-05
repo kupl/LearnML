@@ -28,10 +28,10 @@ let reserved_words : (string * Parser.token) list =
 
 let symbols : (string * Parser.token) list =
   [ ("?", HOLE)
-  ; ("|>", IMPLIES)
+(*; ("|>", IMPLIES) *)
   ; ("=", EQ)
   ; ("->", ARR)
-  ; ("=>", FATARR) 
+(*; ("=>", FATARR) *) 
   ; (",", COMMA)
   ; (":", COLON)
   ; (";", SEMI)

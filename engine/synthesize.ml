@@ -393,45 +393,41 @@ let rec type_directed_set : exp BatSet.t -> typ -> Type.TEnv.t -> id BatSet.t ->
 	)
 
 
-let rec update_exp_components : exp BatSet.t -> exp BatSet.t -> exp BatSet.t
-= fun exp_set result_exp->
-	if(BatSet.is_empty exp_set) then result_exp
-	else
-	(
-		let (exp,exp_set) = (BatSet.pop exp_set) in
-		match exp with
-		| ADD (e1,e2) -> BatSet.add (ADD (gen_hole(),gen_hole())) (update_exp_components exp_set result_exp)
-		| SUB (e1,e2) -> BatSet.add (SUB (gen_hole(),gen_hole())) (update_exp_components exp_set result_exp)
-		| MUL (e1,e2) -> BatSet.add (MUL (gen_hole(),gen_hole())) (update_exp_components exp_set result_exp)
-		| DIV (e1,e2) -> BatSet.add (DIV (gen_hole(),gen_hole())) (update_exp_components exp_set result_exp) 
-		| MOD (e1,e2) -> BatSet.add (MOD (gen_hole(),gen_hole())) (update_exp_components exp_set result_exp)
-		| OR (e1,e2) -> BatSet.add (OR (gen_hole(),gen_hole())) (update_exp_components exp_set result_exp)
-		| AND (e1,e2) -> BatSet.add (AND (gen_hole(),gen_hole())) (update_exp_components exp_set result_exp)
-		| LESS (e1,e2) -> BatSet.add (LESS (gen_hole(),gen_hole())) (update_exp_components exp_set result_exp)
-		| LARGER (e1,e2) -> BatSet.add (LARGER (gen_hole(),gen_hole())) (update_exp_components exp_set result_exp)
-		| EQUAL (e1,e2) -> BatSet.add (EQUAL (gen_hole(),gen_hole())) (update_exp_components exp_set result_exp)
-		| NOTEQ (e1,e2) -> BatSet.add (NOTEQ (gen_hole(),gen_hole())) (update_exp_components exp_set result_exp)
-		| LESSEQ (e1,e2) -> BatSet.add (LESSEQ (gen_hole(),gen_hole())) (update_exp_components exp_set result_exp)
-		| LARGEREQ (e1,e2)  -> BatSet.add (LARGEREQ (gen_hole(),gen_hole())) (update_exp_components exp_set result_exp)
-		| AT (e1,e2) -> BatSet.add (AT (gen_hole(),gen_hole())) (update_exp_components exp_set result_exp)
-		| DOUBLECOLON (e1,e2) -> BatSet.add (DOUBLECOLON (gen_hole(),gen_hole())) (update_exp_components exp_set result_exp)
-		| ELet (a,b,c,d,e1,e2) -> BatSet.add (ELet (a,b,c,d,gen_hole(),gen_hole())) (update_exp_components exp_set result_exp)
-		| EApp (e1,e2) -> BatSet.add (EApp (gen_hole(),gen_hole())) (update_exp_components exp_set result_exp)
-		| MINUS e1 -> BatSet.add (MINUS (gen_hole())) (update_exp_components exp_set result_exp)
-		| NOT e1 -> BatSet.add (NOT (gen_hole())) (update_exp_components exp_set result_exp)
-		| IF (e1,e2,e3) -> BatSet.add (IF (gen_hole(),gen_hole(),gen_hole())) (update_exp_components exp_set result_exp)
-		| ECtor (x,l) -> BatSet.add (ECtor(x,(list_map (fun _ -> gen_hole()) l))) (update_exp_components exp_set result_exp)
-		| EList l -> BatSet.add (EList (list_map (fun _ -> gen_hole()) l)) (update_exp_components exp_set result_exp)
-		| ETuple l-> BatSet.add (ETuple (list_map (fun _ -> gen_hole()) l)) (update_exp_components exp_set result_exp)
-		| EFun (a,e) -> BatSet.add (EFun (a,gen_hole())) (update_exp_components exp_set result_exp)
-		| EMatch (e,bl) ->
-			let (pl,el) = list_split bl in
-			BatSet.add (EMatch (gen_hole(),(List.combine pl (list_map (fun _ -> gen_hole()) el)))) (update_exp_components exp_set result_exp)
-		| x -> BatSet.add x (update_exp_components exp_set result_exp)
-	)
+let rec update_components : exp -> exp
+= fun exp->
+	match exp with
+	| ADD (e1,e2) -> ADD (gen_hole(),gen_hole())
+	| SUB (e1,e2) -> SUB (gen_hole(),gen_hole())
+	| MUL (e1,e2) -> MUL (gen_hole(),gen_hole())
+	| DIV (e1,e2) -> DIV (gen_hole(),gen_hole())
+	| MOD (e1,e2) -> MOD (gen_hole(),gen_hole())
+	| OR (e1,e2) -> OR (gen_hole(),gen_hole())
+	| AND (e1,e2) -> AND (gen_hole(),gen_hole())
+	| LESS (e1,e2) -> LESS (gen_hole(),gen_hole())
+	| LARGER (e1,e2) -> LARGER (gen_hole(),gen_hole())
+	| EQUAL (e1,e2) -> EQUAL (gen_hole(),gen_hole())
+	| NOTEQ (e1,e2) -> NOTEQ (gen_hole(),gen_hole())
+	| LESSEQ (e1,e2) -> LESSEQ (gen_hole(),gen_hole())
+	| LARGEREQ (e1,e2)  -> LARGEREQ (gen_hole(),gen_hole())
+	| AT (e1,e2) -> AT (gen_hole(),gen_hole())
+	| DOUBLECOLON (e1,e2) -> DOUBLECOLON (gen_hole(),gen_hole())
+	| ELet (f,is_rec,xs,t,e1,e2) ->ELet (f,is_rec,xs,t,gen_hole(),gen_hole())
+	| EApp (e1,e2) -> EApp (gen_hole(),gen_hole())
+	| MINUS e1 -> MINUS (gen_hole ())
+	| NOT e1 -> NOT (gen_hole ())
+	| IF (e1,e2,e3) -> IF (gen_hole (),gen_hole (),gen_hole ())
+	| ECtor (x,l) -> ECtor(x,(list_map (fun _ -> gen_hole()) l))
+	| EList l -> EList (list_map (fun _ -> gen_hole()) l)
+	| ETuple l-> ETuple (list_map (fun _ -> gen_hole()) l)
+	| EFun (a,e) -> EFun (a,gen_hole())
+	| EMatch (e,bl) ->
+		let (pl,el) = list_split bl in
+		EMatch (gen_hole(),(list_combine pl (list_map (fun _ -> gen_hole()) el)))
+	| _ -> exp 
+	
 
-let rec expholes : exp -> exp BatSet.t -> exp BatSet.t
-= fun exp set ->
+let rec expholes : exp -> exp BatSet.t
+= fun exp ->
 	match exp with
 	| ADD (e1,e2) 
 	| SUB (e1,e2)
@@ -447,75 +443,68 @@ let rec expholes : exp -> exp BatSet.t -> exp BatSet.t
 	| LESSEQ (e1,e2)
 	| LARGEREQ (e1,e2) 
 	| AT (e1,e2) 
-	| DOUBLECOLON (e1,e2)  -> BatSet.union (expholes e1 set) (expholes e2 set)
-	| ELet (_,_,_,_,e1,e2)  -> BatSet.union (expholes e1 set) (expholes e2 set)
-	| EApp (e1,e2) -> BatSet.union (expholes e1 set) (expholes e2 set)
+	| DOUBLECOLON (e1,e2)
+	| ELet (_,_,_,_,e1,e2)
+	| EApp (e1,e2) -> BatSet.union (expholes e1) (expholes e2)
 	| MINUS e1
-  	| NOT e1 -> expholes e1 set
+  | NOT e1 
+  | EFun (_,e1) -> expholes e1
 	| IF (e1,e2,e3) -> 
-		let set = expholes e1 set in
-		let set = expholes e2 set in
-		expholes e3 set
-	| ECtor (x,l) -> list_fold expholes l set
+		BatSet.union (expholes e1) (BatSet.union (expholes e2) (expholes e3))
+	| ECtor (_,l) 
 	| EList l 
-	| ETuple l -> list_fold expholes l set
+	| ETuple l -> list_fold (fun e r -> BatSet.union (expholes e) r) l BatSet.empty
 	| EMatch (e,bl) ->
-		let (pl,el) = List.split bl in
-		let set = list_fold expholes el set in
-		expholes e set
-	| EFun (a,e) -> expholes e set
-	| Hole _ -> BatSet.add exp set
-	|_ -> set
+		BatSet.union (expholes e)
+		(list_fold (fun (_,e) r -> BatSet.union (expholes e) r) bl BatSet.empty)
+	| Hole _ -> BatSet.singleton exp
+	|_ -> BatSet.empty
 
 let find_expholes : prog -> exp BatSet.t
 = fun decls -> 
-	let f : decl -> exp BatSet.t -> exp BatSet.t 
-	= fun decl set->
+	list_fold(fun decl set ->
 		match decl with
 		| DData _ -> set
-		| DLet (x,is_rec,args,typ,exp) -> expholes exp set
-	in (list_fold f decls BatSet.empty)
+		| DLet (x,is_rec,args,typ,exp) -> BatSet.union (expholes exp) set
+	) decls BatSet.empty
 
 let is_closed : prog -> bool
 = fun decls -> BatSet.is_empty (find_expholes decls)
 
 let rec replace_exp' : exp -> exp -> exp -> exp
-= fun e hole candidate ->
+= fun e h c ->
 	match e with
-	| ADD (e1,e2) -> ADD(replace_exp' e1 hole candidate,replace_exp' e2 hole candidate)
-	| SUB (e1,e2) -> SUB(replace_exp' e1 hole candidate,replace_exp' e2 hole candidate)
-	| MUL (e1,e2) -> MUL(replace_exp' e1 hole candidate,replace_exp' e2 hole candidate)
-	| DIV (e1,e2) -> DIV(replace_exp' e1 hole candidate,replace_exp' e2 hole candidate)
-	| MOD (e1,e2) -> MOD(replace_exp' e1 hole candidate,replace_exp' e2 hole candidate)
-	| OR (e1,e2) -> OR(replace_exp' e1 hole candidate,replace_exp' e2 hole candidate)
-	| AND (e1,e2) -> AND(replace_exp' e1 hole candidate,replace_exp' e2 hole candidate)
-	| LESS (e1,e2) -> LESS(replace_exp' e1 hole candidate,replace_exp' e2 hole candidate)
-	| LARGER (e1,e2) -> LARGER(replace_exp' e1 hole candidate,replace_exp' e2 hole candidate)
-	| EQUAL (e1,e2) -> EQUAL(replace_exp' e1 hole candidate,replace_exp' e2 hole candidate)
-	| NOTEQ (e1,e2) -> NOTEQ(replace_exp' e1 hole candidate,replace_exp' e2 hole candidate)
-	| LESSEQ (e1,e2) -> LESSEQ(replace_exp' e1 hole candidate,replace_exp' e2 hole candidate)
-	| LARGEREQ (e1,e2) -> LARGEREQ(replace_exp' e1 hole candidate,replace_exp' e2 hole candidate)
-	| AT (e1,e2) -> AT(replace_exp' e1 hole candidate,replace_exp' e2 hole candidate)
-	| DOUBLECOLON (e1,e2) -> DOUBLECOLON(replace_exp' e1 hole candidate,replace_exp' e2 hole candidate)
-	| ELet (a,b,c,d,e1,e2) -> ELet(a,b,c,d,replace_exp' e1 hole candidate,replace_exp' e2 hole candidate) 
-	| EApp (e1,e2) -> EApp(replace_exp' e1 hole candidate,replace_exp' e2 hole candidate)
-	| NOT e1 -> NOT(replace_exp' e1 hole candidate)
-	| MINUS e1 -> MINUS(replace_exp' e1 hole candidate)
-  | IF (e1,e2,e3) -> IF(replace_exp' e1 hole candidate,replace_exp' e2 hole candidate,replace_exp' e3 hole candidate)
-	| ECtor (x,l) -> ECtor(x,replace_exp_list l hole candidate)
-	| EList l -> EList (replace_exp_list l hole candidate)
-	| ETuple l -> ETuple (replace_exp_list l hole candidate)
+	| ADD (e1,e2) -> ADD(replace_exp' e1 h c,replace_exp' e2 h c)
+	| SUB (e1,e2) -> SUB(replace_exp' e1 h c,replace_exp' e2 h c)
+	| MUL (e1,e2) -> MUL(replace_exp' e1 h c,replace_exp' e2 h c)
+	| DIV (e1,e2) -> DIV(replace_exp' e1 h c,replace_exp' e2 h c)
+	| MOD (e1,e2) -> MOD(replace_exp' e1 h c,replace_exp' e2 h c)
+	| OR (e1,e2) -> OR(replace_exp' e1 h c,replace_exp' e2 h c)
+	| AND (e1,e2) -> AND(replace_exp' e1 h c,replace_exp' e2 h c)
+	| LESS (e1,e2) -> LESS(replace_exp' e1 h c,replace_exp' e2 h c)
+	| LARGER (e1,e2) -> LARGER(replace_exp' e1 h c,replace_exp' e2 h c)
+	| EQUAL (e1,e2) -> EQUAL(replace_exp' e1 h c,replace_exp' e2 h c)
+	| NOTEQ (e1,e2) -> NOTEQ(replace_exp' e1 h c,replace_exp' e2 h c)
+	| LESSEQ (e1,e2) -> LESSEQ(replace_exp' e1 h c,replace_exp' e2 h c)
+	| LARGEREQ (e1,e2) -> LARGEREQ(replace_exp' e1 h c,replace_exp' e2 h c)
+	| AT (e1,e2) -> AT(replace_exp' e1 h c,replace_exp' e2 h c)
+	| DOUBLECOLON (e1,e2) -> DOUBLECOLON(replace_exp' e1 h c,replace_exp' e2 h c)
+	| ELet (f,is_rec,xs,t,e1,e2) -> ELet(f,is_rec,xs,t,(replace_exp' e1 h c),replace_exp' e2 h c) 
+	| EApp (e1,e2) -> EApp(replace_exp' e1 h c,replace_exp' e2 h c)
+	| NOT e1 -> NOT(replace_exp' e1 h c)
+	| MINUS e1 -> MINUS(replace_exp' e1 h c)
+  | IF (e1,e2,e3) -> IF(replace_exp' e1 h c,replace_exp' e2 h c,replace_exp' e3 h c)
+	| ECtor (x,l) -> ECtor(x,replace_exp_list l h c)
+	| EList l -> EList (replace_exp_list l h c)
+	| ETuple l -> ETuple (replace_exp_list l h c)
 	| EMatch (e,bl) ->
 		let (pl,el) = List.split bl in
-		EMatch((replace_exp' e hole candidate),List.combine pl (replace_exp_list el hole candidate))
-	| EFun (a,e) -> EFun(a,replace_exp' e hole candidate)
-	| Hole (n) -> if (e = hole) then candidate else Hole(n)
+		EMatch((replace_exp' e h c),List.combine pl (replace_exp_list el h c))
+	| EFun (a,e) -> EFun(a,replace_exp' e h c)
+	| Hole (n) -> if (e = h) then c else Hole(n)
 	| _ -> e
 and replace_exp_list : exp list -> exp -> exp -> exp list
-= fun lst hole candidate ->
-	match lst with
-	[] -> []
-	|hd::tl -> (replace_exp' hd hole candidate) :: (replace_exp_list tl hole candidate)
+= fun lst hole candidate -> list_map (fun e -> replace_exp' e hole candidate) lst
 
 let rec replace_exp : prog -> exp -> exp -> prog
 = fun decls hole candidate ->
@@ -538,8 +527,9 @@ let gen_exp_nextstates : exp BatSet.t -> (Workset.work * exp) -> Workset.work Ba
 	let candidates = BatSet.fold (fun v r -> BatSet.add (EVar v) r) var_set candidates in
 	let nextstates = type_directed_set candidates hole_type env var_set (rank,prog,v,h_t,h_e) in
 	(*let candidates = BatSet.fold (fun (e,_,_,_) result-> BatSet.add e result ) nextstates BatSet.empty in*)
-	let nextstates = BatSet.map (fun (e,v,h_t,h_e)-> (rank,replace_exp prog hole e,BatMap.remove n v,BatMap.remove n h_t,BatMap.remove n h_e)) nextstates in
-	nextstates
+	BatSet.map (fun (e,v,h_t,h_e)-> 
+		(rank,replace_exp prog hole e,BatMap.remove n v,BatMap.remove n h_t,BatMap.remove n h_e)
+	) nextstates 
 
 let next_of_exp : components -> (Workset.work * exp) -> Workset.work BatSet.t
 = fun exp_set (ranked_prog,exp_hole) ->
@@ -557,18 +547,13 @@ let iter = ref 0
 let rec is_solution : prog -> examples -> bool
 = fun prog examples ->
 (
-	match examples with
-	|[] -> true
-	|(exp,value)::tl ->
-	(
-		let result_prog = prog@[(DLet ("result",false,[],TPoly,(appify (EVar "f") exp)))] in
-		try
-			let result_env = Eval.run result_prog false in
-			let result_value = lookup_env "result" (result_env) in
-			if(result_value=value) then (is_solution prog tl) else false
-		with
-		| _ -> false
-	)
+	List.for_all (fun (inputs,output) ->
+		let res_var = "__res__" in
+		let prog' = prog @ [(DLet (res_var,false,[],TPoly,(appify (EVar !Options.opt_entry_func) inputs)))] in
+		let env = Eval.run prog' false in
+		let result = lookup_env res_var env in
+		(result=output)
+	) examples
 )
 
 let count = ref 0
@@ -593,7 +578,7 @@ let rec work : Workset.t -> components -> examples -> prog option
 			else
 				work remaining_workset exp_set examples
 	  else
-	  let exp_set = (update_exp_components exp_set BatSet.empty) in
+	  let exp_set = BatSet.map update_components exp_set in
     let nextstates = next (rank,prog,v,h_t,h_e) exp_set in
 	  let new_workset = BatSet.fold Workset.add nextstates remaining_workset in
 	  	work new_workset exp_set examples
