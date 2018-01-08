@@ -1,6 +1,6 @@
 open Lang
 open Util
-open Symbol_lang
+open Label_lang
 
 (*****************************)
 (********language*************)
@@ -261,29 +261,11 @@ let rec labeled_exp_to_string : labeled_exp -> string
     let rec f lst =
     match lst with
     |[] -> ""
-    |(pat,exp)::tl -> "\n|" ^ labeled_pat_to_string pat ^ " -> " ^ labeled_exp_to_string exp ^ (f tl)
+    |(pat,exp)::tl -> "\n|" ^ pat_to_string pat ^ " -> " ^ labeled_exp_to_string exp ^ (f tl)
   in "match " ^ labeled_exp_to_string e ^ " with " ^ f lst
   |_ -> ""
   end ^ ")"
 
-
-and labeled_pat_to_string : labeled_pat -> string
-= fun (n,pat) ->
-  "( " ^ (string_of_int n) ^ ", "^ 
-  begin match pat with
-  | PCtor (x,lst) -> x ^ (if lst=[] then "" else pp_tuple labeled_pat_to_string lst)
-  | Pats lst -> list_fold (fun p r->r^"|"^labeled_pat_to_string p^" ") lst ""
-  | PInt n -> string_of_int n
-  | PVar x -> x
-  | PBool b -> if (b) then "true" else "false"
-  | PList lst -> pp_list labeled_pat_to_string lst 
-  | PTuple lst -> pp_tuple labeled_pat_to_string lst
-  | PUnder -> "_"
-  | PCons lst ->
-    match lst with
-    |[] -> raise (Failure "Pattern Cons does not have operands")
-    |hd::tl -> labeled_pat_to_string hd ^ (list_fold (fun p r -> r ^ "::" ^labeled_pat_to_string p) tl "")
- end ^ ")"
 let rec labeled_decl_to_string : labeled_decl -> string -> string
 = fun decl str ->
   match decl with
@@ -317,43 +299,13 @@ let rec labeled_value_to_string : labeled_value -> string
   match v with
   | VInt n -> (string_of_int n)
   | VBool b -> if b then "true" else "false"
+  | VString str -> str
   | VList vs -> "[" ^ (list_fold (fun x str -> (labeled_value_to_string x) ^ ";" ^ str) vs "") ^"]" 
   | VTuple vs -> "(" ^ (list_fold (fun x str -> (labeled_value_to_string x) ^ "," ^ str) vs "") ^")" 
   | VCtor (x, vs) -> x ^ "(" ^ (list_fold (fun x str -> (labeled_value_to_string x) ^ "," ^ str) vs "") ^")" 
-  | VFun (x, exp, lenv, senv) -> "VFun" ^ x
-  | VFunRec (f, x, exp, lenv, senv) -> "VFun" ^ f ^ x
+  | VFun (x, exp, lenv) -> "VFun" ^ x
+  | VFunRec (f, x, exp, lenv) -> "VFun" ^ f ^ x
   | VHole n -> "?"
-
-let rec string_of_symbol : symbolic_value -> string
-= fun symbol ->
-  match symbol with
-  | Int n -> string_of_int n
-  | Bool b -> string_of_bool b
-  | Str x -> x
-  | Symbol n -> "e" ^ string_of_int n
-  | List es -> pp_list string_of_symbol es
-  | Tuple es -> pp_tuple string_of_symbol es
-  | Ctor (x, es) -> x ^ (if es=[] then "" else pp_tuple string_of_symbol es)
-  | Fun (x, e, closure) -> "Fun " ^ x
-  | FunRec (f, x, e, closure) -> "FunRec " ^ f ^ " " ^ x
-  | Add (e1, e2) -> "(" ^ string_of_symbol e1 ^ " + " ^ string_of_symbol e2 ^ ")"
-  | Sub (e1, e2) -> "(" ^ string_of_symbol e1 ^ " - " ^ string_of_symbol e2 ^ ")"
-  | Mul (e1, e2) -> "(" ^ string_of_symbol e1 ^ " * " ^ string_of_symbol e2 ^ ")"
-  | Div (e1, e2) -> "(" ^ string_of_symbol e1 ^ " / " ^ string_of_symbol e2 ^ ")"
-  | Mod (e1, e2) -> "(" ^ string_of_symbol e1 ^ " % " ^ string_of_symbol e2 ^ ")"
-  | Minus e -> " - " ^ "(" ^ string_of_symbol e ^ ")"
-  | Not e -> " not " ^ "(" ^ string_of_symbol e ^ ")"
-  | Or (e1, e2) -> "(" ^ string_of_symbol e1 ^ " || " ^ string_of_symbol e2 ^ ")"
-  | And (e1, e2) -> "(" ^ string_of_symbol e1 ^ " && " ^ string_of_symbol e2 ^ ")"
-  | Lt (e1, e2) -> "(" ^ string_of_symbol e1 ^ " < " ^ string_of_symbol e2 ^ ")"
-  | Gt (e1, e2) -> "(" ^ string_of_symbol e1 ^ " > " ^ string_of_symbol e2 ^ ")"
-  | Le (e1, e2) -> "(" ^ string_of_symbol e1 ^ " <= " ^ string_of_symbol e2 ^ ")"
-  | Ge (e1, e2) -> "(" ^ string_of_symbol e1 ^ " >= " ^ string_of_symbol e2 ^ ")"
-  | Eq (e1, e2) -> "(" ^ string_of_symbol e1 ^ " = " ^ string_of_symbol e2 ^ ")"
-  | NEq (e1, e2) -> "(" ^ string_of_symbol e1 ^ " != " ^ string_of_symbol e2 ^ ")"
-  | At (e1, e2) -> string_of_symbol e1 ^ " @ " ^ string_of_symbol e2
-  | Cons (e1, e2) -> string_of_symbol e1 ^ " :: " ^ string_of_symbol e2
-  | If (e1, e2, e3) -> "if (" ^ string_of_symbol e1 ^ ", " ^ string_of_symbol e2 ^ ", " ^ string_of_symbol e3 ^ ")"
 
 let print_header str = 
  let _ = print_endline "-----------------------------" in
