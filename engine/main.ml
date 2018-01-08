@@ -33,7 +33,7 @@ let fix_with_solution : prog -> prog -> examples -> unit
   print_header "Solution"; Print.print_pgm solution;
   print_header "Submission"; Print.print_pgm submission;
   print_header "Test-cases"; print_examples examples;
-(*  let ranked_prog_set = Localize.localization submission examples in
+  let ranked_prog_set = Localize.localization submission examples in
   let initial_set = BatSet.map
    (
       fun (n,prog)->
@@ -46,7 +46,7 @@ let fix_with_solution : prog -> prog -> examples -> unit
     ) ranked_prog_set in
   let components = Comp.extract_component solution in
   let correct_program = Synthesize.hole_synthesize submission initial_set components examples in
-*)  ()
+  ()
  
 let fix_without_solution : prog -> examples -> unit
 =fun submission examples -> () (* TODO *)
