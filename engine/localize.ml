@@ -28,7 +28,7 @@ let rec is_solution : prog -> examples -> bool
   (
     let result_prog = prog@[(DLet ("result",false,[],TPoly,(appify (EVar "f") exp)))] in
     try
-      let result_env = Eval.run result_prog false in
+      let result_env = Eval.run result_prog in
       let result_value = lookup_env "result" (result_env) in
       if(result_value=value) then (is_solution prog tl) else false
     with
@@ -370,7 +370,7 @@ let gen_candidate_pgm : prog -> examples -> (int * prog) BatSet.t
       let hole_pgm = gen_hole_pgm l_pgm label in
       let candidate_pgm = unlabeling_prog hole_pgm in
       let rank' = cost candidate_pgm in
-      if (is_closed candidate_pgm) then set else extend_set (rank-rank', candidate_pgm) set
+      if (Synthesize.is_closed candidate_pgm) then set else extend_set (rank-rank', candidate_pgm) set
   ) label_set empty_set
   in
   let _ = print_endline (string_of_int (BatSet.cardinal candidate_set)) in

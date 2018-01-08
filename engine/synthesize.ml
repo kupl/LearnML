@@ -588,7 +588,8 @@ let rec work : Workset.t -> components -> examples -> prog option
 
 let hole_synthesize : prog -> Workset.work BatSet.t -> components -> examples ->prog option
 = fun pgm pgm_set components examples -> 
-	let _ = Print.print_component components in
+	Print.print_header "expression component set is below";
+	Print.print_exp_set components;
 	let workset = BatSet.fold (fun t set-> Workset.add t set) pgm_set Workset.empty in
 	let result = work workset components examples in
 	let result_prog_string = 

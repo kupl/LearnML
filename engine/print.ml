@@ -168,90 +168,36 @@ let rec value_to_string : value -> string
   | VInt n1 -> string_of_int n1
   | VBool b1 -> if b1 = true then "true" else "false"
   | VString str -> str 
-  | VList l1 -> if (l1=[]) then "list []" else "list [" ^ string_of_list l1 ^ "]"
-  | VTuple l1 -> "Tuple (" ^ string_of_tuple l1 ^ ")"
-  | VCtor (id,l1) -> "VCtor " ^ id ^ "(" ^ string_of_tuple l1 ^ ")"
-  | VFun  (id,exp,env) -> "VFun " ^ id  ^ " [env" ^ env_to_string env ^"]"
-  | VFunRec (id1,id2,exp,env) -> "VFunRec " ^ id1 ^ " " ^ id2 ^ " [env" ^ env_to_string env ^"]"
+  | VList l1 -> pp_list value_to_string l1
+  | VTuple l1 -> pp_tuple value_to_string l1
+  | VCtor (id,l1) -> id ^ (if(l1=[]) then "" else pp_tuple value_to_string l1)
+  | VFun  (id,exp,env) -> "fun "^id^"->"^(exp_to_string exp)
+  | VFunRec (id1,id2,exp,env) -> "VFunRec ("^id1^","^id2^","^exp_to_string exp^",env)" 
   | _ -> "?"
 
-and string_of_list l1 =
-  match l1 with
-  | [] -> "\b"
-  | hd::tl -> (value_to_string hd) ^ ";" ^ (string_of_list tl)
+let env_to_string env = BatMap.foldi (fun x v r -> r^" " ^x ^ "|-> " ^ value_to_string v) env ""
 
-and string_of_tuple l1 =
-  match l1 with
-  | [] -> "\b"
-  | hd::tl -> (value_to_string hd) ^ "," ^ (string_of_tuple tl)
-
-and env_to_string env =
-  if (BatMap.is_empty env) then ""
-  else(
-    let ((x,v),env1) = BatMap.pop env in " " ^ x ^ "|-> " ^ value_to_string v ^ env_to_string env1
-  )
-
-and fun_to_string l1 =
-  match l1 with
-  | [] -> " "
-  | hd::tl -> let (v1,v2) = hd in "(" ^ value_to_string v1 ^ "," ^ value_to_string v2 ^ ")"^ fun_to_string tl 
-
-and printEnv : env -> unit
-  =fun env -> 
-      BatMap.iter (fun x v -> print_endline (x ^ " |-> " ^ value_to_string v)) env
+let print_env : env -> unit
+= fun env -> print_endline (env_to_string env)
 
 let print_exp : exp -> unit
 = fun exp -> print_endline (exp_to_string exp)
 
-let rec print_exp_set : exp BatSet.t -> unit
-= fun exps ->
-  if (BatSet.is_empty exps) then ()
-  else
-    let (exp,exps) = BatSet.pop exps in
-    let _ = print_exp exp in
-    print_exp_set exps
-
-let print_pat : pat -> unit
-= fun pat -> print_endline (pat_to_string pat)
-
-let rec print_pat_set : pat BatSet.t -> unit
-= fun pats ->
-  if (BatSet.is_empty pats) then ()
-  else
-    let (pat,pats) = BatSet.pop pats in
-    let _ = print_pat pat in
-    print_pat_set pats
-
-
+let print_exp_set : exp BatSet.t -> unit
+= fun exps -> BatSet.iter print_exp exps
 
 let rec print_pgm : prog -> unit
 = fun pgm ->
   print_endline (program_to_string pgm)
 
-let print_component : components -> unit
-= fun exp_set ->
-  print_endline ("-----------------------------");
-  print_endline ("expression component set is below");
-  print_endline ("-----------------------------");
-  print_exp_set exp_set
-  
-
 let rec print_examples : examples -> unit
-= fun examples ->
-  match examples with
-  |[] -> ()
-  |(exp,value)::tl -> 
+= fun examples -> List.iter 
   (
-    let str_value = (value_to_string value) in
-    let rec f l =
-    match l with
-    [] -> ""
-    |hd::tl -> exp_to_string hd ^ " " ^ f tl in
-    let str_exp = f exp in
-    let _ =  (print_string (str_exp ^ " -> ")) in
-    let _ = print_endline str_value in
-    print_examples tl
-  )
+    fun (i,o) -> 
+      let input_string = list_fold (fun e r-> r ^ exp_to_string e ^ " " ) i "" in
+      let output_string = value_to_string o in
+      print_endline(input_string ^ "-> "^output_string)
+  ) examples
 
 let rec labeled_exp_to_string : labeled_exp -> string
 = fun (n,exp) ->
@@ -261,26 +207,9 @@ let rec labeled_exp_to_string : labeled_exp -> string
   |TRUE -> "true"
   |FALSE -> "false"
   |EVar x -> x
-  |EList lst ->
-    if (lst=[]) then "[]" else
-    let rec f lst =
-    match lst with
-    |[] -> "\b]"
-    |hd::tl -> labeled_exp_to_string hd ^ ";" ^ (f tl)
-  in "[" ^ f lst
-  |ETuple lst ->
-    if (lst=[]) then "()" else
-    let rec f lst =
-    match lst with
-    |[] -> "\b)"
-    |hd::tl -> labeled_exp_to_string hd ^ "," ^ (f tl)
-  in "(" ^ f lst
-  |ECtor (x,lst) ->
-    let rec f lst =
-    match lst with
-    |[] -> ")"
-    |hd::tl -> labeled_exp_to_string hd ^ "," ^ (f tl)
-  in x^" (" ^ f lst
+  |EList lst -> pp_list labeled_exp_to_string lst
+  |ETuple lst -> pp_tuple labeled_exp_to_string lst
+  |ECtor (x,lst) -> x ^ (if lst=[] then "" else pp_tuple labeled_exp_to_string lst)
   |ADD (e1,e2) -> "(" ^ labeled_exp_to_string e1 ^ " + " ^ labeled_exp_to_string e2 ^")"  
   |SUB (e1,e2) -> "(" ^ labeled_exp_to_string e1 ^ " - " ^ labeled_exp_to_string e2 ^")"  
   |MUL (e1,e2) -> "(" ^ labeled_exp_to_string e1 ^ " * " ^ labeled_exp_to_string e2 ^")"  
@@ -331,40 +260,18 @@ and labeled_pat_to_string : labeled_pat -> string
 = fun (n,pat) ->
   "( " ^ (string_of_int n) ^ ", "^ 
   begin match pat with
-  PCtor (x,lst) ->
-    let rec f lst =
-    match lst with
-    |[] -> ")"
-    |hd::tl -> labeled_pat_to_string hd ^ "," ^ (f tl)
-  in x ^ "(" ^ f lst
-  | Pats lst ->
-    let rec f lst =
-    match lst with
-    |[] -> ""
-    |hd::tl -> labeled_pat_to_string hd ^ "|" ^ (f tl)
-  in " " ^ f lst
+  | PCtor (x,lst) -> x ^ (if lst=[] then "" else pp_tuple labeled_pat_to_string lst)
+  | Pats lst -> list_fold (fun p r->r^"|"^labeled_pat_to_string p^" ") lst ""
   | PInt n -> string_of_int n
   | PVar x -> x
   | PBool b -> if (b) then "true" else "false"
-  | PList lst -> 
-    let rec f lst =
-    match lst with
-    |[] -> "]"
-    |hd::tl -> labeled_pat_to_string hd ^ ";" ^ (f tl)
-  in "[" ^ f lst
-  | PTuple lst -> 
-    let rec f lst =
-    match lst with
-    |[] -> ")"
-    |hd::tl -> labeled_pat_to_string hd ^ "," ^ (f tl)
-  in "PTuple (" ^ f lst
+  | PList lst -> pp_list labeled_pat_to_string lst 
+  | PTuple lst -> pp_tuple labeled_pat_to_string lst
   | PUnder -> "_"
   | PCons lst ->
-    let rec f lst =
     match lst with
-    |[] -> "\b\b"
-    |hd::tl -> labeled_pat_to_string hd ^ "::" ^ (f tl)
-  in (f lst)
+    |[] -> raise (Failure "Pattern Cons does not have operands")
+    |hd::tl -> labeled_pat_to_string hd ^ (list_fold (fun p r -> r ^ "::" ^labeled_pat_to_string p) tl "")
  end ^ ")"
 let rec labeled_decl_to_string : labeled_decl -> string -> string
 = fun decl str ->
@@ -414,30 +321,9 @@ let rec string_of_symbol : symbolic_value -> string
   | Bool b -> string_of_bool b
   | Str x -> x
   | Symbol n -> "e" ^ string_of_int n
-  | List es -> 
-    let rec f lst =
-      match lst with
-      |[] -> ""
-      |[a] -> string_of_symbol a
-      |hd::tl -> string_of_symbol hd ^ ";" ^ (f tl)
-    in
-    "[" ^ f es ^ "]"
-  | Tuple es ->
-    let rec f lst =
-      match lst with
-      |[] -> ""
-      |[a] -> string_of_symbol a
-      |hd::tl -> string_of_symbol hd ^ "," ^ (f tl)
-    in
-    "(" ^ f es ^ ")"
-  | Ctor (x, es) ->
-    let rec f lst =
-      match lst with
-      |[] -> ""
-      |[a] -> string_of_symbol a
-      |hd::tl -> string_of_symbol hd ^ "," ^ (f tl)
-    in
-    x ^ " (" ^ f es ^ ")"
+  | List es -> pp_list string_of_symbol es
+  | Tuple es -> pp_tuple string_of_symbol es
+  | Ctor (x, es) -> x ^ (if es=[] then "" else pp_tuple string_of_symbol es)
   | Fun (x, e, closure) -> "Fun " ^ x
   | FunRec (f, x, e, closure) -> "FunRec " ^ f ^ " " ^ x
   | Add (e1, e2) -> "(" ^ string_of_symbol e1 ^ " + " ^ string_of_symbol e2 ^ ")"
