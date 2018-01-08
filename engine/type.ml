@@ -9,11 +9,6 @@ type hole_table = (int, typ) BatMap.t
 exception TypeError
 
 let start_time = ref 0.0
-let global_pgm = ref []
-
-
-let gen_eqn_time = ref 0.0
-let solve_time = ref 0.0
 
 let hole_map = ref BatMap.empty
 let hole_tbl = ref BatMap.empty
@@ -76,32 +71,15 @@ let fresh_tvar () = (tvar_num := !tvar_num + 1; (TVar ("#" ^ string_of_int !tvar
 (* Utility functions *)
 (*********************)
 
-let arg_to_typ (arg_id,arg_typ) = arg_typ
+let rec args_to_env args tenv = list_fold (fun arg r -> TEnv.extend arg r) args tenv
 
-let arg_to_id (arg_id,arg_typ) = arg_id 
-
-let rec body_of_arr : typ -> typ
-=fun tarr ->
-  match tarr with
-  |TArr (t1, t2) -> body_of_arr t2
-  |_ -> tarr
-  
-let ctor_to_typ (tbase, tl) = tl
-
-let ctor_to_id (tbase, tl) = tbase
-
-let rec args_to_env args tenv =
-  match args with
-  |[] -> tenv
-  |hd::tl -> args_to_env tl (TEnv.extend (arg_to_id hd, arg_to_typ hd) tenv)
-
-let rec args_to_arr args ty tenv =
+let rec args_to_arr args ty tenv = 
   match args with
   |[] -> (ty,tenv)
   |hd::tl -> 
-    let arg_typ = arg_to_typ hd in
+    let arg_typ = snd hd in
     let (args_typ,tenv) = (args_to_arr tl ty tenv) in
-    ((TArr (arg_typ,args_typ)),(TEnv.extend (arg_to_id hd, arg_typ) tenv))
+    ((TArr (arg_typ,args_typ)),(TEnv.extend hd tenv))
 
 let rec tuple_to_eqn : exp list -> TEnv.t -> typ list -> typ_eqn -> (typ list * typ_eqn)
 = fun el tenv tl eqns ->
@@ -213,15 +191,6 @@ and branch_to_eqn : branch list -> typ -> typ -> TEnv.t -> typ_eqn
 
 and gen_equations : TEnv.t -> exp -> typ -> typ_eqn 
 = fun tenv e ty ->
-
-  if(Sys.time()-. !start_time > 0.1) then 
-    (
-    (*print_endline("-----------gen----------");
-    print_endline(Print.program_to_string !global_pgm);
-    print_endline("---------------------");
-    exit 0;*)
-    raise TypeError)
-  else
   match e with 
     (*base*)
     | Const n -> (ty, TInt)::[]
@@ -236,7 +205,7 @@ and gen_equations : TEnv.t -> exp -> typ -> typ_eqn
         let t1 = fresh_tvar() in
         (ty, TList t1)::((gen_equations tenv hd t1)@(gen_equations tenv (EList tl) (TList t1)))
     end
-    | ETuple l ->
+    | ETuple l -> 
     begin match l with
       |[] -> (ty, TTuple [])::[]
       |hd::tl -> 
@@ -272,7 +241,7 @@ and gen_equations : TEnv.t -> exp -> typ -> typ_eqn
       (ty, TBool) :: ((gen_equations tenv e1 t1)@(gen_equations tenv e2 t1))
     (* lexp *)
     | AT (e1, e2) ->
-      let t1 = fresh_tvar() in
+      let t1 = TList (fresh_tvar()) in
       (ty, t1) :: ((gen_equations tenv e1 t1)@(gen_equations tenv e2 t1))
     | DOUBLECOLON (e1, e2) ->
       let t1 = fresh_tvar() in
@@ -281,28 +250,25 @@ and gen_equations : TEnv.t -> exp -> typ -> typ_eqn
     | IF (e1, e2 ,e3) ->
       (gen_equations tenv e1 TBool)@(gen_equations tenv e2 ty)@(gen_equations tenv e3 ty)
     | ELet (f, is_rec, args, typ, e1, e2) ->
-      (*t1 = type of function body (e1) *)
-      let t1 = (match typ with |TVar _ -> typ |_ -> body_of_arr typ) in
       begin match args with
-        | [] -> 
-          (gen_equations tenv e1 t1)@(gen_equations (TEnv.extend (f, t1) tenv) e2 ty)
-        | _ ->
-          let (args_ty,new_env) = args_to_arr args t1 tenv in 
-          (* args : ty1 -> ty2 -> ty3..*)
-          (*let new_env = args_to_env args tenv in*)
-          let func_type = (match typ with |TVar _ -> args_ty |_ -> typ) in
-          (gen_equations (TEnv.extend (f, func_type) new_env) e1 t1)@
-          (gen_equations (TEnv.extend (f, func_type) tenv) e2 ty)
+      |[] -> 
+        let new_t = fresh_tvar() in
+        (new_t,typ)::(gen_equations tenv e1 new_t)@(gen_equations (TEnv.extend (f,new_t) tenv) e2 ty)
+      |_ ->
+        let new_t = fresh_tvar() in
+        let (args_ty,args_env) = args_to_arr args new_t tenv in
+        (typ,args_ty)::
+        (gen_equations (if is_rec then TEnv.extend (f,args_ty) args_env else args_env) e1 new_t) @
+        (gen_equations (TEnv.extend (f,args_ty) tenv) e2 ty)
       end
     | EMatch (e, bs) ->
       let t1 = fresh_tvar() in (*type of expression*)
       let t2 = fresh_tvar() in (*type of pattern*)
       (ty, t1)::(gen_equations tenv e t2)@(branch_to_eqn bs t1 t2 tenv)
     | EFun (arg, e) ->
-      let t1= arg_to_typ arg in 
-      let x= arg_to_id arg in
+      let t1= snd arg in 
       let t2= fresh_tvar() in
-      (ty, TArr(t1,t2)) :: (gen_equations (TEnv.extend (x, t1) tenv) e t2)
+      (ty, TArr(t1,t2)) :: (gen_equations (TEnv.extend arg tenv) e t2)
     | EApp (e1, e2) ->
       let t1 = fresh_tvar() in
       (gen_equations tenv e1 (TArr (t1, ty)))@(gen_equations tenv e2 t1)
@@ -327,20 +293,8 @@ and extract_tvar2 : id -> typ list -> bool
 
 let rec unify : typ -> typ -> Subst.t -> Subst.t
 = fun typ1 typ2 subst ->
-  if(Sys.time()-. !start_time > 0.1) then 
-    (
-    (*print_endline("----------unify-----------");
-    print_endline(Print.program_to_string !global_pgm);
-    Subst.print subst;
-    print_endline("---------------------");
-    exit 0;*)
-    raise TypeError)
-  else
-  match (typ1, typ2) with
-  |(TInt, TInt) -> subst
-  |(TBool, TBool) -> subst
-  |(TString, TString) -> subst
-  |(TBase id1, TBase id2) -> if id1 = id2 then subst else raise TypeError
+  if(typ1=typ2) then subst
+  else match (typ1, typ2) with
   |(TList t1, TList t2) -> unify t1 t2 subst
   |(TTuple tl1, TTuple tl2) -> unify_list tl1 tl2 subst
   |(TCtor (id1, tl1), TCtor (id2, tl2)) ->
@@ -384,14 +338,6 @@ and unify_list : typ list -> typ list -> Subst.t -> Subst.t
 
 let rec unify_all : typ_eqn -> Subst.t -> Subst.t
 = fun eqns subst ->
-  if(Sys.time()-. !start_time > 1.0) then 
-  (
-    (*print_endline("-----------unify_all----------");
-    print_endline(Print.program_to_string !global_pgm);
-    print_endline("---------------------");*)
-    raise TypeError
-  )
-  else
   match eqns with
   |[] -> subst
   |(typ1, typ2)::tl ->
@@ -400,20 +346,13 @@ let rec unify_all : typ_eqn -> Subst.t -> Subst.t
     unify_all tl subst'
   
 let solve : typ_eqn -> Subst.t
-= fun eqns -> 
-  unify_all eqns Subst.empty
+= fun eqns -> unify_all eqns Subst.empty
 
 let rec fill_hole_tbl subst holes= 
   if(BatMap.is_empty holes) then ()
   else
     let ((n,id),remain) = BatMap.pop holes in
     let ty = Subst.apply id subst in
-    
-    (*Subst.print subst;
-    
-    print_endline(string_of_type id);
-    print_endline(string_of_type ty);
-    *)
     try 
       let _ = BatMap.find n !hole_tbl in
       fill_hole_tbl subst remain
@@ -437,38 +376,21 @@ let rec complete_tenv subst env_table =
     complete_tenv subst remain
 
 let typeof : exp -> TEnv.t -> typ -> typ
-=fun exp tenv typ->
-(*  let _ = print_endline(Print.exp_to_string exp) in*)
+= fun exp tenv typ->
   let new_tv = fresh_tvar () in
   let eqns = gen_equations tenv exp new_tv in
-  let eqns = (match typ with |TVar _ -> eqns |_ -> (new_tv,typ)::eqns) in
-  (*let _ = print_endline "= Equations = ";
-          print_typ_eqns eqns;
-          print_endline "" in *)
+  let eqns = (new_tv,typ)::eqns in
   let subst = solve eqns in
- (* let _ = print_endline("---------------") in
-  let _ = Subst.print subst in
-  let _ = print_endline("---------------") in*)
   let ty = Subst.apply new_tv subst in
   let _ = complete_tenv subst !at_hole_table in
   let _ = fill_hole_tbl subst !hole_map in
-    (*print_endline "= Substitution = ";
-    Subst.print subst;
-    print_endline "";
-    print_endline ("Type: " ^ string_of_type ty);
-    print_endline ""; *)
     ty
 
 let rec ctors_to_env : ctor list -> TEnv.t -> typ -> TEnv.t
-=fun ctors tenv tbase ->
-  match ctors with
-  | [] -> tenv
-  | (id,typ_lst)::tl -> 
-    let ty = TCtor (tbase, typ_lst) in
-    ctors_to_env tl (TEnv.extend (id, ty) tenv) tbase
+= fun ctors tenv tbase -> list_fold(fun (id,typs) env -> TEnv.extend (id,TCtor(tbase,typs)) env) ctors tenv
 
 let type_decl : decl -> TEnv.t -> TEnv.t
-=fun decl tenv -> 
+= fun decl tenv -> 
   at_hole_table:=BatMap.empty;
   match decl with
   | DData (id, ctors) -> 
@@ -478,28 +400,19 @@ let type_decl : decl -> TEnv.t -> TEnv.t
     begin match args with
     | [] -> (* variable binding *)
       let ty = typeof exp (TEnv.extend (x, typ) tenv) typ in
-      begin match typ with
-      | TVar _ -> TEnv.extend (x, ty) tenv
-      | _ -> if ty = typ then TEnv.extend (x, ty) tenv else raise TypeError
-      end
+      TEnv.extend (x, ty) tenv
     | _ ->  (* function binding *)
       let e = ELet(x, is_rec, args, typ, exp, EVar(x)) in
       let ty = typeof e (TEnv.extend (x, typ) tenv) typ in
-      begin match typ with
-      | TVar _ -> TEnv.extend (x, ty) tenv
-      | _ -> if ty = typ then TEnv.extend (x, ty) tenv else raise TypeError
-      end
+      TEnv.extend (x, ty) tenv
     end
 
-let type_time = ref 0.0
-
 let run : prog -> prog
-=fun decls -> 
+= fun decls -> 
 (*  let _ = print_endline("----------------------") in*)
   let _ = hole_map:=BatMap.empty in
   let _ = hole_tbl:=BatMap.empty in
   let _ = at_hole_ttbl:=BatMap.empty in
   let _ = start_time:=Sys.time() in
-  let _ = global_pgm:=decls in
   let _ = (list_fold type_decl decls TEnv.empty) in
   decls
