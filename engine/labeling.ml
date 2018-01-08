@@ -1,495 +1,152 @@
 (* labeling program *)
 open Lang
 open Util
-open Symbol_lang
+open Label_lang
 
-let label_count = ref 0
-let new_label() = (label_count := !label_count+1; !label_count)
-
-let rec labeling_pat : pat -> labeled_pat
-= fun p ->
-	let _ = label_count:= !label_count+1 in
-	let label = !label_count in
-	match p with
-	|PCtor (x,pl) -> (label,PCtor(x,labeling_patlist pl))
-	|Pats pl -> (label,Pats (labeling_patlist pl))
-	|PInt n -> (label,PInt (n))
-	|PVar x -> (label,PVar (x))
-	|PBool b -> (label,PBool (b))
-	|PList pl -> (label,PList (labeling_patlist pl))
-	|PTuple pl -> (label,PTuple (labeling_patlist pl))
-	|PUnder -> (label,PUnder)
-	|PCons pl -> (label,PCons (labeling_patlist pl))
-
-and labeling_patlist : pat list -> labeled_pat list
-= fun pl ->
-	match pl with
-	|[] -> []
-	|hd::tl -> 
-		let labeled_p = labeling_pat hd in
-		(labeled_p)::(labeling_patlist tl)
-
+(* Tag a label to program AST *)
 let rec labeling_exp : exp -> labeled_exp
 = fun exp ->
-	let label = new_label() in
 	match exp with
-	|Const n -> (label,Const (n))
-	|TRUE -> (label,TRUE)
-	|FALSE -> (label,FALSE)
-	|String id -> (label,String id)
-	|EVar x -> (label,EVar (x))
-	|ADD (e1,e2) -> 
-		let labeled_e1 = labeling_exp e1 in
-		let labeled_e2 = labeling_exp e2 in
-		(label,ADD (labeled_e1,labeled_e2))
-	|SUB (e1,e2) -> 
-		let labeled_e1 = labeling_exp e1 in
-		let labeled_e2 = labeling_exp e2 in
-		(label,SUB (labeled_e1,labeled_e2))
-	|MUL (e1,e2) -> 
-		let labeled_e1 = labeling_exp e1 in
-		let labeled_e2 = labeling_exp e2 in
-		(label,MUL (labeled_e1,labeled_e2))
-	|DIV (e1,e2) -> 
-		let labeled_e1 = labeling_exp e1 in
-		let labeled_e2 = labeling_exp e2 in
-		(label,DIV (labeled_e1,labeled_e2))
-	|MOD (e1,e2) -> 
-		let labeled_e1 = labeling_exp e1 in
-		let labeled_e2 = labeling_exp e2 in
-		(label,MOD (labeled_e1,labeled_e2))
-	|OR (e1,e2) -> 
-		let labeled_e1 = labeling_exp e1 in
-		let labeled_e2 = labeling_exp e2 in
-		(label,OR (labeled_e1,labeled_e2))
-	|AND (e1,e2) -> 
-		let labeled_e1 = labeling_exp e1 in
-		let labeled_e2 = labeling_exp e2 in
-		(label,AND (labeled_e1,labeled_e2))
-	|LESS (e1,e2) -> 
-		let labeled_e1 = labeling_exp e1 in
-		let labeled_e2 = labeling_exp e2 in
-		(label,LESS (labeled_e1,labeled_e2))
-	|LARGER (e1,e2) -> 
-		let labeled_e1 = labeling_exp e1 in
-		let labeled_e2 = labeling_exp e2 in
-		(label,LARGER (labeled_e1,labeled_e2))
-	|EQUAL (e1,e2) -> 
-		let labeled_e1 = labeling_exp e1 in
-		let labeled_e2 = labeling_exp e2 in
-		(label,EQUAL (labeled_e1,labeled_e2))
-	|NOTEQ (e1,e2) -> 
-		let labeled_e1 = labeling_exp e1 in
-		let labeled_e2 = labeling_exp e2 in
-		(label,NOTEQ (labeled_e1,labeled_e2))
-	|LESSEQ (e1,e2) -> 
-		let labeled_e1 = labeling_exp e1 in
-		let labeled_e2 = labeling_exp e2 in
-		(label,LESSEQ (labeled_e1,labeled_e2))
-	|LARGEREQ (e1,e2) -> 
-		let labeled_e1 = labeling_exp e1 in
-		let labeled_e2 = labeling_exp e2 in
-		(label,LARGEREQ (labeled_e1,labeled_e2))
-	|EApp (e1,e2) -> 
-		let labeled_e1 = labeling_exp e1 in
-		let labeled_e2 = labeling_exp e2 in
-		(label,EApp (labeled_e1,labeled_e2))
-	|AT (e1,e2) -> 
-		let labeled_e1 = labeling_exp e1 in
-		let labeled_e2 = labeling_exp e2 in
-		(label,AT (labeled_e1,labeled_e2))
-	|DOUBLECOLON (e1,e2) -> 
-		let labeled_e1 = labeling_exp e1 in
-		let labeled_e2 = labeling_exp e2 in
-		(label,DOUBLECOLON (labeled_e1,labeled_e2))
-	|MINUS e1 -> 
-		let labeled_e1 = labeling_exp e1 in
-		(label,MINUS (labeled_e1))
-	|NOT e1 -> 
-		let labeled_e1 = labeling_exp e1 in
-		(label,NOT (labeled_e1))
-	|EFun (a,e) -> 
-		let labeled_e1 = labeling_exp e in
-		(label,EFun (a,labeled_e1))
-	|ELet (x,is_rec,args,t,e1,e2) -> 
-		let labeled_e1 = labeling_exp e1 in
-		let labeled_e2 = labeling_exp e2 in
-		(label,ELet (x,is_rec,args,t,labeled_e1,labeled_e2))
-	|ECtor (x,exps) -> (label,ECtor (x,labeling_explist exps))
-	|EMatch (e,bl) -> 
-		let labeled_e = labeling_exp e in
-		(label,EMatch (labeled_e,labeling_blist bl))
-	|IF (e1,e2,e3) -> 
-		let labeled_e1 = labeling_exp e1 in
-		let labeled_e2 = labeling_exp e2 in
-		let labeled_e3 = labeling_exp e3 in
-		(label,IF (labeled_e1,labeled_e2,labeled_e3))
-	|EList (exps) -> (label,EList (labeling_explist exps))
-	|ETuple (exps) -> (label,ETuple (labeling_explist exps))
-	|Hole n -> (label, Hole n)
+	| Const n -> (new_label (), Const n)
+	| TRUE -> (new_label (), TRUE)
+	| FALSE -> (new_label (), FALSE)
+	| String str -> (new_label (), String str)
+	| EVar x -> (new_label (), EVar x)
+	| EList es -> (new_label (), EList (labeling_explist es))
+	| ETuple es -> (new_label (), ETuple (labeling_explist es))
+	| ECtor (x, es) -> (new_label (), ECtor (x, labeling_explist es))
+	| ADD (e1, e2) -> (new_label (), ADD (labeling_exp e1, labeling_exp e2))
+	| SUB (e1, e2) -> (new_label (), SUB (labeling_exp e1, labeling_exp e2))
+	| MUL (e1, e2) -> (new_label (), MUL (labeling_exp e1, labeling_exp e2))
+	| DIV (e1, e2) -> (new_label (), DIV (labeling_exp e1, labeling_exp e2))
+	| MOD (e1, e2) -> (new_label (), MOD (labeling_exp e1, labeling_exp e2))
+	| OR (e1, e2) -> (new_label (), OR (labeling_exp e1, labeling_exp e2))
+	| AND (e1, e2) -> (new_label (), AND (labeling_exp e1, labeling_exp e2))
+	| LESS (e1, e2) -> (new_label (), LESS (labeling_exp e1, labeling_exp e2))
+	| LARGER (e1, e2) -> (new_label (), LARGER (labeling_exp e1, labeling_exp e2))
+	| EQUAL (e1, e2) -> (new_label (), EQUAL (labeling_exp e1, labeling_exp e2))
+	| NOTEQ (e1, e2) -> (new_label (), NOTEQ (labeling_exp e1, labeling_exp e2))
+	| LESSEQ (e1, e2) -> (new_label (), LESSEQ (labeling_exp e1, labeling_exp e2))
+	| LARGEREQ (e1, e2) -> (new_label (), LARGEREQ (labeling_exp e1, labeling_exp e2))
+	| EApp (e1, e2) -> (new_label (), EApp (labeling_exp e1, labeling_exp e2))
+	| AT (e1, e2) -> (new_label (), AT (labeling_exp e1, labeling_exp e2))
+	| DOUBLECOLON (e1, e2) -> (new_label (), DOUBLECOLON (labeling_exp e1, labeling_exp e2))
+	| MINUS e -> (new_label (), MINUS (labeling_exp e))
+	| NOT e -> (new_label (), NOT (labeling_exp e))
+	| EFun (x, e) -> (new_label (), EFun (x, labeling_exp e))
+	| ELet (f, is_rec, args, typ, e1, e2) -> (new_label (), ELet (f, is_rec, args, typ, labeling_exp e1, labeling_exp e2))
+	| EMatch (e, bs) -> 
+		let (ps, es) = List.split bs in
+		(new_label (), EMatch (labeling_exp e, List.combine ps (labeling_explist es)))
+	| IF (e1, e2, e3) -> (new_label (), IF (labeling_exp e1, labeling_exp e2, labeling_exp e3))
+	| Hole n -> (new_label (), Hole n)
 
 and labeling_explist : exp list -> labeled_exp list
-= fun e_l ->
-	match e_l with
-	|[] -> []
-	|hd::tl -> 
-		let labeled_e = labeling_exp hd in
-			labeled_e :: (labeling_explist tl)
-
-and labeling_blist : branch list -> l_bl list
-= fun bl ->
-	match bl with
-	| [] -> []
-	| (p,e)::tl -> 
-		let labeled_p = labeling_pat p in
-		let labeled_e = labeling_exp e in
-		(labeled_p,labeled_e) :: (labeling_blist tl)
+= fun es -> List.fold_left (fun acc x -> acc@[labeling_exp x]) [] es
 
 let labeling_decl : decl -> labeled_decl
 = fun decl ->
 	match decl with
-	| DData (id,l) -> DData(id, l)
-	| DLet (id,is_rec,args,t,e) ->
-		let labeled_e = labeling_exp e in
-		DLet (id, is_rec, args, t, labeled_e)
-
-let rec labeling_decls : decl list -> labeled_prog -> labeled_prog
-= fun decls labeled ->
-	match decls with
-	| [] -> labeled
-	| hd::tl -> 
-		let l_decl = labeling_decl hd in
-		labeling_decls tl (labeled@[l_decl])
+	| DData (id, ctors) -> DData (id, ctors)
+	| DLet (f, is_rec, args, typ, e) -> DLet (f, is_rec, args, typ, labeling_exp e)
 
 let labeling_prog : prog -> labeled_prog
 = fun pgm -> 
-	label_count := 0;
-	labeling_decls pgm []
+	init_label ();
+	List.fold_left (fun acc x -> acc@[labeling_decl x]) [] pgm
 
-(**************)
-(* unlabeling *)
-(**************)
-
-let rec unlabeling_pat : labeled_pat -> pat
-= fun (l, p) ->
-	match p with
-	|PCtor (x,pl) -> PCtor(x, unlabeling_patlist pl)
-	|Pats pl -> Pats (unlabeling_patlist pl)
-	|PInt n -> PInt (n)
-	|PVar x -> PVar (x)
-	|PBool b -> PBool (b)
-	|PList pl -> PList (unlabeling_patlist pl)
-	|PTuple pl -> PTuple (unlabeling_patlist pl)
-	|PUnder -> PUnder
-	|PCons pl -> PCons (unlabeling_patlist pl)
-
-and unlabeling_patlist : labeled_pat list -> pat list
-= fun pl ->
-	match pl with
-	|[] -> []
-	|hd::tl -> 
-		let unlabeled_p = unlabeling_pat hd in
-		(unlabeled_p)::(unlabeling_patlist tl)
-
+(* labeld AST -> AST *)
 let rec unlabeling_exp : labeled_exp -> exp
 = fun (l, exp) ->
 	match exp with
-	|Const n -> Const n
-	|TRUE -> TRUE
-	|FALSE -> FALSE
-	|String id -> String id
-	|EVar x -> EVar x
-	|ADD (e1,e2) -> 
-		let unlabeled_e1 = unlabeling_exp e1 in
-		let unlabeled_e2 = unlabeling_exp e2 in
-		ADD (unlabeled_e1, unlabeled_e2)
-	|SUB (e1,e2) -> 
-		let unlabeled_e1 = unlabeling_exp e1 in
-		let unlabeled_e2 = unlabeling_exp e2 in
-		SUB (unlabeled_e1, unlabeled_e2)
-	|MUL (e1,e2) -> 
-		let unlabeled_e1 = unlabeling_exp e1 in
-		let unlabeled_e2 = unlabeling_exp e2 in
-		MUL (unlabeled_e1, unlabeled_e2)
-	|DIV (e1,e2) -> 
-		let unlabeled_e1 = unlabeling_exp e1 in
-		let unlabeled_e2 = unlabeling_exp e2 in
-		DIV (unlabeled_e1, unlabeled_e2)
-	|MOD (e1,e2) -> 
-		let unlabeled_e1 = unlabeling_exp e1 in
-		let unlabeled_e2 = unlabeling_exp e2 in
-		MOD (unlabeled_e1, unlabeled_e2)
-	|OR (e1,e2) -> 
-		let unlabeled_e1 = unlabeling_exp e1 in
-		let unlabeled_e2 = unlabeling_exp e2 in
-		OR (unlabeled_e1, unlabeled_e2)
-	|AND (e1,e2) -> 
-		let unlabeled_e1 = unlabeling_exp e1 in
-		let unlabeled_e2 = unlabeling_exp e2 in
-		AND (unlabeled_e1, unlabeled_e2)
-	|LESS (e1,e2) -> 
-		let unlabeled_e1 = unlabeling_exp e1 in
-		let unlabeled_e2 = unlabeling_exp e2 in
-		LESS (unlabeled_e1, unlabeled_e2)
-	|LARGER (e1,e2) -> 
-		let unlabeled_e1 = unlabeling_exp e1 in
-		let unlabeled_e2 = unlabeling_exp e2 in
-		LARGER (unlabeled_e1, unlabeled_e2)
-	|EQUAL (e1,e2) -> 
-		let unlabeled_e1 = unlabeling_exp e1 in
-		let unlabeled_e2 = unlabeling_exp e2 in
-		EQUAL (unlabeled_e1, unlabeled_e2)
-	|NOTEQ (e1,e2) -> 
-		let unlabeled_e1 = unlabeling_exp e1 in
-		let unlabeled_e2 = unlabeling_exp e2 in
-		NOTEQ (unlabeled_e1, unlabeled_e2)
-	|LESSEQ (e1,e2) -> 
-		let unlabeled_e1 = unlabeling_exp e1 in
-		let unlabeled_e2 = unlabeling_exp e2 in
-		LESSEQ (unlabeled_e1, unlabeled_e2)
-	|LARGEREQ (e1,e2) -> 
-		let unlabeled_e1 = unlabeling_exp e1 in
-		let unlabeled_e2 = unlabeling_exp e2 in
-		LARGEREQ (unlabeled_e1, unlabeled_e2)
-	|EApp (e1,e2) -> 
-		let unlabeled_e1 = unlabeling_exp e1 in
-		let unlabeled_e2 = unlabeling_exp e2 in
-		EApp (unlabeled_e1, unlabeled_e2)
-	|AT (e1,e2) -> 
-		let unlabeled_e1 = unlabeling_exp e1 in
-		let unlabeled_e2 = unlabeling_exp e2 in
-		AT (unlabeled_e1, unlabeled_e2)
-	|DOUBLECOLON (e1,e2) -> 
-		let unlabeled_e1 = unlabeling_exp e1 in
-		let unlabeled_e2 = unlabeling_exp e2 in
-		DOUBLECOLON (unlabeled_e1, unlabeled_e2)
-	|MINUS e1 -> 
-		let unlabeled_e1 = unlabeling_exp e1 in
-		MINUS (unlabeled_e1)
-	|NOT e1 -> 
-		let unlabeled_e1 = unlabeling_exp e1 in
-		NOT (unlabeled_e1)
-	|EFun (a,e) -> 
-		let unlabeled_e1 = unlabeling_exp e in
-		EFun (a, unlabeled_e1)
-	|ELet (x,is_rec,args,t,e1,e2) -> 
-		let unlabeled_e1 = unlabeling_exp e1 in
-		let unlabeled_e2 = unlabeling_exp e2 in
-		ELet (x,is_rec,args,t,unlabeled_e1,unlabeled_e2)
-	|ECtor (x,exps) -> ECtor (x,unlabeling_explist exps)
-	|EMatch (e,bl) -> 
-		let unlabeled_e = unlabeling_exp e in
-		EMatch (unlabeled_e,unlabeling_blist bl)
-	|IF (e1,e2,e3) -> 
-		let unlabeled_e1 = unlabeling_exp e1 in
-		let unlabeled_e2 = unlabeling_exp e2 in
-		let unlabeled_e3 = unlabeling_exp e3 in
-		IF (unlabeled_e1, unlabeled_e2, unlabeled_e3)
-	|EList (exps) -> EList (unlabeling_explist exps)
-	|ETuple (exps) -> ETuple (unlabeling_explist exps)
-	|Hole n -> Hole n
+	| Const n -> Const n
+	| TRUE -> TRUE
+	| FALSE -> FALSE
+	| String str -> String str
+	| EVar x -> EVar x
+	| EList es -> EList (unlabeling_explist es)
+	| ETuple es -> ETuple (unlabeling_explist es)
+	| ECtor (x, es) -> ECtor (x, unlabeling_explist es)
+	| ADD (e1, e2) -> ADD (unlabeling_exp e1, unlabeling_exp e2)
+	| SUB (e1, e2) -> SUB (unlabeling_exp e1, unlabeling_exp e2)
+	| MUL (e1, e2) -> MUL (unlabeling_exp e1, unlabeling_exp e2)
+	| DIV (e1, e2) -> DIV (unlabeling_exp e1, unlabeling_exp e2)
+	| MOD (e1, e2) -> MOD (unlabeling_exp e1, unlabeling_exp e2)
+	| OR (e1, e2) -> OR (unlabeling_exp e1, unlabeling_exp e2)
+	| AND (e1, e2) -> AND (unlabeling_exp e1, unlabeling_exp e2)
+	| LESS (e1, e2) -> LESS (unlabeling_exp e1, unlabeling_exp e2)
+	| LARGER (e1, e2) -> LARGER (unlabeling_exp e1, unlabeling_exp e2)
+	| EQUAL (e1, e2) -> EQUAL (unlabeling_exp e1, unlabeling_exp e2)
+	| NOTEQ (e1, e2) -> NOTEQ (unlabeling_exp e1, unlabeling_exp e2)
+	| LESSEQ (e1, e2) -> LESSEQ (unlabeling_exp e1, unlabeling_exp e2)
+	| LARGEREQ (e1, e2) -> LARGEREQ (unlabeling_exp e1, unlabeling_exp e2)
+	| EApp (e1, e2) -> EApp (unlabeling_exp e1, unlabeling_exp e2)
+	| AT (e1, e2) -> AT (unlabeling_exp e1, unlabeling_exp e2)
+	| DOUBLECOLON (e1, e2) -> DOUBLECOLON (unlabeling_exp e1, unlabeling_exp e2)
+	| MINUS e -> MINUS (unlabeling_exp e)
+	| NOT e -> NOT (unlabeling_exp e)
+	| EFun (x, e) -> EFun (x, unlabeling_exp e)
+	| ELet (f, is_rec, args, typ, e1, e2) -> ELet (f, is_rec, args, typ, unlabeling_exp e1, unlabeling_exp e2)
+	| EMatch (e, bs) ->
+		let (ps, es) = List.split bs in
+		EMatch (unlabeling_exp e, List.combine ps (unlabeling_explist es))
+	| IF (e1, e2, e3) -> IF (unlabeling_exp e1, unlabeling_exp e2, unlabeling_exp e3)
+	| Hole n -> Hole n
 
 and unlabeling_explist : labeled_exp list -> exp list
-= fun e_l ->
-	match e_l with
-	|[] -> []
-	|hd::tl -> 
-		let unlabeled_e = unlabeling_exp hd in
-			unlabeled_e :: (unlabeling_explist tl)
-
-and unlabeling_blist : l_bl list -> branch list
-= fun bl ->
-	match bl with
-	| [] -> []
-	| (p,e)::tl -> 
-		let unlabeled_p = unlabeling_pat p in
-		let unlabeled_e = unlabeling_exp e in
-		(unlabeled_p, unlabeled_e) :: (unlabeling_blist tl)
+= fun es -> List.map unlabeling_exp es
 
 let unlabeling_decl : labeled_decl -> decl
 = fun l_decl ->
 	match l_decl with
-	| DData (id,l) -> DData (id,l)
-	| DLet (id,is_rec,args,t,e) ->
-		let unlabeled_e = unlabeling_exp e in
-		DLet (id, is_rec, args, t, unlabeled_e)
-
-let rec unlabeling_decls : labeled_prog -> decl list -> decl list
-= fun l_decls decls->
-	match l_decls with
-	| [] -> decls
-	| hd::tl -> 
-		let decl = unlabeling_decl hd in
-		unlabeling_decls tl (decls@[decl])
+	| DData (x, ctors) -> DData (x, ctors)
+	| DLet (f, is_rec, args, typ, e) -> DLet (f, is_rec, args, typ ,unlabeling_exp e)
 
 let unlabeling_prog : labeled_prog -> prog
-= fun l_pgm -> unlabeling_decls l_pgm []
+= fun l_pgm -> List.fold_left (fun acc x -> acc@[unlabeling_decl x]) [] l_pgm
 
-let rec unlabeling_value : labeled_value -> value
-= fun lv ->
-	match lv with
-	| VInt n -> VInt n
-	| VBool b -> VBool b
-	| VList vs -> VList (List.map unlabeling_value vs) 
-	| VTuple vs -> VTuple (List.map unlabeling_value vs) 
-	| VCtor (x, vs) -> VCtor (x, List.map unlabeling_value vs) 
-	| VFun (x, exp, lenv, senv) -> VFun (x, unlabeling_exp exp, unlabeling_env lenv)
-	| VFunRec (f, x, exp, lenv, senv) -> VFunRec (f, x, unlabeling_exp exp, unlabeling_env lenv)
-	| VHole n -> VHole n
-	
-and unlabeling_env : labeled_env -> env
-= fun lenv ->
-	BatMap.map (
-		fun v -> unlabeling_value v
-	) lenv
-(***********************)
-(*** generate hole *****)
-(***********************)
-
-let labeled_hole_count = ref 0
-let gen_labeled_hole : unit -> lexp
-= fun () -> 
-	labeled_hole_count:=!labeled_hole_count+1;
-	exp_hole_count:=!exp_hole_count+1;
-	Hole(!labeled_hole_count)
-
-let rec gen_hole_exp : labeled_exp -> int -> labeled_exp
-= fun (label, exp) n ->
-	if label = n then (label, gen_labeled_hole()) else 
+(*** generate hole in error location *****)
+let rec gen_hole_exp : int -> labeled_exp -> labeled_exp
+= fun n (label, exp) ->
+	if label = n then labeling_exp (gen_hole ()) else 
 	match exp with 
-	|Const n -> (label, Const (n))
-	|TRUE -> (label, TRUE)
-	|FALSE -> (label, FALSE)
-	|String id -> (label, String id)
-	|EVar x -> (label, EVar (x))
-	|ADD (e1,e2) -> 
-		let partial_e1 = gen_hole_exp e1 n in
-		let partial_e2 = gen_hole_exp e2 n in
-		(label, ADD (partial_e1, partial_e2))
-	|SUB (e1,e2) -> 
-		let partial_e1 = gen_hole_exp e1 n in
-		let partial_e2 = gen_hole_exp e2 n in
-		(label,SUB (partial_e1,partial_e2))
-	|MUL (e1,e2) -> 
-		let partial_e1 = gen_hole_exp e1 n in
-		let partial_e2 = gen_hole_exp e2 n in
-		(label,MUL (partial_e1,partial_e2))
-	|DIV (e1,e2) -> 
-		let partial_e1 = gen_hole_exp e1 n in
-		let partial_e2 = gen_hole_exp e2 n in
-		(label,DIV (partial_e1,partial_e2))
-	|MOD (e1,e2) -> 
-		let partial_e1 = gen_hole_exp e1 n in
-		let partial_e2 = gen_hole_exp e2 n in
-		(label,MOD (partial_e1,partial_e2))
-	|OR (e1,e2) -> 
-		let partial_e1 = gen_hole_exp e1 n in
-		let partial_e2 = gen_hole_exp e2 n in
-		(label,OR (partial_e1,partial_e2))
-	|AND (e1,e2) -> 
-		let partial_e1 = gen_hole_exp e1 n in
-		let partial_e2 = gen_hole_exp e2 n in
-		(label,AND (partial_e1,partial_e2))
-	|LESS (e1,e2) -> 
-		let partial_e1 = gen_hole_exp e1 n in
-		let partial_e2 = gen_hole_exp e2 n in
-		(label,LESS (partial_e1,partial_e2))
-	|LARGER (e1,e2) -> 
-		let partial_e1 = gen_hole_exp e1 n in
-		let partial_e2 = gen_hole_exp e2 n in
-		(label,LARGER (partial_e1,partial_e2))
-	|EQUAL (e1,e2) -> 
-		let partial_e1 = gen_hole_exp e1 n in
-		let partial_e2 = gen_hole_exp e2 n in
-		(label,EQUAL (partial_e1,partial_e2))
-	|NOTEQ (e1,e2) -> 
-		let partial_e1 = gen_hole_exp e1 n in
-		let partial_e2 = gen_hole_exp e2 n in
-		(label,NOTEQ (partial_e1,partial_e2))
-	|LESSEQ (e1,e2) -> 
-		let partial_e1 = gen_hole_exp e1 n in
-		let partial_e2 = gen_hole_exp e2 n in
-		(label,LESSEQ (partial_e1,partial_e2))
-	|LARGEREQ (e1,e2) -> 
-		let partial_e1 = gen_hole_exp e1 n in
-		let partial_e2 = gen_hole_exp e2 n in
-		(label,LARGEREQ (partial_e1,partial_e2))
-	|EApp (e1,e2) -> 
-		let partial_e1 = gen_hole_exp e1 n in
-		let partial_e2 = gen_hole_exp e2 n in
-		(label,EApp (partial_e1,partial_e2))
-	|AT (e1,e2) -> 
-		let partial_e1 = gen_hole_exp e1 n in
-		let partial_e2 = gen_hole_exp e2 n in
-		(label,AT (partial_e1,partial_e2))
-	|DOUBLECOLON (e1,e2) -> 
-		let partial_e1 = gen_hole_exp e1 n in
-		let partial_e2 = gen_hole_exp e2 n in
-		(label,DOUBLECOLON (partial_e1,partial_e2))
-	|MINUS e1 -> 
-		let partial_e1 = gen_hole_exp e1 n in
-		(label,MINUS (partial_e1))
-	|NOT e1 -> 
-		let partial_e1 = gen_hole_exp e1 n in
-		(label,NOT (partial_e1))
-	|EFun (a,e) -> 
-		let partial_e1 = gen_hole_exp e n in
-		(label,EFun (a,partial_e1))
-	|ELet (x,is_rec,args,t,e1,e2) -> 
-		let partial_e1 = gen_hole_exp e1 n in
-		let partial_e2 = gen_hole_exp e2 n in
-		(label,ELet (x,is_rec,args,t,partial_e1,partial_e2))
-	|ECtor (x,exps) -> (label,ECtor (x,gen_hole_explist exps n))
-	|EMatch (e,bl) -> 
-		let partial_e = gen_hole_exp e n in
-		(label,EMatch (partial_e, gen_hole_blist bl n))
-	|IF (e1,e2,e3) -> 
-		let partial_e1 = gen_hole_exp e1 n in
-		let partial_e2 = gen_hole_exp e2 n in
-		let partial_e3 = gen_hole_exp e3 n in
-		(label,IF (partial_e1,partial_e2,partial_e3))
-	|EList (exps) -> (label,EList (gen_hole_explist exps n))
-	|ETuple (exps) -> (label,ETuple (gen_hole_explist exps n))
-	|Hole n -> (label, Hole n)
+	| EList es -> (label, EList (gen_hole_explist n es))
+	| ETuple es -> (label, ETuple (gen_hole_explist n es))
+	| ECtor (x, es) -> (label, ECtor (x,gen_hole_explist n es))
+	| ADD (e1, e2) -> (label, ADD (gen_hole_exp n e1, gen_hole_exp n e2))
+	| SUB (e1, e2) -> (label, SUB (gen_hole_exp n e1, gen_hole_exp n e2))
+	| MUL (e1, e2) -> (label, MUL (gen_hole_exp n e1, gen_hole_exp n e2))
+	| DIV (e1, e2) -> (label, DIV (gen_hole_exp n e1, gen_hole_exp n e2))
+	| MOD (e1, e2) -> (label, MOD (gen_hole_exp n e1, gen_hole_exp n e2))
+	| OR (e1, e2) -> (label, OR (gen_hole_exp n e1, gen_hole_exp n e2))
+	| AND (e1, e2) -> (label, AND (gen_hole_exp n e1, gen_hole_exp n e2))
+	| LESS (e1, e2) -> (label, LESS (gen_hole_exp n e1, gen_hole_exp n e2))
+	| LARGER (e1, e2) -> (label, LARGER (gen_hole_exp n e1, gen_hole_exp n e2))
+	| EQUAL (e1, e2) -> (label, EQUAL (gen_hole_exp n e1, gen_hole_exp n e2))
+	| NOTEQ (e1, e2) -> (label, NOTEQ (gen_hole_exp n e1, gen_hole_exp n e2))
+	| LESSEQ (e1, e2) -> (label, LESSEQ (gen_hole_exp n e1, gen_hole_exp n e2))
+	| LARGEREQ (e1, e2) -> (label, LARGEREQ (gen_hole_exp n e1, gen_hole_exp n e2))
+	| EApp (e1, e2) -> (label, EApp (gen_hole_exp n e1, gen_hole_exp n e2))
+	| AT (e1, e2) -> (label, AT (gen_hole_exp n e1, gen_hole_exp n e2))
+	| DOUBLECOLON (e1, e2) -> (label, DOUBLECOLON (gen_hole_exp n e1, gen_hole_exp n e2))
+	| MINUS e -> (label, MINUS (gen_hole_exp n e))
+	| NOT e -> (label, NOT (gen_hole_exp n e))
+	| EFun (x, e) -> (label, EFun (x, gen_hole_exp n e))
+	| ELet (f, is_rec, args, typ, e1, e2) -> (label, ELet (f, is_rec, args, typ, gen_hole_exp n e1, gen_hole_exp n e2))
+	| EMatch (e, bs) ->
+		let (ps, es) = List.split bs in
+		(label, EMatch (gen_hole_exp n e, List.combine ps (gen_hole_explist n es)))
+	| IF (e1, e2, e3) -> (label, IF (gen_hole_exp n e1, gen_hole_exp n e2, gen_hole_exp n e3))
+	| _ -> (label, exp)
 
-and gen_hole_explist : labeled_exp list -> int -> labeled_exp list
-= fun e_l n ->
-	match e_l with
-	|[] -> []
-	|hd::tl -> 
-		let partial_e = gen_hole_exp hd n in
-			partial_e :: (gen_hole_explist tl n)
+and gen_hole_explist : int -> labeled_exp list -> labeled_exp list
+= fun n es -> List.map (gen_hole_exp n) es
 
-and gen_hole_blist : l_bl list -> int -> l_bl list
-= fun bl n ->
-	match bl with
-	| [] -> []
-	| (p,e)::tl -> 
-		let partial_e = gen_hole_exp e n in
-		(p, partial_e) :: (gen_hole_blist tl n)
+let rec gen_hole_decl : int -> labeled_decl -> labeled_decl
+= fun n l_decl ->
+	match l_decl with
+	| DData (x, ctors) -> DData (x, ctors)
+	| DLet (f, is_rec, args, typ, e) -> DLet (f, is_rec, args, typ, gen_hole_exp n e)
 
-let rec gen_hole_decl : labeled_decl -> int -> labeled_decl
-= fun decl n ->
-	match decl with
-	| DData (id,l) -> DData (id,l)
-	| DLet (id,is_rec,args,t,e) ->
-		let partial_exp = gen_hole_exp e n in
-		DLet (id, is_rec, args, t, partial_exp)
-
-
-let rec gen_hole_decls : labeled_prog -> int -> labeled_decl list  -> labeled_prog
-= fun pgm n decls->
-  match pgm with
-  | [] -> decls
-  | hd::tl -> 
-  	let decl = gen_hole_decl hd n in
-  	gen_hole_decls tl n (decls@[decl])
-
-
-let rec gen_hole_pgm : labeled_prog -> int -> labeled_prog
-= fun pgm n ->
-  match pgm with
-  | [] -> []
-  | hd::tl ->
-  	let decl = gen_hole_decl hd n in
-  	decl::(gen_hole_pgm tl n)
+let rec gen_hole_pgm : int -> labeled_prog -> labeled_prog
+= fun n l_pgm -> List.fold_left (fun acc x -> acc@[gen_hole_decl n x]) [] l_pgm

@@ -1,383 +1,233 @@
-let empty_env = BatMap.empty
-
 open Lang
 open Util
-open Symbol_lang
+open Label_lang
 open Print
 open Labeling
-open Translate
 
-let extend_env = BatMap.add
-
-let find_env = BatMap.find
+(* set of execution traces *)
+type trace_set = int BatSet.t
 
 let empty_set = BatSet.empty
-
 let extend_set = BatSet.add
 
-let label_set = ref empty_set
+(* set of execution traces *)
+let trace_set = ref empty_set
+let init_set () = (trace_set := empty_set)
 
 let start_time = ref 0.0
 
-let rec is_solution : prog -> examples -> bool
-= fun prog examples ->
-(
-  match examples with
-  |[] -> true
-  |(exp,value)::tl ->
-  (
-    let result_prog = prog@[(DLet ("result",false,[],Type.fresh_tvar(),(appify (EVar "f") exp)))] in
-    try
-      let result_env = Eval.run result_prog in
-      let result_value = lookup_env "result" (result_env) in
-      if(result_value=value) then (is_solution prog tl) else false
-    with
-    | _ -> false
-  )
-)
+(* Find counter exampels *)
+let rec is_counter_example : prog -> example -> bool
+= fun pgm (input, output) ->
+  let res_var = "__res__" in
+  let pgm' = pgm @ [(DLet (res_var,false,[],Type.fresh_tvar(),(Lang.appify (EVar !Options.opt_entry_func) input)))] in
+  let env = Eval.run pgm' in
+  let result_value = Lang.lookup_env res_var env in
+  result_value <> output
 
-let rec find_counter_examples : prog -> examples -> examples -> examples
-= fun pgm exl l ->
-  match exl with
-  | [] -> l
-  | hd::tl ->
-    if (is_solution pgm [hd]) 
-      then find_counter_examples pgm tl l
-    else find_counter_examples pgm tl (hd::l)
+let rec find_counter_examples : prog -> examples -> examples
+= fun pgm examples -> List.filter (is_counter_example pgm) examples
 
-let rec find_first_branch : labeled_value -> l_bl list -> l_bl
-= fun v bs ->
-  match bs with  
+(*****************************************************************)
+(* labeled exp evaluation -> should merge it with non-labeld ver *)
+(*****************************************************************)
+
+(* Pattern Matching *)
+let rec find_first_branch : labeled_value -> labeled_branch list -> (pat * labeled_exp)
+= fun v bs -> 
+  match bs with 
   | [] -> raise (Failure "Pattern matching failure")
-  | (p, ex)::tl ->
-    let p' = snd p in
-    begin match (v, p') with
-    | (VInt n1, PInt n2) -> if (n1 = n2) then (p, ex) else find_first_branch v tl
-    | (VBool b1, PBool b2) -> if (b1 = b2) then (p, ex) else find_first_branch v tl
-    | (VList l1, PList l2) -> if (list_equal l1 l2) then (p, ex) else find_first_branch v tl
-    | (VTuple l1, PTuple l2) -> if (list_equal l1 l2) then (p, ex) else find_first_branch v tl
-    | (VCtor (x1, l1), PCtor(x2, l2)) -> if ((x1 = x2) && (list_equal l1 l2)) then (p, ex) else find_first_branch v tl
-    | (VList l1, PCons l2) -> if (cons_equal l1 l2) then (p, ex) else find_first_branch v tl
-    | (_, PVar x) -> (p, ex)
-    | (_, PUnder) -> (p, ex)
-    | (_, Pats pl) -> find_first_branch v ((pats_to_branch pl ex)@tl)
-    | _ -> find_first_branch v tl
-    end
+  | (p, e)::tl -> if (pattern_match v p) then (p, e) else find_first_branch v tl
 
-and list_equal : labeled_value list -> labeled_pat list -> bool
-= fun vs ps ->
-  match (vs, ps) with
-  | ([], []) -> true
-  | ([], _) -> false
-  | (_, []) -> false
-  | (vhd::vtl, phd::ptl) ->
-    let phd = snd phd in
-    begin match (vhd, phd) with 
-    | (VInt n1, PInt n2) -> if (n1 = n2) then list_equal vtl ptl else false
-    | (VBool b1, PBool b2) -> if (b1 = b2) then list_equal vtl ptl else false
-    | (VList l1, PList l2) -> if (list_equal l1 l2) then list_equal vtl ptl else false
-    | (VTuple l1, PTuple l2) -> if (list_equal l1 l2) then list_equal vtl ptl else false
-    | (VCtor (x1, l1), PCtor(x2, l2)) -> if ((x1 = x2) && (list_equal l1 l2)) then list_equal vtl ptl else false
-    | (VList l1, PCons l2) -> if (cons_equal l1 l2) then list_equal vtl ptl else false
-    | (_, PVar x) -> list_equal vtl ptl
-    | (_, PUnder) -> list_equal vtl ptl
-    | _ -> false
-    end
-
-and cons_equal : labeled_value list -> labeled_pat list -> bool 
-= fun vs ps ->
-  match (vs, ps) with
-  | ([], []) -> false
-  | ([], [p]) ->
-    let p = snd p in
-    begin match p with
-    | PList [] -> true
-    | PVar x -> true
-    | PUnder -> true
-    | _ -> false
-    end
-  | ([v], [p]) ->
-    let p = snd p in 
-    begin match p with
-    | PList ps -> list_equal [v] ps
-    | PVar x -> true
-    | PUnder -> true
-    | _ -> false
-    end
-  | (vhd::vtl, []) -> false
-  | (vhd::vtl, phd::ptl) ->
-    let phd = snd phd in
-    begin match (vhd, phd) with
-    | (VInt n1, PInt n2) -> if (n1 = n2) then cons_equal vtl ptl else false
-    | (VBool b1, PBool b2) -> if (b1 = b2) then cons_equal vtl ptl else false
-    | (VList l1, PList l2) -> if (list_equal l1 l2) then cons_equal vtl ptl else false
-    | (VTuple l1, PTuple l2) -> if (list_equal l1 l2) then cons_equal vtl ptl else false
-    | (VCtor (x1, l1), PCtor(x2, l2)) -> if ((x1 = x2) && (list_equal l1 l2)) then cons_equal vtl ptl else false
-    | (VList l1, PCons l2) -> if (cons_equal l1 l2) then cons_equal vtl ptl else false
-    | (_, PVar x) -> if (ptl = []) then true else cons_equal vtl ptl
-    | (_, PUnder) -> cons_equal vtl ptl
-    | _ -> false
-    end
+and pattern_match : labeled_value -> pat -> bool
+= fun v p ->
+  match (v, p) with
+  | VInt n1, PInt n2 -> n1 = n2
+  | VBool b1, PBool b2 -> b1 = b2
+  | VList l1, PList l2 -> pattern_match_list l1 l2
+  | VTuple l1, PTuple l2 -> pattern_match_list l1 l2
+  | VCtor (x1, l1), PCtor (x2, l2) -> (x1 = x2) && pattern_match_list l1 l2
+  | VList [], PCons (phd::ptl) -> if ptl = [] then (pattern_match v phd) else false
+  | VList (vhd::vtl), PCons (phd::ptl) -> if ptl = [] then (pattern_match v phd) else (pattern_match vhd phd) && (pattern_match (VList vtl) (PCons ptl))
+  | _, PVar x -> true
+  | _, PUnder -> true
+  | _, Pats pl -> (try List.exists (pattern_match v) pl with _ -> false)
   | _ -> false
 
-and pats_to_branch : labeled_pat list -> labeled_exp -> l_bl list
-= fun ps ex ->
-  match ps with
-  | [] -> []
-  | hd::tl -> (hd, ex)::(pats_to_branch tl ex)
+and pattern_match_list : labeled_value list -> pat list -> bool
+= fun vs ps -> try List.for_all2 pattern_match vs ps with _ -> false
 
-let rec env_of_pat : labeled_value -> labeled_pat -> labeled_env -> labeled_env
-= fun v p env ->
-  let p' = snd p in
-  match (v, p') with
-  | (VInt n1, PInt n2) -> env
-  | (VBool b1, PBool b2) -> env
-  | (_, PVar x) -> (extend_env x v env) 
-  | (VList vs, PList ps) -> env_of_pat_list vs ps env
-  | (VTuple vs, PTuple ps) -> env_of_pat_list vs ps env
-  | (VCtor (x1, vs), PCtor (x2, ps))-> env_of_pat_list vs ps env
-  | (VList vs, PCons ps) -> env_of_cons vs ps env
-  | (_, PUnder) -> env
-  | _ -> raise (Failure "Pattern matching failure")
+let rec bind_pat : labeled_env -> labeled_value -> pat -> labeled_env
+= fun env v p ->
+  match (v, p) with
+  | _, PInt n2 -> env
+  | _, PBool b2 -> env
+  | _, PUnder -> env
+  | _, PVar x -> update_env x v env
+  | VList l1, PList l2 -> bind_pat_list env l1 l2 
+  | VTuple l1, PTuple l2 -> bind_pat_list env l1 l2
+  | VCtor (x1, l1), PCtor (x2, l2) -> bind_pat_list env l1 l2
+  | VList [], PCons (phd::ptl) ->  if ptl = [] then (bind_pat env v phd) else raise (Failure "Pattern binding failure")
+  | VList (vhd::vtl), PCons (phd::ptl) -> if ptl = [] then bind_pat env v phd else bind_pat (bind_pat env vhd phd) (VList vtl) (PCons ptl)
+  | _ -> raise (Failure "Pattern binding failure")
 
-and env_of_pat_list : labeled_value list -> labeled_pat list -> labeled_env -> labeled_env
-= fun vs ps env ->
-  let (_,ps') = list_split ps in
-  match (vs, ps) with
-  | ([], []) -> env
-  | (vhd::vtl, phd::ptl) -> 
-    let new_env = env_of_pat vhd phd env in
-    env_of_pat_list vtl ptl new_env
-  | _ -> raise (Failure "Pattern matching failure")
+and bind_pat_list : labeled_env -> labeled_value list -> pat list -> labeled_env
+= fun env vs ps -> List.fold_left2 bind_pat env vs ps
 
-and env_of_cons : labeled_value list -> labeled_pat list -> labeled_env -> labeled_env
-= fun vs ps env ->
-  match (vs, ps) with
-  | ([], [p]) ->
-    let p = snd p in
-    begin match p with
-    | PList [] -> env
-    | PVar x -> extend_env x (VList []) env
-    | PUnder -> env
-    | _ -> raise (Failure "Pattern matching failure")
-    end
-  | ([v], [p]) ->
-    let p = snd p in 
-    begin match p with
-    | PList ps -> env_of_pat_list [v] ps env
-    | PVar x -> extend_env x (VList [v]) env
-    | PUnder -> env
-    | _ -> raise (Failure "Pattern matching failure")
-    end
-  | (vhd::vtl, phd::ptl) ->
-    let phd' = snd phd in 
-    begin match phd' with
-    | PVar x ->
-      if ptl = [] then 
-        extend_env x (VList vs) env
-      else 
-        let new_env = env_of_pat vhd phd env in
-        env_of_cons vtl ptl new_env
-    | _ ->
-      let new_env = env_of_pat vhd phd env in
-      env_of_cons vtl ptl new_env
-    end
-  | _ -> raise (Failure "Pattern matching failure")
-
-let rec eval_abop e1 e2 env op =
-  let v1 = eval_labeled_exp env e1 in
-  let v2 = eval_labeled_exp env e2 in
-  begin match v1,v2 with
-  | VInt n1,VInt n2 -> (op n1 n2)
-  |_ -> raise (Failure "int_bop error")
-  end
-and eval_abbop e1 e2 env op =
-  let v1 = eval_labeled_exp env e1 in
-  let v2 = eval_labeled_exp env e2 in
-  begin match v1,v2 with
-  | VInt n1,VInt n2 -> (op n1 n2)
-  |_ -> raise (Failure "int_bop error")
-  end
-and eval_bbop e1 e2 env op =
-  let v1 = eval_labeled_exp env e1 in
-  let v2 = eval_labeled_exp env e2 in
-  begin match v1,v2 with
-  | VBool b1,VBool b2 -> (op b1 b2)
-  |_ -> raise (Failure "int_bop error")
-  end
-
-and eval_labeled_exp : labeled_env -> labeled_exp -> labeled_value
-= fun env (l,e) ->
-  let _ = if(Unix.gettimeofday() -. !start_time > 0.5) then raise(Failure "Timeout") in
-  let _ = label_set:= extend_set l !label_set in
+(* exp evaluation *)
+let rec eval : labeled_env -> labeled_exp -> labeled_value
+= fun env (label, e) -> 
+  (trace_set := extend_set label !trace_set);  (* gather execution traces *)
+  (*(print_endline (Print.exp_to_string (unlabeling_exp (label, e))));*)
+  if (Unix.gettimeofday() -. !start_time >0.05) then raise (Failure "Timeout")
+  else
   match e with
   | Const n -> VInt n
   | TRUE -> VBool true
   | FALSE -> VBool false
-  | EVar x -> find_env x env
-  | EList el -> VList (list_map (eval_labeled_exp env) el)
-  | ETuple el -> VTuple (list_map (eval_labeled_exp env) el)
-  | ECtor (id,el) -> VCtor (id,list_map (eval_labeled_exp env) el)
-  | ADD (e1,e2) -> VInt (eval_abop e1 e2 env (+))
-  | SUB (e1,e2) -> VInt (eval_abop e1 e2 env (-))
-  | MUL (e1,e2) -> VInt (eval_abop e1 e2 env ( * ))
-  | DIV (e1,e2) -> VInt (eval_abop e1 e2 env (/))
-  | MOD (e1,e2) -> VInt (eval_abop e1 e2 env (mod))
-  | MINUS e1 -> 
-    begin match (eval_labeled_exp env e1) with 
-    | VInt n1 -> VInt ((-1)*n1) 
-    |_ -> raise (Failure "int_uop error")
+  | String id -> VString id
+  | EVar x -> lookup_env x env
+  | EList es -> VList (List.map (eval env) es)
+  | ETuple es -> VTuple (List.map (eval env) es)
+  | ECtor (c, es) ->  VCtor (c, List.map (eval env) es)
+  | ADD (e1, e2) -> VInt (eval_abop env e1 e2 (+)) 
+  | SUB (e1, e2) -> VInt (eval_abop env e1 e2 (-))
+  | MUL (e1, e2) -> VInt (eval_abop env e1 e2 ( * ))
+  | DIV (e1, e2) -> VInt (eval_abop env e1 e2 (/))
+  | MOD (e1, e2) -> VInt (eval_abop env e1 e2 (mod))
+  | MINUS e ->
+    begin match (eval env e) with
+    | VInt n -> VInt (-n)
+    | _ -> raise (Failure "arithmetic_operation error")
     end
-  | NOT e1 ->
-    begin match (eval_labeled_exp env e1) with 
-    | VBool b1 -> VBool (not b1) 
-    |_ -> raise (Failure "int_uop error")
+  (*bexp*)
+  | NOT e -> 
+    begin match (eval env e) with
+    | VBool b -> VBool (not b)
+    | _ -> raise (Failure "boolean_operation error")
     end
-  | OR (e1,e2) -> VBool (eval_bbop e1 e2 env (||))
-  | AND (e1,e2) -> VBool (eval_bbop e1 e2 env (&&))
-  | LESS (e1,e2) -> VBool (eval_abbop e1 e2 env (<))
-  | LARGER (e1,e2) -> VBool (eval_abbop e1 e2 env (>))
-  | LESSEQ (e1,e2) -> VBool (eval_abbop e1 e2 env (<=))
-  | LARGEREQ (e1,e2) -> VBool (eval_abbop e1 e2 env (>=))
-  | EQUAL (e1,e2) -> 
-    let v1 = eval_labeled_exp env e1 in
-    let v2 = eval_labeled_exp env e2 in
-    begin match v1,v2 with
-    | VInt n1, VInt n2 -> VBool (n1 = n2)
-    | VBool b1, VBool b2 -> VBool (b1 = b2)
-    | VList l1, VList l2 -> VBool (l1 = l2)
-    | VTuple l1, VTuple l2 -> VBool (l1 = l2)
-    | VCtor (x1, l1), VCtor(x2, l2) -> VBool ((x1 = x2) && (l1 = l2))
-    |_ -> raise (Failure "equal error")
+  | OR (e1, e2) -> VBool (eval_bbop env e1 e2 (||))
+  | AND (e1, e2) -> VBool (eval_bbop env e1 e2 (&&))
+  | LESS (e1, e2) -> VBool (eval_abbop env e1 e2 (<))
+  | LARGER (e1, e2) -> VBool (eval_abbop env e1 e2 (>))
+  | LESSEQ (e1, e2) -> VBool (eval_abbop env e1 e2 (<=))
+  | LARGEREQ (e1, e2) -> VBool (eval_abbop env e1 e2 (>=))
+  | EQUAL (e1, e2) -> VBool ((eval env e1) = (eval env e2))
+  | NOTEQ (e1, e2) -> VBool ((eval env e1) = (eval env e2))
+  (* lop *)
+  | AT (e1, e2) ->
+    begin match (eval env e1, eval env e2) with
+    | VList vs1, VList vs2 -> VList (vs1 @ vs2)
+    | _ -> raise (Failure "list_operation error")
     end
-  | NOTEQ (e1,e2) -> 
-    let v1 = eval_labeled_exp env e1 in
-    let v2 = eval_labeled_exp env e2 in
-    begin match v1,v2 with
-    | VInt n1, VInt n2 -> VBool (n1 != n2)
-    | VBool b1, VBool b2 -> VBool (b1 != b2)
-    | VList l1, VList l2 -> VBool (l1 != l2)
-    | VTuple l1, VTuple l2 -> VBool (l1 != l2)
-    | VCtor (x1, l1), VCtor(x2, l2) -> VBool ((x1 != x2) || (l1 != l2))
-    |_ -> raise (Failure "equal error")
+  | DOUBLECOLON (e1, e2) ->
+    begin match (eval env e2) with
+    | VList vs -> VList ((eval env e1)::vs) 
+    | _ -> raise (Failure "list_operation error")
     end
-  | AT (e1,e2) ->
-    let v1= eval_labeled_exp env e1 in
-    let v2= eval_labeled_exp env e2 in
-    begin match v1,v2 with
-    | VList l1, VList l2 -> VList (l1 @ l2)
-    | _ -> raise (Failure "List type error")
+  (* else *)
+  | IF (e1, e2, e3) ->
+    begin match (eval env e1) with
+    | VBool true -> eval env e2
+    | VBool false -> eval env e3
+    | _ -> raise (Failure "if_type error")
     end
-  | DOUBLECOLON (e1,e2) ->
-    let v1= eval_labeled_exp env e1 in
-    let v2= eval_labeled_exp env e2 in
-    begin match v2 with
-    | VList l2 -> VList (v1 :: l2) 
-    | _ -> raise (Failure "List type error")
-    end
-  | EFun ((x,_),e) -> VFun (x, e, env, empty_env)  
-  | IF (e1,e2,e3) ->
-    let v1= eval_labeled_exp env e1 in
-    begin match v1 with
-    | VBool true -> eval_labeled_exp env e2
-    | VBool false -> eval_labeled_exp env e3
-    | _ -> raise (Failure "if type error")
-    end
-  | EApp (e1,e2) ->
-    let v1 = eval_labeled_exp env e1 in
-    let v2 = eval_labeled_exp env e2 in
-    begin match v1 with
-    | VFun (x,e,env',_) -> 
-      eval_labeled_exp (extend_env x v2 env') e
-    | VFunRec (f,x,e,env',_) ->
-      let env' = extend_env x v2 env' in
-      let env' = extend_env f v1 env' in
-      eval_labeled_exp env' e
-    | _ -> raise (Failure "Function call error")
-    end
-  | ELet (f,is_rec,args,t,e1,e2) ->
+  | ELet (f, is_rec, args, typ, e1, e2) -> 
     begin match args with
-    |[] ->
+    | [] ->
+      (* Value binding *)
       if is_rec then
-        let v1 = eval_labeled_exp env e1 in
+        let v1 = eval env e1 in
         begin match v1 with
-        | VFun (x,e,env',se) -> 
-          let env' = extend_env f (VFunRec (f,x,e,env',se)) env' in
-          eval_labeled_exp env' e2
-        |_ -> eval_labeled_exp (extend_env f v1 env) e2
+        | VFun (x, e, closure) -> eval (update_env f (VFunRec (f, x, e, closure)) env) e2
+        | _ -> eval (update_env f v1 env) e2
         end
-      else
-        let v1 = eval_labeled_exp env e1 in 
-        eval_labeled_exp (extend_env f v1 env) e2
-    |_ ->
-      let rec binding xs e = 
-      begin match xs with
-      | [] -> e
-      | hd::tl -> (-1,EFun (hd,binding tl e))
-      end in
-      let ((x1,_)::tl) = args in
-      let vf =
-        if is_rec then
-          let e = binding tl e1 in
-          VFunRec (f,x1,e,env,empty_env)
-        else
-          let e = binding tl e1 in
-          VFun(x1,e,env,empty_env)
+      else eval (update_env f (eval env e1) env) e2
+    | _ ->
+      (* Function binding *)
+      let rec binding : arg list -> labeled_exp -> labeled_exp 
+      = fun xs e -> 
+        begin match xs with
+        | [] -> e
+        | hd::tl -> (dummy_label, EFun (hd, binding tl e))
+        end 
       in
-      eval_labeled_exp (extend_env f vf env) e2
+      let (x1, t1) = List.hd args in
+      let vf = 
+        if is_rec then
+          VFunRec (f, x1, (binding (List.tl args) e1), env)
+        else 
+          VFun (x1, (binding (List.tl args) e1), env)
+      in
+      eval (update_env f vf env) e2
     end
-  | EMatch (e,bl) -> 
-    let v = eval_labeled_exp env e in
-    let (p,ex) = find_first_branch v bl in
-    let new_env = env_of_pat v p env in
-    eval_labeled_exp new_env ex
-  | _ -> raise(Failure "Hole")
+  | EMatch (e, bs) ->
+    let v = eval env e in
+    let (p, ex) = find_first_branch v bs in
+    eval (bind_pat env v p) ex
+  | EFun ((x, _), e) -> VFun (x, e, env)  
+  | EApp (e1, e2) ->
+    begin match (eval env e1) with
+    | VFun (x, e, closure) -> eval (update_env x (eval env e2) closure) e
+    | VFunRec (f, x, e, closure) -> eval (update_env f (VFunRec (f,x,e,closure)) (update_env x (eval env e2) closure)) e
+    | _ -> raise (Failure "function_call error")
+    end
+  | Hole n -> VHole n
 
-let eval_labeled_decl : labeled_decl -> labeled_env -> labeled_env
-= fun decl env ->
+and eval_abop : labeled_env -> labeled_exp -> labeled_exp -> (int -> int -> int) -> int
+= fun env e1 e2 op ->
+  match (eval env e1, eval env e2) with
+  | VInt n1, VInt n2 -> op n1 n2
+  | _ -> raise (Failure "arithmetic_operation error")
+
+and eval_abbop : labeled_env -> labeled_exp -> labeled_exp -> (int -> int -> bool) -> bool
+= fun env e1 e2 op ->
+  match (eval env e1, eval env e2) with
+  | VInt n1, VInt n2 -> op n1 n2
+  | _ -> raise (Failure "int_relation error")
+
+and eval_bbop : labeled_env -> labeled_exp -> labeled_exp -> (bool -> bool -> bool) -> bool
+= fun env e1 e2 op ->
+  match (eval env e1, eval env e2) with
+  | VBool b1, VBool b2 -> op b1 b2
+  | _ -> raise (Failure "boolean_operation error")
+    
+let eval_decl : labeled_decl -> labeled_env -> labeled_env
+= fun decl env -> 
   match decl with
-  |DData (id,ctors) -> env
-  |DLet (f,is_rec,args,t,l_e) -> 
-    let exp = (-1,ELet (f,is_rec,args,t,l_e,(-1,EVar f)))in
-    extend_env f (eval_labeled_exp env exp) env
+  | DData _ -> env
+  | DLet (f, is_rec, args, typ, e) -> 
+    let e = (dummy_label, ELet (f, is_rec, args, typ, e, (dummy_label, EVar f))) in
+    update_env f (eval env e) env
 
-let gen_pgm_label : labeled_prog -> example -> label BatSet.t
-= fun l_pgm (input,_) -> 
-  let output = labeling_exp (appify (EVar "f") input) in
-  let l_pgm = l_pgm@[DLet ("@",false,[],Type.fresh_tvar(),output)] in
-  let _ = start_time := Unix.gettimeofday() in
-  let _ = label_set :=empty_set in
+let run : labeled_prog -> labeled_env
+= fun decls -> 
+  start_time := Unix.gettimeofday ();
+  init_set ();
+  (list_fold eval_decl decls empty_env)
+
+let rec collect_execution_trace : labeled_prog -> example -> trace_set
+= fun pgm (input, output) ->
+  let res_var = "__res__" in
+  let pgm' = pgm @ labeling_prog [(DLet (res_var, false, [], Type.fresh_tvar(), (Lang.appify (EVar !Options.opt_entry_func) input)))] in
   try
-    let _ = list_fold eval_labeled_decl l_pgm empty_env in
-    !label_set
-  with
-  | _ -> !label_set
+    let _  = run pgm' in
+    !trace_set
+  with _ -> !trace_set
 
-let gen_counter_label : labeled_prog -> example -> label BatSet.t -> label BatSet.t
-= fun l_pgm example set->
-  let (result_set) = gen_pgm_label l_pgm example in
-  BatSet.union result_set set
-
-let gen_candidate_pgm : prog -> examples -> (int * prog) BatSet.t
-= fun pgm examples ->
-  let rank = cost pgm in
-  let l_pgm = labeling_prog pgm in
-  let counter_examples = find_counter_examples pgm examples [] in
-  let label_set = list_fold (gen_counter_label l_pgm) counter_examples empty_set in
-  let _ = print_endline (string_of_int (BatSet.cardinal label_set)) in
-  let candidate_set = BatSet.fold (
-    fun label set ->
-      let hole_pgm = gen_hole_pgm l_pgm label in
-      let candidate_pgm = unlabeling_prog hole_pgm in
-      let rank' = cost candidate_pgm in
-      if (Synthesize.is_closed candidate_pgm) then set else extend_set (rank-rank', candidate_pgm) set
-  ) label_set empty_set
-  in
-  let _ = print_endline (string_of_int (BatSet.cardinal candidate_set)) in
-  candidate_set
-
-
+(* Find inital candidates *)
 let localization : prog -> examples -> (int * prog) BatSet.t
 = fun pgm examples ->
-  let candidate_set = gen_candidate_pgm pgm examples in
+  let counter_examples = find_counter_examples pgm examples in
+  let l_pgm = Labeling.labeling_prog pgm in
+  let trace_set = List.fold_left (
+    fun set example -> BatSet.union (collect_execution_trace l_pgm example) set
+  ) empty_set counter_examples in
+  let candidate_set = BatSet.fold (
+    fun label set ->
+      let hole_pgm = gen_hole_pgm label l_pgm in
+      let candidate_pgm = unlabeling_prog hole_pgm in
+      let rank = (cost pgm) - (cost candidate_pgm) in
+      if (Synthesize.is_closed candidate_pgm) then set else extend_set (rank, candidate_pgm) set
+  ) trace_set empty_set in
   candidate_set
