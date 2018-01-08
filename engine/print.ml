@@ -2,7 +2,9 @@ open Lang
 open Util
 open Symbol_lang
 
-(**)
+(*****************************)
+(********language*************)
+(*****************************)
 
 let rec tab_to_string : int -> string
 = fun n ->
@@ -50,7 +52,6 @@ let rec type_to_string : typ -> string
   | TInt -> "int"
   | TString -> "string"
   | TBool -> "bool"
-  | TPoly -> "poly"
   | TBase id -> id
   | TList t -> type_to_string t ^ " list"
   | TTuple l -> if(l=[]) then "unit" else pp_tuple type_to_string l
@@ -61,7 +62,7 @@ let rec type_to_string : typ -> string
 let arg_to_string : arg -> string
 = fun (x,typ) ->
   match typ with
-  |TPoly -> x
+  |TVar _ -> x
   |_ -> "(" ^ x ^ " : " ^ type_to_string typ ^ ")"
 
 let rec args_to_string : arg list -> string -> string
@@ -123,7 +124,7 @@ let rec exp_to_string : exp -> string
       let args_string = args_to_string xs "" in
       "\n" ^ "let " ^
       (if is_rec then "rec " else "") ^ f ^" "^ args_string ^
-      (if t=TPoly then "" else " : " ^ type_to_string t) ^
+      (match t with |TVar _ -> "" |_ -> " : " ^ type_to_string t) ^
       " = " ^ (exp_to_string e1) ^ " in \n" ^ (exp_to_string e2)
     end
   |EFun (arg,e1) -> 
@@ -156,7 +157,7 @@ let rec decl_to_string : decl -> string -> string
       let args_string = args_to_string args "" in
       str ^ "\n" ^ "let " ^
       (if(is_rec) then "rec " else "") ^ x ^" " ^args_string ^
-      (if(typ=TPoly) then "" else " : " ^ type_to_string typ) ^
+      (match typ with |TVar _ -> "" |_ -> " : " ^ type_to_string typ) ^
       " = " ^ (exp_to_string exp) ^ ";;\n"
 
 let program_to_string : prog -> string
@@ -190,6 +191,16 @@ let rec print_pgm : prog -> unit
 = fun pgm ->
   print_endline (program_to_string pgm)
 
+(*****************************)
+(******typechecking***********)
+(*****************************)
+
+
+let print_typ_eqns eqns = 
+  List.iter (fun (ty1,ty2) -> print_endline(type_to_string ty1^" = "^type_to_string ty2)) eqns
+(*****************************)
+(********labeling*************)
+(*****************************)
 let rec print_examples : examples -> unit
 = fun examples -> List.iter 
   (
@@ -286,8 +297,7 @@ let rec labeled_decl_to_string : labeled_decl -> string -> string
     | _ ->  (* function binding *)
       let args_string = args_to_string args "" in
       let typ_string = 
-        if (typ=TPoly) then "\b\b\b" 
-        else type_to_string typ 
+        type_to_string typ 
       in
       if is_rec then
         str ^ "\n" ^ "let rec " ^ x ^ args_string ^ " : " ^ typ_string ^ " = \n" ^(labeled_exp_to_string exp) ^ ";;\n"

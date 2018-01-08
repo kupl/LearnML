@@ -199,13 +199,13 @@ letbind:
   | LET REC x=LID args=arg_list COLON t=typ EQ e=exp SEMI SEMI
     { DLet (x, true, List.rev args, t, e) }
   | LET x=LID EQ e=exp SEMI SEMI
-    { DLet (x, false, [], TPoly, e) }
+    { DLet (x, false, [], Type.fresh_tvar(), e) }
   | LET x=LID args=arg_list EQ e=exp SEMI SEMI (*arg => (x:t)*)
-    { DLet (x, false, List.rev args, TPoly, e) }
+    { DLet (x, false, List.rev args, Type.fresh_tvar(), e) }
   | LET REC x=LID args=arg_list EQ e=exp SEMI SEMI
-    { DLet (x, true, List.rev args, TPoly, e) }
+    { DLet (x, true, List.rev args, Type.fresh_tvar(), e) }
   | e=exp SEMI SEMI
-    { DLet ("@", false, [], TPoly, e)}
+    { DLet ("@", false, [], Type.fresh_tvar(), e)}
 
 ctors:  (* NOTE: reversed *)
   | (* empty *)
@@ -259,7 +259,7 @@ arg:
   | LPAREN x=LID COLON t=typ RPAREN
     { (x, t) }
   | x=LID
-    { (x,TPoly) }
+    { (x,Type.fresh_tvar()) }
 
 arg_comma:
   | x=arg
@@ -361,9 +361,9 @@ exp_base:
   | LET REC f=LID xs=arg_list COLON t=typ EQ e1=exp IN e2=exp %prec ASSIGN
     { ELet (f, true, List.rev xs, t, e1, e2) }
   | LET f=LID xs=arg_list EQ e1=exp IN e2=exp %prec ASSIGN
-    { ELet (f, false, List.rev xs, TPoly, e1, e2) }
+    { ELet (f, false, List.rev xs, Type.fresh_tvar(), e1, e2) }
   | LET REC f=LID xs=arg_list EQ e1=exp IN e2=exp %prec ASSIGN
-    { ELet (f, true, List.rev xs, TPoly, e1, e2) } 
+    { ELet (f, true, List.rev xs, Type.fresh_tvar(), e1, e2) } 
   | MATCH e=exp WITH bs=branches 
     { EMatch (e, List.rev bs) }
   | IF b1=exp THEN x1=exp ELSE x2=exp

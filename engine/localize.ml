@@ -26,7 +26,7 @@ let rec is_solution : prog -> examples -> bool
   |[] -> true
   |(exp,value)::tl ->
   (
-    let result_prog = prog@[(DLet ("result",false,[],TPoly,(appify (EVar "f") exp)))] in
+    let result_prog = prog@[(DLet ("result",false,[],Type.fresh_tvar(),(appify (EVar "f") exp)))] in
     try
       let result_env = Eval.run result_prog in
       let result_value = lookup_env "result" (result_env) in
@@ -344,7 +344,7 @@ let eval_labeled_decl : labeled_decl -> labeled_env -> labeled_env
 let gen_pgm_label : labeled_prog -> example -> label BatSet.t
 = fun l_pgm (input,_) -> 
   let output = labeling_exp (appify (EVar "f") input) in
-  let l_pgm = l_pgm@[DLet ("@",false,[],TPoly,output)] in
+  let l_pgm = l_pgm@[DLet ("@",false,[],Type.fresh_tvar(),output)] in
   let _ = start_time := Unix.gettimeofday() in
   let _ = label_set :=empty_set in
   try

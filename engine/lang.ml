@@ -6,7 +6,6 @@ type id = string
 type typ = 
   | TInt
   | TBool
-  | TPoly
   | TString
   | TBase of id  (* user defined*)
   | TList of typ
