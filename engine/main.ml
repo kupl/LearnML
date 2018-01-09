@@ -61,14 +61,21 @@ let generate_testcases : prog -> prog -> examples
 let clonecheck : prog list -> prog list list
 =fun submissions -> [] (* TOOD *)
 
+let read_prog : string -> prog option
+=fun filename ->
+  try 
+    if Sys.file_exists filename then Some (snd (parse_file filename)) 
+    else None 
+  with _ -> raise (Failure ("parsing error: " ^ filename)) 
+
 let main () = 
   let _ = Arg.parse options (fun s->()) usage_msg in
   let testcases = 
     if !opt_testcases_filename = "" then [] 
     else try fst (parse_file !opt_testcases_filename) 
          with _ -> raise (Failure ("error during parsing testcases: " ^ !opt_testcases_filename)) in 
-  let submission = try Some (snd (parse_file !opt_submission_filename)) with _ -> None in
-  let solution= try Some (snd (parse_file !opt_solution_filename)) with _ -> None in
+  let submission = read_prog !opt_submission_filename in
+  let solution = read_prog !opt_solution_filename in
     match !opt_run, !opt_fix, !opt_gentest with
     | true, false, false -> (* execution mode *)
       begin

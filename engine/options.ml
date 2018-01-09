@@ -10,15 +10,15 @@ let opt_gentest = ref false
 
 let options =
   [
-    ("-run", Arg.Set opt_run, "Run submission");
-    ("-fix", Arg.Set opt_fix, "Fix submission");
-    ("-gentest", Arg.Set opt_gentest, "Generate testcases");
-    ("-solution", Arg.String (fun fname -> opt_solution_filename := fname), "Solution filename");
-    ("-submission", Arg.String (fun fname -> opt_submission_filename := fname), "Submission filename");
-    ("-testcases", Arg.String (fun fname -> opt_testcases_filename := fname), "Test-cases filename");
-    ("-entry", Arg.String (fun f -> opt_entry_func := f), "Name of the entry function (default: f)");
-    ("-verbose" , Arg.Set opt_verbose, "Verbose mode");
-    ("-pp", Arg.Set opt_pp, "Print AST");
+    ("-run", Arg.Set opt_run, " Run submission");
+    ("-fix", Arg.Set opt_fix, " Fix submission");
+    ("-gentest", Arg.Set opt_gentest, " Generate testcases");
+    ("-solution", Arg.String (fun fname -> opt_solution_filename := fname), " Solution filename");
+    ("-submission", Arg.String (fun fname -> opt_submission_filename := fname), " Submission filename");
+    ("-testcases", Arg.String (fun fname -> opt_testcases_filename := fname), " Test-cases filename");
+    ("-entry", Arg.String (fun f -> opt_entry_func := f), " Name of the entry function (default: f)");
+    ("-verbose" , Arg.Set opt_verbose, " Verbose mode");
+    ("-pp", Arg.Set opt_pp, " Print AST");
   ]
   |> Arg.align
 
