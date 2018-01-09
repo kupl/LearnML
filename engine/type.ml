@@ -3,32 +3,28 @@ open Util
 open Print
 
 type typ_eqn = (typ * typ) list
-type hole_env = (int, id) BatMap.t
-type hole_table = (int, typ) BatMap.t 
 
 exception TypeError
 
 let start_time = ref 0.0
 
-let hole_map = ref BatMap.empty
-let hole_tbl = ref BatMap.empty
 
 (* type environment : var -> type *)
 module TEnv = struct
   type t = (id, typ) BatMap.t
   let empty = BatMap.empty
-  let extend (x,t) tenv = BatMap.add x t tenv
+  let extend : id * typ -> t ->t 
+  = fun (x,t) tenv -> BatMap.add x t tenv
   let find tenv x = BatMap.find x tenv
   let rec print tenv = 
     BatMap.iter (fun id typ -> 
-      print_endline(id^"|->"^(type_to_string typ)^"\n")) tenv
+      print_endline(id^"|->"^(type_to_string typ))) tenv
 end
 
-type at_hole_env = (int, TEnv.t) BatMap.t
 
-let at_hole_table = ref BatMap.empty
+(*let at_hole_table = ref BatMap.empty
 let at_hole_ttbl = ref BatMap.empty
-
+*)
 (* substitution *)
 module Subst = struct
   type t = (id * typ) list
@@ -60,6 +56,36 @@ module Subst = struct
   = fun subst -> 
       List.iter (fun (x,ty) -> print_endline (x ^ " |-> " ^ type_to_string ty)) subst
 end
+
+module HoleType = struct
+  type t = (int, typ) BatMap.t
+  
+  let empty = BatMap.empty 
+  let extend : int -> typ -> t -> t
+  = fun hole typ env -> BatMap.add hole typ env
+  
+  let update : Subst.t -> t -> t
+  = fun subst env -> BatMap.map (fun typ -> Subst.apply typ subst) env 
+
+  let print : t -> unit
+  = fun env -> BatMap.iter (fun num typ -> print_endline(string_of_int num ^ " -> " ^ type_to_string typ)) env
+end
+
+module VariableType = struct
+  type t = (int,TEnv.t) BatMap.t
+  let empty = BatMap.empty
+  let extend : int -> TEnv.t -> t -> t
+  = fun hole env varenv -> BatMap.add hole env varenv
+
+  let update : Subst.t -> t -> t
+  = fun subst varenv -> BatMap.map (fun tenv -> 
+      BatMap.map (fun typ -> Subst.apply typ subst) tenv
+    ) varenv
+
+  let print : t -> unit
+  = fun varenv -> BatMap.iter (fun num env ->print_endline(string_of_int num);TEnv.print env ) varenv
+end
+
 
 (* generate a fresh type variable *)
 let tvar_num = ref 0
@@ -135,82 +161,112 @@ and gen_pat_cons_equations : (TEnv.t * typ_eqn) -> pat list -> typ -> (TEnv.t * 
     gen_pat_cons_equations (env, eqn) tl typ
 
 (* Construct type equations of expressions *)
-let rec gen_equations : TEnv.t -> exp -> typ -> typ_eqn
-= fun tenv exp ty ->
+let rec gen_equations : HoleType.t -> VariableType.t -> TEnv.t -> exp -> typ -> typ_eqn * HoleType.t * VariableType.t
+= fun hole_typ var_typ tenv exp ty ->
   match exp with
-  | Const n -> [(ty, TInt)]
-  | TRUE | FALSE -> [(ty, TBool)]
-  | String str -> [(ty, TString)]
-  | EVar x -> [(ty, TEnv.find tenv x)]
+  | Const n -> ([(ty, TInt)],hole_typ,var_typ)
+  | TRUE | FALSE -> ([(ty, TBool)],hole_typ,var_typ)
+  | String str -> ([(ty, TString)],hole_typ,var_typ)
+  | EVar x -> ([(ty, TEnv.find tenv x)],hole_typ,var_typ)
   | EList es -> 
     let t = fresh_tvar () in
-    (ty, TList t)::(List.fold_left (fun eqn exp -> eqn@(gen_equations tenv exp t)) [] es)
+    list_fold (fun exp (eqns,h_t,v_t)->
+      let (e,h,v) = gen_equations h_t v_t tenv exp t in
+      (eqns@e,h,v)
+    ) es ([ty,TList t],hole_typ,var_typ) 
   | ETuple es ->
-    let (eqn, ts) = List.fold_left (
-      fun (eqn, ts) exp -> 
-        let t = fresh_tvar () in
-        ((gen_equations tenv exp t), ts@[t])
-    ) ([], []) es 
-    in
-    (ty, TTuple ts)::eqn
+    let (eqns,ts,hole_typ,var_typ) = list_fold (fun exp (eqn,ts,h_t,v_t)->
+      let t = fresh_tvar() in
+      let (e,h,v) = gen_equations h_t v_t tenv exp t in
+      (eqn@e,ts@[t],h,v)
+    ) es ([],[],hole_typ,var_typ) in
+    ((ty,TTuple ts)::eqns,hole_typ,var_typ)
   | ECtor (x, es) -> 
     let tctor = TEnv.find tenv x in
     begin match tctor with
-    | TCtor (t_base, ts) -> List.fold_left2 (fun eqn exp typ -> gen_equations tenv exp typ) [ty, t_base] es ts
+    | TCtor (t_base, ts) -> list_fold(fun (exp,t) (eqns,h_t,v_t)->
+        let (e,h,v) = gen_equations h_t v_t tenv exp t in
+        (eqns@e,h,v)
+    ) (list_combine es ts) ([ty,t_base],hole_typ,var_typ)
     | _ -> raise TypeError
     end
-  | MINUS e -> (ty, TInt)::(gen_equations tenv e TInt)
-  | NOT e -> (ty, TBool)::(gen_equations tenv e TBool)
-  | ADD (e1, e2) | SUB (e1, e2) | MUL (e1, e2) | DIV (e1, e2) | MOD (e1, e2) -> (ty, TInt)::((gen_equations tenv e1 TInt)@(gen_equations tenv e2 TInt))
-  | OR (e1, e2) | AND (e1, e2) -> (ty, TBool)::((gen_equations tenv e1 TBool)@(gen_equations tenv e2 TBool))
-  | LESS (e1, e2) | LARGER (e1, e2) | LESSEQ (e1, e2) | LARGEREQ (e1, e2) -> (ty, TBool)::((gen_equations tenv e1 TInt)@(gen_equations tenv e2 TInt))
+  | MINUS e -> let (eqns,hole_typ,var_typ) = gen_equations hole_typ var_typ tenv e TInt in ((ty,TInt)::eqns,hole_typ,var_typ)
+  | NOT e -> let (eqns,hole_typ,var_typ) = gen_equations hole_typ var_typ tenv e TBool in ((ty,TBool)::eqns,hole_typ,var_typ)
+  | ADD (e1, e2) | SUB (e1, e2) | MUL (e1, e2) | DIV (e1, e2) | MOD (e1, e2) -> 
+    let (eqns,hole_typ,var_typ) = gen_equations hole_typ var_typ tenv e1 TInt in
+    let (eqns',hole_typ,var_typ) = gen_equations hole_typ var_typ tenv e2 TInt in
+    ((ty,TInt)::(eqns@eqns'),hole_typ,var_typ)
+  | OR (e1, e2) | AND (e1, e2) -> 
+    let (eqns,hole_typ,var_typ) = gen_equations hole_typ var_typ tenv e1 TBool in
+    let (eqns',hole_typ,var_typ) = gen_equations hole_typ var_typ tenv e2 TBool in
+    ((ty,TBool)::(eqns@eqns'),hole_typ,var_typ) 
+  | LESS (e1, e2) | LARGER (e1, e2) | LESSEQ (e1, e2) | LARGEREQ (e1, e2) -> 
+    let (eqns,hole_typ,var_typ) = gen_equations hole_typ var_typ tenv e1 TInt in
+    let (eqns',hole_typ,var_typ) = gen_equations hole_typ var_typ tenv e2 TInt in
+    ((ty,TBool)::(eqns@eqns'),hole_typ,var_typ) 
   | EQUAL (e1, e2) | NOTEQ (e1, e2) -> 
     let t = fresh_tvar () in
-    (ty, TBool)::((gen_equations tenv e1 t)@(gen_equations tenv e2 t))
+    let (eqns,hole_typ,var_typ) = gen_equations hole_typ var_typ tenv e1 t in
+    let (eqns',hole_typ,var_typ) = gen_equations hole_typ var_typ tenv e2 t in
+    ((ty,TBool)::(eqns@eqns'),hole_typ,var_typ) 
   | AT (e1, e2) ->
     let t = TList (fresh_tvar ()) in
-    (ty, t)::((gen_equations tenv e1 t)@(gen_equations tenv e2 t))
+    let (eqns,hole_typ,var_typ) = gen_equations hole_typ var_typ tenv e1 t in
+    let (eqns',hole_typ,var_typ) = gen_equations hole_typ var_typ tenv e2 t in
+    ((ty,t)::(eqns@eqns'),hole_typ,var_typ) 
   | DOUBLECOLON (e1, e2) ->
     let t = fresh_tvar () in
-    (ty, TList t)::((gen_equations tenv e1 t)@(gen_equations tenv e2 (TList t)))
-  | IF (e1, e2, e3) -> (gen_equations tenv e1 TBool)@(gen_equations tenv e2 ty)@(gen_equations tenv e3 ty)
+    let (eqns,hole_typ,var_typ) = gen_equations hole_typ var_typ tenv e1 t in
+    let (eqns',hole_typ,var_typ) = gen_equations hole_typ var_typ tenv e2 (TList t) in
+    ((ty,TList t)::(eqns@eqns'),hole_typ,var_typ) 
+  | IF (e1, e2, e3) -> 
+    let (eqns,hole_typ,var_typ) = gen_equations hole_typ var_typ tenv e1 TBool in
+    let (eqns',hole_typ,var_typ) = gen_equations hole_typ var_typ tenv e2 ty in
+    let (eqns'',hole_typ,var_typ) = gen_equations hole_typ var_typ tenv e3 ty in
+    (eqns@eqns'@eqns'',hole_typ,var_typ)
   | ELet (f, is_rec, args, typ, e1, e2) ->
     begin match args with
     | [] ->
       let t =fresh_tvar () in
-      (typ, t)::((gen_equations tenv e1 t)@(gen_equations (TEnv.extend (f, t) tenv) e2 ty))
+      let tenv = if(is_rec) then TEnv.extend (f,t) tenv else tenv in
+      let tenv' = TEnv.extend (f,t) tenv in
+      let (eqns,hole_typ,var_typ) = gen_equations hole_typ var_typ tenv e1 t in
+      let (eqns',hole_typ,var_typ) = gen_equations hole_typ var_typ tenv' e2 ty in
+      ((typ,t)::(eqns@eqns'),hole_typ,var_typ)
     | _ -> 
       let t = fresh_tvar () in
       let (func_typ, args_env) = (type_of_fun args t, bind_args tenv args) in
-      (typ, func_typ)::
-      (gen_equations (if is_rec then TEnv.extend (f, func_typ) args_env else args_env) e1 t)@
-      (gen_equations (TEnv.extend (f, func_typ) tenv) e2 ty)
+      let tenv = if is_rec then TEnv.extend (f,func_typ) args_env else tenv in
+      let tenv' = TEnv.extend (f,func_typ) tenv in
+      let (eqns,hole_typ,var_typ) = gen_equations hole_typ var_typ tenv e1 t in
+      let (eqns',hole_typ,var_typ) = gen_equations hole_typ var_typ tenv' e2 ty in
+      ((typ,func_typ)::(eqns@eqns'),hole_typ,var_typ)
     end
   | EFun (arg, e) ->
     let t1 = type_of_arg arg in
     let t2 = fresh_tvar () in
-    (ty, TArr (t1, t2))::(gen_equations (bind_arg tenv arg) e t2)
+    let tenv = bind_arg tenv arg in
+    let (eqns,hole_typ,var_typ) = gen_equations hole_typ var_typ tenv e t2 in
+    ((ty,TArr (t1,t2))::eqns,hole_typ,var_typ)
   | EApp (e1, e2) ->
     let t = fresh_tvar () in
-    (gen_equations tenv e1 (TArr (t, ty)))@(gen_equations tenv e2 t)
+    let (eqns,hole_typ,var_typ) = gen_equations hole_typ var_typ tenv e1 (TArr (t,ty)) in
+    let (eqns',hole_typ,var_typ) = gen_equations hole_typ var_typ tenv e2 t in
+    (eqns@eqns',hole_typ,var_typ)
   | EMatch (e, bs) ->
-    let (ps, es) = List.split bs in
     let typ_pat = fresh_tvar () in
     let typ_exp = fresh_tvar () in
-    let branch_eqn = List.fold_left2 (
-      fun eqn pat exp -> 
-        let (env, eqn) = gen_pat_equations (tenv, eqn) pat typ_pat in
-        eqn@(gen_equations env exp typ_exp)
-      ) [] ps es in
-    (ty, typ_exp)::((gen_equations tenv e typ_pat)@branch_eqn)
+    let (eqns,hole_typ,var_typ) = gen_equations hole_typ var_typ tenv e typ_pat in
+    list_fold (fun (p,e) (eqns,h_t,v_t) ->
+      let (env,pat_eqn) = gen_pat_equations (tenv,eqns) p typ_pat in
+      let (exp_eqn,h_t,v_t) = gen_equations h_t v_t env e typ_exp in
+      (eqns@pat_eqn@exp_eqn,h_t,v_t)
+    ) bs ((ty,typ_exp)::eqns,hole_typ,var_typ)
   | Hole n ->
     let t = fresh_tvar () in
-    let _ =
-      (* Update Info for type-directed synthesis *)
-      hole_map := BatMap.add n t (!hole_map);
-      at_hole_table := BatMap.add n tenv (!at_hole_table);
-    in
-    [(ty, t)]
+    let hole_typ = HoleType.extend n t hole_typ in
+    let var_typ = VariableType.extend n tenv var_typ in
+    ([(ty,t)],hole_typ,var_typ)
 
 (* Unification *)
 let rec extract_tvar : id -> typ -> bool
@@ -282,70 +338,39 @@ let rec unify_all : typ_eqn -> Subst.t -> Subst.t
 let solve : typ_eqn -> Subst.t
 = fun eqns -> unify_all eqns Subst.empty
 
-let rec fill_hole_tbl subst holes= 
-  if(BatMap.is_empty holes) then ()
-  else
-    let ((n,id),remain) = BatMap.pop holes in
-    let ty = Subst.apply id subst in
-    try 
-      let _ = BatMap.find n !hole_tbl in
-      fill_hole_tbl subst remain
-    with _ ->
-      let _ = hole_tbl := BatMap.add n ty !hole_tbl in
-      fill_hole_tbl subst remain
-
-let rec complete_tenv subst env_table =
-  if(BatMap.is_empty env_table) then ()
-  else
-    let ((n,env),remain) = BatMap.pop env_table in
-    let rec change_env env result_env=
-      if(BatMap.is_empty env) then result_env
-      else 
-        let ((id,t),remain) = BatMap.pop env in
-        let result_env = BatMap.add id (Subst.apply t subst) result_env in
-        change_env remain result_env
-    in
-    let result_env = change_env env BatMap.empty in
-    let _ = at_hole_ttbl:= BatMap.add n result_env (!at_hole_ttbl) in
-    complete_tenv subst remain
-
-let typeof : exp -> TEnv.t -> typ -> typ
-= fun exp tenv typ->
+let typeof : exp -> TEnv.t * HoleType.t * VariableType.t -> typ -> typ * HoleType.t * VariableType.t
+= fun exp (tenv,hole_typ,variable_typ) typ->
   let new_tv = fresh_tvar () in
-  let eqns = gen_equations tenv exp new_tv in
+  let (eqns,hole_typ,variable_typ) = gen_equations hole_typ variable_typ tenv exp new_tv in
   let eqns = (new_tv,typ)::eqns in
   let subst = solve eqns in
   let ty = Subst.apply new_tv subst in
-  let _ = complete_tenv subst !at_hole_table in
-  let _ = fill_hole_tbl subst !hole_map in
-    ty
+  let hole_typ = HoleType.update subst hole_typ in
+  let variable_typ = VariableType.update subst variable_typ in
+  (ty,hole_typ,variable_typ)
 
 let rec ctors_to_env : ctor list -> TEnv.t -> typ -> TEnv.t
 = fun ctors tenv tbase -> list_fold(fun (id,typs) env -> TEnv.extend (id,TCtor(tbase,typs)) env) ctors tenv
 
-let type_decl : decl -> TEnv.t -> TEnv.t
-= fun decl tenv -> 
-  at_hole_table:=BatMap.empty;
+let type_decl : decl -> TEnv.t * HoleType.t * VariableType.t -> TEnv.t * HoleType.t * VariableType.t
+= fun decl (tenv,hole_typ,variable_typ) -> 
   match decl with
   | DData (id, ctors) -> 
     let tbase = TBase id in
-    ctors_to_env ctors tenv tbase
+    (ctors_to_env ctors tenv tbase,hole_typ,variable_typ)
   | DLet (x,is_rec,args,typ,exp) -> 
     begin match args with
     | [] -> (* variable binding *)
-      let ty = typeof exp (TEnv.extend (x, typ) tenv) typ in
-      TEnv.extend (x, ty) tenv
+      let (ty,hole_typ,variable_typ) = typeof exp ((TEnv.extend (x, typ) tenv),hole_typ,variable_typ) typ in
+      (TEnv.extend (x,ty) tenv,hole_typ,variable_typ)
     | _ ->  (* function binding *)
       let e = ELet(x, is_rec, args, typ, exp, EVar(x)) in
-      let ty = typeof e (TEnv.extend (x, typ) tenv) typ in
-      TEnv.extend (x, ty) tenv
+      let (ty,hole_typ,variable_typ) = typeof e ((TEnv.extend (x, typ) tenv),hole_typ,variable_typ) typ in
+      ((TEnv.extend (x, ty) tenv),hole_typ,variable_typ)
     end
 
-let run : prog -> prog
+let run : prog -> HoleType.t * VariableType.t
 = fun decls -> 
-  let _ = hole_map:=BatMap.empty in
-  let _ = hole_tbl:=BatMap.empty in
-  let _ = at_hole_ttbl:=BatMap.empty in
   let _ = start_time:=Sys.time() in
-  let _ = (list_fold type_decl decls TEnv.empty) in
-  decls
+  let (_,hole_typ,variable_typ) = (list_fold type_decl decls (TEnv.empty,HoleType.empty,VariableType.empty)) in
+  (hole_typ,variable_typ)

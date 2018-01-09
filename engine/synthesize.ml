@@ -7,7 +7,7 @@ open Util
 *)
 
 module Workset = struct
-  type work = int * prog * Type.hole_table * Type.at_hole_env
+  type work = int * prog * Type.HoleType.t * Type.VariableType.t
 
   module OrderedType = struct
     type t = work
@@ -215,9 +215,6 @@ let rec type_directed exp hole_typ env (h_t,h_e) =
 		determined_type exp [(n1,TBool);(n2,hole_typ);(n3,hole_typ)] env h_t h_e
 	| ELet (f, is_rec, args, t, e1, e2) ->
 		let (n1,n2) = (extract_holenum e1,extract_holenum e2) in
-		let xs = list_fold (fun arg acc-> acc@(vars_of_arg arg)) args [] in
-		let x_set = BatSet.of_list xs in
-		let x_set = if(is_rec) then BatSet.add f x_set else x_set in
 		let h_t' = BatMap.add n1 t h_t in
 		let h_t' = BatMap.add n2 hole_typ h_t' in
 		let h_e' = BatMap.add n1 (Type.bind_args env args) h_e in
