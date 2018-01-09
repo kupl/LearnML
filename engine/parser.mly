@@ -3,11 +3,6 @@ open Lang
 
 exception Internal_error of string
 
-let rec ctor_of_int (n:int) : exp =
-  if n = 0
-  then ECtor("O", [])
-  else ECtor("S", [ctor_of_int (n-1)])
-
 let rec list_of_exps (l:exp list) : exp = EList l
 (*  match l with
   | [] -> ECtor("Nil", [])
@@ -192,19 +187,19 @@ datatype:
     { DData (d, List.rev cs) }
 
 letbind:
-  | LET x=LID COLON t=typ EQ e=exp SEMI SEMI
+  | LET x=LID COLON t=typ EQ e=exp SEMI SEMI (* let x : typ = e ;;*)
     { DLet (x, false, [], t, e) }
-  | LET x=LID args=arg_list COLON t=typ EQ e=exp SEMI SEMI (*arg => (x:t)*)
+  | LET x=LID args=arg_list COLON t=typ EQ e=exp SEMI SEMI (* let f (x:typ) (y:typ) : typ = e ;; *)
     { DLet (x, false, List.rev args, t, e) }
-  | LET REC x=LID args=arg_list COLON t=typ EQ e=exp SEMI SEMI
+  | LET REC x=LID args=arg_list COLON t=typ EQ e=exp SEMI SEMI (* let rec f (x:typ) (y:typ) = e ;; *)
     { DLet (x, true, List.rev args, t, e) }
-  | LET x=LID EQ e=exp SEMI SEMI
-    { DLet (x, false, [], Type.fresh_tvar(), e) }
-  | LET x=LID args=arg_list EQ e=exp SEMI SEMI (*arg => (x:t)*)
+  | LET x=LID EQ e=exp SEMI SEMI (* let x = e ;; *)
+    { DLet (x, false, [], Type.fresh_tvar(), e) } 
+  | LET x=LID args=arg_list EQ e=exp SEMI SEMI (* let f (x:typ) (y:typ) = e ;; *)
     { DLet (x, false, List.rev args, Type.fresh_tvar(), e) }
-  | LET REC x=LID args=arg_list EQ e=exp SEMI SEMI
+  | LET REC x=LID args=arg_list EQ e=exp SEMI SEMI (* let rec f (x:typ) (y:typ) = e ;; *)
     { DLet (x, true, List.rev args, Type.fresh_tvar(), e) }
-  | e=exp SEMI SEMI
+  | e=exp SEMI SEMI (* e *)
     { DLet ("@", false, [], Type.fresh_tvar(), e)}
 
 ctors:  (* NOTE: reversed *)
@@ -256,26 +251,26 @@ typ_base:
 (***** Args {{{ *****)
 
 arg:
-  | LPAREN x=LID COLON t=typ RPAREN
-    { (x, t) }
   | x=LID
-    { (x,Type.fresh_tvar()) }
+    { ArgOne (x, Type.fresh_tvar ()) }
+  | x=LID COLON t = typ 
+    { ArgOne (x, t) }
+  | LPAREN x=arg COMMA xs=arg_comma_list RPAREN
+    { ArgTuple (x::xs) }
+  | LPAREN x=arg RPAREN
+    { x }
 
-arg_comma:
+arg_comma_list:
   | x=arg
     { [x] }
-  | xs=arg_comma COMMA x=arg
-    { x :: xs }
-  | xs=arg_comma COMMA LPAREN x=arg_comma RPAREN
-    { x @ xs }
+  | x=arg COMMA xs=arg_comma_list
+    { x::xs }
 
 arg_list:   (* NOTE: reversed *)
   | (* Empty *)
     { [] }
   | xs=arg_list x=arg
     { x :: xs}
-  | xs=arg_list LPAREN x=arg_comma RPAREN
-    { x @ xs }
 
 (***** }}} *****)
 
@@ -422,6 +417,10 @@ pat:
     { PCtor (c, xs) }
   | p1=pat DOUBLECOLON p2=pat
     { PCons (p1 :: [p2])}  
+  (*
+  | p1=pat DOUBLECOLON p2=pat
+    { PCons (p1, p2)}
+  *)
   | p1=pat PIPE p2=pat
     { Pats (p1 :: [p2]) }
   | UNDERBAR

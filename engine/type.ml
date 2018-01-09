@@ -61,223 +61,158 @@ module Subst = struct
       List.iter (fun (x,ty) -> print_endline (x ^ " |-> " ^ type_to_string ty)) subst
 end
 
-let tvar_num = ref 0
-
-
 (* generate a fresh type variable *)
+let tvar_num = ref 0
 let fresh_tvar () = (tvar_num := !tvar_num + 1; (TVar ("#" ^ string_of_int !tvar_num)))
 
-(*********************)
-(* Utility functions *)
-(*********************)
+(* Support functions *)
+let rec bind_arg : TEnv.t -> arg -> TEnv.t
+= fun tenv arg ->
+  match arg with
+  | ArgOne (x, t) -> TEnv.extend (x, t) tenv
+  | ArgTuple xs -> List.fold_left bind_arg tenv xs
 
-let rec args_to_env args tenv = list_fold (fun arg r -> TEnv.extend arg r) args tenv
+let rec bind_args : TEnv.t -> arg list -> TEnv.t
+= fun tenv args -> List.fold_left bind_arg tenv args
 
-let rec args_to_arr args ty tenv = 
+let rec type_of_arg : arg -> typ
+= fun arg ->
+  match arg with
+  | ArgOne (x, t) -> t
+  | ArgTuple xs -> TTuple (List.map type_of_arg xs)
+
+let rec type_of_fun : arg list -> typ -> typ
+= fun args typ ->
   match args with
-  |[] -> (ty,tenv)
-  |hd::tl -> 
-    let arg_typ = snd hd in
-    let (args_typ,tenv) = (args_to_arr tl ty tenv) in
-    ((TArr (arg_typ,args_typ)),(TEnv.extend hd tenv))
+  | [] -> typ
+  | hd::tl -> TArr (type_of_arg hd, type_of_fun tl typ)
 
-let rec tuple_to_eqn : exp list -> TEnv.t -> typ list -> typ_eqn -> (typ list * typ_eqn)
-= fun el tenv tl eqns ->
-  match el with
-  |[] -> (List.rev tl,eqns)
-  |e::etl -> 
-    let t1 = fresh_tvar() in
-    tuple_to_eqn etl tenv (t1::tl) ((gen_equations tenv e t1)@eqns)
-
-and ctors_to_eqn : exp list -> typ list -> TEnv.t -> typ_eqn -> typ_eqn
-= fun el tl tenv eqns ->
-  match (el, tl) with
-  |([],[]) -> eqns
-  |(e::etl ,t::ttl) ->
-    ctors_to_eqn etl ttl tenv ((gen_equations tenv e t)@eqns)
-  |_ -> raise TypeError
-
-(*******************************************)
-(*type inference rule of pattern expression*)
-(*******************************************)
-
-and pctor_to_eqn : pat list -> typ list -> TEnv.t -> typ_eqn -> (typ_eqn * TEnv.t)
-= fun pl tl tenv eqns->
-  match (pl, tl) with
-  |([],[]) -> (eqns, tenv)
-  |(p::ptl ,t::ttl) ->
-    let (new_eqn, new_env) = pat_to_eqn p t tenv in
-    pctor_to_eqn ptl ttl new_env (new_eqn@eqns)
-  |_ -> raise TypeError
-
-and ptuple_to_eqn : pat list -> typ list -> TEnv.t -> typ_eqn -> (typ_eqn * TEnv.t * typ list)
-= fun pl tl tenv eqns->
-  match pl with
-  |[] -> (eqns, tenv, List.rev tl)
-  |p::ptl ->
-    let t1 = fresh_tvar() in
-    let (new_eqn, new_env) = pat_to_eqn p t1 tenv in
-    ptuple_to_eqn ptl (t1::tl) new_env (new_eqn@eqns)
-
-and cons_to_eqn : pat list -> typ -> TEnv.t -> typ_eqn -> (typ_eqn * TEnv.t)
-= fun pl ty tenv eqns->
-  (*pl has two or more elements, its last element is list*)
-  match pl with
-  |[] -> raise (Failure "Pattern cons does not have args")
-  |[p] -> 
-    let (new_eqn, new_env) = pat_to_eqn p (TList ty) tenv in
-    (new_eqn@eqns, new_env)
-  |hd::tl ->
-    let (new_eqn, new_env) = pat_to_eqn hd ty tenv in
-    cons_to_eqn tl ty new_env (new_eqn@eqns)
-
-(*check the type of patterns and bind variables in patterns to env*)
-and pat_to_eqn : pat -> typ -> TEnv.t -> (typ_eqn * TEnv.t)
-= fun p ty tenv ->
-  match p with
-  | PInt n  -> ([(ty, TInt)], tenv)
-  | PBool b -> ([(ty, TBool)], tenv)
-  | PVar x-> 
-    let t1 = fresh_tvar() in
-    ([ty, t1], (TEnv.extend (x, t1) tenv))
-  | PUnder -> ([ty, fresh_tvar()], tenv)
-  | PCtor (id, pl) -> 
-    let tctor = TEnv.find tenv id in
+(* construct type eqn of patterns then bind type variablese *)
+let rec gen_pat_equations : (TEnv.t * typ_eqn) -> pat -> typ -> (TEnv.t * typ_eqn)
+= fun (tenv, eqn) pat ty ->
+  match pat with
+  | PInt n -> (tenv, (ty, TInt)::eqn)
+  | PBool b -> (tenv, (ty, TBool)::eqn)
+  | PVar x -> 
+    let t = fresh_tvar () in
+    (TEnv.extend (x, t) tenv, (ty, t)::eqn)
+  | PList ps ->
+    let t = fresh_tvar () in
+    gen_pat_list_equations (tenv, (ty, TList t)::eqn) ps t
+  | PTuple ps ->
+    let (env, eqn, ts) = 
+      List.fold_left (
+        fun (env, eqn, ts) pat ->
+          let t = fresh_tvar () in
+          let (env, eqn) = gen_pat_equations (env, eqn) pat t in
+          (env, eqn, ts@[t])
+      ) (tenv, eqn, []) ps
+    in
+    (env, (ty, TTuple ts)::eqn)
+  | PCtor (x, ps) ->
+    let tctor = TEnv.find tenv x in
     begin match tctor with
-    | TCtor (tbase, tlist) ->
-      let (new_eqn, new_env) = pctor_to_eqn pl tlist tenv [] in
-      ([ty, tbase]@new_eqn, new_env)
-    |_ -> raise TypeError
+    | TCtor (t_base, ts) -> List.fold_left2 (fun (env, eqn) pat typ -> gen_pat_equations (env, eqn) pat typ) (tenv, (ty, t_base)::eqn) ps ts
+    | _ -> raise TypeError
     end
-  | PTuple pl -> 
-    begin match pl with
-    |[] -> ([(ty, TTuple [])], tenv)
-    |hd::tl -> 
-      let (new_eqn, new_env, typ_list) = ptuple_to_eqn pl [] tenv [] in
-      (([ty, TTuple (typ_list)]@new_eqn), new_env)
-    end
-  | PList pl -> 
-    begin match pl with
-    |[] -> 
-      let t1 = fresh_tvar() in
-      ([(ty, TList t1)], tenv)
-    |hd::tl ->
-      let t1 = fresh_tvar() in
-      let (eqn1, env1) = pat_to_eqn hd t1 tenv in
-      let (eqn2, env2) = pat_to_eqn (PList tl) (TList t1) env1 in
-      (([ty, TList t1]@eqn1@eqn2), env2)
-    end
-  | PCons pl ->
-    let t1 = fresh_tvar() in
-    let (new_eqn, new_env) = cons_to_eqn pl t1 tenv [] in
-    (([ty, TList t1]@new_eqn), new_env)
-  | Pats pl -> 
-    begin match pl with
-    |[] -> ([], tenv)
-    |hd::tl -> 
-      let (eqn1, env1) = pat_to_eqn hd ty tenv in
-      let (eqn2, env2) = pat_to_eqn (Pats tl) ty env1 in
-      ((eqn1@eqn2), env2)
-    end
-      
-(*make type equations of branch*)
-and branch_to_eqn : branch list -> typ -> typ -> TEnv.t -> typ_eqn
-= fun bs texp tpat tenv->
-  match bs with
-  |[] -> []
-  |(p, e)::tl ->
-    let (new_eqn, new_env) = pat_to_eqn p tpat tenv in
-    new_eqn@((gen_equations new_env e texp)@(branch_to_eqn tl texp tpat tenv))
+  | PCons ps ->
+    let t = fresh_tvar () in
+    gen_pat_cons_equations (tenv, [ty, TList t]) ps t
+  | PUnder -> (tenv, (ty, fresh_tvar ())::eqn)
+  | Pats ps -> gen_pat_list_equations (tenv, eqn) ps ty
 
-and gen_equations : TEnv.t -> exp -> typ -> typ_eqn 
-= fun tenv e ty ->
-  match e with 
-    (*base*)
-    | Const n -> (ty, TInt)::[]
-    | EVar x -> (ty, (TEnv.find tenv x))::[]
-    | String x -> (ty, TString)::[]
-    | EList l ->
-    begin match l with
-      |[] -> 
-        let t1 = fresh_tvar () in
-        (ty, TList t1)::[]
-      |hd::tl ->
-        let t1 = fresh_tvar() in
-        (ty, TList t1)::((gen_equations tenv hd t1)@(gen_equations tenv (EList tl) (TList t1)))
-    end
-    | ETuple l -> 
-    begin match l with
-      |[] -> (ty, TTuple [])::[]
-      |hd::tl -> 
-        let (typ_list, new_eqn) = tuple_to_eqn l tenv [] [] in
-        (ty, TTuple typ_list)::new_eqn
-    end
-    | ECtor (id, l) -> 
-      let tctor = TEnv.find tenv id in
-      begin match tctor with
-      | TCtor (tbase, tl) -> (ty, tbase)::(ctors_to_eqn l tl tenv [])
-      | _ -> raise TypeError
-      end
-    (*aexp*)
-    | ADD (e1, e2) 
-    | SUB (e1, e2) 
-    | MUL (e1, e2)
-    | DIV (e1, e2) 
-    | MOD (e1, e2)-> (ty, TInt)::((gen_equations tenv e1 TInt)@(gen_equations tenv e2 TInt))
-    | MINUS e -> (ty, TInt)::(gen_equations tenv e TInt)
-    (*bexp*)
-    | TRUE
-    | FALSE -> (ty,TBool)::[]
-    | NOT e1 -> (ty,TBool)::(gen_equations tenv e1 TBool)
-    | OR (e1, e2)
-    | AND (e1, e2) -> (ty, TBool)::((gen_equations tenv e1 TBool)@(gen_equations tenv e2 TBool))
-    | LESS (e1, e2)
-    | LARGER (e1, e2)
-    | LESSEQ (e1, e2)
-    | LARGEREQ (e1, e2) -> (ty, TBool)::((gen_equations tenv e1 TInt)@(gen_equations tenv e2 TInt))
-    | EQUAL (e1, e2)
-    | NOTEQ (e1, e2) -> 
-      let t1 = fresh_tvar() in
-      (ty, TBool) :: ((gen_equations tenv e1 t1)@(gen_equations tenv e2 t1))
-    (* lexp *)
-    | AT (e1, e2) ->
-      let t1 = TList (fresh_tvar()) in
-      (ty, t1) :: ((gen_equations tenv e1 t1)@(gen_equations tenv e2 t1))
-    | DOUBLECOLON (e1, e2) ->
-      let t1 = fresh_tvar() in
-      (ty, TList t1) :: ((gen_equations tenv e1 t1)@(gen_equations tenv e2 (TList t1)))
-    (* else *)
-    | IF (e1, e2 ,e3) ->
-      (gen_equations tenv e1 TBool)@(gen_equations tenv e2 ty)@(gen_equations tenv e3 ty)
-    | ELet (f, is_rec, args, typ, e1, e2) ->
-      begin match args with
-      |[] -> 
-        let new_t = fresh_tvar() in
-        (new_t,typ)::(gen_equations tenv e1 new_t)@(gen_equations (TEnv.extend (f,new_t) tenv) e2 ty)
-      |_ ->
-        let new_t = fresh_tvar() in
-        let (args_ty,args_env) = args_to_arr args new_t tenv in
-        (typ,args_ty)::
-        (gen_equations (if is_rec then TEnv.extend (f,args_ty) args_env else args_env) e1 new_t) @
-        (gen_equations (TEnv.extend (f,args_ty) tenv) e2 ty)
-      end
-    | EMatch (e, bs) ->
-      let t1 = fresh_tvar() in (*type of expression*)
-      let t2 = fresh_tvar() in (*type of pattern*)
-      (ty, t1)::(gen_equations tenv e t2)@(branch_to_eqn bs t1 t2 tenv)
-    | EFun (arg, e) ->
-      let t1= snd arg in 
-      let t2= fresh_tvar() in
-      (ty, TArr(t1,t2)) :: (gen_equations (TEnv.extend arg tenv) e t2)
-    | EApp (e1, e2) ->
-      let t1 = fresh_tvar() in
-      (gen_equations tenv e1 (TArr (t1, ty)))@(gen_equations tenv e2 t1)
-    | Hole n -> 
-      let t1 = fresh_tvar() in
-      let _ = hole_map := BatMap.add n t1 (!hole_map) in
-      let _ = at_hole_table := BatMap.add n tenv (!at_hole_table) in
-      (ty, t1)::[]
+and gen_pat_list_equations : (TEnv.t * typ_eqn) -> pat list -> typ -> (TEnv.t * typ_eqn)
+= fun (tenv, eqn) ps typ -> 
+  List.fold_left (fun (tenv, eqn) pat -> gen_pat_equations (tenv, eqn) pat typ) (tenv, eqn) ps 
 
+and gen_pat_cons_equations : (TEnv.t * typ_eqn) -> pat list -> typ -> (TEnv.t * typ_eqn)
+= fun (tenv, eqn) ps typ ->
+  match ps with
+  | [] -> raise (Failure "Pattern cons does not have args")
+  | [p] -> gen_pat_equations (tenv, eqn) p (TList typ)
+  | hd::tl ->
+    let (env, eqn) = gen_pat_equations (tenv, eqn) hd typ in
+    gen_pat_cons_equations (env, eqn) tl typ
+
+(* Construct type equations of expressions *)
+let rec gen_equations : TEnv.t -> exp -> typ -> typ_eqn
+= fun tenv exp ty ->
+  match exp with
+  | Const n -> [(ty, TInt)]
+  | TRUE | FALSE -> [(ty, TBool)]
+  | String str -> [(ty, TString)]
+  | EVar x -> [(ty, TEnv.find tenv x)]
+  | EList es -> 
+    let t = fresh_tvar () in
+    (ty, TList t)::(List.fold_left (fun eqn exp -> eqn@(gen_equations tenv exp t)) [] es)
+  | ETuple es ->
+    let (eqn, ts) = List.fold_left (
+      fun (eqn, ts) exp -> 
+        let t = fresh_tvar () in
+        ((gen_equations tenv exp t), ts@[t])
+    ) ([], []) es 
+    in
+    (ty, TTuple ts)::eqn
+  | ECtor (x, es) -> 
+    let tctor = TEnv.find tenv x in
+    begin match tctor with
+    | TCtor (t_base, ts) -> List.fold_left2 (fun eqn exp typ -> gen_equations tenv exp typ) [ty, t_base] es ts
+    | _ -> raise TypeError
+    end
+  | MINUS e -> (ty, TInt)::(gen_equations tenv e TInt)
+  | NOT e -> (ty, TBool)::(gen_equations tenv e TBool)
+  | ADD (e1, e2) | SUB (e1, e2) | MUL (e1, e2) | DIV (e1, e2) | MOD (e1, e2) -> (ty, TInt)::((gen_equations tenv e1 TInt)@(gen_equations tenv e2 TInt))
+  | OR (e1, e2) | AND (e1, e2) -> (ty, TBool)::((gen_equations tenv e1 TBool)@(gen_equations tenv e2 TBool))
+  | LESS (e1, e2) | LARGER (e1, e2) | LESSEQ (e1, e2) | LARGEREQ (e1, e2) -> (ty, TBool)::((gen_equations tenv e1 TInt)@(gen_equations tenv e2 TInt))
+  | EQUAL (e1, e2) | NOTEQ (e1, e2) -> 
+    let t = fresh_tvar () in
+    (ty, TBool)::((gen_equations tenv e1 t)@(gen_equations tenv e2 t))
+  | AT (e1, e2) ->
+    let t = TList (fresh_tvar ()) in
+    (ty, t)::((gen_equations tenv e1 t)@(gen_equations tenv e2 t))
+  | DOUBLECOLON (e1, e2) ->
+    let t = fresh_tvar () in
+    (ty, TList t)::((gen_equations tenv e1 t)@(gen_equations tenv e2 (TList t)))
+  | IF (e1, e2, e3) -> (gen_equations tenv e1 TBool)@(gen_equations tenv e2 ty)@(gen_equations tenv e3 ty)
+  | ELet (f, is_rec, args, typ, e1, e2) ->
+    begin match args with
+    | [] ->
+      let t =fresh_tvar () in
+      (typ, t)::((gen_equations tenv e1 t)@(gen_equations (TEnv.extend (f, t) tenv) e2 ty))
+    | _ -> 
+      let t = fresh_tvar () in
+      let (func_typ, args_env) = (type_of_fun args t, bind_args tenv args) in
+      (typ, func_typ)::
+      (gen_equations (if is_rec then TEnv.extend (f, func_typ) args_env else args_env) e1 t)@
+      (gen_equations (TEnv.extend (f, func_typ) tenv) e2 ty)
+    end
+  | EFun (arg, e) ->
+    let t1 = type_of_arg arg in
+    let t2 = fresh_tvar () in
+    (ty, TArr (t1, t2))::(gen_equations (bind_arg tenv arg) e t2)
+  | EApp (e1, e2) ->
+    let t = fresh_tvar () in
+    (gen_equations tenv e1 (TArr (t, ty)))@(gen_equations tenv e2 t)
+  | EMatch (e, bs) ->
+    let (ps, es) = List.split bs in
+    let typ_pat = fresh_tvar () in
+    let typ_exp = fresh_tvar () in
+    let branch_eqn = List.fold_left2 (
+      fun eqn pat exp -> 
+        let (env, eqn) = gen_pat_equations (tenv, eqn) pat typ_pat in
+        eqn@(gen_equations env exp typ_exp)
+      ) [] ps es in
+    (ty, typ_exp)::((gen_equations tenv e typ_pat)@branch_eqn)
+  | Hole n ->
+    let t = fresh_tvar () in
+    let _ =
+      (* Update Info for type-directed synthesis *)
+      hole_map := BatMap.add n t (!hole_map);
+      at_hole_table := BatMap.add n tenv (!at_hole_table);
+    in
+    [(ty, t)]
+
+(* Unification *)
 let rec extract_tvar : id -> typ -> bool
 = fun x t ->
   match t with
@@ -341,7 +276,6 @@ let rec unify_all : typ_eqn -> Subst.t -> Subst.t
   match eqns with
   |[] -> subst
   |(typ1, typ2)::tl ->
-    (*let _ = print_endline((Print.string_of_type typ1) ^ " = " ^ (Print.string_of_type typ2)) in*)
     let subst' = unify (Subst.apply typ1 subst) (Subst.apply typ2 subst) subst in
     unify_all tl subst'
   
@@ -409,7 +343,6 @@ let type_decl : decl -> TEnv.t -> TEnv.t
 
 let run : prog -> prog
 = fun decls -> 
-(*  let _ = print_endline("----------------------") in*)
   let _ = hole_map:=BatMap.empty in
   let _ = hole_tbl:=BatMap.empty in
   let _ = at_hole_ttbl:=BatMap.empty in

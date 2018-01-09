@@ -39,12 +39,13 @@ let rec pat_to_string : pat -> string
   | PList lst -> pp_list pat_to_string lst
   | PTuple lst -> pp_tuple pat_to_string lst
   | PUnder -> "_"
-  | PCons lst ->
+  | PCons (lst) ->
     begin match lst with
       |[] -> raise (Failure "Pattern Cons does not have arguments")
       |hd::tl ->
         (pat_to_string hd)^(list_fold (fun p r -> r^"::"^(pat_to_string p)) tl "")
     end
+  (*| PCons (phd, ptl) -> (pat_to_string phd) ^ "::" ^ (pat_to_string) *)
 
 let rec type_to_string : typ -> string
 = fun ty -> 
@@ -59,11 +60,15 @@ let rec type_to_string : typ -> string
   | TArr (t1,t2) -> "(" ^ type_to_string t1 ^ " -> " ^ type_to_string t2 ^ ")"
   | TVar x -> x
 
-let arg_to_string : arg -> string
-= fun (x,typ) ->
-  match typ with
-  |TVar _ -> x
-  |_ -> "(" ^ x ^ " : " ^ type_to_string typ ^ ")"
+let rec arg_to_string : arg -> string
+= fun arg ->
+  match arg with
+  | ArgOne (x, typ) -> 
+    begin match typ with
+    | TVar _ -> x
+    | _ -> "(" ^ x ^ " : " ^ type_to_string typ ^ ")"
+    end
+  | ArgTuple xs -> pp_tuple arg_to_string xs
 
 let rec args_to_string : arg list -> string -> string
 = fun args str ->
@@ -172,10 +177,10 @@ let rec value_to_string : value -> string
   | VList l1 -> pp_list value_to_string l1
   | VTuple l1 -> pp_tuple value_to_string l1
   | VCtor (id,l1) -> id ^ (if(l1=[]) then "" else pp_tuple value_to_string l1)
-  | VFun  (id,exp,env) -> "fun "^id^"->"^(exp_to_string exp)
-  | VFunRec (id1,id2,exp,env) -> "VFunRec ("^id1^","^id2^","^exp_to_string exp^",env)" 
+  | VFun  (xs, exp, env) -> "fun "^ arg_to_string xs ^"->"^(exp_to_string exp)
+  | VFunRec (f, xs, exp, env) -> "VFunRec ("^f^","^  arg_to_string xs ^","^exp_to_string exp^",env)" 
   | _ -> "?"
-
+  
 let env_to_string env = BatMap.foldi (fun x v r -> r^" " ^x ^ "|-> " ^ value_to_string v) env ""
 
 let print_env : env -> unit
@@ -255,7 +260,7 @@ let rec labeled_exp_to_string : labeled_exp -> string
       else
         "\n" ^ "let " ^ f ^ args_string ^ " : " ^ typ_string ^ " = \n" ^(labeled_exp_to_string e1) ^ " in " ^ (labeled_exp_to_string e2)
     end
-  |EFun ((id,t),e1) -> "fun " ^ id ^ " -> " ^ labeled_exp_to_string e1 
+  |EFun (arg ,e1) -> "fun " ^ (arg_to_string arg) ^ " -> " ^ labeled_exp_to_string e1 
   |Hole n -> "?"
   |EMatch (e,lst) ->  
     let rec f lst =
@@ -303,8 +308,8 @@ let rec labeled_value_to_string : labeled_value -> string
   | VList vs -> "[" ^ (list_fold (fun x str -> (labeled_value_to_string x) ^ ";" ^ str) vs "") ^"]" 
   | VTuple vs -> "(" ^ (list_fold (fun x str -> (labeled_value_to_string x) ^ "," ^ str) vs "") ^")" 
   | VCtor (x, vs) -> x ^ "(" ^ (list_fold (fun x str -> (labeled_value_to_string x) ^ "," ^ str) vs "") ^")" 
-  | VFun (x, exp, lenv) -> "VFun" ^ x
-  | VFunRec (f, x, exp, lenv) -> "VFun" ^ f ^ x
+  | VFun (arg, exp, lenv) -> "VFun" ^ arg_to_string arg
+  | VFunRec (f, arg, exp, lenv) -> "VFun" ^ f ^ arg_to_string arg
   | VHole n -> "?"
 
 let print_header str = 

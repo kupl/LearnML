@@ -6,6 +6,14 @@ let count = ref 0
 let infinite_count = ref 0
 let start_time = ref 0.0
 
+(* Argument binding *)
+let rec arg_binding : env -> arg -> value -> env
+= fun env arg v ->
+  match (arg, v) with
+  | ArgOne (x, t), _ -> update_env x v env 
+  | ArgTuple xs, VTuple vs -> List.fold_left2 arg_binding env xs vs
+  | _ -> raise (Failure "argument binding failure")
+
 (* Pattern Matching *)
 let rec find_first_branch : value -> branch list -> (pat * exp)
 = fun v bs -> 
@@ -23,6 +31,7 @@ and pattern_match : value -> pat -> bool
   | VCtor (x1, l1), PCtor (x2, l2) -> (x1 = x2) && pattern_match_list l1 l2
   | VList [], PCons (phd::ptl) -> if ptl = [] then (pattern_match v phd) else false
   | VList (vhd::vtl), PCons (phd::ptl) -> if ptl = [] then (pattern_match v phd) else (pattern_match vhd phd) && (pattern_match (VList vtl) (PCons ptl))
+  (*| VList (vhd::vtl), PCons (phd, ptl) -> (pattern_match v phd) && (pattern_match (VList vtl) ptl) *)
   | _, PVar x -> true
   | _, PUnder -> true
   | _, Pats pl -> (try List.exists (pattern_match v) pl with _ -> false)
@@ -43,6 +52,7 @@ let rec bind_pat : env -> value -> pat -> env
   | VCtor (x1, l1), PCtor (x2, l2) -> bind_pat_list env l1 l2
   | VList [], PCons (phd::ptl) ->  if ptl = [] then (bind_pat env v phd) else raise (Failure "Pattern binding failure")
   | VList (vhd::vtl), PCons (phd::ptl) -> if ptl = [] then bind_pat env v phd else bind_pat (bind_pat env vhd phd) (VList vtl) (PCons ptl)
+  (*| VList (vhd::vtl), PCons (phd::ptl) -> bind_pat (bind_pat env vhd phd) (VList vtl) ptl*)
   | _ -> raise (Failure "Pattern binding failure")
 
 and bind_pat_list : env -> value list -> pat list -> env
@@ -126,12 +136,12 @@ let rec eval : env -> exp -> value
         | hd::tl -> EFun (hd, binding tl e)
         end 
       in
-      let (x1, t1) = List.hd args in
+      let x = List.hd args in
       let vf = 
         if is_rec then
-          VFunRec (f, x1, (binding (List.tl args) e1), env)
+          VFunRec (f, x, (binding (List.tl args) e1), env)
         else 
-          VFun (x1, (binding (List.tl args) e1), env)
+          VFun (x, (binding (List.tl args) e1), env)
       in
       eval (update_env f vf env) e2
     end
@@ -139,11 +149,12 @@ let rec eval : env -> exp -> value
     let v = eval env e in
     let (p, ex) = find_first_branch v bs in
     eval (bind_pat env v p) ex
-  | EFun ((x, _), e) -> VFun (x, e, env)  
+  | EFun (arg, e) -> VFun (arg, e, env)
   | EApp (e1, e2) ->
-    begin match (eval env e1) with
-    | VFun (x, e, closure) -> eval (update_env x (eval env e2) closure) e
-    | VFunRec (f, x, e, closure) -> eval (update_env f (VFunRec (f,x,e,closure)) (update_env x (eval env e2) closure)) e
+    let (v1, v2) = (eval env e1, eval env e2) in
+    begin match v1 with
+    | VFun (x, e, closure) -> eval (arg_binding closure x v2) e
+    | VFunRec (f, x, e, closure) -> eval (update_env f v1 (arg_binding closure x v2)) e
     | _ -> raise (Failure "function_call error")
     end
   | Hole n -> VHole n
@@ -168,7 +179,7 @@ and eval_bbop : env -> exp -> exp -> (bool -> bool -> bool) -> bool
     
 let eval_decl : decl -> env -> env
 =fun decl env -> 
-  match decl with
+  match decl with 
   | DData _ -> env
   | DLet (x,is_rec,args,typ,exp) -> 
     let exp = ELet (x, is_rec, args, typ, exp, EVar x) in
