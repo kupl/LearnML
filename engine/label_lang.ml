@@ -53,8 +53,8 @@ type labeled_value =
   | VList of labeled_value list
   | VTuple of labeled_value list
   | VCtor of id * labeled_value list
-  | VFun  of id * labeled_exp * labeled_env
-  | VFunRec of id * id * labeled_exp * labeled_env
+  | VFun  of arg * labeled_exp * labeled_env
+  | VFunRec of id * arg * labeled_exp * labeled_env
   | VHole of int
 and labeled_env = (id, labeled_value) BatMap.t
 

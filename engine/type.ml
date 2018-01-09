@@ -71,15 +71,27 @@ let fresh_tvar () = (tvar_num := !tvar_num + 1; (TVar ("#" ^ string_of_int !tvar
 (* Utility functions *)
 (*********************)
 
-let rec args_to_env args tenv = list_fold (fun arg r -> TEnv.extend arg r) args tenv
+let rec bind_arg : TEnv.t -> arg -> TEnv.t
+= fun tenv arg ->
+  match arg with
+  | ArgOne (x, t) -> TEnv.extend (x, t) tenv
+  | ArgTuple xs -> List.fold_left bind_arg tenv xs
 
-let rec args_to_arr args ty tenv = 
+let rec bind_args : TEnv.t -> arg list -> TEnv.t
+= fun tenv args -> List.fold_left bind_arg tenv args
+
+let rec type_of_arg : arg -> typ
+= fun arg ->
+  match arg with
+  | ArgOne (x, t) -> t
+  | ArgTuple xs -> TTuple (List.map type_of_arg xs)
+
+let rec type_of_args : arg list -> typ
+= fun args ->
   match args with
-  |[] -> (ty,tenv)
-  |hd::tl -> 
-    let arg_typ = snd hd in
-    let (args_typ,tenv) = (args_to_arr tl ty tenv) in
-    ((TArr (arg_typ,args_typ)),(TEnv.extend hd tenv))
+  | [] -> raise TypeError 
+  | [x] -> type_of_arg x
+  | hd::tl -> TArr (type_of_arg hd, type_of_args tl)
 
 let rec tuple_to_eqn : exp list -> TEnv.t -> typ list -> typ_eqn -> (typ list * typ_eqn)
 = fun el tenv tl eqns ->
@@ -254,21 +266,21 @@ and gen_equations : TEnv.t -> exp -> typ -> typ_eqn
       |[] -> 
         let new_t = fresh_tvar() in
         (new_t,typ)::(gen_equations tenv e1 new_t)@(gen_equations (TEnv.extend (f,new_t) tenv) e2 ty)
-      |_ ->
+      | _ ->
         let new_t = fresh_tvar() in
-        let (args_ty,args_env) = args_to_arr args new_t tenv in
-        (typ,args_ty)::
-        (gen_equations (if is_rec then TEnv.extend (f,args_ty) args_env else args_env) e1 new_t) @
-        (gen_equations (TEnv.extend (f,args_ty) tenv) e2 ty)
+        let (args_typ, args_env) = (type_of_args (args@[ArgOne ("#", new_t)]), bind_args tenv args) in
+        (typ, args_typ)::
+        (gen_equations (if is_rec then TEnv.extend (f,args_typ) args_env else args_env) e1 new_t) @
+        (gen_equations (TEnv.extend (f,args_typ) tenv) e2 ty)
       end
     | EMatch (e, bs) ->
       let t1 = fresh_tvar() in (*type of expression*)
       let t2 = fresh_tvar() in (*type of pattern*)
       (ty, t1)::(gen_equations tenv e t2)@(branch_to_eqn bs t1 t2 tenv)
     | EFun (arg, e) ->
-      let t1= snd arg in 
-      let t2= fresh_tvar() in
-      (ty, TArr(t1,t2)) :: (gen_equations (TEnv.extend arg tenv) e t2)
+      let t1 = type_of_arg arg in
+      let t2 = fresh_tvar () in
+      (ty, TArr(t1,t2)) :: (gen_equations (bind_arg tenv arg) e t2)
     | EApp (e1, e2) ->
       let t1 = fresh_tvar() in
       (gen_equations tenv e1 (TArr (t1, ty)))@(gen_equations tenv e2 t1)
@@ -341,7 +353,6 @@ let rec unify_all : typ_eqn -> Subst.t -> Subst.t
   match eqns with
   |[] -> subst
   |(typ1, typ2)::tl ->
-    (*let _ = print_endline((Print.string_of_type typ1) ^ " = " ^ (Print.string_of_type typ2)) in*)
     let subst' = unify (Subst.apply typ1 subst) (Subst.apply typ2 subst) subst in
     unify_all tl subst'
   

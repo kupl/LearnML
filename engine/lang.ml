@@ -24,28 +24,36 @@ type pat =
   | PTuple of pat list
   | PCtor of id * pat list
   | PCons of pat list
+  (*| PCons of pat * pat*)
   | PUnder 
   | Pats of pat list
 
-type arg = id * typ
+type arg = 
+  | ArgOne of id * typ
+  | ArgTuple of arg list
 
 and decl =
   | DData of id * ctor list                         (* 'type' D = ctors *)
   | DLet  of id * bool * arg list * typ * exp       (* let x [rec] (x1:t1) .. (xn:tn) : t = e *)
 
 and exp =
-  (* aexp *)
+  (* Const *)
   | Const of int
+  | TRUE
+  | FALSE  
+  | EList of exp list
   | String of id
+  | EVar of id         
+  | ECtor of id * exp list
+  | ETuple of exp list                             
+  (* aop *)
   | ADD of exp * exp                                (*a1 + a2*)
   | SUB of exp * exp                                (*a1 - a2*)
   | MUL of exp * exp                                (*a1 * a2*)
   | DIV of exp * exp                                (*a1 / a2*)
   | MOD of exp * exp                                (*a1 % a2*)
   | MINUS of exp
-  (* bexp *)
-  | TRUE
-  | FALSE
+  (* bop *)
   | NOT of exp                                      (*not b1*)
   | OR of exp * exp                                 (*b1 || b2*)
   | AND of exp * exp                                (*b1 && b2*)
@@ -55,21 +63,16 @@ and exp =
   | NOTEQ of exp * exp                              (*a1 <> a2 or a1 != a2*)
   | LESSEQ of exp * exp                             (*a1 <= a2*)
   | LARGEREQ of exp * exp                           (*a1 >= a2*)
-  (* else *)
-  | EVar of id                                      (* x *)
-  | EApp of exp * exp                               (* e1 e2 *)
-  | EFun of arg * exp                               (* fun (x:t1) -> e *)
-  (**)
-  | ELet of id * bool * arg list * typ * exp * exp  (* let [rec] (x1:t1) .. (xn:tn) : t = e1 in e2 *)
-  | ECtor of id * exp list                          (* C (e1, .., en) *)
-  | EMatch of exp * branch list                     (* match e with bs *)
-  (**)
-  | IF of exp * exp * exp
-  (*List operation*)
+  (* lop *)
   | AT of exp * exp
   | DOUBLECOLON of exp * exp
-  | EList of exp list
-  | ETuple of exp list
+  (* else *)
+  | EApp of exp * exp                               (* e1 e2 *)
+  | EFun of arg * exp                               (* fun (x:t1) -> e *)
+  | ELet of id * bool * arg list * typ * exp * exp  (* let [rec] (x1:t1) .. (xn:tn) : t = e1 in e2 *)
+  | EMatch of exp * branch list                     (* match e with bs *)
+  | IF of exp * exp * exp
+  (*List operation*)
   | Hole of int
 and branch = pat * exp   
 
@@ -83,10 +86,9 @@ type value =
   | VList of value list (* ?? *)
   | VTuple of value list
   | VCtor of id * value list
-  | VFun  of id * exp * env
-  | VFunRec of id * id * exp * env
+  | VFun  of arg * exp * env
+  | VFunRec of id * arg * exp * env
   | VHole of int
-
 and env = (id, value) BatMap.t
 and components = exp BatSet.t
 
@@ -184,13 +186,13 @@ and pat_cost : pat -> int
       |hd::tl -> (pat_cost hd) + (f tl)
     in 30 + f lst  
     | PUnder -> 20
-    | PCons lst -> 
+    | PCons (lst) -> 
       let rec f l = 
       match l with
       [] -> 0
       |hd::tl -> (pat_cost hd) + (f tl)
     in 20 + f lst
-
+    (*| PCons (phd, ptl) -> (pat_cost phd) + (pat_cost ptl)*)
 
 let cost_decl : decl -> int -> int
 = fun decl cost ->
@@ -219,3 +221,9 @@ let rec appify : exp -> exp list -> exp
 	match exp_list with
 	[] -> exp
 	|hd::tl -> appify (EApp(exp,hd)) tl
+
+let rec vars_of_arg : arg -> id list
+= fun arg ->
+  match arg with
+  | ArgOne (x, t) -> [x]
+  | ArgTuple xs -> List.fold_left (fun acc x -> acc@(vars_of_arg x)) [] xs

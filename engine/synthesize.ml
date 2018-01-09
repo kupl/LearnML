@@ -299,14 +299,14 @@ let rec type_directed_set : exp BatSet.t -> typ -> Type.TEnv.t -> id BatSet.t ->
 			BatSet.add (exp,v',h_t',h_e') (type_directed_set remain_set hole_typ env var_set (rank,prog,v,h_t,h_e))
 		| ELet (f, is_rec, args, t, e1, e2) ->
 			let (n1,n2) = (extract_holenum e1,extract_holenum e2) in
-			let (xs,_) = list_split args in
+			let xs = List.fold_left (fun acc arg -> acc@(vars_of_arg arg)) [] args in
 			let x_set = BatSet.of_list xs in
 			let x_set = if(is_rec) then BatSet.add f x_set else x_set in
 			let h_t' = BatMap.add n1 t h_t in
 			let h_t' = BatMap.add n2 hole_typ h_t' in
 			let v' = BatMap.add n1 (BatSet.union x_set var_set) v in			
 			let v' = BatMap.add n2 (BatSet.add f var_set) v' in
-			let h_e' = BatMap.add n1 (list_fold (fun (x,t) env -> BatMap.add x t env) args env) h_e in
+			let h_e' = BatMap.add n1 (Type.bind_args env args) h_e in
 			let h_e' = if(is_rec) then BatMap.modify n1 (fun env -> BatMap.add f t env) h_e' else h_e' in
 			let h_e' = BatMap.add n2 (BatMap.add f t env) h_e' in
 			BatSet.add (exp,v',h_t',h_e') (type_directed_set remain_set hole_typ env var_set (rank,prog,v,h_t,h_e))
@@ -328,6 +328,7 @@ let rec type_directed_set : exp BatSet.t -> typ -> Type.TEnv.t -> id BatSet.t ->
 				BatSet.add (exp,v',h_t',h_e') (type_directed_set remain_set hole_typ env var_set (rank,prog,v,h_t,h_e))
 			|_ -> type_directed_set remain_set hole_typ env var_set (rank,prog,v,h_t,h_e)
 			end
+		(*
 		| EFun ((a,t),e) ->
 			let n = extract_holenum e in
 			begin match hole_typ with
@@ -345,6 +346,31 @@ let rec type_directed_set : exp BatSet.t -> typ -> Type.TEnv.t -> id BatSet.t ->
 				let env' = update_env hole_typ (TArr(t,tv)) env in
 				let v' = BatMap.add n (BatSet.add a var_set) v in
 				let h_e' = BatMap.add n (BatMap.add a t env') h_e in
+				let h_t' = BatMap.add n tv h_t' in
+				BatSet.add (exp,v',h_t',h_e') (type_directed_set remain_set hole_typ env var_set (rank,prog,v,h_t,h_e))
+			|_ -> type_directed_set remain_set hole_typ env var_set (rank,prog,v,h_t,h_e)
+			end
+		*)
+		| EFun (arg, e) ->
+			let n = extract_holenum e in
+			let (xs, t) = (vars_of_arg arg, Type.type_of_arg arg) in
+			begin match hole_typ with
+			|TArr (t1,t2) -> 
+				let t = (match t with |TVar _ -> t1 |_ -> t) in
+				if(t=t1) then
+					let new_var_set = List.fold_left (fun set x -> BatSet.add x set) var_set xs in
+					let v' = BatMap.add n new_var_set v in
+					let h_e' = BatMap.add n (Type.bind_arg env arg) h_e in
+					let h_t' = BatMap.add n t2 h_t in
+					BatSet.add (exp,v',h_t',h_e') (type_directed_set remain_set hole_typ env var_set (rank,prog,v,h_t,h_e))
+				else type_directed_set remain_set hole_typ env var_set (rank,prog,v,h_t,h_e)
+			|TVar _ -> 
+				let tv = fresh_tvar () in
+				let h_t' = update_hole_type hole_typ (TArr(t,tv)) h_t in
+				let env' = update_env hole_typ (TArr(t,tv)) env in
+				let new_var_set = List.fold_left (fun set x -> BatSet.add x set) var_set xs in
+				let v' = BatMap.add n new_var_set v in
+				let h_e' = BatMap.add n (Type.bind_arg env' arg) h_e in
 				let h_t' = BatMap.add n tv h_t' in
 				BatSet.add (exp,v',h_t',h_e') (type_directed_set remain_set hole_typ env var_set (rank,prog,v,h_t,h_e))
 			|_ -> type_directed_set remain_set hole_typ env var_set (rank,prog,v,h_t,h_e)

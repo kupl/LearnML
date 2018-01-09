@@ -8,11 +8,17 @@ let rec update_var_set xs env =
   |[] -> env
   |(id,_)::tl -> update_var_set tl (BatSet.add id env)
 
+let rec extract_var : id BatSet.t -> arg -> id BatSet.t
+= fun set arg ->
+  match arg with
+  | ArgOne (x, t) -> BatSet.add x set
+  | ArgTuple xs -> List.fold_left extract_var set xs
+
 let rec var_exp env map exp =
   match exp with  
-  | ELet (f, is_rec, xs, t, e1, e2) ->
+  | ELet (f, is_rec, args, t, e1, e2) ->
     let env = if(is_rec) then BatSet.add f env else env in
-    let env' = update_var_set xs env in
+    let env' = List.fold_left extract_var env args in
     let (_,map') = var_exp env' map e1 in
     var_exp (BatSet.add f env) map' e2
   | ECtor (c, es) ->  
@@ -28,9 +34,7 @@ let rec var_exp env map exp =
   | Const _ 
   | EVar _ 
   | String _ -> (env,map)
-  | EFun ((x, _), e) ->
-    let env = BatSet.add x env in
-    var_exp env map e
+  | EFun (arg, e) -> var_exp (extract_var env arg) map e
   | ADD (x1,x2) 
   | SUB (x1,x2)  
   | MUL (x1,x2)  
