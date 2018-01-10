@@ -7,6 +7,7 @@ open Label_lang
 let rec labeling_exp : exp -> labeled_exp
 = fun exp ->
 	match exp with
+	| EUnit -> (new_label (), EUnit)
 	| Const n -> (new_label (), Const n)
 	| TRUE -> (new_label (), TRUE)
 	| FALSE -> (new_label (), FALSE)
@@ -59,6 +60,7 @@ let labeling_prog : prog -> labeled_prog
 let rec unlabeling_exp : labeled_exp -> exp
 = fun (l, exp) ->
 	match exp with
+	| EUnit -> EUnit
 	| Const n -> Const n
 	| TRUE -> TRUE
 	| FALSE -> FALSE

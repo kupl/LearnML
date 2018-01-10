@@ -24,6 +24,9 @@ let reserved_words : (string * Parser.token) list =
   ; ("int",TInt)
   ; ("list",TList)
   ; ("string", TString)
+  ; ("unit", TUnit)
+  ; ("begin", BEGIN)
+  ; ("end"), END
   ]
 
 let symbols : (string * Parser.token) list =
@@ -31,7 +34,7 @@ let symbols : (string * Parser.token) list =
 (*; ("|>", IMPLIES) *)
   ; ("=", EQ)
   ; ("->", ARR)
-(*; ("=>", FATARR) *) 
+  ; ("=>", FATARR)
   ; (",", COMMA)
   ; (":", COLON)
   ; (";", SEMI)

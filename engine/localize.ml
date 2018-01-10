@@ -90,6 +90,7 @@ let rec eval : labeled_env -> labeled_exp -> labeled_value
   if (Unix.gettimeofday() -. !start_time >0.05) then raise (Failure "Timeout")
   else
   match e with
+  | EUnit -> VUnit
   | Const n -> VInt n
   | TRUE -> VBool true
   | FALSE -> VBool false

@@ -6,6 +6,7 @@ open Util
 *)
 type labeled_exp = int * lexp
 and lexp =
+  | EUnit
   | Const of int
   | TRUE
   | FALSE
@@ -47,6 +48,7 @@ type labeled_prog = labeled_decl list
 
 (* labeled value *)
 type labeled_value =
+  | VUnit
   | VInt of int
   | VBool of bool
   | VString of id

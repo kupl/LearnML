@@ -65,6 +65,7 @@ let rec eval : env -> exp -> value
   else
   match e with   
   (* base *)
+  | EUnit -> VUnit
   | Const n -> VInt n
   | TRUE -> VBool true
   | FALSE -> VBool false

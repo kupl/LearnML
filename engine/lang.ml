@@ -4,6 +4,7 @@ exception Eval_error of string
 
 type id = string 
 type typ = 
+  | TUnit
   | TInt
   | TBool
   | TString
@@ -14,9 +15,10 @@ type typ =
   | TArr of typ * typ (*fun t1->t2->t3...*)
   | TVar of id (* type variable *)
 
-type ctor = id * typ list           (* C t1 .. tn *)
+type ctor = id * typ list
 
 type pat = 
+  | PUnit
   | PInt of int
   | PBool of bool
   | PVar of id
@@ -38,6 +40,7 @@ and decl =
 
 and exp =
   (* Const *)
+  | EUnit
   | Const of int
   | TRUE
   | FALSE  
@@ -80,6 +83,7 @@ type prog = decl list
 
 (* semantics *)
 type value =
+  | VUnit
   | VInt of int
   | VString of string
   | VBool of bool
@@ -98,6 +102,7 @@ type examples = (exp list* value) list
 let rec exp_cost : exp -> int 
 = fun exp ->
   match exp with
+  | EUnit -> 7
   | Const n -> 7
   | TRUE -> 15
   | FALSE -> 15

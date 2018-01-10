@@ -50,6 +50,7 @@ let rec pat_to_string : pat -> string
 let rec type_to_string : typ -> string
 = fun ty -> 
   match ty with
+  | TUnit -> "unit"
   | TInt -> "int"
   | TString -> "string"
   | TBool -> "bool"
@@ -84,6 +85,7 @@ let rec user_defined_type_to_string : ctor -> string
 let rec exp_to_string : exp -> string
 = fun exp ->
   match exp with
+  |EUnit -> "()"
   |Const n -> string_of_int n
   |String id -> id
   |TRUE -> "true"
@@ -171,6 +173,7 @@ let program_to_string : prog -> string
 let rec value_to_string : value -> string
 = fun v ->
   match v with
+  | VUnit -> "()"
   | VInt n1 -> string_of_int n1
   | VBool b1 -> if b1 = true then "true" else "false"
   | VString str -> str 
@@ -219,6 +222,7 @@ let rec labeled_exp_to_string : labeled_exp -> string
 = fun (n,exp) ->
   "( " ^ (string_of_int n) ^ ", "^ 
   begin match exp with
+  | EUnit -> "()"
   |Const n -> string_of_int n
   |TRUE -> "true"
   |FALSE -> "false"
@@ -302,6 +306,7 @@ let print_labeled_pgm : labeled_prog -> unit
 let rec labeled_value_to_string : labeled_value -> string
 = fun v ->
   match v with
+  | VUnit -> "()"
   | VInt n -> (string_of_int n)
   | VBool b -> if b then "true" else "false"
   | VString str -> str
