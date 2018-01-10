@@ -190,8 +190,12 @@ let rec gen_equations : HoleType.t -> VariableType.t -> TEnv.t -> exp -> typ -> 
     ) (list_combine es ts) ([ty,t_base],hole_typ,var_typ)
     | _ -> raise TypeError
     end
-  | MINUS e -> let (eqns,hole_typ,var_typ) = gen_equations hole_typ var_typ tenv e TInt in ((ty,TInt)::eqns,hole_typ,var_typ)
-  | NOT e -> let (eqns,hole_typ,var_typ) = gen_equations hole_typ var_typ tenv e TBool in ((ty,TBool)::eqns,hole_typ,var_typ)
+  | MINUS e -> 
+    let (eqns,hole_typ,var_typ) = gen_equations hole_typ var_typ tenv e TInt in 
+    ((ty,TInt)::eqns,hole_typ,var_typ)
+  | NOT e -> 
+    let (eqns,hole_typ,var_typ) = gen_equations hole_typ var_typ tenv e TBool in 
+    ((ty,TBool)::eqns,hole_typ,var_typ)
   | ADD (e1, e2) | SUB (e1, e2) | MUL (e1, e2) | DIV (e1, e2) | MOD (e1, e2) -> 
     let (eqns,hole_typ,var_typ) = gen_equations hole_typ var_typ tenv e1 TInt in
     let (eqns',hole_typ,var_typ) = gen_equations hole_typ var_typ tenv e2 TInt in
@@ -227,20 +231,18 @@ let rec gen_equations : HoleType.t -> VariableType.t -> TEnv.t -> exp -> typ -> 
   | ELet (f, is_rec, args, typ, e1, e2) ->
     begin match args with
     | [] ->
-      let t =fresh_tvar () in
-      let tenv = if(is_rec) then TEnv.extend (f,t) tenv else tenv in
-      let tenv' = TEnv.extend (f,t) tenv in
-      let (eqns,hole_typ,var_typ) = gen_equations hole_typ var_typ tenv e1 t in
+      let tenv = if(is_rec) then TEnv.extend (f,typ) tenv else tenv in
+      let tenv' = TEnv.extend (f,typ) tenv in
+      let (eqns,hole_typ,var_typ) = gen_equations hole_typ var_typ tenv e1 typ in
       let (eqns',hole_typ,var_typ) = gen_equations hole_typ var_typ tenv' e2 ty in
-      ((typ,t)::(eqns@eqns'),hole_typ,var_typ)
+      ((eqns@eqns'),hole_typ,var_typ)
     | _ -> 
-      let t = fresh_tvar () in
-      let (func_typ, args_env) = (type_of_fun args t, bind_args tenv args) in
+      let (func_typ, args_env) = (type_of_fun args typ, bind_args tenv args) in
       let tenv = if is_rec then TEnv.extend (f,func_typ) args_env else tenv in
       let tenv' = TEnv.extend (f,func_typ) tenv in
-      let (eqns,hole_typ,var_typ) = gen_equations hole_typ var_typ tenv e1 t in
+      let (eqns,hole_typ,var_typ) = gen_equations hole_typ var_typ tenv e1 typ in
       let (eqns',hole_typ,var_typ) = gen_equations hole_typ var_typ tenv' e2 ty in
-      ((typ,func_typ)::(eqns@eqns'),hole_typ,var_typ)
+      ((eqns@eqns'),hole_typ,var_typ)
     end
   | EFun (arg, e) ->
     let t1 = type_of_arg arg in
@@ -338,11 +340,10 @@ let rec unify_all : typ_eqn -> Subst.t -> Subst.t
 let solve : typ_eqn -> Subst.t
 = fun eqns -> unify_all eqns Subst.empty
 
-let typeof : exp -> TEnv.t * HoleType.t * VariableType.t -> typ -> typ * HoleType.t * VariableType.t
-= fun exp (tenv,hole_typ,variable_typ) typ->
+let typeof : exp -> TEnv.t * HoleType.t * VariableType.t -> typ * HoleType.t * VariableType.t
+= fun exp (tenv,hole_typ,variable_typ)->
   let new_tv = fresh_tvar () in
   let (eqns,hole_typ,variable_typ) = gen_equations hole_typ variable_typ tenv exp new_tv in
-  let eqns = (new_tv,typ)::eqns in
   let subst = solve eqns in
   let ty = Subst.apply new_tv subst in
   let hole_typ = HoleType.update subst hole_typ in
@@ -361,11 +362,11 @@ let type_decl : decl -> TEnv.t * HoleType.t * VariableType.t -> TEnv.t * HoleTyp
   | DLet (x,is_rec,args,typ,exp) -> 
     begin match args with
     | [] -> (* variable binding *)
-      let (ty,hole_typ,variable_typ) = typeof exp ((TEnv.extend (x, typ) tenv),hole_typ,variable_typ) typ in
+      let (ty,hole_typ,variable_typ) = typeof exp ((TEnv.extend (x, typ) tenv),hole_typ,variable_typ) in
       (TEnv.extend (x,ty) tenv,hole_typ,variable_typ)
     | _ ->  (* function binding *)
       let e = ELet(x, is_rec, args, typ, exp, EVar(x)) in
-      let (ty,hole_typ,variable_typ) = typeof e ((TEnv.extend (x, typ) tenv),hole_typ,variable_typ) typ in
+      let (ty,hole_typ,variable_typ) = typeof e ((TEnv.extend (x, typ) tenv),hole_typ,variable_typ) in
       ((TEnv.extend (x, ty) tenv),hole_typ,variable_typ)
     end
 
