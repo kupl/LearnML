@@ -175,6 +175,7 @@ and pat_cost : pat -> int
       [] -> 0
       |hd::tl -> (pat_cost hd) + (f tl)
     in 50 + f lst
+    | PUnit -> 30
     | PInt _ -> 30
     | PVar _ -> 15
     | PBool b -> 30

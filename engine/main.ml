@@ -24,7 +24,9 @@ let run_testcases : prog -> examples -> unit
 
 let run_prog : prog -> examples -> unit
 =fun prog examples ->
+(*
   let _ = Type.run prog in
+*)
   print_header "Program"; Print.print_pgm prog;
   print_header "Test-cases"; print_examples examples;
   print_header "Run test-cases"; run_testcases prog examples 
@@ -42,7 +44,7 @@ let fix_with_solution : prog -> prog -> examples -> unit
         (n,prog,hole_type,variable_type)
     ) ranked_prog_set in
   let components = Comp.extract_component solution in
-  let correct_program = Synthesize.hole_synthesize submission initial_set components examples in
+  let _ = Synthesize.hole_synthesize submission initial_set components examples in
   ()
  
 let fix_without_solution : prog -> examples -> unit

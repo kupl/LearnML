@@ -117,6 +117,7 @@ let rec type_of_fun : arg list -> typ -> typ
 let rec gen_pat_equations : (TEnv.t * typ_eqn) -> pat -> typ -> (TEnv.t * typ_eqn)
 = fun (tenv, eqn) pat ty ->
   match pat with
+  | PUnit -> (tenv, (ty, TUnit)::eqn)
   | PInt n -> (tenv, (ty, TInt)::eqn)
   | PBool b -> (tenv, (ty, TBool)::eqn)
   | PVar x -> 
@@ -164,6 +165,7 @@ and gen_pat_cons_equations : (TEnv.t * typ_eqn) -> pat list -> typ -> (TEnv.t * 
 let rec gen_equations : HoleType.t -> VariableType.t -> TEnv.t -> exp -> typ -> typ_eqn * HoleType.t * VariableType.t
 = fun hole_typ var_typ tenv exp ty ->
   match exp with
+  | EUnit -> ([ty, TUnit], hole_typ, var_typ)
   | Const n -> ([(ty, TInt)],hole_typ,var_typ)
   | TRUE | FALSE -> ([(ty, TBool)],hole_typ,var_typ)
   | String str -> ([(ty, TString)],hole_typ,var_typ)

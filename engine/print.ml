@@ -30,7 +30,8 @@ let pp_list func lst =
 let rec pat_to_string : pat -> string
 = fun pat ->
   match pat with
-  |PCtor (x,lst) -> x ^ (if lst=[] then "" else pp_tuple pat_to_string lst)
+  | PUnit -> "()"
+  | PCtor (x,lst) -> x ^ (if lst=[] then "" else " " ^ pat_to_string (List.hd lst))
   | Pats lst ->
     list_fold (fun p r -> r ^ "|"^(pat_to_string p)^" ") lst ""
   | PInt n -> string_of_int n
@@ -93,7 +94,7 @@ let rec exp_to_string : exp -> string
   |EVar x -> x
   |EList lst -> pp_list exp_to_string lst
   |ETuple lst -> pp_tuple exp_to_string lst
-  |ECtor (x,lst) -> x^ (if lst=[] then "" else pp_tuple exp_to_string lst)
+  |ECtor (x,lst) -> x ^ (if lst=[] then "" else pp_tuple exp_to_string lst)
   |ADD (e1,e2) -> "(" ^ exp_to_string e1 ^ " + " ^ exp_to_string e2 ^")"  
   |SUB (e1,e2) -> "(" ^ exp_to_string e1 ^ " - " ^ exp_to_string e2 ^")"  
   |MUL (e1,e2) -> "(" ^ exp_to_string e1 ^ " * " ^ exp_to_string e2 ^")"  
@@ -159,13 +160,13 @@ let rec decl_to_string : decl -> string -> string
     | [] -> (* variable binding *)
       str ^ "\n" ^ "let " ^
       (if(is_rec) then "rec " else "" ) ^
-      x ^ " = "^(exp_to_string exp) ^ ";;\n"
+      x ^ " = "^(exp_to_string exp) ^ "\n"
     | _ ->  (* function binding *)
       let args_string = args_to_string args "" in
       str ^ "\n" ^ "let " ^
       (if(is_rec) then "rec " else "") ^ x ^" " ^args_string ^
       (match typ with |TVar _ -> "" |_ -> " : " ^ type_to_string typ) ^
-      " = " ^ (exp_to_string exp) ^ ";;\n"
+      " = " ^ (exp_to_string exp) ^ "\n"
 
 let program_to_string : prog -> string
 = fun prog -> list_fold decl_to_string prog ""
