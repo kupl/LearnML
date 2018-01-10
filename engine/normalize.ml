@@ -168,11 +168,10 @@ let rec constant_exp : exp -> exp
 let constant_decl : decl -> decl
 = fun decl ->
 	match decl with
-  | DExcept _ -> decl
-	| DData _ -> decl
   | DLet (x,is_rec,args,typ,exp) -> 
     let exp = constant_exp exp in
     DLet (x,is_rec,args,typ,exp)
+  | _ -> decl
 
 let constant_pgm : prog -> prog 
 = fun pgm -> list_map constant_decl pgm
@@ -259,11 +258,10 @@ let rec reorder_exp : exp -> exp
 let reorder_decl : decl -> decl
 = fun decl ->
 	match decl with
-  | DExcept _ -> decl
-	| DData _ -> decl
   | DLet (x,is_rec,args,typ,exp) -> 
     let exp = reorder_exp exp in
     DLet (x,is_rec,args,typ,exp)
+  | _ -> decl
 
 let reorder_pgm : prog -> prog 
 = fun pgm -> list_map reorder_decl pgm

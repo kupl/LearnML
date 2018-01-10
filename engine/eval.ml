@@ -185,11 +185,10 @@ and eval_bbop : env -> exp -> exp -> (bool -> bool -> bool) -> value
 let eval_decl : decl -> env -> env
 =fun decl env -> 
   match decl with
-  | DExcept _ -> env
-  | DData _ -> env
   | DLet (x,is_rec,args,typ,exp) -> 
     let exp = ELet (x, is_rec, args, typ, exp, EVar x) in
     update_env x (eval env exp) env
+  | _ -> env
 
 let run : prog -> env
 = fun decls -> 

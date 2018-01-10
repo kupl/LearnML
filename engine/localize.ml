@@ -208,11 +208,10 @@ and eval_bbop : labeled_env -> labeled_exp -> labeled_exp -> (bool -> bool -> bo
 let eval_decl : labeled_decl -> labeled_env -> labeled_env
 = fun decl env -> 
   match decl with
-  | DExcept _ -> env
-  | DData _ -> env
   | DLet (f, is_rec, args, typ, e) -> 
     let e = (dummy_label, ELet (f, is_rec, args, typ, e, (dummy_label, EVar f))) in
     update_env f (eval env e) env
+  | _ -> env
 
 let run : labeled_prog -> labeled_env
 = fun decls -> 

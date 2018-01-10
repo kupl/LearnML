@@ -164,6 +164,8 @@ let rec decl_to_string : decl -> string -> string
   match decl with
   | DExcept ctor -> 
     str ^ "exception " ^ user_defined_type_to_string ctor
+  | DEqn (x, typ) ->
+    str ^ "type " ^ x ^ " = " ^ type_to_string typ ^ "\n"
   | DData (id,lst) -> 
     str ^ "type " ^ id ^ " =" ^ 
     (list_fold (fun t r -> r ^ "\n|" ^ user_defined_type_to_string t) lst "") ^ "\n"
@@ -295,6 +297,8 @@ let rec labeled_decl_to_string : labeled_decl -> string -> string
   match decl with
   | DExcept t ->
     str ^ "exception " ^ user_defined_type_to_string t
+  | DEqn (x, typ) ->
+    str ^ "type " ^ x ^ " = " ^ type_to_string typ ^ "\n"
   | DData (id,lst) -> 
     str ^ "type " ^ id ^ " =" ^ 
     (list_fold (fun t r -> r ^ "\n|" ^ user_defined_type_to_string t) lst "") ^ "\n"

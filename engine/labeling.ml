@@ -49,7 +49,8 @@ and labeling_explist : exp list -> labeled_exp list
 let labeling_decl : decl -> labeled_decl
 = fun decl ->
 	match decl with
-  | DExcept t -> DExcept t
+  	| DExcept t -> DExcept t
+  	| DEqn (x, typ) -> DEqn (x, typ)
 	| DData (id, ctors) -> DData (id, ctors)
 	| DLet (f, is_rec, args, typ, e) -> DLet (f, is_rec, args, typ, labeling_exp e)
 
@@ -104,7 +105,8 @@ and unlabeling_explist : labeled_exp list -> exp list
 let unlabeling_decl : labeled_decl -> decl
 = fun l_decl ->
 	match l_decl with
-  | DExcept t -> DExcept t
+  	| DExcept t -> DExcept t
+  	| DEqn (x, typ) -> DEqn (x, typ)
 	| DData (x, ctors) -> DData (x, ctors)
 	| DLet (f, is_rec, args, typ, e) -> DLet (f, is_rec, args, typ ,unlabeling_exp e)
 
@@ -151,9 +153,8 @@ and gen_hole_explist : int -> labeled_exp list -> labeled_exp list
 let rec gen_hole_decl : int -> labeled_decl -> labeled_decl
 = fun n l_decl ->
 	match l_decl with
-  | DExcept t -> DExcept t
-	| DData (x, ctors) -> DData (x, ctors)
 	| DLet (f, is_rec, args, typ, e) -> DLet (f, is_rec, args, typ, gen_hole_exp n e)
+	| _ -> l_decl
 
 let rec gen_hole_pgm : int -> labeled_prog -> labeled_prog
 = fun n l_pgm -> List.fold_left (fun acc x -> acc@[gen_hole_decl n x]) [] l_pgm

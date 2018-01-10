@@ -37,6 +37,7 @@ type arg =
 
 and decl =
   | DExcept of ctor                                 (* exception x of t *)
+  | DEqn of id * typ 
   | DData of id * ctor list                         (* 'type' D = ctors *)
   | DLet  of id * bool * arg list * typ * exp       (* let x [rec] (x1:t1) .. (xn:tn) : t = e *)
 
@@ -208,14 +209,14 @@ and pat_cost : pat -> int
 let cost_decl : decl -> int -> int
 = fun decl cost ->
   match decl with
-  | DExcept _ -> cost
-  | DData _ -> cost
   | DLet (x,is_rec,args,typ,exp) -> 
-    match args with
+    begin match args with
     | [] -> (* variable binding *)
       cost+(exp_cost exp) 
     | _ ->  (* function binding *)
       cost+(exp_cost (ELet (x,is_rec,args,typ,exp, EVar x)))
+    end
+  | _ -> cost
 
 let cost : prog -> int
 = fun decls ->  list_fold cost_decl decls 0

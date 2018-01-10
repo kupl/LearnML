@@ -100,10 +100,8 @@ prog:
     { ([],(List.rev ds)) }
   | ds=decls SEMI SEMI EOF
     { ([],(List.rev ds)) }
-  | LBRACE es=examples RBRACE ds=decls EOF
-    { (es,(List.rev ds)) }
-  | LBRACE es=examples RBRACE ds=decls SEMI SEMI EOF
-    { (es,(List.rev ds)) }
+  | LBRACE es=examples RBRACE EOF
+    { (es, []) }
 
 examples:
   | 
@@ -198,6 +196,8 @@ except:
     { DExcept c }
 
 datatype:
+  | TYPE d=LID EQ t=typ
+    { DEqn (d, t) }
   | TYPE d=LID EQ cs=ctors
     { DData (d, List.rev cs) }
 
