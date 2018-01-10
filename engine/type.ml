@@ -357,7 +357,7 @@ let typeof : exp -> TEnv.t * HoleType.t * VariableType.t -> typ * HoleType.t * V
 let rec ctors_to_env : ctor list -> TEnv.t -> typ -> TEnv.t
 = fun ctors tenv tbase -> list_fold(fun (id,typs) env -> TEnv.extend (id,TCtor(tbase,typs)) env) ctors tenv
 
-let type_decl : decl -> TEnv.t * HoleType.t * VariableType.t -> TEnv.t * HoleType.t * VariableType.t
+let type_decl : decl -> (TEnv.t * HoleType.t * VariableType.t) -> (TEnv.t * HoleType.t * VariableType.t)
 = fun decl (tenv,hole_typ,variable_typ) -> 
   match decl with
   | DExcept(id,typ) ->  (TEnv.extend (id,TCtor (TExn,typ)) tenv,hole_typ,variable_typ)
