@@ -198,7 +198,6 @@ let rec value_to_string : value -> string
   | VFun  (xs, exp, env) -> "fun "^ arg_to_string xs ^"->"^(exp_to_string exp)
   | VFunRec (f, xs, exp, env) -> "VFunRec ("^f^","^  arg_to_string xs ^","^exp_to_string exp^",env)" 
   | VHole _ -> "?"
-  | VExcept v -> "Exception: " ^ value_to_string v
   
 let env_to_string env = BatMap.foldi (fun x v r -> r^" " ^x ^ "|-> " ^ value_to_string v) env ""
 
@@ -334,7 +333,6 @@ let rec labeled_value_to_string : labeled_value -> string
   | VFun (arg, exp, lenv) -> "VFun" ^ arg_to_string arg
   | VFunRec (f, arg, exp, lenv) -> "VFun" ^ f ^ arg_to_string arg
   | VHole n -> "?"
-  | VExcept v -> "Exception: "^ labeled_value_to_string v
 
 let print_header str = 
  let _ = print_endline "-----------------------------" in

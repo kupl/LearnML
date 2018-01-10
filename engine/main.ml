@@ -16,10 +16,17 @@ let run_testcases : prog -> examples -> unit
   List.iter (fun (inputs, output) ->
     let res_var = "__res__" in
     let prog' = prog @ [(DLet (res_var,false,[],Type.fresh_tvar(),(Lang.appify (EVar !opt_entry_func) inputs)))] in
-		let env = Eval.run prog' in
-		let result_value = Lang.lookup_env res_var env in
-      print_endline ("Result: " ^ Print.value_to_string result_value ^ " " ^  
+		try
+      let env = Eval.run prog' in
+		  let result_value = Lang.lookup_env res_var env in
+        print_endline ("Result: " ^ Print.value_to_string result_value ^ " " ^  
                      "Expected: " ^ Print.value_to_string output);
+    with except ->
+      match except with
+      |EExcept v ->
+        print_endline("Result : " ^ Print.value_to_string v ^ " " ^
+                    "Expected: " ^ Print.value_to_string output);
+      |_ -> raise except
   ) examples 
 
 let run_prog : prog -> examples -> unit

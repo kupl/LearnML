@@ -96,9 +96,10 @@ type value =
   | VFun  of arg * exp * env
   | VFunRec of id * arg * exp * env
   | VHole of int
-  | VExcept of value
 and env = (id, value) BatMap.t
 and components = exp BatSet.t
+
+exception EExcept of value
 
 type example = (exp list * value)
 type examples = (exp list* value) list

@@ -75,11 +75,11 @@ let rec eval : env -> exp -> value
   | ETuple es -> VTuple (List.map (eval env) es)
   | ECtor (c, es) ->  VCtor (c, List.map (eval env) es)
   (* aop *)
-  | ADD (e1, e2) -> VInt (eval_abop env e1 e2 (+)) 
-  | SUB (e1, e2) -> VInt (eval_abop env e1 e2 (-))
-  | MUL (e1, e2) -> VInt (eval_abop env e1 e2 ( * ))
-  | DIV (e1, e2) -> VInt (eval_abop env e1 e2 (/))
-  | MOD (e1, e2) -> VInt (eval_abop env e1 e2 (mod))
+  | ADD (e1, e2) -> (eval_abop env e1 e2 (+))
+  | SUB (e1, e2) -> (eval_abop env e1 e2 (-))
+  | MUL (e1, e2) -> (eval_abop env e1 e2 ( * ))
+  | DIV (e1, e2) -> (eval_abop env e1 e2 (/))
+  | MOD (e1, e2) -> (eval_abop env e1 e2 (mod))
   | MINUS e ->
     begin match (eval env e) with
     | VInt n -> VInt (-n)
@@ -91,12 +91,12 @@ let rec eval : env -> exp -> value
     | VBool b -> VBool (not b)
     | _ -> raise (Failure "boolean_operation error")
     end
-  | OR (e1, e2) -> VBool (eval_bbop env e1 e2 (||))
-  | AND (e1, e2) -> VBool (eval_bbop env e1 e2 (&&))
-  | LESS (e1, e2) -> VBool (eval_abbop env e1 e2 (<))
-  | LARGER (e1, e2) -> VBool (eval_abbop env e1 e2 (>))
-  | LESSEQ (e1, e2) -> VBool (eval_abbop env e1 e2 (<=))
-  | LARGEREQ (e1, e2) -> VBool (eval_abbop env e1 e2 (>=))
+  | OR (e1, e2) -> (eval_bbop env e1 e2 (||))
+  | AND (e1, e2) -> (eval_bbop env e1 e2 (&&))
+  | LESS (e1, e2) -> (eval_abbop env e1 e2 (<))
+  | LARGER (e1, e2) -> (eval_abbop env e1 e2 (>))
+  | LESSEQ (e1, e2) -> (eval_abbop env e1 e2 (<=))
+  | LARGEREQ (e1, e2) -> (eval_abbop env e1 e2 (>=))
   | EQUAL (e1, e2) -> VBool ((eval env e1) = (eval env e2))
   | NOTEQ (e1, e2) -> VBool ((eval env e1) <> (eval env e2))
   (* lop *)
@@ -106,8 +106,9 @@ let rec eval : env -> exp -> value
     | _ -> raise (Failure "list_operation error")
     end
   | DOUBLECOLON (e1, e2) ->
-    begin match (eval env e2) with
-    | VList vs -> VList ((eval env e1)::vs) 
+    let (v1,v2) = (eval env e1,eval env e2) in
+    begin match v1,v2 with
+    |  _,VList vs -> VList (v1::vs)
     | _ -> raise (Failure "list_operation error")
     end
   (* else *)
@@ -159,24 +160,26 @@ let rec eval : env -> exp -> value
     | _ -> raise (Failure "function_call error")
     end
   | Hole n -> VHole n
-  | Raise e -> VExcept (eval env e)
+  | Raise e -> 
+    let e = eval env e in
+    raise (EExcept e)
 
-and eval_abop : env -> exp -> exp -> (int -> int -> int) -> int
+and eval_abop : env -> exp -> exp -> (int -> int -> int) -> value
 = fun env e1 e2 op ->
   match (eval env e1, eval env e2) with
-  | VInt n1, VInt n2 -> op n1 n2
+  | VInt n1, VInt n2 -> VInt (op n1 n2)
   | _ -> raise (Failure "arithmetic_operation error")
 
-and eval_abbop : env -> exp -> exp -> (int -> int -> bool) -> bool
+and eval_abbop : env -> exp -> exp -> (int -> int -> bool) -> value
 = fun env e1 e2 op ->
   match (eval env e1, eval env e2) with
-  | VInt n1, VInt n2 -> op n1 n2
+  | VInt n1, VInt n2 -> VBool (op n1 n2)
   | _ -> raise (Failure "int_relation error")
 
-and eval_bbop : env -> exp -> exp -> (bool -> bool -> bool) -> bool
+and eval_bbop : env -> exp -> exp -> (bool -> bool -> bool) -> value
 = fun env e1 e2 op ->
   match (eval env e1, eval env e2) with
-  | VBool b1, VBool b2 -> op b1 b2
+  | VBool b1, VBool b2 -> VBool (op b1 b2)
   | _ -> raise (Failure "boolean_operation error")
     
 let eval_decl : decl -> env -> env

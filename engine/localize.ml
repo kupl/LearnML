@@ -183,7 +183,9 @@ let rec eval : labeled_env -> labeled_exp -> labeled_value
     | _ -> raise (Failure "function_call error")
     end
   | Hole n -> VHole n
-  | Raise e -> VExcept (eval env e)
+  | Raise e -> 
+    let e = eval env e in
+    raise (LExcept e)
 
 and eval_abop : labeled_env -> labeled_exp -> labeled_exp -> (int -> int -> int) -> int
 = fun env e1 e2 op ->

@@ -60,8 +60,10 @@ type labeled_value =
   | VFun  of arg * labeled_exp * labeled_env
   | VFunRec of id * arg * labeled_exp * labeled_env
   | VHole of int
-  | VExcept of labeled_value
 and labeled_env = (id, labeled_value) BatMap.t
+
+exception LExcept of labeled_value
+
 
 let label_count = ref 0
 let init_label () = (label_count := 0)
