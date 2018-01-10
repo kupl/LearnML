@@ -18,14 +18,22 @@ let pp_tuple func tup =
   |[] -> "()"
   |hd::tl -> 
     "(" ^ (func hd) ^
-    (list_fold (fun elem r -> r ^ "," ^ (func elem)) tl "") ^ ")"
+    (list_fold (fun elem r -> r ^ ", " ^ (func elem)) tl "") ^ ")"
 
 let pp_list func lst =
   match lst with
   |[] -> "[]"
   |hd::tl ->
     "[" ^ (func hd) ^
-    (list_fold (fun elem r -> r ^ ";" ^ (func elem)) tl "") ^ "]"
+    (list_fold (fun elem r -> r ^ "; " ^ (func elem)) tl "") ^ "]"
+
+let pp_star_tuple : ('a -> string) -> 'a list -> string
+= fun func tuple ->
+  match tuple with
+  | [] -> ""
+  | hd::tl ->
+    "(" ^ (func hd) ^
+    (list_fold (fun elem r -> r ^ " * " ^ (func elem)) tl "") ^ ")"
 
 let rec pat_to_string : pat -> string
 = fun pat ->
@@ -57,7 +65,7 @@ let rec type_to_string : typ -> string
   | TBool -> "bool"
   | TBase id -> id
   | TList t -> type_to_string t ^ " list"
-  | TTuple l -> if(l=[]) then "unit" else pp_tuple type_to_string l
+  | TTuple l -> if(l=[]) then "unit" else pp_star_tuple type_to_string l
   | TCtor (t, l) -> type_to_string t ^ (if(l=[]) then "" else pp_tuple type_to_string l)
   | TArr (t1,t2) -> "(" ^ type_to_string t1 ^ " -> " ^ type_to_string t2 ^ ")"
   | TVar x -> x
@@ -94,7 +102,7 @@ let rec exp_to_string : exp -> string
   |EVar x -> x
   |EList lst -> pp_list exp_to_string lst
   |ETuple lst -> pp_tuple exp_to_string lst
-  |ECtor (x,lst) -> x ^ (if lst=[] then "" else pp_tuple exp_to_string lst)
+  |ECtor (x,lst) -> x ^ (if lst=[] then "" else " " ^ exp_to_string (List.hd lst))
   |ADD (e1,e2) -> "(" ^ exp_to_string e1 ^ " + " ^ exp_to_string e2 ^")"  
   |SUB (e1,e2) -> "(" ^ exp_to_string e1 ^ " - " ^ exp_to_string e2 ^")"  
   |MUL (e1,e2) -> "(" ^ exp_to_string e1 ^ " * " ^ exp_to_string e2 ^")"  
@@ -160,7 +168,9 @@ let rec decl_to_string : decl -> string -> string
     | [] -> (* variable binding *)
       str ^ "\n" ^ "let " ^
       (if(is_rec) then "rec " else "" ) ^
-      x ^ " = "^(exp_to_string exp) ^ "\n"
+      x ^ 
+      (match typ with |TVar _ -> "" |_ -> " : " ^ type_to_string typ) ^
+      " = "^(exp_to_string exp) ^ "\n"
     | _ ->  (* function binding *)
       let args_string = args_to_string args "" in
       str ^ "\n" ^ "let " ^

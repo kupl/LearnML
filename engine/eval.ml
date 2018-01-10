@@ -98,7 +98,7 @@ let rec eval : env -> exp -> value
   | LESSEQ (e1, e2) -> VBool (eval_abbop env e1 e2 (<=))
   | LARGEREQ (e1, e2) -> VBool (eval_abbop env e1 e2 (>=))
   | EQUAL (e1, e2) -> VBool ((eval env e1) = (eval env e2))
-  | NOTEQ (e1, e2) -> VBool ((eval env e1) = (eval env e2))
+  | NOTEQ (e1, e2) -> VBool ((eval env e1) <> (eval env e2))
   (* lop *)
   | AT (e1, e2) ->
     begin match (eval env e1, eval env e2) with
