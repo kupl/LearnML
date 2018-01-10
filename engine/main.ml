@@ -24,9 +24,7 @@ let run_testcases : prog -> examples -> unit
 
 let run_prog : prog -> examples -> unit
 =fun prog examples ->
-(*
   let _ = Type.run prog in
-*)
   print_header "Program"; Print.print_pgm prog;
   print_header "Test-cases"; print_examples examples;
   print_header "Run test-cases"; run_testcases prog examples 

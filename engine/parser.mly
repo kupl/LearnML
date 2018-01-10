@@ -97,6 +97,10 @@ prog:
     { ([],(List.rev ds)) }
   | LBRACE es=examples RBRACE ds=decls EOF
     { (es,(List.rev ds)) }
+  | ds=decls SEMI SEMI EOF
+    { ([],(List.rev ds)) }
+  | LBRACE es=examples RBRACE ds=decls SEMI SEMI EOF
+    { (es,(List.rev ds)) }
 
 examples:
   | 
@@ -109,74 +113,72 @@ example:
     { (i,o) }
 
 exp_list:
-  | e=exp_op
+  | e=exp
     { [e] }
-  | e=exp_op COMMA el=exp_list
+  | e=exp SEMI el=exp_list
     { e::el }
 
 value:
+  | v=value_base COMMA vs=value_comma_list
+    { VTuple (v::vs) }
   | c=value_base
     { c }
-  | LPAREN c=value_base RPAREN
-    { c }
-  | LPAREN c=value_comma_list RPAREN
-    { VTuple(c) }
-  | LBRACKET c=value_list RBRACKET
-    { VList(c) }
 
 value_base:
+  | LPAREN RPAREN
+    { VUnit }
   | c=INT
-    { VInt (c) }
+    { VInt c }
   | TRUE
-    { VBool (true) }
+    { VBool true }
   | FALSE
-    { VBool (false) }
+    { VBool false }
+  | c=STRING
+    { VString c }
+  | LBRACKET RBRACKET
+    { VList [] }
+  | LBRACKET v=value vs=value_semi_list RBRACKET
+    { VList (v::vs) }
   | c=UID
     { VCtor (c, []) }
-  | c=UID LPAREN cl=value_comma_list RPAREN
-    { VCtor (c, cl) }
-  | c=STRING
-    { VString (c) }
+  | c=UID v=value_base
+    { VCtor (c, [v]) }
   | MINUS c=INT
     { VInt (-c)}
+  | LPAREN v=value RPAREN
+    { v }
 
-value_list : 
-  | (*empty*)
+value_semi_list:
+  | 
     { [] }
-  | c=value
-    { [c] }
-  | c=value_base SEMI cl=value_list_one
-    { c::cl }
-
-value_list_one :
-  | c=value_base
-    { [c] }
-  | c= value_base SEMI cl = value_list_one
-    { c:: cl}
+  | SEMI
+    { [] }
+  | SEMI v=value vs=value_semi_list
+    { v::vs }
 
 value_comma_list : 
-  | (*empty*)
-    { [] }
-  | c=value
-    { [c] }
-  | c=value_base COMMA cl=value_comma_list_one
-    { c::cl }
-
-value_comma_list_one :
   | c=value_base
     { [c] }
-  | c= value_base COMMA cl = value_comma_list_one
-    { c:: cl }
+  | c=value_base COMMA cl=value_comma_list
+    { c::cl }
 
 (***** Declarations {{{ *****)
 
 decls:  (* NOTE: reversed *)
   | (* empty *)
     { [] }
-  | ds=decls d=datatype
+  | ds=decls d=decl
     { d::ds }
-  | ds=decls l=letbind
-    { l::ds }
+  | ds=decls SEMI SEMI d=decl
+    { d::ds }
+  | ds=decls SEMI SEMI e=exp_bind
+    { e::ds }
+
+decl:
+  | d=datatype
+    { d }
+  | l=letbind
+    { l }
 
 datatype:
   | TYPE d=LID EQ cs=ctors
@@ -197,15 +199,17 @@ ctor:
     { (c, [t]) }
 
 letbind:
-  | LET x=LID args=args EQ e=exp SEMI SEMI (* let f x y = e ;; *)
+  | LET x=LID args=args EQ e=exp (* let f x y = e ;; *)
     { DLet (x, false, args, Type.fresh_tvar (), e) }
-  | LET x=LID args=args COLON t=typ EQ e=exp SEMI SEMI (* let f x y : typ = e ;; *)
+  | LET x=LID args=args COLON t=typ EQ e=exp (* let f x y : typ = e ;; *)
     { DLet (x, false, args, t, e) }
-  | LET REC x=LID args=args EQ e=exp SEMI SEMI (* let rec f x y = e ;; *)
+  | LET REC x=LID args=args EQ e=exp (* let rec f x y = e ;; *)
     { DLet (x, true, args, Type.fresh_tvar(), e) }
-  | LET REC x=LID args=args COLON t=typ EQ e=exp SEMI SEMI (* let rec f x y : typ = e ;; *)
+  | LET REC x=LID args=args COLON t=typ EQ e=exp (* let rec f x y : typ = e ;; *)
     { DLet (x, true, args, t, e) }
-  | e=exp SEMI SEMI (* e *)
+
+exp_bind:
+  | e=exp (* e *)
     { DLet ("@", false, [], Type.fresh_tvar(), e)}
 
 (***** }}} *****)
@@ -213,12 +217,16 @@ letbind:
 (***** Types {{{ *****)
 
 typ:
-  | t1=typ_base ARR t2=typ
+  | t1=typ_star ARR t2=typ
     { TArr (t1, t2) }
+  | t = typ_star
+    { t }
+
+typ_star:
+  | t=typ_base
+    { t }
   | t=typ_base STAR ts=star_typ_list
     { TTuple (t::ts) }
-  | t = typ_base
-    { t }
 
 star_typ_list:  (* NOTE: reversed *)
   | t=typ_base
@@ -276,7 +284,7 @@ exp:
   | MATCH e=exp WITH bs=branches 
     { EMatch (e, bs) }
   | FUN xs=args ARR e=exp
-    { binding_args (List.rev xs) e }
+    { binding_args xs e }
   | LET f=LID args=args COLON t=typ EQ e1=exp IN e2=exp
     { ELet (f, false, args, t, e1, e2) }
   | LET REC f=LID args=args COLON t=typ EQ e1=exp IN e2=exp
