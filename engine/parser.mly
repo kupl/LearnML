@@ -41,6 +41,9 @@ let rec binding_args : arg list -> exp -> exp
 %token TUnit
 %token BEGIN
 %token END
+%token EXCEPTION
+%token RAISE
+
 
 %token HOLE       (* ? *)
 (* %token IMPLIES    (* |> *) *)
@@ -93,13 +96,12 @@ let rec binding_args : arg list -> exp -> exp
 %%
 
 prog:
-  | ds=empty_decls EOF
   | ds=decls EOF
-    { ([],(List.rev ds)) }
-  | ds=decls SEMI SEMI EOF
     { ([],(List.rev ds)) }
   | LBRACE es=examples RBRACE ds=decls EOF
     { (es,(List.rev ds)) }
+  | ds=decls SEMI SEMI EOF
+    { ([],(List.rev ds)) }
   | LBRACE es=examples RBRACE ds=decls SEMI SEMI EOF
     { (es,(List.rev ds)) }
 
@@ -165,17 +167,9 @@ value_comma_list :
 
 (***** Declarations {{{ *****)
 
-empty_decls:
-  | 
-    { [] }
-  | SEMI SEMI 
-    { [] }
-    
 decls:  (* NOTE: reversed *)
-  | d=decl
-    { [d] }
-  | e=exp_bind
-    { [e] }
+  | (* empty *)
+    { [] }
   | ds=decls d=decl
     { d::ds }
   | ds=decls SEMI SEMI d=decl
@@ -188,6 +182,12 @@ decl:
     { d }
   | l=letbind
     { l }
+  | d=except
+    { d }
+
+except:
+  | EXCEPTION c=ctor
+    { DExcept c }
 
 datatype:
   | TYPE d=LID EQ cs=ctors
@@ -354,6 +354,8 @@ exp_op:
     { AT (e1, e2) }
   | e1=exp_op DOUBLECOLON e2=exp_op
     { DOUBLECOLON (e1, e2) }
+  | RAISE e=exp_base
+    { Raise e}
   | e=exp_base es=exp_app_list (* funcion call or constant *)
     { appify e es }
   | c=UID e=exp_base
