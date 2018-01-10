@@ -93,12 +93,13 @@ let rec binding_args : arg list -> exp -> exp
 %%
 
 prog:
+  | ds=empty_decls EOF
   | ds=decls EOF
+    { ([],(List.rev ds)) }
+  | ds=decls SEMI SEMI EOF
     { ([],(List.rev ds)) }
   | LBRACE es=examples RBRACE ds=decls EOF
     { (es,(List.rev ds)) }
-  | ds=decls SEMI SEMI EOF
-    { ([],(List.rev ds)) }
   | LBRACE es=examples RBRACE ds=decls SEMI SEMI EOF
     { (es,(List.rev ds)) }
 
@@ -164,9 +165,17 @@ value_comma_list :
 
 (***** Declarations {{{ *****)
 
-decls:  (* NOTE: reversed *)
-  | (* empty *)
+empty_decls:
+  | 
     { [] }
+  | SEMI SEMI 
+    { [] }
+    
+decls:  (* NOTE: reversed *)
+  | d=decl
+    { [d] }
+  | e=exp_bind
+    { [e] }
   | ds=decls d=decl
     { d::ds }
   | ds=decls SEMI SEMI d=decl
