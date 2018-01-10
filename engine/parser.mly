@@ -3,11 +3,6 @@ open Lang
 
 exception Internal_error of string
 
-let rec list_of_exps (l:exp list) : exp = EList l
-(*  match l with
-  | [] -> ECtor("Nil", [])
-  | e::es -> ECtor("Cons", [e; (list_of_exps es)])
-*)
 let rec appify (e:exp) (es:exp list) : exp =
   match es with
   | [] -> e
@@ -43,12 +38,15 @@ let rec binding_args : arg list -> exp -> exp
 %token TInt
 %token TList
 %token TString
+%token TUnit
+%token BEGIN
+%token END
 
 %token HOLE       (* ? *)
 (* %token IMPLIES    (* |> *) *)
 %token EQ         (* = *)
 %token ARR        (* -> *)
-(* %token FATARR     (* => *) *)
+%token FATARR     (* => *)
 %token COMMA      (* , *)
 %token COLON      (* : *)
 %token SEMI       (* ; *)
@@ -81,7 +79,6 @@ let rec binding_args : arg list -> exp -> exp
 
 %token EOF
 
-%nonassoc ASSIGN
 %left OR
 %left AND
 %left LESS LESSEQ LARGER LARGEREQ EQ NOTEQ
@@ -89,7 +86,6 @@ let rec binding_args : arg list -> exp -> exp
 %right DOUBLECOLON
 %left PLUS MINUS
 %left STAR DIVIDE MOD
-%left PIPE
 %right UNARY
 
 %start prog
@@ -103,23 +99,23 @@ prog:
     { (es,(List.rev ds)) }
 
 examples:
-  | e= example
-    { [e] }
-  | e= example es=examples
-    { e:: es}
+  | 
+    { [] }
+  | e=example es=examples
+    { e::es}
 
 example:
-  | i=exp_list ARR o=value SEMI
+  | i=exp_list FATARR o=value SEMI
     { (i,o) }
 
 exp_list:
-  | e=exp
+  | e=exp_op
     { [e] }
-  | e=exp COMMA el=exp_list
+  | e=exp_op COMMA el=exp_list
     { e::el }
 
 value:
-  | c= value_base
+  | c=value_base
     { c }
   | LPAREN c=value_base RPAREN
     { c }
@@ -170,7 +166,7 @@ value_comma_list_one :
   | c=value_base
     { [c] }
   | c= value_base COMMA cl = value_comma_list_one
-    { c:: cl}
+    { c:: cl }
 
 (***** Declarations {{{ *****)
 
@@ -186,74 +182,80 @@ datatype:
   | TYPE d=LID EQ cs=ctors
     { DData (d, List.rev cs) }
 
-letbind:
-  | LET x=LID COLON t=typ EQ e=exp SEMI SEMI (* let x : typ = e ;;*)
-    { DLet (x, false, [], t, e) }
-  | LET x=LID args=arg_list COLON t=typ EQ e=exp SEMI SEMI (* let f (x:typ) (y:typ) : typ = e ;; *)
-    { DLet (x, false, List.rev args, t, e) }
-  | LET REC x=LID args=arg_list COLON t=typ EQ e=exp SEMI SEMI (* let rec f (x:typ) (y:typ) = e ;; *)
-    { DLet (x, true, List.rev args, t, e) }
-  | LET x=LID EQ e=exp SEMI SEMI (* let x = e ;; *)
-    { DLet (x, false, [], Type.fresh_tvar(), e) } 
-  | LET x=LID args=arg_list EQ e=exp SEMI SEMI (* let f (x:typ) (y:typ) = e ;; *)
-    { DLet (x, false, List.rev args, Type.fresh_tvar(), e) }
-  | LET REC x=LID args=arg_list EQ e=exp SEMI SEMI (* let rec f (x:typ) (y:typ) = e ;; *)
-    { DLet (x, true, List.rev args, Type.fresh_tvar(), e) }
-  | e=exp SEMI SEMI (* e *)
-    { DLet ("@", false, [], Type.fresh_tvar(), e)}
-
-ctors:  (* NOTE: reversed *)
-  | (* empty *)
-    { [] }
-  | cs=ctors c=ctor
-    { c::cs }
+ctors:
+  | c=ctor
+    { [c] }
+  | PIPE c=ctor
+    { [c] }
+  | cs=ctors PIPE c=ctor
+    { cs@[c] }
 
 ctor:
-  | PIPE c=UID OF ts=star_typ_list
-    { (c, List.rev ts) }
-  | PIPE c=UID
+  | c=UID
     { (c, []) }
+  | c=UID OF t=typ
+    { (c, [t]) }
 
-star_typ_list:  (* NOTE: reversed *)
-  | t=typ
-    { [t] }
-  | ts=star_typ_list STAR t=typ
-    { t::ts }
+letbind:
+  | LET x=LID args=args EQ e=exp SEMI SEMI (* let f x y = e ;; *)
+    { DLet (x, false, args, Type.fresh_tvar (), e) }
+  | LET x=LID args=args COLON t=typ EQ e=exp SEMI SEMI (* let f x y : typ = e ;; *)
+    { DLet (x, false, args, t, e) }
+  | LET REC x=LID args=args EQ e=exp SEMI SEMI (* let rec f x y = e ;; *)
+    { DLet (x, true, args, Type.fresh_tvar(), e) }
+  | LET REC x=LID args=args COLON t=typ EQ e=exp SEMI SEMI (* let rec f x y : typ = e ;; *)
+    { DLet (x, true, args, t, e) }
+  | e=exp SEMI SEMI (* e *)
+    { DLet ("@", false, [], Type.fresh_tvar(), e)}
 
 (***** }}} *****)
 
 (***** Types {{{ *****)
 
 typ:
-  | LPAREN t=typ RPAREN
-    { t }
-  | t1=typ ARR t2=typ
+  | t1=typ_base ARR t2=typ
     { TArr (t1, t2) }
-  | LPAREN t1=star_typ_list STAR t2=typ RPAREN
-    { TTuple(t2 :: List.rev t1)}
-  | a=typ TList
-    { TList (a) }
-  | t=typ_base  
+  | t=typ_base STAR ts=star_typ_list
+    { TTuple (t::ts) }
+  | t = typ_base
     { t }
 
+star_typ_list:  (* NOTE: reversed *)
+  | t=typ_base
+    { [t] }
+  | t=typ_base STAR ts=star_typ_list
+    { t::ts }
+  
 typ_base:
-  | TBool
-    { TBool }
   | TInt
     { TInt }
   | TString
     { TString}
+  | TUnit
+    { TUnit }
   | d=LID
     { TBase d }
+  | t=typ_base TList
+    { TList t }
+  | TBool
+    { TBool }
+  | LPAREN t=typ RPAREN
+    { t }
 
 (***** }}} *****)
 
 (***** Args {{{ *****)
 
+args:  
+  | 
+    { [] }
+  | x=arg xs=args
+    { x :: xs}
+
 arg:
   | x=LID
     { ArgOne (x, Type.fresh_tvar ()) }
-  | x=LID COLON t = typ 
+  | LPAREN x=LID COLON t=typ RPAREN
     { ArgOne (x, t) }
   | LPAREN x=arg COMMA xs=arg_comma_list RPAREN
     { ArgTuple (x::xs) }
@@ -266,180 +268,198 @@ arg_comma_list:
   | x=arg COMMA xs=arg_comma_list
     { x::xs }
 
-arg_list:   (* NOTE: reversed *)
-  | (* Empty *)
-    { [] }
-  | xs=arg_list x=arg
-    { x :: xs}
-
 (***** }}} *****)
 
 (***** Expressions {{{ *****)
 
 exp:
-  | e=exp_app
+  | MATCH e=exp WITH bs=branches 
+    { EMatch (e, bs) }
+  | FUN xs=args ARR e=exp
+    { binding_args (List.rev xs) e }
+  | LET f=LID args=args COLON t=typ EQ e1=exp IN e2=exp
+    { ELet (f, false, args, t, e1, e2) }
+  | LET REC f=LID args=args COLON t=typ EQ e1=exp IN e2=exp
+    { ELet (f, true, args, t, e1, e2) }
+  | LET f=LID args=args EQ e1=exp IN e2=exp
+    { ELet (f, false, args, Type.fresh_tvar(), e1, e2) }
+  | LET REC f=LID args=args EQ e1=exp IN e2=exp
+    { ELet (f, true, args, Type.fresh_tvar(), e1, e2) } 
+  | IF e1=exp THEN e2=exp ELSE e3=exp
+    { IF (e1, e2, e3) }
+  | e=exp_tuple
     { e }
+
+exp_tuple:
+  | e=exp_op es=exp_comma_list
+    { ETuple (e::es) }
   | e=exp_op
     { e }
 
-exp_app:
-  | e=exp_base es=exp_app_list
-    { appify e es }
-  | e=exp_base
-    { e }
-
-exp_app_list:     
-  | e=exp_base
+exp_comma_list:
+  | COMMA e=exp_op
     { [e] }
-  | e=exp_base es=exp_app_list 
+  | COMMA e=exp_op es=exp_comma_list
     { e::es }
 
 exp_op:
-  | x1=exp PLUS x2=exp
-    { ADD(x1,x2) }
-  | x1=exp MINUS x2=exp
-    { SUB(x1,x2) }
-  | x1=exp DIVIDE x2=exp
-    { DIV(x1,x2) }
-  | x1=exp MOD x2=exp
-    { MOD(x1,x2) }
-  | x1=exp STAR x2=exp
-    { MUL(x1,x2) }
-  | NOT x1=exp %prec UNARY
-    { NOT(x1) }
-  | MINUS x1=exp %prec UNARY
-    { MINUS (x1) }
-  | x1=exp OR x2=exp
-    { OR(x1,x2) }
-  | x1=exp AND x2=exp
-    { AND(x1,x2) }
-  | x1=exp LESS x2=exp
-    { LESS(x1,x2) }
-  | x1=exp LARGER x2=exp
-    { LARGER(x1,x2) }
-  | x1=exp LESSEQ x2=exp
-    { LESSEQ(x1,x2) }
-  | x1=exp LARGEREQ x2=exp
-    { LARGEREQ(x1,x2) }
-  | x1=exp NOTEQ x2=exp
-    { NOTEQ(x1,x2) }
-  | x1=exp EQ x2=exp
-    { EQUAL(x1,x2) }
-  | l1=exp AT l2=exp
-    { AT(l1,l2) }
-  | l1=exp DOUBLECOLON l2=exp
-    { DOUBLECOLON(l1,l2) }
+  | e1=exp_op PLUS e2=exp_op
+    { ADD (e1, e2) }
+  | e1=exp_op MINUS e2=exp_op
+    { SUB (e1, e2) }
+  | e1=exp_op STAR e2=exp_op
+    { MUL (e1, e2) }
+  | e1=exp_op DIVIDE e2=exp_op
+    { DIV (e1, e2) }
+  | e1=exp_op MOD e2=exp_op
+    { MOD (e1, e2) }
+  | NOT e=exp_op %prec UNARY
+    { NOT e }
+  | MINUS e=exp_op %prec UNARY
+    { MINUS e }
+  | e1=exp_op OR e2=exp_op
+    { OR (e1, e2) }
+  | e1=exp_op AND e2=exp_op
+    { AND (e1, e2) }
+  | e1=exp_op LESS e2=exp_op
+    { LESS (e1, e2) }
+  | e1=exp_op LARGER e2=exp_op
+    { LARGER (e1, e2) }
+  | e1=exp_op LESSEQ e2=exp_op
+    { LESSEQ (e1, e2) }
+  | e1=exp_op LARGEREQ e2=exp_op
+    { LARGEREQ (e1, e2) }
+  | e1=exp_op EQ e2=exp_op
+    { EQUAL (e1, e2) }
+  | e1=exp_op NOTEQ e2=exp_op
+    { NOTEQ (e1, e2) }
+  | e1=exp_op AT e2=exp_op
+    { AT (e1, e2) }
+  | e1=exp_op DOUBLECOLON e2=exp_op
+    { DOUBLECOLON (e1, e2) }
+  | e=exp_base es=exp_app_list (* funcion call or constant *)
+    { appify e es }
+  | c=UID e=exp_base
+    { ECtor (c, [e]) }
 
+exp_app_list:     
+  | 
+    { [] }
+  | e=exp_base es=exp_app_list 
+    { e::es }
+  
 exp_base:
   | c=INT
     { Const c }
+  | x=LID
+    { EVar x }
   | c=STRING
     { String c }
   | TRUE
     { TRUE }
   | FALSE
     { FALSE }
-  | x=LID
-    { EVar x }
+  | LPAREN RPAREN
+    { EUnit }
+  | LBRACKET RBRACKET
+    { EList [] }
+  | LBRACKET e=exp es=exp_semi_list RBRACKET
+    { EList (e::es) }
   | c=UID
     { ECtor (c, []) }
-  | c=UID LPAREN es=exp_comma_list RPAREN
-    { ECtor (c, es) }
-  | LBRACKET l=exp_semi_list RBRACKET
-    { list_of_exps l }
-  | LPAREN e=exp COMMA l=exp_comma_list RPAREN
-    { ETuple (e::l) }
-  | FUN xs=arg_list ARR e=exp
-    { binding_args (List.rev xs) e }
-  | LET f=LID xs=arg_list COLON t=typ EQ e1=exp IN e2=exp %prec ASSIGN
-    { ELet (f, false, List.rev xs, t, e1, e2) }
-  | LET REC f=LID xs=arg_list COLON t=typ EQ e1=exp IN e2=exp %prec ASSIGN
-    { ELet (f, true, List.rev xs, t, e1, e2) }
-  | LET f=LID xs=arg_list EQ e1=exp IN e2=exp %prec ASSIGN
-    { ELet (f, false, List.rev xs, Type.fresh_tvar(), e1, e2) }
-  | LET REC f=LID xs=arg_list EQ e1=exp IN e2=exp %prec ASSIGN
-    { ELet (f, true, List.rev xs, Type.fresh_tvar(), e1, e2) } 
-  | MATCH e=exp WITH bs=branches 
-    { EMatch (e, List.rev bs) }
-  | IF b1=exp THEN x1=exp ELSE x2=exp
-    { IF(b1,x1,x2) }
   | LPAREN e=exp RPAREN
     { e }
+  | BEGIN e=exp END
+    { e }
   | HOLE
-    { Lang.gen_hole()}
-
-exp_comma_list:
-  | e=exp
-    { [e] }
-  | e=exp COMMA es=exp_comma_list
-    { e :: es }
+    { Lang.gen_hole() }
 
 exp_semi_list:
-  | (* empty *)
-    { [] }
-  | e=exp
-    { [e] }
-  | e=exp SEMI es=exp_semi_list_one
-    { e :: List.rev es }
-
-exp_semi_list_one:    (* NOTE: reversed *)
-  | e=exp
-    { [e] }
-  | es=exp_semi_list_one SEMI e=exp
-    { e :: es }
-
-branches:
   |
     { [] }
-  | bs=branches b=branch
-    { b::bs }
+  | SEMI
+    { [] }
+  | SEMI e=exp es=exp_semi_list
+    { e::es }
+  
+
+(***** }}} *****)
+
+(***** Branch & Pattern {{{ *****)
+
+branches:
+  | b=branch
+    { [b] }
+  | PIPE b=branch
+    { [b] }
+  | bs=branches PIPE b=branch 
+    { bs@[b] }
 
 branch:
-  | PIPE p=pat ARR e=exp
+  | p=pat ARR e=exp
     { (p, e) }
 
 pat:
+  | p=pat_tuple PIPE ps=pat_list
+    { Pats (p :: ps) }
+  | p=pat_tuple
+    { p }
+
+pat_list:
+  | p=pat_tuple
+    { [p] }
+  | p=pat_tuple PIPE ps=pat_list
+    { p::ps }
+
+
+pat_tuple:
+  | p=pat_op
+    { p }
+  | p=pat_op COMMA ps=pat_comma_list
+    { PTuple (p::ps)}
+
+pat_comma_list:
+  | p=pat_op
+    { [p] }
+  | p=pat_op COMMA ps=pat_comma_list
+    { p::ps }
+
+pat_op:
+  | p1=pat_op DOUBLECOLON p2=pat_op
+    { PCons (p1::[p2]) }
+  | c=UID ps=pat_base
+    { PCtor (c, [ps]) }
+  | p=pat_base
+    { p }
+
+pat_base:
+  | LPAREN RPAREN
+    { PUnit }
   | c=INT
     { PInt (c) }
   | TRUE
-    { PBool (true) }
+    { PBool true }
   | FALSE
-    { PBool (false) }
-  | c=LID
-    { PVar (c) }
-  | LBRACKET p=pat_semi RBRACKET
-    { PList (List.rev p) }
-  | LPAREN p1=pat COMMA p2=pat_comma RPAREN
-    { PTuple (p1::(List.rev p2))}
-  | c=UID
-    { PCtor (c, []) }
-  | c=UID LPAREN xs=pat_comma RPAREN
-    { PCtor (c, xs) }
-  | p1=pat DOUBLECOLON p2=pat
-    { PCons (p1 :: [p2])}  
-  (*
-  | p1=pat DOUBLECOLON p2=pat
-    { PCons (p1, p2)}
-  *)
-  | p1=pat PIPE p2=pat
-    { Pats (p1 :: [p2]) }
+    { PBool false }
+  | x=LID
+    { PVar x }
   | UNDERBAR
     { PUnder }
+  | c=UID
+    { PCtor (c, []) }
+  | LBRACKET RBRACKET
+    { PList [] }
+  | LBRACKET p=pat ps=pat_semi_list RBRACKET
+    { PList (p::ps) }
   | LPAREN p=pat RPAREN
     { p }
 
-pat_semi:
+pat_semi_list:
   |
     { [] }
-  | p=pat
-    { [p] }
-  | p1=pat_semi SEMI p2=pat
-    { p2::p1 }
-
-pat_comma:
-  | p=pat
-    { [p] }
-  | p1=pat COMMA p2=pat_comma
-    { p1::p2 }
+  | SEMI 
+    { [] }
+  | SEMI p=pat ps=pat_semi_list
+    { p::ps }
 
 (***** }}} *****)

@@ -238,7 +238,7 @@ let rec gen_equations : HoleType.t -> VariableType.t -> TEnv.t -> exp -> typ -> 
       ((eqns@eqns'),hole_typ,var_typ)
     | _ -> 
       let (func_typ, args_env) = (type_of_fun args typ, bind_args tenv args) in
-      let tenv = if is_rec then TEnv.extend (f,func_typ) args_env else tenv in
+      let tenv = if is_rec then TEnv.extend (f,func_typ) args_env else args_env in
       let tenv' = TEnv.extend (f,func_typ) tenv in
       let (eqns,hole_typ,var_typ) = gen_equations hole_typ var_typ tenv e1 typ in
       let (eqns',hole_typ,var_typ) = gen_equations hole_typ var_typ tenv' e2 ty in
