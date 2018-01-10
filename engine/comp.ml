@@ -112,6 +112,7 @@ let rec find_component : exp-> components -> components
 let extracts : decl -> components -> components
 = fun decl comps ->
 	match decl with
+  | DExcept _ -> comps
 	| DData _ -> comps
 	| DLet (x,is_rec,args,typ,exp) ->
 		find_component exp comps

@@ -26,7 +26,9 @@ let reserved_words : (string * Parser.token) list =
   ; ("string", TString)
   ; ("unit", TUnit)
   ; ("begin", BEGIN)
-  ; ("end"), END
+  ; ("end", END)
+  ; ("exception",EXCEPTION)
+  ; ("raise",RAISE)
   ]
 
 let symbols : (string * Parser.token) list =

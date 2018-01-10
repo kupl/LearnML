@@ -271,6 +271,8 @@ let rec gen_equations : HoleType.t -> VariableType.t -> TEnv.t -> exp -> typ -> 
     let hole_typ = HoleType.extend n t hole_typ in
     let var_typ = VariableType.extend n tenv var_typ in
     ([(ty,t)],hole_typ,var_typ)
+  | Raise e ->
+    gen_equations hole_typ var_typ tenv e TExn
 
 (* Unification *)
 let rec extract_tvar : id -> typ -> bool
@@ -358,6 +360,7 @@ let rec ctors_to_env : ctor list -> TEnv.t -> typ -> TEnv.t
 let type_decl : decl -> TEnv.t * HoleType.t * VariableType.t -> TEnv.t * HoleType.t * VariableType.t
 = fun decl (tenv,hole_typ,variable_typ) -> 
   match decl with
+  | DExcept(id,typ) ->  (TEnv.extend (id,TCtor (TExn,typ)) tenv,hole_typ,variable_typ)
   | DData (id, ctors) -> 
     let tbase = TBase id in
     (ctors_to_env ctors tenv tbase,hole_typ,variable_typ)

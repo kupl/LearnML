@@ -14,6 +14,7 @@ type typ =
   | TCtor of typ * typ list (*  tbase x , tl *)
   | TArr of typ * typ (*fun t1->t2->t3...*)
   | TVar of id (* type variable *)
+  | TExn
 
 type ctor = id * typ list
 
@@ -35,6 +36,7 @@ type arg =
   | ArgTuple of arg list
 
 and decl =
+  | DExcept of ctor                                 (* exception x of t *)
   | DData of id * ctor list                         (* 'type' D = ctors *)
   | DLet  of id * bool * arg list * typ * exp       (* let x [rec] (x1:t1) .. (xn:tn) : t = e *)
 
@@ -77,6 +79,7 @@ and exp =
   | IF of exp * exp * exp
   (*List operation*)
   | Hole of int
+  | Raise of exp
 and branch = pat * exp   
 
 type prog = decl list
@@ -93,6 +96,7 @@ type value =
   | VFun  of arg * exp * env
   | VFunRec of id * arg * exp * env
   | VHole of int
+  | VExcept of value
 and env = (id, value) BatMap.t
 and components = exp BatSet.t
 
@@ -159,7 +163,7 @@ let rec exp_cost : exp -> int
     |hd::tl -> (exp_cost hd) + (f tl) 
   in 20+ (f l) 
   | Hole n-> 15
-
+  | Raise e -> 30 + (exp_cost e) 
 and pat_cost : pat -> int
 = fun pat ->
     match pat with
@@ -203,6 +207,7 @@ and pat_cost : pat -> int
 let cost_decl : decl -> int -> int
 = fun decl cost ->
   match decl with
+  | DExcept _ -> cost
   | DData _ -> cost
   | DLet (x,is_rec,args,typ,exp) -> 
     match args with

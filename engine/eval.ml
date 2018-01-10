@@ -159,6 +159,7 @@ let rec eval : env -> exp -> value
     | _ -> raise (Failure "function_call error")
     end
   | Hole n -> VHole n
+  | Raise e -> VExcept (eval env e)
 
 and eval_abop : env -> exp -> exp -> (int -> int -> int) -> int
 = fun env e1 e2 op ->
@@ -180,7 +181,8 @@ and eval_bbop : env -> exp -> exp -> (bool -> bool -> bool) -> bool
     
 let eval_decl : decl -> env -> env
 =fun decl env -> 
-  match decl with 
+  match decl with
+  | DExcept _ -> env
   | DData _ -> env
   | DLet (x,is_rec,args,typ,exp) -> 
     let exp = ELet (x, is_rec, args, typ, exp, EVar x) in

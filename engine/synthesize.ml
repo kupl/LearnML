@@ -351,6 +351,7 @@ let find_expholes : prog -> exp BatSet.t
 = fun decls -> 
 	list_fold(fun decl set ->
 		match decl with
+    | DExcept _ -> set
 		| DData _ -> set
 		| DLet (x,is_rec,args,typ,exp) -> BatSet.union (expholes exp) set
 	) decls BatSet.empty

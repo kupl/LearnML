@@ -69,6 +69,7 @@ let rec type_to_string : typ -> string
   | TCtor (t, l) -> type_to_string t ^ (if(l=[]) then "" else pp_tuple type_to_string l)
   | TArr (t1,t2) -> "(" ^ type_to_string t1 ^ " -> " ^ type_to_string t2 ^ ")"
   | TVar x -> x
+  | TExn -> "exn"
 
 let rec arg_to_string : arg -> string
 = fun arg ->
@@ -156,10 +157,13 @@ let rec exp_to_string : exp -> string
     "\nmatch " ^ exp_to_string e ^ " with " ^ 
     (list_fold (fun (p,e) r -> r ^ "\n|" ^ pat_to_string p ^ " -> " ^ exp_to_string e) lst "")
   |Hole n -> "?"
+  |Raise e -> "raise "^exp_to_string e
 
 let rec decl_to_string : decl -> string -> string
 = fun decl str ->
   match decl with
+  | DExcept ctor -> 
+    str ^ "exception " ^ user_defined_type_to_string ctor
   | DData (id,lst) -> 
     str ^ "type " ^ id ^ " =" ^ 
     (list_fold (fun t r -> r ^ "\n|" ^ user_defined_type_to_string t) lst "") ^ "\n"
@@ -193,7 +197,8 @@ let rec value_to_string : value -> string
   | VCtor (id,l1) -> id ^ (if(l1=[]) then "" else pp_tuple value_to_string l1)
   | VFun  (xs, exp, env) -> "fun "^ arg_to_string xs ^"->"^(exp_to_string exp)
   | VFunRec (f, xs, exp, env) -> "VFunRec ("^f^","^  arg_to_string xs ^","^exp_to_string exp^",env)" 
-  | _ -> "?"
+  | VHole _ -> "?"
+  | VExcept v -> "Exception: " ^ value_to_string v
   
 let env_to_string env = BatMap.foldi (fun x v r -> r^" " ^x ^ "|-> " ^ value_to_string v) env ""
 
@@ -289,6 +294,8 @@ let rec labeled_exp_to_string : labeled_exp -> string
 let rec labeled_decl_to_string : labeled_decl -> string -> string
 = fun decl str ->
   match decl with
+  | DExcept t ->
+    str ^ "exception " ^ user_defined_type_to_string t
   | DData (id,lst) -> 
     str ^ "type " ^ id ^ " =" ^ 
     (list_fold (fun t r -> r ^ "\n|" ^ user_defined_type_to_string t) lst "") ^ "\n"
@@ -327,6 +334,7 @@ let rec labeled_value_to_string : labeled_value -> string
   | VFun (arg, exp, lenv) -> "VFun" ^ arg_to_string arg
   | VFunRec (f, arg, exp, lenv) -> "VFun" ^ f ^ arg_to_string arg
   | VHole n -> "?"
+  | VExcept v -> "Exception: "^ labeled_value_to_string v
 
 let print_header str = 
  let _ = print_endline "-----------------------------" in

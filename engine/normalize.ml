@@ -168,6 +168,7 @@ let rec constant_exp : exp -> exp
 let constant_decl : decl -> decl
 = fun decl ->
 	match decl with
+  | DExcept _ -> decl
 	| DData _ -> decl
   | DLet (x,is_rec,args,typ,exp) -> 
     let exp = constant_exp exp in
@@ -258,6 +259,7 @@ let rec reorder_exp : exp -> exp
 let reorder_decl : decl -> decl
 = fun decl ->
 	match decl with
+  | DExcept _ -> decl
 	| DData _ -> decl
   | DLet (x,is_rec,args,typ,exp) -> 
     let exp = reorder_exp exp in

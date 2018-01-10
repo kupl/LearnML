@@ -41,6 +41,7 @@ let rec labeling_exp : exp -> labeled_exp
 		(new_label (), EMatch (labeling_exp e, List.combine ps (labeling_explist es)))
 	| IF (e1, e2, e3) -> (new_label (), IF (labeling_exp e1, labeling_exp e2, labeling_exp e3))
 	| Hole n -> (new_label (), Hole n)
+  | Raise e -> (new_label (),Raise (labeling_exp e))
 
 and labeling_explist : exp list -> labeled_exp list
 = fun es -> List.fold_left (fun acc x -> acc@[labeling_exp x]) [] es
@@ -48,6 +49,7 @@ and labeling_explist : exp list -> labeled_exp list
 let labeling_decl : decl -> labeled_decl
 = fun decl ->
 	match decl with
+  | DExcept t -> DExcept t
 	| DData (id, ctors) -> DData (id, ctors)
 	| DLet (f, is_rec, args, typ, e) -> DLet (f, is_rec, args, typ, labeling_exp e)
 
@@ -94,6 +96,7 @@ let rec unlabeling_exp : labeled_exp -> exp
 		EMatch (unlabeling_exp e, List.combine ps (unlabeling_explist es))
 	| IF (e1, e2, e3) -> IF (unlabeling_exp e1, unlabeling_exp e2, unlabeling_exp e3)
 	| Hole n -> Hole n
+  | Raise e -> Raise (unlabeling_exp e)
 
 and unlabeling_explist : labeled_exp list -> exp list
 = fun es -> List.map unlabeling_exp es
@@ -101,6 +104,7 @@ and unlabeling_explist : labeled_exp list -> exp list
 let unlabeling_decl : labeled_decl -> decl
 = fun l_decl ->
 	match l_decl with
+  | DExcept t -> DExcept t
 	| DData (x, ctors) -> DData (x, ctors)
 	| DLet (f, is_rec, args, typ, e) -> DLet (f, is_rec, args, typ ,unlabeling_exp e)
 
@@ -147,6 +151,7 @@ and gen_hole_explist : int -> labeled_exp list -> labeled_exp list
 let rec gen_hole_decl : int -> labeled_decl -> labeled_decl
 = fun n l_decl ->
 	match l_decl with
+  | DExcept t -> DExcept t
 	| DData (x, ctors) -> DData (x, ctors)
 	| DLet (f, is_rec, args, typ, e) -> DLet (f, is_rec, args, typ, gen_hole_exp n e)
 
