@@ -78,7 +78,7 @@ let rec binding_args : arg list -> exp -> exp
 %token AT         (* @ *)
 %token DOUBLECOLON(* :: *)
 %token STRCON     (* ^ *)
-
+%token IDENT      (* ' *)
 %token EOF
 
 %left OR
@@ -266,6 +266,8 @@ typ_base:
     { TBool }
   | LPAREN t=typ RPAREN
     { t }
+  | IDENT s=LID
+    { TVar s }
 
 (***** }}} *****)
 
