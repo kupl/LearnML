@@ -22,11 +22,14 @@ let run_testcases : prog -> examples -> unit
         print_endline ("Result: " ^ Print.value_to_string result_value ^ " " ^  
                      "Expected: " ^ Print.value_to_string output);
     with except ->
-      match except with
+      begin match except with
       |EExcept v ->
         print_endline("Result : " ^ Print.value_to_string v ^ " " ^
                     "Expected: " ^ Print.value_to_string output);
-      |_ -> raise except
+      |_ ->
+        print_endline("Result : Timeout" ^ " " ^
+                    "Expected: " ^ Print.value_to_string output);
+      end
   ) examples 
 
 let run_prog : prog -> examples -> unit
