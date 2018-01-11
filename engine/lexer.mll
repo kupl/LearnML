@@ -86,7 +86,7 @@ let create_string lexbuf =
 
 let newline    = '\n' | ('\r' '\n') | '\r'
 let whitespace = ['\t' ' ']
-let lowercase  = ['a'-'z']
+let lowercase  = ['a'-'z'] | '_'
 let uppercase  = ['A'-'Z']
 let character  = uppercase | lowercase
 let digit      = ['0'-'9']
@@ -97,8 +97,8 @@ rule token = parse
   | "(*" {comments 0 lexbuf}
   | '"' {STRING (create_string (Buffer.create 100) lexbuf)}
   | whitespace+ | newline+    { token lexbuf }
-  | lowercase (digit | character | '_')*    { create_token lexbuf }
-  | uppercase (digit | character | '_')*    { UID (lexeme lexbuf) }
+  | lowercase (digit | character | ''')*    { create_token lexbuf }
+  | uppercase (digit | character | ''')*    { UID (lexeme lexbuf) }
   | '?' | "|>" | '=' | "->" | "=>" | '*' | ',' | ':' | ';' | '|' | '(' | ')' | '{' | '}' | '[' | ']' 
   | '_' | '+' | '-' | '/'| '%' | "||" | "&&" | "<" | ">" | "<=" | ">=" | "!=" | "<>" | "@"| "::" 
     { create_symbol lexbuf }

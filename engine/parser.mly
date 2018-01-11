@@ -360,6 +360,9 @@ exp_op:
     { LARGEREQ (e1, e2) }
   | e1=exp_op EQ e2=exp_op
     { EQUAL (e1, e2) }
+  | e1=exp_op EQ EQ e2=exp_op
+    { EQUAL (e1, e2) }
+
   | e1=exp_op NOTEQ e2=exp_op
     { NOTEQ (e1, e2) }
   | e1=exp_op AT e2=exp_op
