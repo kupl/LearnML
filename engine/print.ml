@@ -120,6 +120,7 @@ let rec exp_to_string : exp -> string
   |LESSEQ (e1,e2) -> "(" ^ exp_to_string e1 ^ " <= " ^ exp_to_string e2 ^")"
   |AT (e1,e2) -> "(" ^ exp_to_string e1 ^ " @ " ^ exp_to_string e2 ^")"
   |DOUBLECOLON (e1,e2) -> "(" ^ exp_to_string e1 ^ " :: " ^ exp_to_string e2 ^")"
+  |STRCON (e1,e2) -> "(" ^ exp_to_string e1 ^ " ^ " ^ exp_to_string e2 ^ ")"
   |NOT e -> "not (" ^ exp_to_string e ^ ")"
   |EApp (e1,e2) -> 
     exp_to_string e1 ^ " " ^

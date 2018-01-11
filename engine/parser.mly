@@ -77,14 +77,14 @@ let rec binding_args : arg list -> exp -> exp
 
 %token AT         (* @ *)
 %token DOUBLECOLON(* :: *)
-
+%token STRCON     (* ^ *)
 
 %token EOF
 
 %left OR
 %left AND
 %left LESS LESSEQ LARGER LARGEREQ EQ NOTEQ
-%right AT
+%right AT STRCON
 %right DOUBLECOLON
 %left PLUS MINUS
 %left STAR DIVIDE MOD
@@ -366,6 +366,8 @@ exp_op:
     { AT (e1, e2) }
   | e1=exp_op DOUBLECOLON e2=exp_op
     { DOUBLECOLON (e1, e2) }
+  | e1=exp_op STRCON e2 = exp_op
+    { STRCON (e1,e2) }
   | RAISE e=exp_base
     { Raise e}
   | e=exp_base es=exp_app_list (* funcion call or constant *)

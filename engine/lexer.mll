@@ -63,7 +63,7 @@ let symbols : (string * Parser.token) list =
   ; ("<>", NOTEQ)
   ; ("@",AT)
   ; ("::",DOUBLECOLON)
-  ;
+  ; ("^",STRCON)
   ]
 
 let create_token lexbuf =

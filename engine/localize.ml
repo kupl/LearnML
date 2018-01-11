@@ -134,6 +134,12 @@ let rec eval : labeled_env -> labeled_exp -> labeled_value
     | VList vs -> VList ((eval env e1)::vs) 
     | _ -> raise (Failure "list_operation error")
     end
+  | STRCON (e1,e2) ->
+    let (v1,v2) = (eval env e1,eval env e2) in
+    begin match v1,v2 with
+    | VString str1,VString str2 -> VString (str1 ^ str2)
+    | _ -> raise (Failure "string_operation error")
+    end
   (* else *)
   | IF (e1, e2, e3) ->
     begin match (eval env e1) with

@@ -74,6 +74,7 @@ and exp =
   (* lop *)
   | AT of exp * exp
   | DOUBLECOLON of exp * exp
+  | STRCON of exp * exp
   (* else *)
   | EApp of exp * exp                               (* e1 e2 *)
   | EFun of arg * exp                               (* fun (x:t1) -> e *)
@@ -128,85 +129,37 @@ let rec exp_cost : exp -> int
   | NOTEQ (e1,e2) -> 15 + (exp_cost e1) + (exp_cost e2)
   | LESSEQ (e1,e2) -> 15 + (exp_cost e1) + (exp_cost e2)
   | LARGEREQ (e1,e2) -> 15 + (exp_cost e1) + (exp_cost e2)
+  | STRCON (e1,e2) -> 15 + (exp_cost e1) + (exp_cost e2)
   | MINUS e1 -> 15 + (exp_cost e1)
   | NOT e1 -> 15 + (exp_cost e1)
   | EVar x -> 7
   | EApp (e1,e2) -> 10 + (exp_cost e1) + (exp_cost e2)
   | ELet (x,is_rec,args,typ,e1,e2) -> (if (is_rec) then 50 else 40) + (exp_cost e1) + (exp_cost e2)
-  | ECtor (x,l) -> 
-    let rec f lst =
-    match lst with
-    [] -> 0
-    |hd::tl -> (exp_cost hd) + (f tl) 
-  in 10+ (f l) 
+  | ECtor (x,l) -> 15 + (list_fold(fun e r -> exp_cost e + r) l 0)
   | EMatch (e1,bl) -> 
-    let (pl,el) = List.split bl in
-    let rec f_pat lst = 
-    match lst with 
-    [] -> 0
-    |hd::tl -> (pat_cost hd) + (f_pat tl)
-  in let rec f_exp lst =
-    match lst with
-    [] -> 0
-    |hd::tl -> (exp_cost hd) + (f_exp tl)
-  in 40+(f_pat pl)+(f_exp el)+(exp_cost e1)
-  | EFun (arg,e) -> 40 + (exp_cost e)
+    let (pl,el) = list_split bl in
+    40 + (exp_cost e1)+(list_fold(fun p r -> pat_cost p+r) pl 0) + (list_fold(fun e r ->exp_cost e+r) el 0)
+  | EFun (arg,e) -> 30 + (exp_cost e)
   | IF (e1,e2,e3) -> 40 + (exp_cost e1) + (exp_cost e2) + (exp_cost e3)
   | AT (e1,e2) -> 15 + (exp_cost e1) + (exp_cost e2)
   | DOUBLECOLON (e1,e2) -> 15 + (exp_cost e1) + (exp_cost e2)
-  | EList l -> 
-    let rec f lst =
-    match lst with
-    [] -> 0
-    |hd::tl -> (exp_cost hd) + (f tl) 
-  in 20+ (f l) 
-  | ETuple l-> 
-    let rec f lst =
-    match lst with
-    [] -> 0
-    |hd::tl -> (exp_cost hd) + (f tl) 
-  in 20+ (f l) 
+  | EList l -> 20 + (list_fold (fun e r -> exp_cost e + r) l 0)
+  | ETuple l-> 20 + (list_fold (fun e r -> exp_cost e + r) l 0) 
   | Hole n-> 15
   | Raise e -> 30 + (exp_cost e) 
+
 and pat_cost : pat -> int
 = fun pat ->
     match pat with
-    PCtor (x,lst) -> 
-      let rec f l = 
-      match l with
-      [] -> 0
-      |hd::tl -> (pat_cost hd) + (f tl)
-    in 10 + f lst
-    | Pats lst -> 
-      let rec f l = 
-      match l with
-      [] -> 0
-      |hd::tl -> (pat_cost hd) + (f tl)
-    in 50 + f lst
-    | PUnit -> 30
-    | PInt _ -> 30
-    | PVar _ -> 15
-    | PBool b -> 30
-    | PList lst ->  
-      let rec f l = 
-      match l with
-      [] -> 0
-      |hd::tl -> (pat_cost hd) + (f tl)
-    in 30 + f lst
-    | PTuple lst -> 
-      let rec f l = 
-      match l with
-      [] -> 0
-      |hd::tl -> (pat_cost hd) + (f tl)
-    in 30 + f lst  
-    | PUnder -> 20
-    | PCons (lst) -> 
-      let rec f l = 
-      match l with
-      [] -> 0
-      |hd::tl -> (pat_cost hd) + (f tl)
-    in 20 + f lst
-    (*| PCons (phd, ptl) -> (pat_cost phd) + (pat_cost ptl)*)
+    PCtor (x,lst) -> 10 + (list_fold (fun p r -> pat_cost p+r) lst 0) 
+  | Pats lst -> 30 + (list_fold (fun p r -> pat_cost p+r) lst 0)
+  | PUnit -> 30
+  | PInt _ -> 30
+  | PVar _ -> 15
+  | PBool b -> 30
+  | PList lst |PTuple lst -> 30 + (list_fold (fun p r -> pat_cost p+r) lst 0)  
+  | PUnder -> 20
+  | PCons (lst) -> 20 + (list_fold (fun p r -> pat_cost p+r) lst 0) 
 
 let cost_decl : decl -> int -> int
 = fun decl cost ->

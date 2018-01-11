@@ -305,6 +305,10 @@ let rec gen_equations : HoleType.t -> VariableType.t -> TEnv.t -> exp -> typ -> 
     let (eqns,hole_typ,var_typ) = gen_equations hole_typ var_typ tenv e1 t in
     let (eqns',hole_typ,var_typ) = gen_equations hole_typ var_typ tenv e2 (TList t) in
     ((ty,TList t)::(eqns@eqns'),hole_typ,var_typ) 
+  | STRCON (e1,e2) ->
+    let (eqns,hole_typ,var_typ) = gen_equations hole_typ var_typ tenv e1 TString in
+    let (eqns',hole_typ,var_typ) = gen_equations hole_typ var_typ tenv e2 TString in
+    ((ty,TString)::(eqns@eqns'),hole_typ,var_typ)
   | IF (e1, e2, e3) -> 
     let (eqns,hole_typ,var_typ) = gen_equations hole_typ var_typ tenv e1 TBool in
     let (eqns',hole_typ,var_typ) = gen_equations hole_typ var_typ tenv e2 ty in

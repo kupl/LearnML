@@ -39,6 +39,7 @@ and lexp =
   | EFun of arg * labeled_exp
   | Hole of int
   | Raise of labeled_exp
+  | STRCON of labeled_exp * labeled_exp
 and labeled_branch = pat * labeled_exp
 
 type labeled_decl =

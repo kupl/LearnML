@@ -11,6 +11,23 @@ let parse_file (f:string) : (examples * prog) =
     |> Lexing.from_string
     |> Parser.prog Lexer.token
 
+let except_handling : exn -> value -> unit
+= fun except output ->
+  begin match except with
+  |EExcept v ->
+    print_endline("Result : " ^ Print.value_to_string v ^ " " ^
+                  "Expected: " ^ Print.value_to_string output);
+  |TimeoutError ->
+    print_endline("Result : Timeout" ^ " " ^
+                  "Expected: " ^ Print.value_to_string output);
+  |Failure s ->
+    print_endline("Result : Error "^ s ^ " " ^
+                  "Expected: " ^ Print.value_to_string output);
+  |_ ->
+     print_endline("Result : Evaluation Error "^
+                  "Expected: " ^ Print.value_to_string output);
+  end
+ 
 let run_testcases : prog -> examples -> unit
 =fun prog examples ->
   List.iter (fun (inputs, output) ->
@@ -21,18 +38,7 @@ let run_testcases : prog -> examples -> unit
 		  let result_value = Lang.lookup_env res_var env in
         print_endline ("Result: " ^ Print.value_to_string result_value ^ " " ^  
                      "Expected: " ^ Print.value_to_string output);
-    with except ->
-      begin match except with
-      |EExcept v ->
-        print_endline("Result : " ^ Print.value_to_string v ^ " " ^
-                    "Expected: " ^ Print.value_to_string output);
-      |TimeoutError ->
-        print_endline("Result : Timeout" ^ " " ^
-                    "Expected: " ^ Print.value_to_string output);
-      |_ ->
-        print_endline("Result : evaluation Error"^ " " ^
-                    "Expected: " ^ Print.value_to_string output);
-      end
+    with except -> except_handling except output
   ) examples 
 
 let run_prog : prog -> examples -> unit
