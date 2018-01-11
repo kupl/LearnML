@@ -163,7 +163,7 @@ let rec decl_to_string : decl -> string -> string
 = fun decl str ->
   match decl with
   | DExcept ctor -> 
-    str ^ "exception " ^ user_defined_type_to_string ctor
+    str ^ "\n" ^ "exception " ^ user_defined_type_to_string ctor ^ "\n"
   | DEqn (x, typ) ->
     str ^ "type " ^ x ^ " = " ^ type_to_string typ ^ "\n"
   | DData (id,lst) -> 

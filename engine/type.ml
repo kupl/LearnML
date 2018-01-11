@@ -8,6 +8,86 @@ exception TypeError
 
 let start_time = ref 0.0
 
+(* Convert user_def typ var -> existing typ *)
+module Converter = struct 
+  type t = (id, typ) BatMap.t (* env of user_def_typ -> typ*)
+  let empty = BatMap.empty
+  
+  let extend (x, t) env = BatMap.add x t env
+  
+  let find env x = BatMap.find x env
+
+  let rec print env = BatMap.iter (fun x typ -> print_endline (x ^ " |-> " ^type_to_string typ)) env
+
+  let rec convert_typ : t -> typ -> typ
+  = fun env typ ->
+    match typ with
+    | TBase x -> (try find env x with _ -> typ)
+    | TList t -> TList (convert_typ env t)
+    | TTuple ts -> TTuple (List.map (convert_typ env) ts)
+    | TCtor (t, ts) -> TCtor (convert_typ env t, List.map (convert_typ env) ts)
+    | TArr (t1, t2) -> TArr (convert_typ env t1, convert_typ env t2)
+    | _ -> typ
+
+  let rec convert_arg : t -> arg -> arg
+  = fun env arg ->
+    match arg with
+    | ArgOne (x, t) -> ArgOne (x, convert_typ env t)
+    | ArgTuple xs -> ArgTuple (List.map (convert_arg env) xs)
+
+  let rec convert_args : t -> arg list -> arg list
+  = fun env args -> List.map (convert_arg env) args
+
+  let rec convert_exp : t -> exp -> exp
+  = fun env exp ->
+    match exp with 
+    | EList es -> EList (List.map (convert_exp env) es)
+    | ETuple es -> ETuple (List.map (convert_exp env) es)
+    | ECtor (x, es) -> ECtor (x, List.map (convert_exp env) es)
+    | MINUS e -> MINUS (convert_exp env e)
+    | NOT e -> NOT (convert_exp env e)
+    | ADD (e1, e2) -> ADD (convert_exp env e1, convert_exp env e2)
+    | SUB (e1, e2) -> SUB (convert_exp env e1, convert_exp env e2)
+    | MUL (e1, e2) -> MUL (convert_exp env e1, convert_exp env e2)
+    | DIV (e1, e2) -> DIV (convert_exp env e1, convert_exp env e2) 
+    | MOD (e1, e2) -> MOD (convert_exp env e1, convert_exp env e2)
+    | OR (e1, e2) -> OR (convert_exp env e1, convert_exp env e2)
+    | AND (e1, e2) -> AND (convert_exp env e1, convert_exp env e2)
+    | LESS (e1, e2) -> LESS (convert_exp env e1, convert_exp env e2)
+    | LARGER (e1, e2) -> LARGER (convert_exp env e1, convert_exp env e2)
+    | LESSEQ (e1, e2) -> LESSEQ (convert_exp env e1, convert_exp env e2)
+    | LARGEREQ (e1, e2) -> LARGEREQ (convert_exp env e1, convert_exp env e2)
+    | EQUAL (e1, e2) -> EQUAL (convert_exp env e1, convert_exp env e2)
+    | NOTEQ (e1, e2) -> NOTEQ (convert_exp env e1, convert_exp env e2)
+    | AT (e1, e2) -> AT (convert_exp env e1, convert_exp env e2)
+    | DOUBLECOLON (e1, e2) -> DOUBLECOLON (convert_exp env e1, convert_exp env e2)
+    | IF (e1, e2, e3) -> IF (convert_exp env e1, convert_exp env e2, convert_exp env e3)
+    | ELet (f, is_rec, args, typ, e1, e2) -> ELet (f, is_rec, convert_args env args, convert_typ env typ, convert_exp env e1, convert_exp env e2)
+    | EFun (arg, e) -> EFun (convert_arg env arg, convert_exp env e)
+    | EApp (e1, e2) -> EApp (convert_exp env e1, convert_exp env e2)
+    | EMatch (e, bs) ->
+      let (ps, es) = List.split bs in
+      EMatch (convert_exp env e, List.combine ps (List.map (convert_exp env) es))
+    | Raise e -> Raise (convert_exp env e)
+    | _ -> exp
+
+  let rec convert_ctor : t -> ctor -> ctor
+  = fun env (x, ts) -> (x, List.map (convert_typ env) ts)
+
+  let rec convert_decl : t -> decl -> (t * decl)
+  = fun env decl ->
+    match decl with  
+    | DExcept(x, ts) -> (env, DExcept (x, List.map (convert_typ env) ts))
+    | DEqn (x, typ) -> (extend (x, typ) env, DEqn (x, typ))
+    | DData (x, ctors) -> (env, DData (x, List.map (convert_ctor env) ctors))
+    | DLet (f, is_rec, args, typ, exp) -> (env, DLet (f, is_rec, convert_args env args, convert_typ env typ, convert_exp env exp))
+
+  let rec convert : t -> prog -> prog
+  = fun env decls -> 
+    match decls with
+    | [] -> []
+    | decl::decls -> let (t, decl) = convert_decl env decl in decl::(convert t decls)
+end
 
 (* type environment : var -> type *)
 module TEnv = struct
@@ -360,23 +440,24 @@ let rec ctors_to_env : ctor list -> TEnv.t -> typ -> TEnv.t
 let type_decl : decl -> (TEnv.t * HoleType.t * VariableType.t) -> (TEnv.t * HoleType.t * VariableType.t)
 = fun decl (tenv,hole_typ,variable_typ) -> 
   match decl with
-  | DExcept(id,typ) ->  (TEnv.extend (id,TCtor (TExn,typ)) tenv,hole_typ,variable_typ)
+  | DExcept(id, typ) ->  (TEnv.extend (id,TCtor (TExn,typ)) tenv,hole_typ,variable_typ)
+  | DEqn (x, typ) -> (tenv, hole_typ, variable_typ)
   | DData (id, ctors) -> 
     let tbase = TBase id in
     (ctors_to_env ctors tenv tbase,hole_typ,variable_typ)
   | DLet (x,is_rec,args,typ,exp) -> 
-    begin match args with
+    match args with
     | [] -> (* variable binding *)
       let (ty,hole_typ,variable_typ) = typeof exp ((TEnv.extend (x, typ) tenv),hole_typ,variable_typ) in
       (TEnv.extend (x,ty) tenv,hole_typ,variable_typ)
     | _ ->  (* function binding *)
       let e = ELet(x, is_rec, args, typ, exp, EVar(x)) in
       let (ty,hole_typ,variable_typ) = typeof e ((TEnv.extend (x, typ) tenv),hole_typ,variable_typ) in
-      ((TEnv.extend (x, ty) tenv),hole_typ,variable_typ)
-    end
+      (TEnv.extend (x, ty) tenv,hole_typ,variable_typ)
 
 let run : prog -> HoleType.t * VariableType.t
 = fun decls -> 
   let _ = start_time:=Sys.time() in
+  let decls = Converter.convert Converter.empty decls in
   let (_,hole_typ,variable_typ) = (list_fold type_decl decls (TEnv.empty,HoleType.empty,VariableType.empty)) in
   (hole_typ,variable_typ)
