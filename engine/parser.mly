@@ -298,35 +298,39 @@ arg_comma_list:
 (***** Expressions {{{ *****)
 
 exp:
-  | MATCH e=exp WITH bs=branches 
-    { EMatch (e, bs) }
-  | FUN xs=args ARR e=exp
-    { binding_args xs e }
-  | LET f=LID args=args COLON t=typ EQ e1=exp IN e2=exp
-    { ELet (f, false, args, t, e1, e2) }
-  | LET REC f=LID args=args COLON t=typ EQ e1=exp IN e2=exp
-    { ELet (f, true, args, t, e1, e2) }
-  | LET f=LID args=args EQ e1=exp IN e2=exp
-    { ELet (f, false, args, Type.fresh_tvar(), e1, e2) }
-  | LET REC f=LID args=args EQ e1=exp IN e2=exp
-    { ELet (f, true, args, Type.fresh_tvar(), e1, e2) } 
-  | IF e1=exp THEN e2=exp ELSE e3=exp
-    { IF (e1, e2, e3) }
   | e=exp_tuple
     { e }
 
 exp_tuple:
-  | e=exp_op es=exp_comma_list
+  | e=exp_struct es=exp_comma_list
     { ETuple (e::es) }
-  | e=exp_op
+  | e=exp_struct
     { e }
 
 exp_comma_list:
-  | COMMA e=exp_op
+  | COMMA e=exp_struct
     { [e] }
-  | COMMA e=exp_op es=exp_comma_list
+  | COMMA e=exp_struct es=exp_comma_list
     { e::es }
 
+exp_struct:  
+  | MATCH e=exp_struct WITH bs=branches 
+    { EMatch (e, bs) }
+  | FUN xs=args ARR e=exp_struct
+    { binding_args xs e }
+  | LET f=LID args=args COLON t=typ EQ e1=exp_struct IN e2=exp_struct
+    { ELet (f, false, args, t, e1, e2) }
+  | LET REC f=LID args=args COLON t=typ EQ e1=exp_struct IN e2=exp_struct
+    { ELet (f, true, args, t, e1, e2) }
+  | LET f=LID args=args EQ e1=exp_struct IN e2=exp_struct
+    { ELet (f, false, args, Type.fresh_tvar(), e1, e2) }
+  | LET REC f=LID args=args EQ e1=exp_struct IN e2=exp_struct
+    { ELet (f, true, args, Type.fresh_tvar(), e1, e2) } 
+  | IF e1=exp_struct THEN e2=exp_struct ELSE e3=exp_struct
+    { IF (e1, e2, e3) }
+  | e=exp_op
+    { e }
+  
 exp_op:
   | e1=exp_op PLUS e2=exp_op
     { ADD (e1, e2) }

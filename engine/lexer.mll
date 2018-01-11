@@ -6,6 +6,7 @@ exception Lexer_error of string
 
 let reserved_words : (string * Parser.token) list =
   [ ("fun", FUN)
+  ; ("function", FUN)
   ; ("match", MATCH)
   ; ("with", WITH)
   ; ("type", TYPE)
