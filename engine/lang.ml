@@ -1,6 +1,8 @@
 open Util
 
-exception Eval_error of string
+exception EvalError of string
+exception TimeoutError
+
 
 type id = string 
 type typ = 

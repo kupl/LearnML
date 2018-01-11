@@ -26,8 +26,11 @@ let run_testcases : prog -> examples -> unit
       |EExcept v ->
         print_endline("Result : " ^ Print.value_to_string v ^ " " ^
                     "Expected: " ^ Print.value_to_string output);
-      |_ ->
+      |TimeoutError ->
         print_endline("Result : Timeout" ^ " " ^
+                    "Expected: " ^ Print.value_to_string output);
+      |_ ->
+        print_endline("Result : evaluation Error"^ " " ^
                     "Expected: " ^ Print.value_to_string output);
       end
   ) examples 
