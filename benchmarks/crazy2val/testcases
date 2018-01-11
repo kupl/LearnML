@@ -1,0 +1,12 @@
+{
+	ONE NIL => 1;
+	ONE (MONE NIL) => -1;
+	ONE (ZERO (ONE NIL)) => 5;
+	ZERO (ONE (MONE NIL)) => -2;
+	ZERO (ZERO (ZERO NIL)) => 0;
+	ONE (MONE (ZERO (MONE NIL))) => -9;
+	ONE (MONE (MONE (ONE (ONE NIL)))) => 19;
+	ONE (ONE (ONE (ONE (ONE (MONE NIL))))) => -1;
+	ZERO (ONE (MONE (ZERO (ONE (MONE NIL))))) => -18;
+	ZERO (ZERO (ZERO (ZERO (ZERO (ZERO (ONE NIL)))))) => 64;
+}
