@@ -43,6 +43,7 @@ let rec binding_args : arg list -> exp -> exp
 %token END
 %token EXCEPTION
 %token RAISE
+%token DEFAND
 
 %token HOLE       (* ? *)
 (* %token IMPLIES    (* |> *) *)
@@ -200,6 +201,10 @@ datatype:
     { DEqn (d, t) }
   | TYPE d=LID EQ cs=ctors
     { DData (d, List.rev cs) }
+  | DEFAND d=LID EQ t=typ
+    { DEqn (d, t) }
+  | DEFAND d=LID EQ cs=ctors
+    { DData (d,List.rev cs) }
 
 ctors:
   | c=ctor
@@ -224,6 +229,11 @@ letbind:
     { DLet (x, true, args, Type.fresh_tvar(), e) }
   | LET REC x=LID args=args COLON t=typ EQ e=exp (* let rec f x y : typ = e ;; *)
     { DLet (x, true, args, t, e) }
+  | DEFAND x=LID args=args COLON t=typ EQ e=exp
+    { DLet (x,true,args,t,e)  }
+  | DEFAND x=LID args=args EQ e=exp (* let rec f x y = e ;; *)
+    { DLet (x, true, args, Type.fresh_tvar(), e) }
+ 
 
 exp_bind:
   | e=exp (* e *)
@@ -316,7 +326,7 @@ exp_comma_list:
     { e::es }
 
 exp_struct:  
-  | MATCH e=exp_struct WITH bs=branches 
+  | MATCH e=exp WITH bs=branches 
     { EMatch (e, bs) }
   | FUN xs=args ARR e=exp_struct
     { binding_args xs e }

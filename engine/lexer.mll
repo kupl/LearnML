@@ -30,6 +30,7 @@ let reserved_words : (string * Parser.token) list =
   ; ("end", END)
   ; ("exception",EXCEPTION)
   ; ("raise",RAISE)
+  ; ("and",DEFAND)
   ]
 
 let symbols : (string * Parser.token) list =
