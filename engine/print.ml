@@ -198,8 +198,8 @@ let rec value_to_string : value -> string
   | VList l1 -> pp_list value_to_string l1
   | VTuple l1 -> pp_tuple value_to_string l1
   | VCtor (id,l1) -> id ^ (if(l1=[]) then "" else pp_tuple value_to_string l1)
-  | VFun  (xs, exp, env) -> "fun "^ arg_to_string xs ^"->"^(exp_to_string exp)
-  | VFunRec (f, xs, exp, env) -> "VFunRec ("^f^","^  arg_to_string xs ^","^exp_to_string exp^",env)" 
+  | VFun  (xs, exp, env) -> "<fun>"
+  | VFunRec (f, xs, exp, env) -> "<fun>"
   | VHole _ -> "?"
   
 let env_to_string env = BatMap.foldi (fun x v r -> r^" " ^x ^ "|-> " ^ value_to_string v) env ""
@@ -344,3 +344,47 @@ let print_header str =
  let _ = print_endline str in
  let _ = print_endline "-----------------------------" in
    ()
+
+let poly_count = ref (Char.code 'a')
+
+let rec pp_polymorphic t env =
+  match t with
+  |TVar id -> 
+    if (BatMap.mem id env) then (BatMap.find id env,env)
+    else
+      let t = "'"^Char.escaped(Char.chr(!poly_count)) in
+      let _ = poly_count:= (!poly_count)+1 in
+      (t,BatMap.add id t env) 
+  |TList t -> 
+    let (str,env) = (pp_polymorphic t env) in
+    (str ^ " list",env)
+  |TTuple typ_lst -> 
+    begin match typ_lst with
+    |[] -> ("unit",env)
+    |hd::tl -> 
+      let (str,env) = pp_polymorphic hd env in
+      list_fold (fun t (str,env) ->
+        let (s,env) = pp_polymorphic t env in
+        (str^" * "^s,env)
+      ) tl (str,env)
+    end
+  |TArr (t1,t2) ->
+    let (str,env) = pp_polymorphic t1 env in
+    let (str2,env) = pp_polymorphic t2 env in
+    ("(" ^ str ^ " -> "^str2^")",env)
+  |_ -> (type_to_string t,env)
+
+let print_REPL : prog -> (id,typ) BatMap.t -> env -> unit
+=fun prog tenv env ->
+  List.iter(fun (decl:decl) ->
+    match decl with
+    | DLet _ -> ()
+    | _ -> print_pgm [decl]
+  ) prog;
+  let str = BatMap.foldi(fun id v r->
+    let _ = poly_count :=(Char.code 'a') in
+    let t = BatMap.find id tenv in
+    let (t_string,_) = pp_polymorphic t empty_env in
+    ("val "^id^" : " ^ t_string ^ " = " ^ (value_to_string v)^"\n")^r
+  ) env "" in
+  print_string str

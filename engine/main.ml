@@ -57,13 +57,19 @@ let fix_with_solution : prog -> prog -> examples -> unit
   let initial_set = BatSet.map
    (
       fun (n,prog)->
-        let (hole_type,variable_type) = Type.run prog in
+        let (_,hole_type,variable_type) = Type.run prog in
         (n,prog,hole_type,variable_type)
     ) ranked_prog_set in
   let components = Comp.extract_component solution in
   let _ = Synthesize.hole_synthesize submission initial_set components examples in
   ()
  
+let execute : prog -> unit
+=fun prog ->
+  let (tenv,_,_) = Type.run prog in
+  let env = Eval.run prog in
+  (Print.print_REPL prog tenv env)
+
 let fix_without_solution : prog -> examples -> unit
 =fun submission examples -> () (* TODO *)
 
@@ -91,25 +97,31 @@ let main () =
          with _ -> raise (Failure ("error during parsing testcases: " ^ !opt_testcases_filename)) in 
   let submission = read_prog !opt_submission_filename in
   let solution = read_prog !opt_solution_filename in
-    match !opt_run, !opt_fix, !opt_gentest with
-    | true, false, false -> (* execution mode *)
+    match !opt_run, !opt_fix, !opt_gentest, !opt_execute with
+    | true, false, false, false -> (* execution mode *)
       begin
         match submission with
         | Some sub -> run_prog sub testcases
         | _ -> raise (Failure (!opt_submission_filename ^ " does not exist"))
       end
-    | false, true, false -> (* fix mode *)
+    | false, true, false, false -> (* fix mode *)
       begin
         match submission, solution with
         | Some sub, Some sol -> fix_with_solution sub sol testcases 
         | Some sub, None -> fix_without_solution sub testcases 
         | _ -> raise (Failure (!opt_submission_filename ^ " does not exist"))
       end
-    | false, false, true -> (* testcase-generation mode *)
+    | false, false, true, false -> (* testcase-generation mode *)
       begin
         match submission, solution with
         | Some sub, Some sol -> ignore (generate_testcases sub sol)
         | _ -> raise (Failure "Submission or solution not provided")
+      end
+    | false, false, false, true -> (* execution mode *)
+      begin 
+        match submission with
+        | Some sub -> execute sub
+        | _ -> raise (Failure "Submission file is not provided")
       end
     | _ -> Arg.usage options usage_msg
 

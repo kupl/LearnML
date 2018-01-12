@@ -459,9 +459,9 @@ let type_decl : decl -> (TEnv.t * HoleType.t * VariableType.t) -> (TEnv.t * Hole
       let (ty,hole_typ,variable_typ) = typeof e ((TEnv.extend (x, typ) tenv),hole_typ,variable_typ) in
       (TEnv.extend (x, ty) tenv,hole_typ,variable_typ)
 
-let run : prog -> HoleType.t * VariableType.t
+let run : prog -> (TEnv.t * HoleType.t * VariableType.t)
 = fun decls -> 
   let _ = start_time:=Sys.time() in
   let decls = Converter.convert Converter.empty decls in
-  let (_,hole_typ,variable_typ) = (list_fold type_decl decls (TEnv.empty,HoleType.empty,VariableType.empty)) in
-  (hole_typ,variable_typ)
+  let (tenv,hole_typ,variable_typ) = (list_fold type_decl decls (TEnv.empty,HoleType.empty,VariableType.empty)) in
+  (tenv,hole_typ,variable_typ)

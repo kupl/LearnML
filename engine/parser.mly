@@ -237,7 +237,7 @@ letbind:
 
 exp_bind:
   | e=exp (* e *)
-    { DLet ("@", false, [], Type.fresh_tvar(), e)}
+    { DLet ("-", false, [], Type.fresh_tvar(), e)}
 
 (***** }}} *****)
 
