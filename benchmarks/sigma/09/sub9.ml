@@ -1,5 +1,3 @@
-(* 2006-11782 Song Young-chan, Hw1-1 Sigma *)
-
 exception Error of string
 
 let rec sigma a b f =

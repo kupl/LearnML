@@ -11,7 +11,7 @@ type formula = TRUE
 
 let rec inverter : expr -> int = fun expr ->
 	match expr with
-		|NUM i -> i;
+		|NUM i -> i
 		|PLUS (e1,e2)  -> begin 
 			 	 let i1 = inverter e1 in
 				 let i2 = inverter e2 in

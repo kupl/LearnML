@@ -9,9 +9,8 @@
 
 let rec sigma (a,b,f) =
   match (a,b) with
-  | (a,b) when a > b -> 0
-  | (a,b) when a = b -> f a
-  | (a,b) -> (
-    (f a) + sigma (a+1, b, f)
-  )
+  | (a,b) -> 
+    if (a > b) then 0
+    else if (a = b) then f a 
+    else (f a) + sigma (a+1, b, f)
 
