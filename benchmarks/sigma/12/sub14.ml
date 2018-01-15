@@ -1,10 +1,9 @@
 let res = []
 
 let rec func(a, b, tmp) =
-	if  a=b then res :: tmp(a)
+	if a=b then res :: tmp(a)
 	else if a<b then  res :: tmp(b)
-		func(a, (b-1), tmp)
-
+	else func(a, (b-1), tmp)
 
 let rec sum l =
 	match l with
