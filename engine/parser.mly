@@ -82,6 +82,20 @@ let rec binding_args : arg list -> exp -> exp
 %token IDENT      (* ' *)
 %token EOF
 
+%token LISTHD
+%token LISTTL
+%token LISTMAP
+%token LISTMEM
+%token LISTEXISTS
+%token LISTFILTER
+%token LISTAPPEND
+%token LISTLENGTH
+%token LISTNTH
+%token LISTREV
+%token LISTFOLDL
+
+
+
 %left OR
 %left AND
 %left LESS LESSEQ LARGER LARGEREQ EQ NOTEQ
@@ -410,6 +424,29 @@ exp_op:
     { appify e es }
   | c=UID e=exp_base
     { ECtor (c, [e]) }
+  | LISTHD es=exp_app_list
+    { appify (EVar "__list_hd__") es }
+  | LISTTL es=exp_app_list
+    {appify (EVar "__list_tl__") es }
+  | LISTMAP es=exp_app_list
+    {appify (EVar "__list_map__") es }
+  | LISTMEM es=exp_app_list
+    {appify (EVar "__list_mem__") es }
+  | LISTEXISTS es=exp_app_list
+    {appify (EVar "__list_exists__") es }
+  | LISTFILTER es=exp_app_list
+    {appify (EVar "__list_filter__") es }
+  | LISTAPPEND es=exp_app_list
+    {appify (EVar "__list_append__") es }
+  | LISTLENGTH es=exp_app_list
+    {appify (EVar "__list_length__") es }
+  | LISTNTH es=exp_app_list
+    {appify (EVar "__list_nth__") es }
+  | LISTREV es=exp_app_list
+    {appify (EVar "__list_rev__") es }
+  | LISTFOLDL es=exp_app_list
+    {appify (EVar "__list_foldl__") es }
+
 
 exp_app_list:     
   | 

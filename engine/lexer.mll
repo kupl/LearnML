@@ -31,6 +31,17 @@ let reserved_words : (string * Parser.token) list =
   ; ("exception",EXCEPTION)
   ; ("raise",RAISE)
   ; ("and",DEFAND)
+  ; ("List.hd",LISTHD)
+  ; ("List.tl",LISTTL)
+  ; ("List.map",LISTMAP)
+  ; ("List.mem",LISTMEM)
+  ; ("List.exists",LISTEXISTS)
+  ; ("List.filter",LISTFILTER)
+  ; ("List.append",LISTAPPEND)
+  ; ("List.length",LISTLENGTH)
+  ; ("List.nth",LISTNTH)
+  ; ("List.rev",LISTREV)
+  ; ("List.fold_left",LISTFOLDL)
   ]
 
 let symbols : (string * Parser.token) list =
@@ -56,6 +67,7 @@ let symbols : (string * Parser.token) list =
   ; ("/", DIVIDE)
   ; ("||", OR)
   ; ("&&",AND)
+  ; ("&",AND)
   ; ("<", LESS)
   ; (">", LARGER)
   ; ("<=", LESSEQ)
@@ -79,6 +91,12 @@ let create_symbol lexbuf =
   match Util.lookup str symbols with
   | None   -> raise @@ Lexer_error ("Unexpected token: " ^ str)
   | Some t -> t
+
+let create_external lexbuf =
+  let str = lexeme lexbuf in
+  match Util.lookup str reserved_words with
+  | None -> raise @@ Lexer_error ("Unexpected token: "^str)
+  | Some t -> t
 (*
 let create_string lexbuf = 
   let str = lexeme lexbuf in
@@ -101,8 +119,9 @@ rule token = parse
   | whitespace+ | newline+    { token lexbuf }
   | lowercase (digit | character | ''')*    { create_token lexbuf }
   | uppercase (digit | character | ''')*    { UID (lexeme lexbuf) }
+  | uppercase (digit | character | ''')*('.')(digit | character | ''')* {create_external lexbuf}
   | '?' | "|>" | '=' | "->" | "=>" | '*' | ',' | ':' | ';' | '|' | '(' | ')' | '{' | '}' | '[' | ']' 
-  | '_' | '+' | '-' | '/'| '%' | "||" | "&&" | "<" | ">" | "<=" | ">=" | "!=" | "<>" | "@"| "::" | "'" |"^" 
+  | '_' | '+' | '-' | '/'| '%' | "||" | "&&" | "<" | ">" | "<=" | ">=" | "!=" | "<>" | "@"| "::" | "'" |"^" | "&" 
     { create_symbol lexbuf }
   | _ as c { raise @@ Lexer_error ("Unexpected character: " ^ Char.escaped c) }
 
