@@ -193,6 +193,18 @@ let rec type_of_fun : arg list -> typ -> typ
   | [] -> typ
   | hd::tl -> TArr (type_of_arg hd, type_of_fun tl typ)
 
+let rec let_binding : TEnv.t -> let_bind -> typ -> TEnv.t
+= fun tenv x typ->
+  match (x, typ) with
+  | BindOne x, _ -> TEnv.extend (x, typ) tenv
+  | BindTuple xs, TTuple ts -> (try List.fold_left2 (let_binding) tenv xs ts with _ -> raise TypeError)
+  | BindTuple xs, TVar _ -> List.fold_left (
+    fun env x -> 
+      let t = fresh_tvar () in
+      let_binding env x t
+    ) tenv xs
+  | _ -> raise TypeError
+
 (* construct type eqn of patterns then bind type variablese *)
 let rec gen_pat_equations : (TEnv.t * typ_eqn) -> pat -> typ -> (TEnv.t * typ_eqn)
 = fun (tenv, eqn) pat ty ->
@@ -317,15 +329,15 @@ let rec gen_equations : HoleType.t -> VariableType.t -> TEnv.t -> exp -> typ -> 
   | ELet (f, is_rec, args, typ, e1, e2) ->
     begin match args with
     | [] ->
-      let tenv = if(is_rec) then TEnv.extend (f,typ) tenv else tenv in
-      let tenv' = TEnv.extend (f,typ) tenv in
+      let tenv = if (is_rec) then let_binding tenv f typ else tenv in
+      let tenv' = let_binding tenv f typ in
       let (eqns,hole_typ,var_typ) = gen_equations hole_typ var_typ tenv e1 typ in
       let (eqns',hole_typ,var_typ) = gen_equations hole_typ var_typ tenv' e2 ty in
       ((eqns@eqns'),hole_typ,var_typ)
     | _ -> 
       let (func_typ, args_env) = (type_of_fun args typ, bind_args tenv args) in
-      let tenv = if is_rec then TEnv.extend (f,func_typ) args_env else args_env in
-      let tenv' = TEnv.extend (f,func_typ) tenv in
+      let tenv = if is_rec then let_binding args_env f func_typ else args_env in
+      let tenv' = let_binding tenv f func_typ in
       let (eqns,hole_typ,var_typ) = gen_equations hole_typ var_typ tenv e1 typ in
       let (eqns',hole_typ,var_typ) = gen_equations hole_typ var_typ tenv' e2 ty in
       ((eqns@eqns'),hole_typ,var_typ)
@@ -449,15 +461,15 @@ let type_decl : decl -> (TEnv.t * HoleType.t * VariableType.t) -> (TEnv.t * Hole
   | DData (id, ctors) -> 
     let tbase = TBase id in
     (ctors_to_env ctors tenv tbase,hole_typ,variable_typ)
-  | DLet (x,is_rec,args,typ,exp) -> 
+  | DLet (f, is_rec, args, typ, exp) -> 
     match args with
     | [] -> (* variable binding *)
-      let (ty,hole_typ,variable_typ) = typeof exp ((TEnv.extend (x, typ) tenv),hole_typ,variable_typ) in
-      (TEnv.extend (x,ty) tenv,hole_typ,variable_typ)
+      let (ty,hole_typ,variable_typ) = typeof exp (let_binding tenv f typ,hole_typ,variable_typ) in
+      (let_binding tenv f ty, hole_typ, variable_typ)
     | _ ->  (* function binding *)
-      let e = ELet(x, is_rec, args, typ, exp, EVar(x)) in
-      let (ty,hole_typ,variable_typ) = typeof e ((TEnv.extend (x, typ) tenv),hole_typ,variable_typ) in
-      (TEnv.extend (x, ty) tenv,hole_typ,variable_typ)
+      let e = ELet(f, is_rec, args, typ, exp, binding_to_exp f) in
+      let (ty,hole_typ,variable_typ) = typeof e (let_binding tenv f typ, hole_typ,variable_typ) in
+      (let_binding tenv f ty,hole_typ,variable_typ)
 
 let run : prog -> (TEnv.t * HoleType.t * VariableType.t)
 = fun decls -> 

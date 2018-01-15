@@ -33,6 +33,10 @@ type pat =
   | PUnder 
   | Pats of pat list
 
+type let_bind =
+  | BindOne of id (* let x = ... in x *)
+  | BindTuple of let_bind list (* let x,y = (..., ...) in x,y *)
+
 type arg = 
   | ArgOne of id * typ
   | ArgTuple of arg list
@@ -41,7 +45,7 @@ and decl =
   | DExcept of ctor                                 (* exception x of t *)
   | DEqn of id * typ 
   | DData of id * ctor list                         (* 'type' D = ctors *)
-  | DLet  of id * bool * arg list * typ * exp       (* let x [rec] (x1:t1) .. (xn:tn) : t = e *)
+  | DLet  of let_bind * bool * arg list * typ * exp       (* let x [rec] (x1:t1) .. (xn:tn) : t = e *)
 
 and exp =
   (* Const *)
@@ -78,7 +82,7 @@ and exp =
   (* else *)
   | EApp of exp * exp                               (* e1 e2 *)
   | EFun of arg * exp                               (* fun (x:t1) -> e *)
-  | ELet of id * bool * arg list * typ * exp * exp  (* let [rec] (x1:t1) .. (xn:tn) : t = e1 in e2 *)
+  | ELet of let_bind * bool * arg list * typ * exp * exp  (* let [rec] (x1:t1) .. (xn:tn) : t = e1 in e2 *)
   | EMatch of exp * branch list                     (* match e with bs *)
   | IF of exp * exp * exp
   (*List operation*)
@@ -108,6 +112,27 @@ exception EExcept of value
 type example = (exp list * value)
 type examples = (exp list* value) list
 
+let exp_hole_count = ref 0
+let gen_hole : unit -> exp
+= fun () -> exp_hole_count:=!exp_hole_count+1; Hole(!exp_hole_count)
+
+let empty_env = BatMap.empty
+let lookup_env = BatMap.find
+let update_env = BatMap.add
+
+let rec appify : exp -> exp list -> exp
+= fun exp exp_list ->
+	match exp_list with
+	[] -> exp
+	|hd::tl -> appify (EApp(exp,hd)) tl
+
+let rec binding_to_exp : let_bind -> exp
+= fun x ->
+  match x with
+  | BindOne x -> EVar x
+  | BindTuple xs -> ETuple (List.map binding_to_exp xs)
+
+(* cost function *)
 let rec exp_cost : exp -> int 
 = fun exp ->
   match exp with
@@ -169,29 +194,9 @@ let cost_decl : decl -> int -> int
     | [] -> (* variable binding *)
       cost+(exp_cost exp) 
     | _ ->  (* function binding *)
-      cost+(exp_cost (ELet (x,is_rec,args,typ,exp, EVar x)))
+      cost+(exp_cost (ELet (x,is_rec,args,typ,exp, binding_to_exp x)))
     end
   | _ -> cost
 
 let cost : prog -> int
 = fun decls ->  list_fold cost_decl decls 0
-
-let exp_hole_count = ref 0
-let gen_hole : unit -> exp
-= fun () -> exp_hole_count:=!exp_hole_count+1; Hole(!exp_hole_count)
-
-let empty_env = BatMap.empty
-let lookup_env = BatMap.find
-let update_env = BatMap.add
-
-let rec appify : exp -> exp list -> exp
-= fun exp exp_list ->
-	match exp_list with
-	[] -> exp
-	|hd::tl -> appify (EApp(exp,hd)) tl
-
-let rec vars_of_arg : arg -> id list
-= fun arg ->
-  match arg with
-  | ArgOne (x, t) -> [x]
-  | ArgTuple xs -> List.fold_left (fun acc x -> acc@(vars_of_arg x)) [] xs

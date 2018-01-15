@@ -11,8 +11,15 @@ let rec arg_binding : env -> arg -> value -> env
 = fun env arg v ->
   match (arg, v) with
   | ArgOne (x, t), _ -> update_env x v env 
-  | ArgTuple xs, VTuple vs -> List.fold_left2 arg_binding env xs vs
+  | ArgTuple xs, VTuple vs -> (try List.fold_left2 arg_binding env xs vs with _ -> raise (Failure "argument binding failure - tuples are not compatible"))
   | _ -> raise (Failure "argument binding failure")
+
+let rec let_binding : env -> let_bind -> value -> env
+= fun env x v ->
+  match (x, v) with
+  | BindOne x, _ -> update_env x v env
+  | BindTuple xs, VTuple vs -> (try List.fold_left2 let_binding env xs vs with _ -> raise (Failure "argument binding failure - tuples are not compatible"))
+  | _ -> raise (Failure "let binding failure")
 
 (* Pattern Matching *)
 let rec find_first_branch : value -> branch list -> (pat * exp)
@@ -128,13 +135,17 @@ let rec eval : env -> exp -> value
     begin match args with
     | [] ->
       (* Value binding *)
-      if is_rec then
+      if is_rec then 
         let v1 = eval env e1 in
         begin match v1 with
-        | VFun (x, e, closure) -> eval (update_env f (VFunRec (f, x, e, closure)) env) e2
-        | _ -> eval (update_env f v1 env) e2
+        | VFun (x, e, closure) -> 
+          begin match f with
+          | BindOne f -> eval (update_env f (VFunRec (f, x, e, closure)) env) e2
+          | _ -> raise (Failure "left-hand side cannot be a tupple")
+          end
+        | _ -> eval (let_binding env f v1) e2
         end
-      else eval (update_env f (eval env e1) env) e2
+      else eval (let_binding env f (eval env e1)) e2
     | _ ->
       (* Function binding *)
       let rec binding : arg list -> exp -> exp 
@@ -147,11 +158,14 @@ let rec eval : env -> exp -> value
       let x = List.hd args in
       let vf = 
         if is_rec then
-          VFunRec (f, x, (binding (List.tl args) e1), env)
+          begin match f with
+          | BindOne f -> VFunRec (f, x, (binding (List.tl args) e1), env)
+          | _ -> raise (Failure "left-hand side cannot be a tupple")
+          end
         else 
           VFun (x, (binding (List.tl args) e1), env)
       in
-      eval (update_env f vf env) e2
+      eval (let_binding env f vf) e2
     end
   | EMatch (e, bs) ->
     let v = eval env e in
@@ -192,8 +206,8 @@ let eval_decl : decl -> env -> env
 =fun decl env -> 
   match decl with
   | DLet (x,is_rec,args,typ,exp) -> 
-    let exp = ELet (x, is_rec, args, typ, exp, EVar x) in
-    update_env x (eval env exp) env
+    let exp = ELet (x, is_rec, args, typ, exp, binding_to_exp x) in
+    let_binding env x (eval env exp)
   | _ -> env
 
 let run : prog -> env

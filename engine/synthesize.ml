@@ -218,8 +218,8 @@ let rec type_directed exp hole_typ env (h_t,h_e) =
 		let h_t' = BatMap.add n1 t h_t in
 		let h_t' = BatMap.add n2 hole_typ h_t' in
 		let h_e' = BatMap.add n1 (Type.bind_args env args) h_e in
-		let h_e' = if(is_rec) then BatMap.modify n1 (fun env -> BatMap.add f t env) h_e' else h_e' in
-		let h_e' = BatMap.add n2 (BatMap.add f t env) h_e' in
+		let h_e' = if(is_rec) then BatMap.modify n1 (fun env -> Type.let_binding env f t) h_e' else h_e' in
+		let h_e' = BatMap.add n2 (Type.let_binding env f t) h_e' in
 		Some (exp,h_t',h_e')
 	| ECtor (x,l) ->
 		let ctor_typ = BatMap.find x env in
@@ -441,7 +441,7 @@ let rec is_solution : prog -> examples -> bool
 (
 	List.for_all (fun (inputs,output) ->
 		let res_var = "__res__" in
-		let prog' = prog @ [(DLet (res_var,false,[],fresh_tvar(),(appify (EVar !Options.opt_entry_func) inputs)))] in
+		let prog' = prog @ [(DLet (BindOne res_var,false,[],fresh_tvar(),(appify (EVar !Options.opt_entry_func) inputs)))] in
 		try
 			let env = Eval.run prog' in
 			let result = lookup_env res_var env in

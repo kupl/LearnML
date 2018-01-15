@@ -166,6 +166,28 @@ value_comma_list :
 
 (***** Declarations {{{ *****)
 
+bind:
+  | x=bind_tuple
+    { x }
+
+bind_tuple:
+  | x=bind_base xs=bind_comma_list
+    { BindTuple (x::xs) }
+  | x=bind_base
+    { x }
+
+bind_comma_list:
+  | COMMA x=bind_base 
+    { [x] }
+  | COMMA x=bind_base xs=bind_comma_list
+    { x::xs }
+
+bind_base:
+  | x=LID
+    { BindOne x }
+  | LPAREN x=bind RPAREN
+    { x }
+
 empty_decls:
   | 
     { [] }
@@ -221,23 +243,22 @@ ctor:
     { (c, [t]) }
 
 letbind:
-  | LET x=LID args=args EQ e=exp (* let f x y = e ;; *)
+  | LET x=bind args=args EQ e=exp (* let f x y = e ;; *)
     { DLet (x, false, args, Type.fresh_tvar (), e) }
-  | LET x=LID args=args COLON t=typ EQ e=exp (* let f x y : typ = e ;; *)
+  | LET x=bind args=args COLON t=typ EQ e=exp (* let f x y : typ = e ;; *)
     { DLet (x, false, args, t, e) }
-  | LET REC x=LID args=args EQ e=exp (* let rec f x y = e ;; *)
+  | LET REC x=bind args=args EQ e=exp (* let rec f x y = e ;; *)
     { DLet (x, true, args, Type.fresh_tvar(), e) }
-  | LET REC x=LID args=args COLON t=typ EQ e=exp (* let rec f x y : typ = e ;; *)
+  | LET REC x=bind args=args COLON t=typ EQ e=exp (* let rec f x y : typ = e ;; *)
     { DLet (x, true, args, t, e) }
-  | DEFAND x=LID args=args COLON t=typ EQ e=exp
+  | DEFAND x=bind args=args COLON t=typ EQ e=exp
     { DLet (x,true,args,t,e)  }
-  | DEFAND x=LID args=args EQ e=exp (* let rec f x y = e ;; *)
+  | DEFAND x=bind args=args EQ e=exp (* let rec f x y = e ;; *)
     { DLet (x, true, args, Type.fresh_tvar(), e) }
- 
 
 exp_bind:
   | e=exp (* e *)
-    { DLet ("-", false, [], Type.fresh_tvar(), e)}
+    { DLet (BindOne "-", false, [], Type.fresh_tvar(), e)}
 
 (***** }}} *****)
 
@@ -330,13 +351,13 @@ exp_struct:
     { EMatch (e, bs) }
   | FUN xs=args ARR e=exp_struct
     { binding_args xs e }
-  | LET f=LID args=args COLON t=typ EQ e1=exp_struct IN e2=exp_struct
+  | LET f=bind args=args COLON t=typ EQ e1=exp_struct IN e2=exp_struct
     { ELet (f, false, args, t, e1, e2) }
-  | LET REC f=LID args=args COLON t=typ EQ e1=exp_struct IN e2=exp_struct
+  | LET REC f=bind args=args COLON t=typ EQ e1=exp_struct IN e2=exp_struct
     { ELet (f, true, args, t, e1, e2) }
-  | LET f=LID args=args EQ e1=exp_struct IN e2=exp_struct
+  | LET f=bind args=args EQ e1=exp_struct IN e2=exp_struct
     { ELet (f, false, args, Type.fresh_tvar(), e1, e2) }
-  | LET REC f=LID args=args EQ e1=exp_struct IN e2=exp_struct
+  | LET REC f=bind args=args EQ e1=exp_struct IN e2=exp_struct
     { ELet (f, true, args, Type.fresh_tvar(), e1, e2) } 
   | IF e1=exp_struct THEN e2=exp_struct ELSE e3=exp_struct
     { IF (e1, e2, e3) }

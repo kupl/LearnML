@@ -20,7 +20,7 @@ let start_time = ref 0.0
 let rec is_counter_example : prog -> example -> bool
 = fun pgm (input, output) ->
   let res_var = "__res__" in
-  let pgm' = pgm @ [(DLet (res_var,false,[],Type.fresh_tvar(),(Lang.appify (EVar !Options.opt_entry_func) input)))] in
+  let pgm' = pgm @ [(DLet (BindOne res_var,false,[],Type.fresh_tvar(),(Lang.appify (EVar !Options.opt_entry_func) input)))] in
   let env = Eval.run pgm' in
   let result_value = Lang.lookup_env res_var env in
   result_value <> output
@@ -39,6 +39,13 @@ let rec arg_binding : labeled_env -> arg -> labeled_value -> labeled_env
   | ArgOne (x, t), _ -> update_env x v env 
   | ArgTuple xs, VTuple vs -> List.fold_left2 arg_binding env xs vs
   | _ -> raise (Failure "argument binding failure")
+
+let rec let_binding : labeled_env -> let_bind -> labeled_value -> labeled_env
+= fun env x v ->
+  match (x, v) with
+  | BindOne x, _ -> update_env x v env
+  | BindTuple xs, VTuple vs -> (try List.fold_left2 let_binding env xs vs with _ -> raise (Failure "argument binding failure - tuples are not compatible"))
+  | _ -> raise (Failure "let binding failure")
 
 (* Pattern Matching *)
 let rec find_first_branch : labeled_value -> labeled_branch list -> (pat * labeled_exp)
@@ -151,13 +158,17 @@ let rec eval : labeled_env -> labeled_exp -> labeled_value
     begin match args with
     | [] ->
       (* Value binding *)
-      if is_rec then
+      if is_rec then 
         let v1 = eval env e1 in
         begin match v1 with
-        | VFun (x, e, closure) -> eval (update_env f (VFunRec (f, x, e, closure)) env) e2
-        | _ -> eval (update_env f v1 env) e2
+        | VFun (x, e, closure) -> 
+          begin match f with
+          | BindOne f -> eval (update_env f (VFunRec (f, x, e, closure)) env) e2
+          | _ -> raise (Failure "left-hand side cannot be a tupple")
+          end
+        | _ -> eval (let_binding env f v1) e2
         end
-      else eval (update_env f (eval env e1) env) e2
+      else eval (let_binding env f (eval env e1)) e2
     | _ ->
       (* Function binding *)
       let rec binding : arg list -> labeled_exp -> labeled_exp 
@@ -170,11 +181,14 @@ let rec eval : labeled_env -> labeled_exp -> labeled_value
       let x = List.hd args in
       let vf = 
         if is_rec then
-          VFunRec (f, x, (binding (List.tl args) e1), env)
+          begin match f with
+          | BindOne f -> VFunRec (f, x, (binding (List.tl args) e1), env)
+          | _ -> raise (Failure "left-hand side cannot be a tupple")
+          end
         else 
           VFun (x, (binding (List.tl args) e1), env)
       in
-      eval (update_env f vf env) e2
+      eval (let_binding env f vf) e2
     end
   | EMatch (e, bs) ->
     let v = eval env e in
@@ -215,8 +229,8 @@ let eval_decl : labeled_decl -> labeled_env -> labeled_env
 = fun decl env -> 
   match decl with
   | DLet (f, is_rec, args, typ, e) -> 
-    let e = (dummy_label, ELet (f, is_rec, args, typ, e, (dummy_label, EVar f))) in
-    update_env f (eval env e) env
+    let e = (dummy_label, ELet (f, is_rec, args, typ, e, (binding_to_lexp f))) in
+    let_binding env f (eval env e)
   | _ -> env
 
 let run : labeled_prog -> labeled_env
@@ -228,7 +242,7 @@ let run : labeled_prog -> labeled_env
 let rec collect_execution_trace : labeled_prog -> example -> trace_set
 = fun pgm (input, output) ->
   let res_var = "__res__" in
-  let pgm' = pgm @ labeling_prog [(DLet (res_var, false, [], Type.fresh_tvar(), (Lang.appify (EVar !Options.opt_entry_func) input)))] in
+  let pgm' = pgm @ labeling_prog [(DLet (BindOne res_var, false, [], Type.fresh_tvar(), (Lang.appify (EVar !Options.opt_entry_func) input)))] in
   try
     let _  = run pgm' in
     !trace_set

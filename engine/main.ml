@@ -32,7 +32,7 @@ let run_testcases : prog -> examples -> unit
 =fun prog examples ->
   List.iter (fun (inputs, output) ->
     let res_var = "__res__" in
-    let prog' = prog @ [(DLet (res_var,false,[],Type.fresh_tvar(),(Lang.appify (EVar !opt_entry_func) inputs)))] in
+    let prog' = prog @ [(DLet (BindOne res_var,false,[],Type.fresh_tvar(),(Lang.appify (EVar !opt_entry_func) inputs)))] in
 		try
       let env = Eval.run prog' in
 		  let result_value = Lang.lookup_env res_var env in
