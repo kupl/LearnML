@@ -42,6 +42,11 @@ let reserved_words : (string * Parser.token) list =
   ; ("List.nth",LISTNTH)
   ; ("List.rev",LISTREV)
   ; ("List.fold_left",LISTFOLDL)
+  ; ("List.fold_right",LISTFOLDR)
+  ; ("List.sort",LISTSORT)
+  ; ("List.rev_map",LISTREVMAP)
+  ; ("List.memq",LISTMEMQ)
+  ; ("List.rev_append",LISTREVAPD)
   ]
 
 let symbols : (string * Parser.token) list =

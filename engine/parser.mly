@@ -94,8 +94,11 @@ let rec binding_args : arg list -> exp -> exp
 %token LISTNTH
 %token LISTREV
 %token LISTFOLDL
-
-
+%token LISTFOLDR
+%token LISTSORT
+%token LISTREVMAP
+%token LISTMEMQ
+%token LISTREVAPD
 
 %left OR
 %left AND
@@ -449,6 +452,21 @@ exp_op:
     {appify (EVar "__list_rev__") es }
   | LISTFOLDL es=exp_app_list
     {appify (EVar "__list_foldl__") es }
+  | LISTFOLDR es=exp_app_list
+    {appify (EVar "__list_foldr__") es }
+  | LISTSORT es=exp_app_list
+    {appify (EVar "__list_sort__") es }
+  | LISTREVMAP es=exp_app_list
+    {appify (EVar "__list_rev_map__") es }
+  | LISTMEMQ es=exp_app_list
+    {appify (EVar "__list_memq__") es }
+  | LISTREVAPD es=exp_app_list
+    {appify (EVar "__list_rev_append__") es }
+
+
+
+
+
 
 
 exp_app_list:     
