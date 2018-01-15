@@ -430,44 +430,6 @@ exp_op:
     { appify e es }
   | c=UID e=exp_base
     { ECtor (c, [e]) }
-  | LISTHD es=exp_app_list
-    { appify (EVar "__list_hd__") es }
-  | LISTTL es=exp_app_list
-    {appify (EVar "__list_tl__") es }
-  | LISTMAP es=exp_app_list
-    {appify (EVar "__list_map__") es }
-  | LISTMEM es=exp_app_list
-    {appify (EVar "__list_mem__") es }
-  | LISTEXISTS es=exp_app_list
-    {appify (EVar "__list_exists__") es }
-  | LISTFILTER es=exp_app_list
-    {appify (EVar "__list_filter__") es }
-  | LISTAPPEND es=exp_app_list
-    {appify (EVar "__list_append__") es }
-  | LISTLENGTH es=exp_app_list
-    {appify (EVar "__list_length__") es }
-  | LISTNTH es=exp_app_list
-    {appify (EVar "__list_nth__") es }
-  | LISTREV es=exp_app_list
-    {appify (EVar "__list_rev__") es }
-  | LISTFOLDL es=exp_app_list
-    {appify (EVar "__list_foldl__") es }
-  | LISTFOLDR es=exp_app_list
-    {appify (EVar "__list_foldr__") es }
-  | LISTSORT es=exp_app_list
-    {appify (EVar "__list_sort__") es }
-  | LISTREVMAP es=exp_app_list
-    {appify (EVar "__list_rev_map__") es }
-  | LISTMEMQ es=exp_app_list
-    {appify (EVar "__list_memq__") es }
-  | LISTREVAPD es=exp_app_list
-    {appify (EVar "__list_rev_append__") es }
-
-
-
-
-
-
 
 exp_app_list:     
   | 
@@ -500,6 +462,39 @@ exp_base:
     { e }
   | HOLE
     { Lang.gen_hole() }
+  | LISTHD
+    { (EVar "__list_hd__") }
+  | LISTTL
+    { (EVar "__list_tl__") }
+  | LISTMAP
+    { (EVar "__list_map__") }
+  | LISTMEM
+    { (EVar "__list_mem__") }
+  | LISTEXISTS
+    { (EVar "__list_exists__") }
+  | LISTFILTER
+    { (EVar "__list_filter__") }
+  | LISTAPPEND
+    { (EVar "__list_append__") }
+  | LISTLENGTH
+    { (EVar "__list_length__") }
+  | LISTNTH
+    { (EVar "__list_nth__") }
+  | LISTREV
+    { (EVar "__list_rev__") }
+  | LISTFOLDL
+    { (EVar "__list_foldl__") }
+  | LISTFOLDR
+    { (EVar "__list_foldr__") }
+  | LISTSORT
+    { (EVar "__list_sort__") }
+  | LISTREVMAP
+    { (EVar "__list_rev_map__") }
+  | LISTMEMQ
+    { (EVar "__list_memq__") }
+  | LISTREVAPD
+    { (EVar "__list_rev_append__") }
+
 
 exp_semi_list:
   |
