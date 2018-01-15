@@ -3,7 +3,7 @@ open Util
 
 let init () =
   let (_,prog) = 
-    Preproc.preprocess_file "external.ml"
+    Preproc.preprocess_file (!Options.opt_external_filename)
     |> Lexing.from_string
     |> Parser.prog Lexer.token
   in prog
