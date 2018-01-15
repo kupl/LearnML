@@ -44,6 +44,7 @@ let rec binding_args : arg list -> exp -> exp
 %token EXCEPTION
 %token RAISE
 %token DEFAND
+%token FUNCTION
 
 %token HOLE       (* ? *)
 (* %token IMPLIES    (* |> *) *)
@@ -365,6 +366,8 @@ exp_struct:
     { EMatch (e, bs) }
   | FUN xs=args ARR e=exp_struct
     { binding_args xs e }
+  | FUNCTION bs=branches
+    { EFun(ArgOne("__fun__",Type.fresh_tvar()),EMatch(EVar "__fun__",bs)) }
   | LET f=bind args=args COLON t=typ EQ e1=exp_struct IN e2=exp_struct
     { ELet (f, false, args, t, e1, e2) }
   | LET REC f=bind args=args COLON t=typ EQ e1=exp_struct IN e2=exp_struct
