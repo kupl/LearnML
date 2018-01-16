@@ -5,8 +5,9 @@ exception ListError
 
 exception Failure of string
 exception Invalid_argument of string
+exception Exit
 
-let assert : bool -> 'a
+let assert' : bool -> 'a
 = fun b -> raise (Failure ("Assert failure"))
 
 let invalid_arg : string -> 'a
@@ -129,3 +130,9 @@ let min_int : int = -4611686018427387903
 let fst (t,_) = t
 
 let snd (_,t) = t
+
+let max a b = if(a>b) then a else b
+
+let min a b = if(a>b) then b else a
+
+let compare a b = if(a=b) then 0 else if (a>b) then 1 else -1
