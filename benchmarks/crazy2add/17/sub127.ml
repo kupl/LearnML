@@ -24,7 +24,7 @@ let rec crazy2addwithcarry t = match t with
 (*0 1 1 /3*)
 	| (ZERO x, ONE y, P) | (ONE x, ZERO y, P) | (ONE x, ONE y, Z) -> ZERO( crazy2addwithcarry(x, y, P))
 (*1 1 1 /1*)
-	| (ONE x, ONE y, P) -> ONE( crazy2addwithcarry(x, y, P));
+	| (ONE x, ONE y, P) -> ONE( crazy2addwithcarry(x, y, P))
 
 
 (*0 0 -1 /3*)

@@ -3,32 +3,6 @@ type crazy2 = NIL
   |ONE of crazy2
   |MONE of crazy2
 
-(* code from hw2 ----------------*)
-let rec crazy2value crazy = match crazy with
-  |ZERO x -> 0 :: (crazy2value x)
-  |ONE x -> 1 :: (crazy2value x)
-  |MONE x -> -1 :: (crazy2value x)
-  |NIL -> []
-
-let exp (a:int) (b:int): int = (float_of_int a)**(float_of_int b) |> int_of_float
-
-let crazy_length crazy = List.length(crazy)
-
-
-let rec crazy2val_help value (counter:int) (length:int) =
-  if counter < length then (
-    match value with
-      |ZERO x -> 0*(exp 2 counter) + (crazy2val_help x (counter+1) length)
-      |ONE x -> 1*(exp 2 counter) + (crazy2val_help x (counter+1) length)
-      |MONE x -> (-1)*(exp 2 counter) + (crazy2val_help x (counter+1) length)
-      |NIL -> 0
-      )
-      else 0
-
-let crazy2val input = crazy2val_help (input) (0) (crazy_length(crazy2value(input)))
-
-
-
 let rec crazy2add (num1,num2)  = match num1, num2 with
   |(ZERO x, ZERO y) -> ZERO(crazy2add(x,y))
   |(ZERO x, ONE y)|(ONE x, ZERO y) ->ONE(crazy2add(x,y))

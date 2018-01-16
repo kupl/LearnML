@@ -24,12 +24,3 @@ let rec crazy2add ((cz1: crazy2), (cz2: crazy2)): crazy2=
   | ((ZERO cz10), (MONE cz20)) -> (MONE (crazy2add (cz10, cz20)))
   | ((ONE cz10), (ONE cz20)) -> (ZERO (crazy2add ( (crazy2add (cz10,(ONE NIL))), cz20 ) ))
   | ((MONE cz10), (MONE cz20)) -> (ZERO (crazy2add ( (crazy2add (cz10,(MONE NIL))), cz20 ) ))
-
-let _ = print_int (crazy2val (ONE (ZERO NIL))); print_endline("")
-let _ = print_int (crazy2val (crazy2add ((ONE NIL), (ZERO NIL)))); print_endline("")
-
-let _ = print_int (crazy2val (crazy2add ((ONE (ZERO NIL)), (ONE (ZERO NIL)))))
-
-let _ = print_int (crazy2val (crazy2add (((ZERO (ONE (MONE NIL))), (ZERO (ONE (MONE NIL)))))))
-
-

@@ -1,6 +1,6 @@
 exception Error of string;;
 type crazy2 = NIL | ZERO of crazy2 | ONE of crazy2 | MONE of crazy2;;
-let crazy2add ( ( a : crazy2 ), ( b : crazy2 ) ) =
+let crazy2add ( ( a : crazy2 ), ( b : crazy2 ) ) =	
 	let rec crazy2fulladd ( ( a : crazy2 ), ( b : crazy2 ), ( carry : crazy2 ) ) =
 		let realAdder  ( ( h1 : crazy2 ), ( h2 : crazy2 ), ( carry : crazy2 ) ) =
 			let getHead ( a : crazy2 ) =
@@ -9,7 +9,7 @@ let crazy2add ( ( a : crazy2 ), ( b : crazy2 ) ) =
 					ZERO p -> 0 |
 					ONE p -> 1 |
 					MONE p -> -1 in
-
+			
 			let getTail ( a : crazy2 ) =
 				match a with
 					NIL -> NIL |

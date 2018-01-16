@@ -3,7 +3,7 @@ type crazy2 = NIL
             | ONE of crazy2
             | MONE of crazy2
 
-let rec crazy2add ((left, right): crazy2 * crazy2): crazy2 =
+let rec crazy2add ((left:crazy2), (right:crazy2)) : crazy2 =
   match left, right with
   | _, NIL -> left
   | NIL, _ -> right

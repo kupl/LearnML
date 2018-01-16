@@ -3,7 +3,7 @@ type crazy2 =	NIL
 		| ONE of crazy2
 		| MONE of crazy2
 
-let rec crazy2add ((l,r) : crazy2 * crazy2) : crazy2 =
+let rec crazy2add ((l:crazy2),(r:crazy2)) : crazy2 =
 	match l, r with
 	| NIL, _ 		-> r
 	| _, NIL 		-> l

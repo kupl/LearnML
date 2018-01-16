@@ -13,13 +13,3 @@ let rec crazy2add: crazy2 * crazy2 -> crazy2 = fun (one, two) ->
   | (MONE a, ZERO b) -> MONE (crazy2add (a, b))
   | (MONE a, ONE b) -> ZERO (crazy2add (a, b))
   | (MONE a, MONE b) -> ZERO (crazy2add (MONE NIL, (crazy2add (a, b))))
-
-let rec print_c crazy = 
-  match crazy with
-  | NIL -> print_endline ""
-  | ZERO a -> print_string("0");print_c a
-  | ONE a -> print_string("+");print_c a
-  | MONE a -> print_string("-");print_c a
-
-let print_crazy (one, two) = print_c(crazy2add (one, two))
-
