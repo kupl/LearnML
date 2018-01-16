@@ -1,13 +1,6 @@
 open Lang
 open Util
 
-let init () =
-  let (_,prog) = 
-    Preproc.preprocess_file (!Options.opt_external_filename)
-    |> Lexing.from_string
-    |> Parser.prog Lexer.token
-  in prog
-
 
 (* Control variables *)
 let count = ref 0
@@ -222,7 +215,7 @@ let run : prog -> env
 = fun decls -> 
   start_time:=Unix.gettimeofday(); 
   count:=(!count)+1;
-  let init_env = list_fold eval_decl (init()) empty_env in
+  let init_env = list_fold eval_decl (External.init_prog) empty_env in
   let env = (list_fold eval_decl decls init_env) in
   BatMap.diff env init_env
 

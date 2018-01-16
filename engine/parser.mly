@@ -262,21 +262,21 @@ ctor:
 
 letbind:
   | LET x=bind args=args EQ e=exp (* let f x y = e ;; *)
-    { DLet (x, false, args, Type.fresh_tvar (), e) }
+    { DLet (x, false, args, fresh_tvar (), e) }
   | LET x=bind args=args COLON t=typ EQ e=exp (* let f x y : typ = e ;; *)
     { DLet (x, false, args, t, e) }
   | LET REC x=bind args=args EQ e=exp (* let rec f x y = e ;; *)
-    { DLet (x, true, args, Type.fresh_tvar(), e) }
+    { DLet (x, true, args, fresh_tvar(), e) }
   | LET REC x=bind args=args COLON t=typ EQ e=exp (* let rec f x y : typ = e ;; *)
     { DLet (x, true, args, t, e) }
   | DEFAND x=bind args=args COLON t=typ EQ e=exp
     { DLet (x,true,args,t,e)  }
   | DEFAND x=bind args=args EQ e=exp (* let rec f x y = e ;; *)
-    { DLet (x, true, args, Type.fresh_tvar(), e) }
+    { DLet (x, true, args, fresh_tvar(), e) }
 
 exp_bind:
   | e=exp (* e *)
-    { DLet (BindOne "-", false, [], Type.fresh_tvar(), e)}
+    { DLet (BindOne "-", false, [], fresh_tvar(), e)}
 
 (***** }}} *****)
 
@@ -330,7 +330,7 @@ args:
 
 arg:
   | x=LID
-    { ArgOne (x, Type.fresh_tvar ()) }
+    { ArgOne (x, fresh_tvar ()) }
   | LPAREN x=LID COLON t=typ RPAREN
     { ArgOne (x, t) }
   | LPAREN x=arg COMMA xs=arg_comma_list RPAREN
@@ -370,15 +370,15 @@ exp_struct:
   | FUN xs=args ARR e=exp_struct
     { binding_args xs e }
   | FUNCTION bs=branches
-    { EFun(ArgOne("__fun__",Type.fresh_tvar()),EMatch(EVar "__fun__",bs)) }
+    { EFun(ArgOne("__fun__",fresh_tvar()),EMatch(EVar "__fun__",bs)) }
   | LET f=bind args=args COLON t=typ EQ e1=exp_struct IN e2=exp_struct
     { ELet (f, false, args, t, e1, e2) }
   | LET REC f=bind args=args COLON t=typ EQ e1=exp_struct IN e2=exp_struct
     { ELet (f, true, args, t, e1, e2) }
   | LET f=bind args=args EQ e1=exp_struct IN e2=exp_struct
-    { ELet (f, false, args, Type.fresh_tvar(), e1, e2) }
+    { ELet (f, false, args, fresh_tvar(), e1, e2) }
   | LET REC f=bind args=args EQ e1=exp_struct IN e2=exp_struct
-    { ELet (f, true, args, Type.fresh_tvar(), e1, e2) } 
+    { ELet (f, true, args, fresh_tvar(), e1, e2) } 
   | IF e1=exp_struct THEN e2=exp_struct ELSE e3=exp_struct
     { IF (e1, e2, e3) }
   | e=exp_op

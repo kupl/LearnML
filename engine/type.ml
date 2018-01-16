@@ -167,10 +167,6 @@ module VariableType = struct
 end
 
 
-(* generate a fresh type variable *)
-let tvar_num = ref 0
-let fresh_tvar () = (tvar_num := !tvar_num + 1; (TVar ("#" ^ string_of_int !tvar_num)))
-
 (* Support functions *)
 let rec bind_arg : TEnv.t -> arg -> TEnv.t
 = fun tenv arg ->
@@ -475,5 +471,6 @@ let run : prog -> (TEnv.t * HoleType.t * VariableType.t)
 = fun decls -> 
   let _ = start_time:=Sys.time() in
   let decls = Converter.convert Converter.empty decls in
-  let (tenv,hole_typ,variable_typ) = (list_fold type_decl decls (TEnv.empty,HoleType.empty,VariableType.empty)) in
-  (tenv,hole_typ,variable_typ)
+  let (init_env,_,_) = (list_fold type_decl (External.init_prog) (TEnv.empty,HoleType.empty,VariableType.empty)) in
+  let (tenv,hole_typ,variable_typ) = (list_fold type_decl decls (init_env,HoleType.empty,VariableType.empty)) in
+  (BatMap.diff tenv init_env,hole_typ,variable_typ)

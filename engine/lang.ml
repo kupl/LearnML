@@ -120,6 +120,10 @@ let empty_env = BatMap.empty
 let lookup_env = BatMap.find
 let update_env = BatMap.add
 
+(* generate a fresh type variable *)
+let tvar_num = ref 0
+let fresh_tvar () = (tvar_num := !tvar_num + 1; (TVar ("#" ^ string_of_int !tvar_num)))
+
 let rec appify : exp -> exp list -> exp
 = fun exp exp_list ->
 	match exp_list with

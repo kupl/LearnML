@@ -20,7 +20,7 @@ let start_time = ref 0.0
 let rec is_counter_example : prog -> example -> bool
 = fun pgm (input, output) ->
   let res_var = "__res__" in
-  let pgm' = pgm @ [(DLet (BindOne res_var,false,[],Type.fresh_tvar(),(Lang.appify (EVar !Options.opt_entry_func) input)))] in
+  let pgm' = pgm @ [(DLet (BindOne res_var,false,[],fresh_tvar(),(Lang.appify (EVar !Options.opt_entry_func) input)))] in
   let env = Eval.run pgm' in
   let result_value = Lang.lookup_env res_var env in
   result_value <> output
@@ -242,7 +242,7 @@ let run : labeled_prog -> labeled_env
 let rec collect_execution_trace : labeled_prog -> example -> trace_set
 = fun pgm (input, output) ->
   let res_var = "__res__" in
-  let pgm' = pgm @ labeling_prog [(DLet (BindOne res_var, false, [], Type.fresh_tvar(), (Lang.appify (EVar !Options.opt_entry_func) input)))] in
+  let pgm' = pgm @ labeling_prog [(DLet (BindOne res_var, false, [], fresh_tvar(), (Lang.appify (EVar !Options.opt_entry_func) input)))] in
   try
     let _  = run pgm' in
     !trace_set
