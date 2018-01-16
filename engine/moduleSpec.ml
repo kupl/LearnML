@@ -3,6 +3,8 @@
 (*********************************)
 exception ListError
 
+exception Failure of string
+
 let __list_hd__ : 'a list -> int
 =fun lst -> 
   match lst with
@@ -117,4 +119,3 @@ let min_int : int = -4611686018427387903
 let fst (t,_) = t
 
 let snd (_,t) = t
-
