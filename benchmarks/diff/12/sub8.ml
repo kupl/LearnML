@@ -11,11 +11,11 @@ let rec diff (ae_exp, str_diff) =
 	(
 	match ae_exp with
 	| CONST (i) -> CONST 0
-	| VAR (str) ->	if (compare str str_diff) == 0 then
+	| VAR (str) ->	if str=str_diff then
 						CONST 1
 					else
 						CONST 0
-	| POWER (str, i) -> if (compare str str_diff) == 0 then
+	| POWER (str, i) -> if str=str_diff then
 						TIMES [CONST i;POWER (str, i-1)]
 					else
 						CONST 0

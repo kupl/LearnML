@@ -24,6 +24,6 @@ let rec eval f =
 		| NOT a -> not((eval a))
 		| ANDALSO (a, b) -> (eval a) && (eval b)
 		| ORELSE (a, b) -> (eval a) || (eval b)
-		| IMPLY (a, b) -> not (eval a) or (eval b)
+		| IMPLY (a, b) -> not (eval a) || (eval b)
 		| LESS (a, b) -> ( (toNumber a) < (toNumber b) )
 ;;

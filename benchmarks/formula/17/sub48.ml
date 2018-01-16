@@ -21,20 +21,20 @@ let rec eval_formula (f:formula) =
 	| FALSE -> FALSE
 	| NOT TRUE -> FALSE
 	| NOT FALSE -> TRUE
-	| NOT (f1:formula) -> eval_formula(NOT (eval_formula f1))
+	| NOT (f1) -> eval_formula(NOT (eval_formula f1))
 	| ANDALSO(TRUE, TRUE) -> TRUE
 	| ANDALSO(FALSE, _) -> FALSE
 	| ANDALSO(_, FALSE) -> FALSE
-	| ANDALSO((f1:formula), (f2:formula)) -> eval_formula(ANDALSO((eval_formula f1), (eval_formula f2)))
+	| ANDALSO((f1), (f2)) -> eval_formula(ANDALSO((eval_formula f1), (eval_formula f2)))
 	| ORELSE(TRUE, _) -> TRUE
 	| ORELSE(_, TRUE) -> TRUE
 	| ORELSE(FALSE, FALSE) -> FALSE
-	| ORELSE((f1:formula), (f2:formula)) -> eval_formula(ORELSE((eval_formula f1), (eval_formula f2)))
+	| ORELSE((f1), (f2)) -> eval_formula(ORELSE((eval_formula f1), (eval_formula f2)))
 	| IMPLY(TRUE, TRUE) -> TRUE
 	| IMPLY(TRUE, FALSE) -> FALSE
 	| IMPLY(FALSE, _) -> TRUE
-	| IMPLY((f1:formula), (f2:formula)) -> eval_formula(IMPLY((eval_formula f1), (eval_formula f2)))
-    | LESS((f1:expr), (f2:expr)) -> if ((eval_number f1)< (eval_number f2)) then TRUE
+	| IMPLY((f1), (f2)) -> eval_formula(IMPLY((eval_formula f1), (eval_formula f2)))
+    | LESS((f1), (f2)) -> if ((eval_number f1)< (eval_number f2)) then TRUE
     									else FALSE
 let eval (f:formula)=
 	if((eval_formula f) == TRUE) then true

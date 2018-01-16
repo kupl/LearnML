@@ -7,12 +7,10 @@
   Excercise-Name : Iterator
 *)
 
-let rec iter ((n:int),(f:'a->'a)) arg = 
-  match n with
-  | n when n <=0 -> arg
-  | n -> (
+let rec iter ((n:int),(f:'a->'a)) arg =
+  if(n<=0) then arg
+  else
     let arg' = f arg in
-    iter(n-1, f) arg'
-  ) 
+    iter(n-1,f) arg'
 ;;
 

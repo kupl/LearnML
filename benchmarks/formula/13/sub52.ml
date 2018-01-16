@@ -28,16 +28,4 @@ let rec eval (formula) =
 
 (* test cases *)
 
-assert(eval(TRUE)=true);;
-assert(eval(FALSE)=false);;
-assert(eval(NOT(TRUE))=false);;
-assert(eval(ANDALSO(TRUE, FALSE))=false);;
-assert(eval(ANDALSO(TRUE, TRUE))=true);;
-assert(eval(ORELSE(FALSE, TRUE))=true);;
-assert(eval(ORELSE(FALSE, FALSE))=false);;
-assert(eval(IMPLY(FALSE, FALSE))=true);;
-assert(eval(IMPLY(TRUE, FALSE))=false);;
-assert(eval(LESS(NUM(2), NUM(3)))=true);;
-assert(eval(LESS(NUM(5), NUM(3)))=false);;
-assert(eval(LESS(NUM(5), NUM(3)))=false);;
-assert(eval(LESS(MINUS(NUM(5), NUM(3)), PLUS(NUM(5), NUM(3))))=true);; (* 5 - 3 < 5 + 3 ? *)
+

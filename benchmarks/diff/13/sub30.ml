@@ -11,9 +11,9 @@ let rec diff (ae, s) =
 	| (SUM[], s) -> raise InvalidArgument
 	| (TIMES[], s) -> raise InvalidArgument
 	| (CONST i, s) -> CONST 0
-	| (VAR s1, s) -> if (compare s1 s = 0) then CONST 1
+	| (VAR s1, s) -> if (s1 = s) then CONST 1
 			 else CONST 0
-	| (POWER (s1, a), s) -> if (compare s1 s = 0) then TIMES[CONST a; POWER (s1, a - 1)]
+	| (POWER (s1, a), s) -> if (s1 = s) then TIMES[CONST a; POWER (s1, a - 1)]
 				else TIMES[CONST a; diff(VAR s1, s); POWER (s1, a - 1)]
 	| (SUM[a; b], s) -> SUM[diff(a, s); diff(b, s)]
 	| (SUM(a::sl), s) -> SUM[diff(a, s); diff(SUM(sl), s)]

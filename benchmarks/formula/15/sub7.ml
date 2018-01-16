@@ -23,7 +23,7 @@ match fmla with
 |ANDALSO (fm1,fm2) -> (eval fm1)&&(eval fm2)
 |ORELSE (fm1,fm2) -> (eval fm1)||(eval fm2)
 |IMPLY (fm1,fm2) -> (not(eval fm1))||(eval fm2)
-|LESS (exp1,exp2) -> (if(cal_of_expr exp1<cal_of_expr exp2) then (true) else (false););;
+|LESS (exp1,exp2) -> (if(cal_of_expr exp1<cal_of_expr exp2) then (true) else (false));;
 
 
 

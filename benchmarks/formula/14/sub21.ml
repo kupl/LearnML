@@ -18,8 +18,8 @@ let rec eval formula_eq =
 
   let rec calc expr =
     match expr with
-    | NUM (int) ->
-       int
+    | NUM (n) ->
+       n
     | PLUS (expr_1, expr_2) ->
        (calc expr_1) + (calc expr_2)
     | MINUS (expr_1, expr_2) ->

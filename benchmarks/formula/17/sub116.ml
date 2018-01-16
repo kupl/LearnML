@@ -11,7 +11,7 @@ and expr = NUM of int
 
 let rec exprval (expr1:expr) : int =
 							   match expr1 with
-											   NUM (int) -> int
+											   NUM (n) -> n
 											  |PLUS(expr1,expr2) -> exprval expr1 + exprval expr2
 											  |MINUS(expr1,expr2) -> exprval expr1 - exprval expr2
 let rec eval (f:formula) : bool =

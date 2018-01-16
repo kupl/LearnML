@@ -6,8 +6,6 @@ let rec iter = fun(n,f) a ->
 
 
 
-let k = iter(1, function x -> x) 1.323413
 
-let _= print_endline(string_of_int k)
 
 

@@ -14,4 +14,4 @@ let rec eval(expr) =
    | DIVIDE(a, b) -> eval(a) / eval(b)
    | MAX a -> if List.length(a) = 0 then 0
      else if List.length(a) = 1 then eval(List.nth a 1)
-     else List.nth (List.rev(List.sort compare (List.map eval a))) 1
+     else List.nth (List.rev(List.sort (fun a b -> if(a>b) then 1 else if (a=b) then 0 else -1) (List.map eval a))) 1

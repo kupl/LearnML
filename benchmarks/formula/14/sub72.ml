@@ -26,11 +26,11 @@ let rec eval : formula -> bool =
     | TRUE    -> true
     | FALSE   -> false
     | NOT f   -> let v = eval f in if v then false else true
-    | ANDALSO (f1,f2) -> let v1, v2 = (eval f1), (eval f2) in
+    | ANDALSO (f1,f2) -> let (v1, v2) = ((eval f1), (eval f2)) in
   		  if v1 && v2 then true else false
-    | ORELSE  (f1,f2) -> let v1, v2 = (eval f1), (eval f2) in
+    | ORELSE  (f1,f2) -> let (v1, v2) = ((eval f1), (eval f2)) in
   		  if v1 || v2 then true else false
-    | IMPLY   (f1,f2) -> let v1, v2 = (eval f1), (eval f2) in
+    | IMPLY   (f1,f2) -> let (v1, v2) = ((eval f1), (eval f2)) in
   		  if v1 && v2 = false then false else true
-    | LESS    (e1,e2) -> let v1, v2 = (eval_expr e1), (eval_expr e2) in
+    | LESS    (e1,e2) -> let (v1, v2) = ((eval_expr e1), (eval_expr e2)) in
   		  if v1 < v2 then true else false

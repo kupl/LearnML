@@ -13,9 +13,9 @@ let rec diff (ae,dx) =
 	(if b=0 then CONST 0
 	else TIMES [CONST b;POWER (a,b-1)])
 	else CONST 0
-  |TIMES list -> (match list with
+  |TIMES lst -> (match lst with
     |[] -> raise InvalidArgument
     |[one] -> diff (one,dx)
-    |_ -> SUM [TIMES ((diff (List.hd list, dx))::List.tl list); TIMES ([(List.hd list);(diff (TIMES (List.tl list),dx))])])
-  |SUM list -> if []=list then raise InvalidArgument
-  else SUM (List.map (fun a -> diff (a,dx)) list)
+    |_ -> SUM [TIMES ((diff (List.hd lst, dx))::List.tl lst); TIMES ([(List.hd lst);(diff (TIMES (List.tl lst),dx))])])
+  |SUM lst -> if []=lst then raise InvalidArgument
+  else SUM (List.map (fun a -> diff (a,dx)) lst)

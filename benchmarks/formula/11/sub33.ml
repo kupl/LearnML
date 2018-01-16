@@ -20,7 +20,7 @@ let rec eval f =
 	TRUE -> true
 	| FALSE -> false
 	| NOT x -> not(eval(x))
-	| ANDALSO (x, y) -> (eval(x) & eval(y))
-	| ORELSE (x, y) -> (eval(x) or eval(y))
+	| ANDALSO (x, y) -> (eval(x) && eval(y))
+	| ORELSE (x, y) -> (eval(x) || eval(y))
 	| IMPLY (x, y) -> (not(eval(x)) or eval(y))
 	| LESS (x, y) -> (evalexp(x) < evalexp(y))

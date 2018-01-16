@@ -10,7 +10,6 @@ type expr 	= NUM of int
 			| MAX of expr list
 ;;
 
-open List ;;
 
 let rec eval (e : expr) =
 	match e with

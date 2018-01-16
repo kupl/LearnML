@@ -1,7 +1,3 @@
-open String
-open List
-open Array
-
 type ae =
     CONST of int
 	|VAR of string
@@ -14,12 +10,12 @@ exception InvalidArgument
 let rec diff:ae*string -> ae=
     fun (a,str)->
 	    match a with
-		|CONST n -> CONST 0;
+		|CONST n -> CONST 0
 		|VAR s -> 
-		    if (String.compare s str)=0 then CONST 1
+		    if s=str then CONST 1
 			else CONST 0
 		|POWER (s,n) -> 
-		    if (String.compare s str)=0 then
+		    if s=str then
 			    if n=2 then TIMES [CONST 2;VAR s]
 				else if n=1 then CONST 1
 				else if n=0 then CONST 0

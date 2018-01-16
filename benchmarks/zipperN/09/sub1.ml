@@ -1,24 +1,24 @@
-let rec zipperN (list: int list list) =
-    let getHeadtoint(list: int list list) =
-        match list with
+let rec zipperN (lst: int list list) =
+    let getHeadtoint(lst: int list list) =
+        match lst with
            h::t -> h 
          | []  -> []
     in
-    let getHeadtolist(list) =
-        match list with
+    let getHeadtolist(lst) =
+        match lst with
            h::t -> [h]
          | []  -> []
     in
-    let getTail(list) =
-         match list with
+    let getTail(lst) =
+         match lst with
            h::t -> t
           |[]  -> []
     in
     
-    if list = [] then
+    if lst = [] then
           []
     else
-        if getTail(getHeadtoint(list))=[] then
-           getHeadtolist(getHeadtoint(list))@zipperN(getTail(list))
+        if getTail(getHeadtoint(lst))=[] then
+           getHeadtolist(getHeadtoint(lst))@zipperN(getTail(lst))
         else
-           getHeadtolist(getHeadtoint(list))@zipperN(getTail(list)@[getTail(getHeadtoint(list))]);;
+           getHeadtolist(getHeadtoint(lst))@zipperN(getTail(lst)@[getTail(getHeadtoint(lst))]);;

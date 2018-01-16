@@ -7,9 +7,9 @@ exception InvalidArgument
 let rec diff(ae,s) =
 	match ae with
 	|CONST n -> CONST(0)
-	|VAR x -> if (compare s x) == 0 then CONST(1)
+	|VAR x -> if s=x then CONST(1)
               else CONST(0)
-	|POWER(x,n) -> if (compare s x) == 0 then (
+	|POWER(x,n) -> if s=x then (
 					   if n == 0 then CONST(0)
 					   else if n == 1 then CONST(1)
 					   else TIMES([CONST(n);POWER(x,n-1)])

@@ -1,13 +1,13 @@
-let rec zipperN list:int list = 
-	let rec split list = 
-  		match list with
+let rec zipperN lst:int list = 
+	let rec split lst = 
+  		match lst with
 			sublist::lista -> (match sublist with x::sublista -> sublista::split lista | _ -> split lista)
   			| _ -> []
 	in
-	let rec first list = 
-  		match list with
+	let rec first lst = 
+  		match lst with
 			sublist::lista -> (match sublist with x::sublista -> x::first lista | _ -> first lista)
 			| _ -> []
 	in	
-	if list = [] then []
-	else (first list)@(zipperN (split list));;
+	if lst = [] then []
+	else (first lst)@(zipperN (split lst));;

@@ -1,11 +1,11 @@
 let rec zipper((list1 : int list), (list2 : int list)) =
-    let getHead(list) =
-        match list with
+    let getHead(lst) =
+        match lst with
            h::t -> [h]
          | []  -> []
     in
-    let getTail(list) =
-         match list with
+    let getTail(lst) =
+         match lst with
            h::t -> t
           |[]  -> []
     in

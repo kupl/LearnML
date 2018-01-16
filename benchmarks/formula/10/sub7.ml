@@ -1,4 +1,3 @@
-(* 컴퓨터공학부 / 2005-11721 / 김재경 / 숙제1-5 *)
 type formula = TRUE
              | FALSE
              | NOT of formula
@@ -11,7 +10,7 @@ and expr = NUM of int
          | MINUS of expr*expr
 let rec expr_value expr =
     match expr with
-      NUM(int) -> int
+      NUM(n) -> n
     | PLUS(e1,e2) -> expr_value(e1) + expr_value(e2)
     | MINUS(e1,e2) -> expr_value(e1) - expr_value(e2)
 let rec eval formula =

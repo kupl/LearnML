@@ -26,7 +26,7 @@ let rec eval form =
   |NOT f -> not (eval f)
   |ANDALSO (f1, f2) -> ((eval f1) &
   		        (eval f2))
-  |ORELSE (f1, f2) -> ((eval f1) or
+  |ORELSE (f1, f2) -> ((eval f1) ||
   		       (eval f2))
   |IMPLY (f1, f2) -> (if (((eval f1) = true) &
   			  ((eval f2) = false))

@@ -16,10 +16,10 @@ let rec diff: ae*string->ae = fun( alexp, str )->
 	match alexp with
 	|CONST c-> CONST 0
 	|VAR s->
-		if String.compare s str !=0 then CONST 0
+		if s!=str then CONST 0
 		else CONST 1	
 	|POWER(s,n)->
-		if String.compare s str !=0 then CONST 0
+		if s!=str then CONST 0
 		else if n=0 then CONST 1
 		else if n=1 then CONST n
 		else if n=2 then TIMES((CONST n)::((VAR s)::[]))

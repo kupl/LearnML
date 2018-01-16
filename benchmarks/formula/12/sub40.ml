@@ -16,7 +16,7 @@ let rec eval form =
                 | NUM a -> a
                 | PLUS (e1, e2) -> (etoint e1) + (etoint e2)
                 | MINUS (e1, e2) -> (etoint e1) - (etoint e2)
-        in
+        in true
 
         match form with
         | TRUE -> true

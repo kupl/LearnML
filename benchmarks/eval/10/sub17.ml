@@ -13,4 +13,5 @@ let rec eval : expr -> int =
     | MULT(e1,e2) -> (eval e1) * (eval e2)
     | DIVIDE(e1,e2) -> (eval e1) / (eval e2)
     | MAX([]) -> 0
-    | MAX(e) -> eval (List.hd (List.sort (fun x -> fun y -> compare (eval y) (eval x)) e))
+    | MAX(e) -> eval (List.hd (List.sort (
+            fun x -> fun y -> if (eval y)> (eval x) then 1 else if (eval)y = (eval x) then 0 else -1) e))

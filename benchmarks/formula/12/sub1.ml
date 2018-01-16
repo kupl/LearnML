@@ -13,7 +13,7 @@ type formula =
 let rec eval formula =
 	let rec eval2 expr = 
 		match expr with 
-		NUM int -> int
+		NUM n -> n
 		| PLUS( expr1, expr2 ) -> eval2 expr1 + eval2 expr2
 		| MINUS( expr1, expr2 ) -> eval2 expr1 - eval2 expr2	
 	in

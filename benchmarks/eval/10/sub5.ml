@@ -8,17 +8,17 @@ type expr = NUM of int
 exception DividedByZero
 let rec eval(expr) =
     match expr with
-      NUM(int) -> int
+      NUM(n) -> n
     | PLUS(expr1, expr2) -> eval(expr1) + eval(expr2)
     | MINUS(expr1, expr2) -> eval(expr1) - eval(expr2)
     | MULT(expr1, expr2) -> eval(expr1) * eval(expr2)
     | DIVIDE(expr1, expr2) -> 
         if eval(expr2) = 0 then raise(DividedByZero) else eval(expr1) / eval(expr2)
-    | MAX(list) ->
-        let rec max_fun(list, max_int) = 
-          match list with
+    | MAX(lst) ->
+        let rec max_fun(lst, max_int) = 
+          match lst with
             a::list_ex ->
               let max_int = if eval(a) > max_int then eval(a) else max_int in
               max_fun(list_ex, max_int)
           | _ -> max_int in
-        max_fun(list, 0)
+        max_fun(lst, 0)

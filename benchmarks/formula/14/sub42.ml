@@ -33,7 +33,7 @@ let rec eval = function
 and eval_expr = function
   | NUM i -> i
   | PLUS (e1, e2) -> (eval_expr e1) + (eval_expr e2)
-  | MINUS (e1, e2) -> (eval_expr e1) - (eval_expr e2) ;;
+  | MINUS (e1, e2) -> (eval_expr e1) - (eval_expr e2)
 
 
 

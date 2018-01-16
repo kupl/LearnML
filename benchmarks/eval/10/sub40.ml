@@ -10,7 +10,6 @@ type expr 	= NUM of int
 			| MAX of expr list
 ;;
 
-open List ;;
 
 exception DividedByZero
 

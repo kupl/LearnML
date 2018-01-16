@@ -9,9 +9,9 @@ exception InvalidArgument
 let rec diff (ae, str) =
 	match ae with
 	| CONST d -> CONST 0
-	| VAR s -> if (compare str s)=0 then CONST 1
+	| VAR s -> if str=s then CONST 1
 			   else CONST 0
-	| POWER (s, d) -> if (compare str s)=0 then 
+	| POWER (s, d) -> if str=s then 
 							if d=0 then CONST 0
 							else if d=1 then CONST 1
 							else if d=2 then TIMES [CONST 2;VAR s]

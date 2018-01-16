@@ -23,8 +23,7 @@ let rec eval f : bool =
     | NOT a -> not (eval a)
     | ANDALSO (a, b) -> (eval a) && (eval b)
     | ORELSE (a, b) -> (eval a) || (eval b)
-    | IMPLY (a, b) when ((eval a) = true && (eval b) = false) -> false
-    | IMPLY (a, b) -> true
+    | IMPLY (a,b) -> if((eval a = true)&& (eval b) = false) then false else true
     | LESS (a, b) -> (getnum a) < (getnum b)
 
 (*let a61 = eval TRUE

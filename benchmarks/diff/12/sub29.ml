@@ -71,7 +71,7 @@ let diff (equ, var) =
 
 		in
 									
-
+(*
 						
 	(*end of simplifying function*)	
 
@@ -89,8 +89,8 @@ let rec sdiff (equ, var) =
 											
 	match equ with
 	| CONST i	-> (CONST 0)
-	| VAR str	-> (if((String.compare str var) = 0) then (CONST 1) else (CONST 0))
-	| POWER (str, pow) -> (if(((String.compare str var) = 0) && ((abs pow) >= 1))
+	| VAR str	-> (if(str=var) then (CONST 1) else (CONST 0))
+	| POWER (str, pow) -> (if((str=var) && ((abs pow) >= 1))
 							then (TIMES [(CONST pow); POWER (str, (pow-1))])
 							else (CONST 0))
 	| TIMES lst 	-> (match lst with
@@ -107,4 +107,4 @@ let rec sdiff (equ, var) =
 						)
 	in
 	(simp (sdiff (equ, var)))
-	
+	*)

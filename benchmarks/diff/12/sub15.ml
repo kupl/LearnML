@@ -23,7 +23,7 @@ let rec pretty ae =
          match ae with
          (TIMES lst) -> (if (List.mem (CONST 0) (List.map pretty lst)) then (CONST 0) else
 	                         let remove1 = (List.fold_right (fun a b -> if (a = CONST 1) then b else a::b) lst []) in
-				 let remove_times = (List.fold_right (fun a b -> (match a with (TIMES list)-> list@b |_ -> a::b)) remove1 []) in
+				 let remove_times = (List.fold_right (fun a b -> (match a with (TIMES lst)-> lst@b |_ -> a::b)) remove1 []) in
 				 let final = (List.map pretty remove_times) in
 				 (if ((List.length final) = 1) then (List.hd final) else
 				 (TIMES final)))

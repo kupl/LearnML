@@ -1,10 +1,9 @@
 (*print_endline "p3"*)
 
 let rec iter ((n: int), (f: int->int)): (int->int) =
-    match n with
-    | n when n < 0 -> fun x -> x
-    | 0 -> fun x -> x
-    | n -> fun x -> x |> f |> iter ((n-1), f)
+  if(n<0) then fun x -> x
+  else if (n=0) then fun x -> x
+  else fun x -> iter ((n-1),f) (f x)
 
 (*;; 10 |> iter (3, (fun x -> x + 1)) |> print_int*)
 (*; print_endline ""*)

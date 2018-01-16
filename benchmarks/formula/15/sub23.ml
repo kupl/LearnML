@@ -1,4 +1,4 @@
-(*
+
 type formula = TRUE
 		|FALSE
 		|NOT of formula
@@ -9,7 +9,7 @@ type formula = TRUE
 and expr = NUM of int
 		|PLUS of expr * expr
 		|MINUS of expr * expr
-*)
+
 
 let rec eval f =  
 	match f with

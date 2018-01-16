@@ -7,12 +7,12 @@ type ae = CONST of int
 let rec diff (exp ,s) = 
 	let rec mul (a, b) = 
 		match b with
-		| [] -> [];
+		| [] -> []
 		| hd::tl ->  (TIMES ( (diff (hd,s))::(List.append a tl)) ) ::mul(hd::a, tl)
 	in
 	let rec hap a = 
 		match a with
-		| [] -> [];
+		| [] -> []
 		| hd::tl -> (diff (hd, s))::(hap tl)
 	in
 	match exp with

@@ -11,7 +11,7 @@ and expr = NUM of int
 
 let rec evalsub (e: expr): int = 
 	match e with
-	| NUM i -> i;
+	| NUM i -> i
     | PLUS (e1, e2) -> (evalsub e1) + (evalsub e2)
 	| MINUS (e1, e2) -> (evalsub e1) - (evalsub e2)
 

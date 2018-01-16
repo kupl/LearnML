@@ -16,13 +16,13 @@ let rec eval e =
   let c = (eval b) in
   if c = 0 then raise DividedByZero
   else (eval a) / c
-  | MAX list -> 
-  let rec max list =
-  match list with [] -> 0
+  | MAX lst -> 
+  let rec max lst =
+  match lst with [] -> 0
   | [a] -> (eval a)
   | h::t ->
   let hh = (eval h) in
   let tt = if t = [] then min_int else max t in
   if hh > tt then hh else tt
   in
-  max list
+  max lst

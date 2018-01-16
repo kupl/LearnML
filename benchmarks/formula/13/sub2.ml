@@ -14,20 +14,20 @@ let rec eval (f : formula) : bool =
         match f with
             TRUE -> true
         |   FALSE -> false
-        |   NOT (g : formula) -> not(eval g)
-        |   ANDALSO ((g : formula), (h : formula)) -> (eval g) && (eval h)
-        |   ORELSE ((g : formula), (h : formula)) -> (eval g) || (eval h)
-        |   IMPLY ((g : formula), (h : formula)) -> (not(eval g)) || (eval h)
-        |   LESS ((d : expr), (e : expr)) ->
+        |   NOT (g) -> not(eval g)
+        |   ANDALSO ((g), (h)) -> (eval g) && (eval h)
+        |   ORELSE ((g), (h)) -> (eval g) || (eval h)
+        |   IMPLY ((g), (h)) -> (not(eval g)) || (eval h)
+        |   LESS ((d), (e)) ->
                 let rec eval_expr (e : expr) : int = 
                     (
                         match e with
-                            NUM (a : int) -> a
-                        |   PLUS ((b : expr), (c : expr)) -> (eval_expr b) + (eval_expr c)
-                        |   MINUS ((b : expr), (c : expr)) -> (eval_expr b) - (eval_expr c)
+                            NUM (a) -> a
+                        |   PLUS ((b), (c)) -> (eval_expr b) + (eval_expr c)
+                        |   MINUS ((b), (c)) -> (eval_expr b) - (eval_expr c)
                     ) in
-                let (x : int) = (eval_expr d) in
-                let (y : int) = (eval_expr e) in
+                let x : int = (eval_expr d) in
+                let y : int = (eval_expr e) in
                 if(x < y) then true
                 else false
     )

@@ -14,7 +14,7 @@ let rec eval f =
   match f with
     TRUE -> true
   | FALSE -> false
-  | NOT(subForm) -> not @@ eval subForm
+  | NOT(subForm) -> not (eval subForm)
   | ANDALSO(subForm1, subForm2) -> eval subForm1 && eval subForm2
   | ORELSE(subForm1, subForm2) -> eval subForm1 || eval subForm2
   | IMPLY(subForm1, subForm2) -> not (eval subForm1) || eval subForm2

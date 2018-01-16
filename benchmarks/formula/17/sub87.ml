@@ -40,10 +40,4 @@ let rec eval (fm: formula) : bool =
       then true
       else false
 
-let print_bool b=
-  print_endline(string_of_bool b)
-
-let _ = print_bool (eval TRUE); 
-print_bool(eval (ANDALSO (TRUE, FALSE))); 
-print_bool (eval (LESS (NUM 5, NUM 3)))
 

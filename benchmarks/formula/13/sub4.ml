@@ -23,7 +23,7 @@ let rec eval f =
 	| FALSE -> false
 	| (NOT f) -> not (eval f)
 	| (ANDALSO (f1, f2)) -> (eval f1) & (eval f2)
-	| (ORELSE (f1, f2)) -> (eval f1) or (eval f2)
+	| (ORELSE (f1, f2)) -> (eval f1) || (eval f2)
 	| (IMPLY (f1, f2)) -> if (eval f1)=false then true
 						  else if (eval f2)=true then true
 						  else false

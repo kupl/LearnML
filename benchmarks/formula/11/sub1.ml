@@ -51,7 +51,7 @@ let rec protoeval f =
 let eval f =
 	if (protoeval f)=TRUE then true
 	else if (protoeval f)=FALSE then false
-	else (print_string"error\n"; false)
+	else (false)
 
 (* Test Code :: some parts are refrenced from last semester class web board
 let test = eval(LESS(PLUS(NUM 5, NUM 5), MINUS(NUM 20, NUM 13)))

@@ -19,16 +19,16 @@ and expr = NUM of int
 let rec exprToInt (e:expr):int = 
   match e with
   | NUM(i) -> i
-  | PLUS((e1:expr),(e2:expr)) -> exprToInt(e1) + exprToInt(e2)
-  | MINUS((e1:expr),(e2:expr)) -> exprToInt(e1) - exprToInt(e2)
+  | PLUS((e1),(e2)) -> exprToInt(e1) + exprToInt(e2)
+  | MINUS((e1),(e2)) -> exprToInt(e1) - exprToInt(e2)
 
 let rec eval (f:formula) :bool =
   match f with
   | TRUE -> true
   | FALSE -> false
-  | NOT (negated:formula) -> not (eval(negated))
-  | ANDALSO((f1:formula), (f2:formula)) -> (eval(f1)) && (eval(f2))
-  | ORELSE((f1:formula), (f2:formula)) -> (eval(f1)) || (eval(f2))
-  | IMPLY ((f1:formula), (f2:formula)) -> (not (eval(f1))) || (eval(f2))
-  | LESS ((e1:expr),(e2:expr)) -> exprToInt(e1) < exprToInt(e2)
+  | NOT (negated) -> not (eval(negated))
+  | ANDALSO((f1), (f2)) -> (eval(f1)) && (eval(f2))
+  | ORELSE((f1), (f2)) -> (eval(f1)) || (eval(f2))
+  | IMPLY ((f1), (f2)) -> (not (eval(f1))) || (eval(f2))
+  | LESS ((e1),(e2)) -> exprToInt(e1) < exprToInt(e2)
 

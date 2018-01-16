@@ -9,7 +9,7 @@ type expr = NUM of int
 
 let rec eval e = 
 
-let rec find_max list buf = match list with
+let rec find_max lst buf = match lst with
 | e::l -> if (eval e) > buf then (find_max l (eval e))
           else (find_max l buf)
 | [] -> buf in

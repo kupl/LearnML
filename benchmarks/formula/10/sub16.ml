@@ -26,7 +26,5 @@ let rec eval_temp : formula -> bool =
 			|IMPLY (c1,c2) -> (not ((eval_temp c1) && (not (eval_temp c2))))
 			|LESS (ex1,ex2) -> ((calc ex1) < (calc ex2))));;
 let eval : formula -> bool =
-	try
 		(function formu -> (eval_temp formu))
-	with e -> raise (Error "Invalid error.");;
 		

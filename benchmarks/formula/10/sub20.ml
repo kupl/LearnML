@@ -10,8 +10,8 @@ type formula = TRUE
     and expr = NUM of int
 			  | PLUS of expr * expr
 			  | MINUS of expr * expr
-let rec (eval : formula -> bool) =
-	let rec (evale : expr -> int) =
+let rec eval : formula -> bool =
+	let rec evale : expr -> int =
 		fun ex -> match ex with NUM a -> a
 							|PLUS(a,b) -> evale(a) + evale(b)
 							|MINUS(a,b) -> evale(a) - evale(b)

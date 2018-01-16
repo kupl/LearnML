@@ -9,7 +9,7 @@ type formula = TRUE
              | PLUS of expr * expr
 	     | MINUS of expr * expr
 let imply b1 b2 =
- if (b1 & b2) = true then true
+ if (b1 && b2) = true then true
  else
    if b1 = false then true
    else false
@@ -25,8 +25,8 @@ let rec eval formula =
       TRUE -> true
     | FALSE -> false
     | NOT(f) -> not (eval f)
-    | ANDALSO(f1, f2) -> (eval f1) & (eval f2)
-    | ORELSE(f1, f2) -> (eval f1) or (eval f2)
+    | ANDALSO(f1, f2) -> (eval f1) && (eval f2)
+    | ORELSE(f1, f2) -> (eval f1) || (eval f2)
     | IMPLY(f1, f2) -> imply (eval f1) (eval f2)
     | LESS(e1, e2) -> (evalex e1) < (evalex e2)
 

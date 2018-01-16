@@ -7,9 +7,9 @@ type ae = CONST of int
 let rec diff : ae * string -> ae = fun (expr,str) ->
 	match expr with
 	CONST i -> CONST 0
-	|VAR s -> if (String.compare str s) != 0 then CONST 0
+	|VAR s -> if str!=s then CONST 0
 		  else CONST 1
-	|POWER(s,i) ->  if (String.compare str s) != 0 then CONST 0
+	|POWER(s,i) ->  if str!=s then CONST 0
 		 	else TIMES [CONST i; POWER(s,i-1)] 
 	|TIMES l -> (match l with
 		[] -> CONST 0

@@ -1,6 +1,6 @@
 let rec zipperN a =
-	let not_empty list = match list with head:: tail -> true | _ -> false in
-	let filter_empty_lists list = (List.filter not_empty list) in
+	let not_empty lst = match lst with head:: tail -> true | _ -> false in
+	let filter_empty_lists lst = (List.filter not_empty lst) in
 	let b = (filter_empty_lists a) in
 	match b with
 	| [] -> []

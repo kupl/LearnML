@@ -29,4 +29,3 @@ let rec eval : formula -> bool = fun f ->
 
 (* TESTING FIELD BELOW *)
 
-let _ = if eval(IMPLY(ORELSE(TRUE, FALSE), LESS(NUM(10), NUM(5)))) then print_endline("1") else print_endline("0")

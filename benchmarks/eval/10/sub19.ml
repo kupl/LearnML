@@ -9,9 +9,9 @@ type expr = NUM of int
 		| 	MAX of expr list
 
 
-let rec (eval : expr -> int) = fun ex ->
+let rec eval : expr -> int = fun ex ->
 	
-	let rec (findmax : expr list * int -> int) = fun (lst, m) ->
+	let rec findmax : expr list * int -> int = fun (lst, m) ->
 		match lst with a::r -> if(eval a > m) then findmax(r,eval a)
 											else findmax(r,m)
 				|	[] -> m

@@ -28,7 +28,7 @@ let rec eval f =
        |FALSE -> false
        |NOT f1 -> not (eval f1)
        |ANDALSO (f1, f2) -> (eval f1) & (eval f2)
-       |ORELSE (f1, f2) -> (eval f1) or (eval f2)
+       |ORELSE (f1, f2) -> (eval f1) || (eval f2)
        |IMPLY (f1, f2) -> (match (eval f1, eval f2) with
                                 (true, true) -> true
                                 |(true, false) -> false

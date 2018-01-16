@@ -1,4 +1,5 @@
-let rec zipper (l1, l2 : int list * int list) =
+let rec zipper : int list * int list
+=fun (l1,l2) ->
   match (l1, l2) with
   | ([], _) -> l2
   | (_, []) -> l1

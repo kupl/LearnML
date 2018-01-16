@@ -21,8 +21,8 @@ let rec eval value =
 	| TRUE -> true
 	| FALSE -> false
 	| NOT f -> not (eval f)
-	| ANDALSO (f1,f2) -> (&&) (eval f1) (eval f2)
-	| ORELSE (f1,f2) -> (||) (eval f1) (eval f2)
+	| ANDALSO (f1,f2) ->  (eval f1) && (eval f2)
+	| ORELSE (f1,f2) ->  (eval f1) || (eval f2)
 	| IMPLY (f1,f2) -> (if (eval f1) = true && (eval f2) = false then false
 							else true)
 	| LESS (e1,e2) -> (if (numExpr e1) < (numExpr e2) then true

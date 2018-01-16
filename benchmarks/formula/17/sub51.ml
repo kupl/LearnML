@@ -24,7 +24,4 @@ let rec eval : formula -> bool = fun f ->
     not eval_f || (eval_f && eval g))
   | LESS (h, i) -> ((eval_expr h) < (eval_expr i))
 
-let print_bool b = 
-  match b with
-  | true -> print_endline "true"
-  | false -> print_endline "false"
+
