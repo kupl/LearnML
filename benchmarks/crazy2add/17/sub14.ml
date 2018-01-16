@@ -102,15 +102,3 @@ let rec crazy2add_h ((x: crazy2), (y: crazy2), (z: crazy2c)) : crazy2 =
  
 let crazy2add ((x:crazy2), (y:crazy2)) : crazy2 =
         crazy2add_h(x, y, N)
-
-let rec eval_h ((x: crazy2), (y: float)) : float =
-        match (x, y) with
-        | (NIL, c) -> 0. 
-        | (ZERO z, c) -> eval_h(z, c+.1.)
-        | (ONE z, c) -> (2.**c) +. eval_h(z, c+.1.)
-        | (MONE z, c ) -> -.(2.**c) +. eval_h(z, c+.1.) 
-       
-let crazy2val (x: crazy2) : int =
-        eval_h (x, 0.) |> int_of_float
-
-

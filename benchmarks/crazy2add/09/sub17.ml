@@ -47,7 +47,7 @@ NIL->ZERO(NIL)|
 _->x
 in
 
-if a=NIL or b=NIL then
+if a=NIL || b=NIL then
 raise (Error "NIL is not number")
 else
 crazy2add_reduceZero(crazy2add_internal (a,b))

@@ -7,8 +7,8 @@ type crazy2
 
 let rec crazy2add((c1:crazy2), (c2:crazy2)) = 
   match c1, c2 with
-  | (NIL, (c:crazy2)) -> c
-  | ((c:crazy2), NIL) -> c
+  | (NIL, c) -> c
+  | (c, NIL) -> c
   | (ONE(c1), ONE(c2)) -> ZERO(crazy2add(crazy2add(c1, c2), ONE(NIL)))
   | (ONE(c1), ZERO(c2)) -> ONE(crazy2add(c1, c2)) 
   | (ONE(c1), MONE(c2)) -> ZERO(crazy2add(c1, c2))

@@ -5,7 +5,7 @@ type crazy2	= NIL
 		| ONE of crazy2 
 		| MONE of crazy2
 
-let rec crazy2add((cl,cr): crazy2*crazy2): crazy2 =
+let rec crazy2add((cl:crazy2),(cr:crazy2)): crazy2 =
 	match (cl, cr) with
 	| (_, NIL) -> cl
 	| (NIL, _) -> cr
