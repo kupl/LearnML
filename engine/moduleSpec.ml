@@ -106,7 +106,7 @@ let __list_map_i__ : (int -> 'a -> 'b) -> 'a list -> 'b list
   = fun func count lst ->
     match lst with
     | [] -> lst
-    | hd::tl -> (func count hd)::(map_with_counter func (counter+1) tl)
+    | hd::tl -> (func count hd)::(map_with_counter func (count+1) tl)
   in 
   map_with_counter func 0 lst 
 
