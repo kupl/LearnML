@@ -99,6 +99,7 @@ let rec binding_args : arg list -> exp -> exp
 %token LISTREVMAP
 %token LISTMEMQ
 %token LISTREVAPD
+%token LISTMAPI
 
 %left OR
 %left AND
@@ -494,6 +495,8 @@ exp_base:
     { (EVar "__list_memq__") }
   | LISTREVAPD
     { (EVar "__list_rev_append__") }
+  | LISTMAPI
+    { (EVar "__list_map_i__") }
 
 
 exp_semi_list:
@@ -559,6 +562,10 @@ pat_base:
     { PUnit }
   | c=INT
     { PInt (c) }
+  | MINUS c=INT
+    { PInt (-c) }
+  | PLUS c=INT
+    { PInt c }
   | TRUE
     { PBool true }
   | FALSE

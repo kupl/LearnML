@@ -100,6 +100,16 @@ let rec __list_rev_append__ : 'a list -> 'a list -> 'a list
   |[] -> lst2
   |hd::tl -> __list_rev_append__ tl (hd::lst2)
 
+let __list_map_i__ : (int -> 'a -> 'b) -> 'a list -> 'b list
+= fun func lst ->
+  let rec map_with_counter : (int -> 'a -> 'b) -> int -> 'a list -> 'b list 
+  = fun func count lst ->
+    match lst with
+    | [] -> lst
+    | hd::tl -> (func count hd)::(map_with_counter func (counter+1) tl)
+  in 
+  map_with_counter func 0 lst 
+
 let max_int : int = 4611686018427387903
 
 let min_int : int = -4611686018427387903
