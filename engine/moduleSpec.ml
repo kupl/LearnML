@@ -4,6 +4,16 @@
 exception ListError
 
 exception Failure of string
+exception Invalid_argument of string
+
+let assert : bool -> 'a
+= fun b -> raise (Failure ("Assert failure"))
+
+let invalid_arg : string -> 'a
+= fun s -> raise (Invalid_argument s)
+
+let failwith : string -> 'a
+= fun s -> raise (Failure s)
 
 let __list_hd__ : 'a list -> int
 =fun lst -> 

@@ -4,7 +4,7 @@ type crazy2 = NIL
 			| MONE of crazy2
 
 let rec crazy2add (ca, cb) = crazy2add_in ca cb (ZERO(NIL))
-	and crazy2add_in a b carry = 
+and crazy2add_in a b carry = 
 		match a with
 		NIL	-> (
 			match b with

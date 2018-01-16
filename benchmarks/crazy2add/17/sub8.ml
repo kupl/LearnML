@@ -1,7 +1,3 @@
-print_endline "hw2 e3 2010-11969";;
-
-let a = 3
-
 type crazy2 = NIL
   | ZERO of crazy2
   | ONE of crazy2
