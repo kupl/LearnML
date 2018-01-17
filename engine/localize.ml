@@ -236,8 +236,9 @@ let eval_decl : labeled_decl -> labeled_env -> labeled_env
 let run : labeled_prog -> labeled_env
 = fun decls -> 
   start_time := Unix.gettimeofday ();
+  let init_env = (list_fold eval_decl (Labeling.labeling_prog (External.init_prog)) empty_env) in
   init_set ();
-  (list_fold eval_decl decls empty_env)
+  (list_fold eval_decl decls init_env)
 
 let rec collect_execution_trace : labeled_prog -> example -> trace_set
 = fun pgm (input, output) ->

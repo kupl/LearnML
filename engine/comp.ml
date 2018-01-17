@@ -94,13 +94,12 @@ let rec find_component : exp-> components -> components
 	| ELet (f,is_rec,xs,t,e1,e2) ->
 		let comps = find_component e1 comps in
 		let comps = find_component e2 comps in
-		(BatSet.add (ELet (f,is_rec,xs,t,Hole (0),Hole (0))) comps)
+    if (is_rec) then (BatSet.add (ELet (BindOne("__f__"),is_rec,xs,t,Hole (0),Hole (0))) comps)
+    else comps
 	| EFun (arg,e1) -> 
 		let comps = find_component e1 comps in
-		(BatSet.add (EFun (arg,Hole (0))) comps)
-	| ECtor (x,lst) ->
-		let comps = list_fold find_component lst comps in
-		BatSet.add (ECtor (x,(list_map (fun e -> Hole (0)) lst))) comps
+		(BatSet.add (EFun (ArgOne("__x__",TVar "comp"),Hole (0))) comps)
+	| ECtor (x,lst) -> comps
 	| EMatch (e,lst) ->
 		let comps = find_component e comps in
 	 	let (pl,el) = List.split lst in

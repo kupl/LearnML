@@ -473,4 +473,4 @@ let run : prog -> (TEnv.t * HoleType.t * VariableType.t)
   let decls = Converter.convert Converter.empty decls in
   let (init_env,_,_) = (list_fold type_decl (External.init_prog) (TEnv.empty,HoleType.empty,VariableType.empty)) in
   let (tenv,hole_typ,variable_typ) = (list_fold type_decl decls (init_env,HoleType.empty,VariableType.empty)) in
-  (BatMap.diff tenv init_env,hole_typ,variable_typ)
+  (BatMap.diff tenv init_env,hole_typ, BatMap.map (fun tenv -> BatMap.diff tenv init_env) variable_typ)

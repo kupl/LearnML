@@ -50,6 +50,18 @@ let run_prog : prog -> examples -> unit
 
 let fix_with_solution : prog -> prog -> examples -> unit
 =fun submission solution examples ->  (* TODO *)
+  let _ = Type.run submission in
+  let score = Util.list_fold (fun (inputs, output) score->
+    let res_var = "__res__" in
+    let prog = submission @ [(DLet (BindOne res_var,false,[],fresh_tvar(),(Lang.appify (EVar !opt_entry_func) inputs)))] in
+    try
+      let _ = (Type.run prog) in
+      let env = Eval.run prog in
+      let result_value = Lang.lookup_env res_var env in
+      if(result_value=output) then score+1 else score
+    with |_ -> raise (Failure "The program type and examples' types are mismatched")
+  ) examples 0 in
+  let _ = if(score=List.length examples) then raise (Failure "The submission is correct code") in
   print_header "Solution"; Print.print_pgm solution;
   print_header "Submission"; Print.print_pgm submission;
   print_header "Test-cases"; print_examples examples;
