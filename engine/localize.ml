@@ -21,9 +21,11 @@ let rec is_counter_example : prog -> example -> bool
 = fun pgm (input, output) ->
   let res_var = "__res__" in
   let pgm' = pgm @ [(DLet (BindOne res_var,false,[],fresh_tvar(),(Lang.appify (EVar !Options.opt_entry_func) input)))] in
-  let env = Eval.run pgm' in
-  let result_value = Lang.lookup_env res_var env in
-  result_value <> output
+  try
+    let env = Eval.run pgm' in
+    let result_value = Lang.lookup_env res_var env in
+    result_value <> output
+  with _ -> true
 
 let rec find_counter_examples : prog -> examples -> examples
 = fun pgm examples -> List.filter (is_counter_example pgm) examples
@@ -94,7 +96,7 @@ let rec eval : labeled_env -> labeled_exp -> labeled_value
 = fun env (label, e) -> 
   (trace_set := extend_set label !trace_set);  (* gather execution traces *)
   (*(print_endline (Print.exp_to_string (unlabeling_exp (label, e))));*)
-  if (Unix.gettimeofday() -. !start_time >0.05) then raise (Failure "Timeout")
+  if (Unix.gettimeofday() -. !start_time >0.2) then raise (Failure "Timeout")
   else
   match e with
   | EUnit -> VUnit
@@ -234,10 +236,11 @@ let eval_decl : labeled_decl -> labeled_env -> labeled_env
   | _ -> env
 
 let run : labeled_prog -> labeled_env
-= fun decls -> 
-  start_time := Unix.gettimeofday ();
+= fun decls ->
+  start_time := Unix.gettimeofday();
   let init_env = (list_fold eval_decl (Labeling.labeling_prog (External.init_prog)) empty_env) in
   init_set ();
+  start_time := Unix.gettimeofday();
   (list_fold eval_decl decls init_env)
 
 let rec collect_execution_trace : labeled_prog -> example -> trace_set

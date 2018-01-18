@@ -69,7 +69,7 @@ and bind_pat_list : env -> value list -> pat list -> env
 (* exp evaluation *)
 let rec eval : env -> exp -> value
 =fun env e ->
-  if(Unix.gettimeofday() -. !start_time >0.05) then let _ = (infinite_count:=!(infinite_count)+1) in raise TimeoutError
+  if(Unix.gettimeofday() -. !start_time >0.2) then let _ = (infinite_count:=!(infinite_count)+1) in raise TimeoutError
   else
   match e with   
   (* base *)
@@ -213,9 +213,10 @@ let eval_decl : decl -> env -> env
 
 let run : prog -> env
 = fun decls -> 
-  start_time:=Unix.gettimeofday(); 
   count:=(!count)+1;
+  start_time:=Unix.gettimeofday();
   let init_env = list_fold eval_decl (External.init_prog) empty_env in
+  start_time:=Unix.gettimeofday();
   let env = (list_fold eval_decl decls init_env) in
   BatMap.diff env init_env
 

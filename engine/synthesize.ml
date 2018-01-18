@@ -405,6 +405,17 @@ let rec replace_exp : prog -> exp -> exp -> prog
 		  | x -> x :: (replace_exp tl hole candidate)
 	)
 
+let bound_var_to_comp tenv cand =
+  BatMap.foldi(fun v t r ->
+    match t with
+    | TCtor(t,tl) ->
+      begin match tl with
+      |[] -> BatSet.add (ECtor(v,[])) cand
+      |hd::tl -> BatSet.add (ECtor(v,[gen_hole()])) cand
+      end
+    |_ -> BatSet.add (EVar v) cand
+  ) tenv cand
+
 let gen_exp_nextstates : exp BatSet.t -> (Workset.work * exp) -> Workset.work BatSet.t
 = fun candidates ((rank,prog,h_t,h_e),hole) ->
 	let n = extract_holenum hole in
@@ -456,13 +467,14 @@ let count = ref 0
 let rec work : Workset.t -> components -> examples -> prog option
 = fun workset exp_set examples->
 	iter := !iter +1;
-	if (!iter mod 10000 = 0)
-	then
-		begin
-			print_string("Iter : " ^ (string_of_int !iter) ^ " ");
-			print_endline((Workset.workset_info workset) ^ (" Total elapsed : " ^ (string_of_float (Sys.time() -. !start_time))));
-			work workset exp_set examples
-		end
+  if (Sys.time() -. (!start_time) >60.0) then None
+  else if (!iter mod 10000 = 0)
+	  then
+		  begin
+			  print_string("Iter : " ^ (string_of_int !iter) ^ " ");
+			  print_endline((Workset.workset_info workset) ^ (" Total elapsed : " ^ (string_of_float (Sys.time() -. !start_time))));
+			  work workset exp_set examples
+		  end
 	else
 	match Workset.choose workset with
 	| None -> None
@@ -483,6 +495,7 @@ let hole_synthesize : prog -> Workset.work BatSet.t -> components -> examples ->
 	Print.print_header "expression component set is below";
 	Print.print_exp_set components;
 	let workset = BatSet.fold (fun t set-> Workset.add t set) pgm_set Workset.empty in
+  let _ = start_time := 0.0 in
 	let result = work workset components examples in
 	let result_prog_string = 
 	match result with

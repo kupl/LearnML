@@ -11,6 +11,10 @@ let parse_file (f:string) : (examples * prog) =
     |> Lexing.from_string
     |> Parser.prog Lexer.token
 
+let program_with_input prog inputs =
+  let res_var = "__res__" in
+  prog @ [(DLet (BindOne res_var,false,[],fresh_tvar(),(Lang.appify (EVar !opt_entry_func) inputs)))] 
+
 let except_handling : exn -> value -> unit
 = fun except output ->
   begin match except with
@@ -31,11 +35,10 @@ let except_handling : exn -> value -> unit
 let run_testcases : prog -> examples -> unit
 =fun prog examples ->
   List.iter (fun (inputs, output) ->
-    let res_var = "__res__" in
-    let prog' = prog @ [(DLet (BindOne res_var,false,[],fresh_tvar(),(Lang.appify (EVar !opt_entry_func) inputs)))] in
-		try
+    let prog' = program_with_input prog inputs in
+	  try
       let env = Eval.run prog' in
-		  let result_value = Lang.lookup_env res_var env in
+		  let result_value = Lang.lookup_env "__res__" env in
         print_endline ("Result: " ^ Print.value_to_string result_value ^ " " ^  
                      "Expected: " ^ Print.value_to_string output);
     with except -> except_handling except output
@@ -52,16 +55,20 @@ let fix_with_solution : prog -> prog -> examples -> unit
 =fun submission solution examples ->  (* TODO *)
   let _ = Type.run submission in
   let score = Util.list_fold (fun (inputs, output) score->
-    let res_var = "__res__" in
-    let prog = submission @ [(DLet (BindOne res_var,false,[],fresh_tvar(),(Lang.appify (EVar !opt_entry_func) inputs)))] in
+    let prog = program_with_input submission inputs in
+    let _ = 
+      try
+        (Type.run prog)
+      with |_ -> raise (Failure "The submission and type are mismatched")
+    in
     try
-      let _ = (Type.run prog) in
       let env = Eval.run prog in
-      let result_value = Lang.lookup_env res_var env in
+      let result_value = Lang.lookup_env "__res__" env in
       if(result_value=output) then score+1 else score
-    with |_ -> raise (Failure "The program type and examples' types are mismatched")
+    with |_ -> score
   ) examples 0 in
   let _ = if(score=List.length examples) then raise (Failure "The submission is correct code") in
+  print_header "Score"; print_endline(string_of_int score);
   print_header "Solution"; Print.print_pgm solution;
   print_header "Submission"; Print.print_pgm submission;
   print_header "Test-cases"; print_examples examples;
@@ -72,6 +79,7 @@ let fix_with_solution : prog -> prog -> examples -> unit
         let (_,hole_type,variable_type) = Type.run prog in
         (n,prog,hole_type,variable_type)
     ) ranked_prog_set in
+  print_header "initial-set"; print_endline(string_of_int (BatSet.cardinal initial_set));
   let components = Comp.extract_component solution in
   let _ = Synthesize.hole_synthesize submission initial_set components examples in
   ()

@@ -103,7 +103,7 @@ let rec exp_to_string : exp -> string
   match exp with
   |EUnit -> "()"
   |Const n -> string_of_int n
-  |String id -> id
+  |String id -> "\""^id^"\""
   |TRUE -> "true"
   |FALSE -> "false"
   |EVar x -> x

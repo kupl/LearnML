@@ -16,3 +16,8 @@ $ ./main.native -execute -submission ../benchmarks/factorial/sub1.ml
 $ ./main.native -run -submission ../benchmarks/factorial/sub1.ml -testcases ../benchmarks/factorial/testcases -entry factorial
 $ ./main.native -fix -submission ../benchmarks/factorial/sub1.ml -solution ../benchmarks/factorial/sol.ml -testcases ../benchmarks/factorial/testcases -entry factorial
 ```
+
+## Running Script
+```sh
+$ python run.py
+```
