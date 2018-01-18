@@ -446,7 +446,8 @@ let next : Workset.work -> components -> Workset.work BatSet.t
 
 let start_time = ref 0.0
 let iter = ref 0
-	
+
+
 let rec is_solution : prog -> examples -> bool
 = fun prog examples ->
 (
@@ -457,7 +458,8 @@ let rec is_solution : prog -> examples -> bool
 			let env = Eval.run prog' in
 			let result = lookup_env res_var env in
 			(result=output)
-		with 
+		with
+    |TimeoutError -> (*Print.print_pgm prog;*)false
 		|_ -> false
 	) examples
 )
@@ -467,8 +469,8 @@ let count = ref 0
 let rec work : Workset.t -> components -> examples -> prog option
 = fun workset exp_set examples->
 	iter := !iter +1;
-  if (Sys.time() -. (!start_time) >60.0) then None
-  else if (!iter mod 10000 = 0)
+  (*if (Sys.time() -. (!start_time) >60.0) then None
+  else*) if (!iter mod 10000 = 0)
 	  then
 		  begin
 			  print_string("Iter : " ^ (string_of_int !iter) ^ " ");
@@ -482,10 +484,9 @@ let rec work : Workset.t -> components -> examples -> prog option
 	  if is_closed prog then
 	  	let _ = count := !count +1 in
 	  	if is_solution prog examples then Some prog
-			else
-				work remaining_workset exp_set examples
+			else work remaining_workset exp_set examples
 	  else
-	  let exp_set = BatSet.map update_components exp_set in
+    let exp_set = BatSet.map update_components exp_set in
     let nextstates = next (rank,prog,h_t,h_e) exp_set in
 	  let new_workset = BatSet.fold Workset.add nextstates remaining_workset in
 	  	work new_workset exp_set examples
@@ -511,4 +512,4 @@ let hole_synthesize : prog -> Workset.work BatSet.t -> components -> examples ->
 	print_endline(string_of_int (!Eval.count));
 	Print.print_header "infinite count";
 	print_endline(string_of_int (!Eval.infinite_count));
-	result
+  result

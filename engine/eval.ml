@@ -6,7 +6,6 @@ open Util
 let count = ref 0
 let infinite_count = ref 0
 let start_time = ref 0.0
-
 (* Argument binding *)
 let rec arg_binding : env -> arg -> value -> env
 = fun env arg v ->
@@ -69,7 +68,9 @@ and bind_pat_list : env -> value list -> pat list -> env
 (* exp evaluation *)
 let rec eval : env -> exp -> value
 =fun env e ->
-  if(Unix.gettimeofday() -. !start_time >0.2) then let _ = (infinite_count:=!(infinite_count)+1) in raise TimeoutError
+  if(Unix.gettimeofday() -. !start_time >0.20) then 
+    let _ = (infinite_count:=!(infinite_count)+1) in
+    raise TimeoutError
   else
   match e with   
   (* base *)
@@ -105,8 +106,8 @@ let rec eval : env -> exp -> value
   | LARGER (e1, e2) -> (eval_abbop env e1 e2 (>))
   | LESSEQ (e1, e2) -> (eval_abbop env e1 e2 (<=))
   | LARGEREQ (e1, e2) -> (eval_abbop env e1 e2 (>=))
-  | EQUAL (e1, e2) -> VBool ((eval env e1) = (eval env e2))
-  | NOTEQ (e1, e2) -> VBool ((eval env e1) <> (eval env e2))
+  | EQUAL (e1, e2) -> eval_equality env e1 e2 (=)
+  | NOTEQ (e1, e2) -> eval_equality env e1 e2 (!=)
   (* lop *)
   | AT (e1, e2) ->
     begin match (eval env e1, eval env e2) with
@@ -202,7 +203,27 @@ and eval_bbop : env -> exp -> exp -> (bool -> bool -> bool) -> value
   match (eval env e1, eval env e2) with
   | VBool b1, VBool b2 -> VBool (op b1 b2)
   | _ -> raise (Failure "boolean_operation error")
-    
+
+and eval_equality : env -> exp -> exp -> ('a -> 'a -> bool) -> value
+= fun env e1 e2 op ->
+  let (x,y) = (eval env e1, eval env e2) in
+  match (x, y) with
+  | VFun _, _  
+  | VFunRec _, _
+  | _, VFun _
+  | _, VFunRec _ -> raise (Failure "Unable to check functions equality")
+  | VList l1, VList l2
+  | VTuple l1, VTuple l2
+  | VCtor (_,l1), VCtor(_,l2) ->
+    let b = List.exists2 (fun v1 v2 ->
+      match (v1,v2) with
+      | VFun _,_ | VFunRec _,_ | _,VFun _ | _,VFunRec _ -> true
+      |_ -> false
+    ) l1 l2 in
+    if b then raise (Failure "Unable to check functions equality")
+    else VBool (op x y)
+  | _ -> VBool (op x y)
+
 let eval_decl : decl -> env -> env
 =fun decl env -> 
   match decl with

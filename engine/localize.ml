@@ -12,6 +12,7 @@ let extend_set = BatSet.add
 
 (* set of execution traces *)
 let trace_set = ref empty_set
+let entry_function_label = ref 0
 let init_set () = (trace_set := empty_set)
 
 let start_time = ref 0.0
@@ -226,11 +227,17 @@ and eval_bbop : labeled_env -> labeled_exp -> labeled_exp -> (bool -> bool -> bo
   match (eval env e1, eval env e2) with
   | VBool b1, VBool b2 -> op b1 b2
   | _ -> raise (Failure "boolean_operation error")
-    
+
+let check_entry f entry_func =
+  match f with
+  |BindOne x -> (x=entry_func)
+  |_ -> false
+
 let eval_decl : labeled_decl -> labeled_env -> labeled_env
 = fun decl env -> 
   match decl with
-  | DLet (f, is_rec, args, typ, e) -> 
+  | DLet (f, is_rec, args, typ, e) ->
+    if (check_entry f (!Options.opt_entry_func)) then entry_function_label:=(fst e);
     let e = (dummy_label, ELet (f, is_rec, args, typ, e, (binding_to_lexp f))) in
     let_binding env f (eval env e)
   | _ -> env
@@ -260,6 +267,7 @@ let localization : prog -> examples -> (int * prog) BatSet.t
   let trace_set = List.fold_left (
     fun set example -> BatSet.union (collect_execution_trace l_pgm example) set
   ) empty_set counter_examples in
+  let trace_set = BatSet.remove (!entry_function_label) trace_set in
   let candidate_set = BatSet.fold (
     fun label set ->
       let hole_pgm = gen_hole_pgm label l_pgm in
