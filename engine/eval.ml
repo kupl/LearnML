@@ -282,11 +282,12 @@ and eval_equality : env -> exp -> exp -> ('a -> 'a -> bool) -> value
   | VList l1, VList l2
   | VTuple l1, VTuple l2
   | VCtor (_,l1), VCtor(_,l2) ->
-    let b = List.exists2 (fun v1 v2 ->
-      match (v1,v2) with
-      | VFun _,_ | VFunRec _,_ | _,VFun _ | _,VFunRec _ -> true
-      |_ -> false
-    ) l1 l2 in
+    let check v = 
+      match v with
+      | VFun _ | VFunRec _ -> true
+      | _ -> false
+    in
+    let b = (List.exists check l1) || (List.exists check l2) in
     if b then raise (Failure "Unable to check functions equality")
     else VBool (op x y)
   | _ -> VBool (op x y)
@@ -328,6 +329,7 @@ let run : prog -> env
   start_time:=Unix.gettimeofday();
   let init_env = List.fold_left eval_decl empty_env (External.init_prog) in
   start_time:=Unix.gettimeofday();
+  let decls = decls@(External.grading_prog) in
   let env = List.fold_left eval_decl init_env decls in
   BatMap.diff env init_env
 

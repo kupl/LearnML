@@ -48,6 +48,9 @@ let reserved_words : (string * Parser.token) list =
   ; ("List.memq",LISTMEMQ)
   ; ("List.rev_append",LISTREVAPD)
   ; ("List.mapi", LISTMAPI)
+  ; ("List.for_all",LISTFORALL)
+  ; ("List.find",LISTFIND)
+  ;
   ]
 
 let symbols : (string * Parser.token) list =

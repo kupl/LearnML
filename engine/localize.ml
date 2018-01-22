@@ -336,6 +336,7 @@ let run : labeled_prog -> labeled_env
   let init_env = List.fold_left eval_decl empty_env (Labeling.labeling_prog (External.init_prog)) in
   init_set ();
   start_time := Unix.gettimeofday();
+  let decls = decls@(Labeling.labeling_prog (External.grading_prog)) in
   List.fold_left eval_decl init_env decls
 
 let rec collect_execution_trace : labeled_prog -> example -> trace_set

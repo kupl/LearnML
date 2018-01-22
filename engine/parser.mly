@@ -100,6 +100,8 @@ let rec binding_args : arg list -> exp -> exp
 %token LISTMEMQ
 %token LISTREVAPD
 %token LISTMAPI
+%token LISTFORALL
+%token LISTFIND
 
 %left OR
 %left AND
@@ -482,7 +484,10 @@ exp_base:
     { (EVar "__list_rev_append__") }
   | LISTMAPI
     { (EVar "__list_map_i__") }
-
+  | LISTFORALL
+    { (EVar "__list_for_all__") }
+  | LISTFIND
+    { (EVar "__list_find__") }
 
 exp_semi_list:
   |

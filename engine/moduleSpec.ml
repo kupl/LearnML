@@ -16,7 +16,7 @@ let invalid_arg : string -> 'a
 let failwith : string -> 'a
 = fun s -> raise (Failure s)
 
-let __list_hd__ : 'a list -> int
+let __list_hd__ : 'a list -> 'a
 =fun lst -> 
   match lst with
   |[] -> raise ListError
@@ -122,6 +122,18 @@ let __list_map_i__ : (int -> 'a -> 'b) -> 'a list -> 'b list
     | hd::tl -> (func count hd)::(map_with_counter func (count+1) tl)
   in 
   map_with_counter func 0 lst 
+
+let rec __list_for_all__ : ('a -> bool) -> 'a list -> bool
+= fun pred lst ->
+  match lst with
+  |[] ->  true
+  |hd::tl -> (pred hd)&&(__list_for_all__ pred tl)
+
+let rec __list_find__ : ('a -> bool) -> 'a list -> 'a
+= fun pred lst ->
+  match lst with
+  |[] -> raise ListError
+  |hd::tl -> if(pred hd) then hd else __list_find__ pred tl
 
 let max_int : int = 4611686018427387903
 

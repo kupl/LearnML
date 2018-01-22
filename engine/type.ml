@@ -487,6 +487,7 @@ and ctors_to_env : TEnv.t -> typ -> ctor list -> TEnv.t
 let run : prog -> (TEnv.t * HoleType.t * VariableType.t)
 = fun decls -> 
   let _ = start_time:=Sys.time() in
+  let decls = decls@(External.grading_prog) in
   let decls = Converter.convert Converter.empty decls in
   let (init_env, _, _) = List.fold_left type_decl (TEnv.empty, HoleType.empty, VariableType.empty) (External.init_prog) in
   let (tenv, hole_typ, var_typ) = List.fold_left type_decl (init_env, HoleType.empty, VariableType.empty) decls in
