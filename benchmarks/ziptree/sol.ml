@@ -12,6 +12,11 @@ type zipper = TOP
 
 type location = LOC of tree * zipper
 
+let rec rev_append l1 l2  =
+  match l1 with
+  |[] -> l2
+  |hd::tl -> rev_append tl (hd::l2)
+
 let goLeft loc = match loc with
 	| LOC(t, TOP) -> raise (NOMOVE "left of top")
 	| LOC(t, HAND(l::left, up, right)) -> LOC(l, HAND(left, up, t::right))
@@ -24,7 +29,7 @@ let goRight loc = match loc with
 
 let goUp loc = match loc with
 	| LOC(_, TOP) -> raise (NOMOVE "up of top")
-	| LOC(t, HAND(left, up, right)) -> LOC(NODE(List.rev_append left (t::right)), up)
+	| LOC(t, HAND(left, up, right)) -> LOC(NODE(rev_append left (t::right)), up)
 
 let goDown loc = match loc with
 	| LOC(LEAF _, _) -> raise (NOMOVE "down of leaf")

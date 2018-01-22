@@ -1,5 +1,4 @@
 {
-	
 	LEAF Korea => "Korea";
 	NODE(LEAF Korea, LEAF Brazil) => "(Korea Brazil)";
 	NODE(NODE(NODE(LEAF Korea, NODE(LEAF France, LEAF Usa)), LEAF Brazil), LEAF Japan) => "(((Korea (France Usa)) Brazil) Japan)";
@@ -11,5 +10,4 @@
 	NODE(NODE(LEAF Korea, LEAF France), NODE(NODE(LEAF Poland, LEAF Japan), LEAF Croatia)) => "(((Sweden England) (Portugal Brazil)) ((France Cameroon) (Japan Argentina)))";
 	NODE(NODE(LEAF Korea, LEAF France), NODE(NODE(LEAF Poland, NODE(LEAF Usa, LEAF Italy)), LEAF Croatia)) => "((Korea France) ((Poland (Usa Italy)) Croatia))";
 	NODE(NODE(LEAF Korea, NODE(NODE(LEAF Japan, LEAF Sweden), LEAF England)), NODE(NODE(LEAF Poland, NODE(LEAF Usa, LEAF Italy)), LEAF Croatia)) => "((Korea ((Japan Sweden) England)) ((Poland (Usa Italy)) Croatia))";
-
 }

@@ -1,0 +1,7 @@
+{
+  LOC (NODE [LEAF "1"],TOP) => LOC (LEAF "1",HAND ([],TOP,[]));
+  LOC (NODE [LEAF "1"],HAND ([],TOP,[])) => LOC (LEAF "1",HAND ([],HAND ([],TOP,[]),[]));
+  LOC (NODE [LEAF "1";LEAF "2"],TOP) => LOC (LEAF "1",HAND ([],TOP,[LEAF "2"]));
+  LOC (NODE [NODE [LEAF "1";LEAF "2"];LEAF "3";LEAF "4"],TOP) => LOC (NODE [LEAF "1";LEAF "2"],HAND ([],TOP,[LEAF "3";LEAF "4"]));
+  LOC (NODE [LEAF "1";LEAF "2";LEAF "3"],HAND ([LEAF "4"],TOP,[LEAF "5"])) => LOC (LEAF "1",HAND ([],HAND ([LEAF "4"],TOP,[LEAF "5"]),[LEAF "2";LEAF "3"]));
+}
