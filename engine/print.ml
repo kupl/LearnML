@@ -35,6 +35,14 @@ let pp_star_tuple : ('a -> string) -> 'a list -> string
     "(" ^ (func hd) ^
     (list_fold (fun elem r -> r ^ " * " ^ (func elem)) tl "") ^ ")"
 
+let pp_block : ('a -> string) -> 'a list -> string
+= fun func decls ->
+  match decls with
+  | [] -> ""
+  | hd::tl ->
+    (func hd) ^
+    List.fold_left (fun str elem -> str ^ "and " ^ (func elem)) "" tl
+
 let rec pat_to_string : pat -> string
 = fun pat ->
   match pat with
@@ -92,18 +100,18 @@ let rec user_defined_type_to_string : ctor -> string
   |hd::tl -> id ^ " of " ^ type_to_string hd ^ 
   list_fold (fun t r-> r ^ " * " ^ type_to_string t) tl ""
 
-let rec binding_to_string : let_bind -> string
+let rec let_to_string : let_bind -> string
 = fun x ->
   match x with
   | BindOne x -> x
-  | BindTuple xs -> pp_tuple binding_to_string xs
+  | BindTuple xs -> pp_tuple let_to_string xs
 
 let rec exp_to_string : exp -> string
 = fun exp ->
   match exp with
   |EUnit -> "()"
   |Const n -> string_of_int n
-  |String id -> "\""^id^"\""
+  |String id -> id
   |TRUE -> "true"
   |FALSE -> "false"
   |EVar x -> x
@@ -139,18 +147,12 @@ let rec exp_to_string : exp -> string
     " then " ^ exp_to_string e2 ^ "\n" ^
     " else " ^ exp_to_string e3
   |ELet (f, is_rec, xs, t, e1, e2) -> 
-    begin match xs with
-    | [] -> (* variable binding *)
-      "\n" ^ "let " ^ 
-      (if is_rec then "rec " else "") ^
-      (binding_to_string f) ^ " = "^(exp_to_string e1) ^ " in \n" ^ (exp_to_string e2)
-    | _ ->  (* function binding *)
-      let args_string = args_to_string xs "" in
-      "\n" ^ "let " ^
-      (if is_rec then "rec " else "") ^ (binding_to_string f) ^" "^ args_string ^
-      (match t with |TVar _ -> "" |_ -> " : " ^ type_to_string t) ^
-      " = " ^ (exp_to_string e1) ^ " in \n" ^ (exp_to_string e2)
-    end
+    "\n" ^ "let " ^ (if is_rec then "rec " else "") ^
+    binding_to_string (f, is_rec, xs, t, e1) ^ " in \n" ^ (exp_to_string e2)
+  |EBlock (is_rec, es, e2) ->
+    "\n" ^ "{let " ^
+    (if is_rec then "rec " else "") ^
+    pp_block (binding_to_string) es ^ "}" ^ " in \n" ^ exp_to_string e2 
   |EFun (arg,e1) -> 
     let rec multi_args (e : exp) r =
       begin match e with
@@ -166,6 +168,12 @@ let rec exp_to_string : exp -> string
   |Hole n -> "?"
   |Raise e -> "raise "^exp_to_string e
 
+and binding_to_string : binding -> string
+= fun (f, is_rec, args, typ, exp) ->
+    (let_to_string f) ^ " " ^ args_to_string args "" ^
+    (match typ with |TVar _ -> "" |_ -> " : " ^ type_to_string typ) ^
+    " = " ^ (exp_to_string exp) ^ "\n"
+
 let rec decl_to_string : decl -> string -> string
 = fun decl str ->
   match decl with
@@ -177,19 +185,23 @@ let rec decl_to_string : decl -> string -> string
     str ^ "type " ^ id ^ " =" ^ 
     (list_fold (fun t r -> r ^ "\n|" ^ user_defined_type_to_string t) lst "") ^ "\n"
   | DLet (f, is_rec, args, typ, exp) -> 
-    match args with
-    | [] -> (* variable binding *)
-      str ^ "\n" ^ "let " ^
-      (if(is_rec) then "rec " else "" ) ^
-      (binding_to_string f) ^ 
-      (match typ with |TVar _ -> "" |_ -> " : " ^ type_to_string typ) ^
-      " = "^(exp_to_string exp) ^ "\n"
-    | _ ->  (* function binding *)
-      let args_string = args_to_string args "" in
-      str ^ "\n" ^ "let " ^
-      (if(is_rec) then "rec " else "") ^ (binding_to_string f) ^" " ^args_string ^
-      (match typ with |TVar _ -> "" |_ -> " : " ^ type_to_string typ) ^
-      " = " ^ (exp_to_string exp) ^ "\n"
+    str ^ "\n" ^ "let " ^ (if is_rec then "rec " else "") ^
+    binding_to_string (f, is_rec, args, typ, exp)
+  | DBlock (is_rec, ds) ->
+    str ^ "\n" ^ "{\n" ^ "let " ^ (if is_rec then "rec " else "") ^
+    pp_block (binding_to_string) ds ^ "}"
+  | TBlock decls ->
+    str ^ "\n" ^ "{\n" ^ "type " ^
+    pp_block (type_decl_to_string) decls ^ "}"
+
+and type_decl_to_string : decl -> string
+= fun decl ->
+  match decl with
+  | DEqn (x, typ) -> x ^ " = " ^ type_to_string typ ^ "\n"
+  | DData (id,lst) -> 
+    id ^ " =" ^ 
+    (list_fold (fun t r -> r ^ "\n|" ^ user_defined_type_to_string t) lst "") ^ "\n"
+  | _ -> raise (Failure "Invalid type decl")
 
 let program_to_string : prog -> string
 = fun prog -> list_fold decl_to_string prog ""
@@ -207,6 +219,10 @@ let rec value_to_string : value -> string
   | VFun  (xs, exp, env) -> "<fun>"
   | VFunRec (f, xs, exp, env) -> "<fun>"
   | VHole _ -> "?"
+  | VBlock (f, vs) -> "{" ^ f ^ "|->" ^ pp_block (value_block_to_string) vs ^ "}"
+
+and value_block_to_string : id * value -> string
+= fun (x, v) -> x ^ " : " ^ value_to_string v
   
 let env_to_string env = BatMap.foldi (fun x v r -> r^" " ^x ^ "|-> " ^ value_to_string v) env ""
 
@@ -226,8 +242,6 @@ let rec print_pgm : prog -> unit
 (*****************************)
 (******typechecking***********)
 (*****************************)
-
-
 let print_typ_eqns eqns = 
   List.iter (fun (ty1,ty2) -> print_endline(type_to_string ty1^" = "^type_to_string ty2)) eqns
 (*****************************)
@@ -279,14 +293,14 @@ let rec labeled_exp_to_string : labeled_exp -> string
   |ELet (f,is_rec,xs,t,e1,e2) -> 
     begin match xs with
     | [] -> (* variable binding *)
-      "\n" ^ "let " ^ (binding_to_string f) ^ " = "^(labeled_exp_to_string e1) ^ " in " ^ (labeled_exp_to_string e2)
+      "\n" ^ "let " ^ (let_to_string f) ^ " = "^(labeled_exp_to_string e1) ^ " in " ^ (labeled_exp_to_string e2)
     | _ ->  (* function binding *)
       let args_string = args_to_string xs "" in
       let typ_string = type_to_string t in
       if is_rec then
-        "\n" ^ "let rec " ^ (binding_to_string f) ^ args_string ^ " : " ^ typ_string ^ " = \n" ^(labeled_exp_to_string e1) ^ " in " ^ (labeled_exp_to_string e2)
+        "\n" ^ "let rec " ^ (let_to_string f) ^ args_string ^ " : " ^ typ_string ^ " = \n" ^(labeled_exp_to_string e1) ^ " in " ^ (labeled_exp_to_string e2)
       else
-        "\n" ^ "let " ^ (binding_to_string f) ^ args_string ^ " : " ^ typ_string ^ " = \n" ^(labeled_exp_to_string e1) ^ " in " ^ (labeled_exp_to_string e2)
+        "\n" ^ "let " ^ (let_to_string f) ^ args_string ^ " : " ^ typ_string ^ " = \n" ^(labeled_exp_to_string e1) ^ " in " ^ (labeled_exp_to_string e2)
     end
   |EFun (arg ,e1) -> "fun " ^ (arg_to_string arg) ^ " -> " ^ labeled_exp_to_string e1 
   |Hole n -> "?"
@@ -299,6 +313,12 @@ let rec labeled_exp_to_string : labeled_exp -> string
   |_ -> ""
   end ^ ")"
 
+and labeled_binding_to_string : labeled_binding -> string
+= fun (f, is_rec, args, typ, exp) ->
+    (let_to_string f) ^ " " ^ args_to_string args "" ^
+    (match typ with |TVar _ -> "" |_ -> " : " ^ type_to_string typ) ^
+    " = " ^ (labeled_exp_to_string exp) ^ "\n"
+
 let rec labeled_decl_to_string : labeled_decl -> string -> string
 = fun decl str ->
   match decl with
@@ -310,18 +330,23 @@ let rec labeled_decl_to_string : labeled_decl -> string -> string
     str ^ "type " ^ id ^ " =" ^ 
     (list_fold (fun t r -> r ^ "\n|" ^ user_defined_type_to_string t) lst "") ^ "\n"
   | DLet (f,is_rec,args,typ,exp) -> 
-    match args with
-    | [] -> (* variable binding *)
-      str ^ "\n" ^ "let " ^ (binding_to_string f) ^ " = "^(labeled_exp_to_string exp) ^ ";;\n"
-    | _ ->  (* function binding *)
-      let args_string = args_to_string args "" in
-      let typ_string = 
-        type_to_string typ 
-      in
-      if is_rec then
-        str ^ "\n" ^ "let rec " ^ (binding_to_string f) ^ args_string ^ " : " ^ typ_string ^ " = \n" ^(labeled_exp_to_string exp) ^ ";;\n"
-      else
-        str ^ "\n" ^ "let " ^ (binding_to_string f) ^ args_string ^ " : " ^ typ_string ^ " = \n" ^(labeled_exp_to_string exp) ^ ";;\n"
+    str ^ "\n" ^ "let " ^ (if is_rec then "rec " else "") ^
+    labeled_binding_to_string (f, is_rec, args, typ, exp)
+  | DBlock (is_rec, ds) ->
+    str ^ "\n" ^ "{\n" ^ "let " ^ (if is_rec then "rec " else "") ^
+    pp_block (labeled_binding_to_string) ds ^ "}"
+  | TBlock decls ->
+    str ^ "\n" ^ "{\n" ^ "type " ^
+    pp_block (labeled_type_decl_to_string) decls ^ "}"
+
+and labeled_type_decl_to_string : labeled_decl -> string
+= fun decl ->
+  match decl with
+  | DEqn (x, typ) -> x ^ " = " ^ type_to_string typ ^ "\n"
+  | DData (id,lst) -> 
+    id ^ " =" ^ 
+    (list_fold (fun t r -> r ^ "\n|" ^ user_defined_type_to_string t) lst "") ^ "\n"
+  | _ -> raise (Failure "Invalid type decl")
 
 let labeled_program_to_string : labeled_prog -> string
 = fun pgm ->
@@ -344,6 +369,10 @@ let rec labeled_value_to_string : labeled_value -> string
   | VFun (arg, exp, lenv) -> "VFun" ^ arg_to_string arg
   | VFunRec (f, arg, exp, lenv) -> "VFun" ^ f ^ arg_to_string arg
   | VHole n -> "?"
+  | VBlock (f, vs) -> "{" ^ f ^ "|->" ^ pp_block (labeled_value_block_to_string) vs
+
+and labeled_value_block_to_string : id * labeled_value -> string
+= fun (x, v) -> x ^ " : " ^ labeled_value_to_string v
 
 let print_header str = 
  let _ = print_endline "-----------------------------" in

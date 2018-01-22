@@ -3,7 +3,6 @@ open Util
 exception EvalError of string
 exception TimeoutError
 
-
 type id = string 
 type typ = 
   | TUnit
@@ -41,12 +40,14 @@ type arg =
   | ArgOne of id * typ
   | ArgTuple of arg list
 
-and decl =
+type decl =
   | DExcept of ctor                                 (* exception x of t *)
   | DEqn of id * typ 
   | DData of id * ctor list                         (* 'type' D = ctors *)
-  | DLet  of let_bind * bool * arg list * typ * exp       (* let x [rec] (x1:t1) .. (xn:tn) : t = e *)
-
+  | DLet  of binding       (* let x [rec] (x1:t1) .. (xn:tn) : t = e *)
+  (* and block *)
+  | DBlock of bool * binding list (* let x1 = e1 and x2 = e2 ... xn = en | let rec f1 x1 = e1 and f2 x2 = e2 and ... fn xn = en *)
+  | TBlock of decl list
 and exp =
   (* Const *)
   | EUnit
@@ -83,12 +84,14 @@ and exp =
   | EApp of exp * exp                               (* e1 e2 *)
   | EFun of arg * exp                               (* fun (x:t1) -> e *)
   | ELet of let_bind * bool * arg list * typ * exp * exp  (* let [rec] (x1:t1) .. (xn:tn) : t = e1 in e2 *)
+  | EBlock of bool * binding list * exp (* let x1 = e1 and x2 = e2 and ... xn = en in e' | let rec f1 x1 = e1 and f2 x2 = e2 ... fn xn = en in e' *)
   | EMatch of exp * branch list                     (* match e with bs *)
   | IF of exp * exp * exp
   (*List operation*)
   | Hole of int
   | Raise of exp
 and branch = pat * exp   
+and binding = (let_bind * bool * arg list * typ * exp) (* f [rec] x1,x2 :t = e => must divide LET & LETREC later *)
 
 type prog = decl list
 
@@ -103,6 +106,7 @@ type value =
   | VCtor of id * value list
   | VFun  of arg * exp * env
   | VFunRec of id * arg * exp * env
+  | VBlock of id * (id * value) list
   | VHole of int
 and env = (id, value) BatMap.t
 and components = exp BatSet.t
@@ -130,11 +134,11 @@ let rec appify : exp -> exp list -> exp
 	[] -> exp
 	|hd::tl -> appify (EApp(exp,hd)) tl
 
-let rec binding_to_exp : let_bind -> exp
+let rec let_to_exp : let_bind -> exp
 = fun x ->
   match x with
   | BindOne x -> EVar x
-  | BindTuple xs -> ETuple (List.map binding_to_exp xs)
+  | BindTuple xs -> ETuple (List.map let_to_exp xs)
 
 (* cost function *)
 let rec exp_cost : exp -> int 
@@ -164,6 +168,7 @@ let rec exp_cost : exp -> int
   | EVar x -> 7
   | EApp (e1,e2) -> 10 + (exp_cost e1) + (exp_cost e2)
   | ELet (x,is_rec,args,typ,e1,e2) -> (if (is_rec) then 50 else 40) + (exp_cost e1) + (exp_cost e2)
+  | EBlock (is_rec, es, e2) -> List.fold_left (fun acc (x, is_rec, args, typ, e) -> acc+(exp_cost e)) 0 es
   | ECtor (x,l) -> 15 + (list_fold(fun e r -> exp_cost e + r) l 0)
   | EMatch (e1,bl) -> 
     let (pl,el) = list_split bl in
@@ -198,7 +203,7 @@ let cost_decl : decl -> int -> int
     | [] -> (* variable binding *)
       cost+(exp_cost exp) 
     | _ ->  (* function binding *)
-      cost+(exp_cost (ELet (x,is_rec,args,typ,exp, binding_to_exp x)))
+      cost+(exp_cost (ELet (x,is_rec,args,typ,exp, let_to_exp x)))
     end
   | _ -> cost
 

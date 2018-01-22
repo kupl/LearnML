@@ -37,6 +37,9 @@ let rec labeling_exp : exp -> labeled_exp
 	| NOT e -> (new_label (), NOT (labeling_exp e))
 	| EFun (x, e) -> (new_label (), EFun (x, labeling_exp e))
 	| ELet (f, is_rec, args, typ, e1, e2) -> (new_label (), ELet (f, is_rec, args, typ, labeling_exp e1, labeling_exp e2))
+	| EBlock (is_rec, ds, e2) -> 
+		let ds = List.map (fun (f, is_rec, args, typ, e) -> (f, is_rec, args, typ, labeling_exp e)) ds in
+		(new_label (), EBlock (is_rec, ds, labeling_exp e2))
 	| EMatch (e, bs) -> 
 		let (ps, es) = List.split bs in
 		(new_label (), EMatch (labeling_exp e, List.combine ps (labeling_explist es)))
@@ -47,13 +50,17 @@ let rec labeling_exp : exp -> labeled_exp
 and labeling_explist : exp list -> labeled_exp list
 = fun es -> List.fold_left (fun acc x -> acc@[labeling_exp x]) [] es
 
-let labeling_decl : decl -> labeled_decl
+let rec labeling_decl : decl -> labeled_decl
 = fun decl ->
 	match decl with
-  	| DExcept t -> DExcept t
-  	| DEqn (x, typ) -> DEqn (x, typ)
+  | DExcept t -> DExcept t
+  | DEqn (x, typ) -> DEqn (x, typ)
 	| DData (id, ctors) -> DData (id, ctors)
 	| DLet (f, is_rec, args, typ, e) -> DLet (f, is_rec, args, typ, labeling_exp e)
+	| DBlock (is_rec, ds) -> 
+		let ds = List.map (fun (f, is_rec, args, typ, e) -> (f, is_rec, args, typ, labeling_exp e)) ds in
+		DBlock (is_rec, ds)
+	| TBlock ds -> TBlock (List.map (labeling_decl) ds)
 
 let labeling_prog : prog -> labeled_prog
 = fun pgm -> 
@@ -94,6 +101,9 @@ let rec unlabeling_exp : labeled_exp -> exp
 	| NOT e -> NOT (unlabeling_exp e)
 	| EFun (x, e) -> EFun (x, unlabeling_exp e)
 	| ELet (f, is_rec, args, typ, e1, e2) -> ELet (f, is_rec, args, typ, unlabeling_exp e1, unlabeling_exp e2)
+	| EBlock (is_rec, ds, e2) -> 
+		let ds = List.map (fun (f, is_rec, args, typ, e) -> (f, is_rec, args, typ, unlabeling_exp e)) ds in
+		EBlock (is_rec, ds, unlabeling_exp e2)
 	| EMatch (e, bs) ->
 		let (ps, es) = List.split bs in
 		EMatch (unlabeling_exp e, List.combine ps (unlabeling_explist es))
@@ -104,13 +114,17 @@ let rec unlabeling_exp : labeled_exp -> exp
 and unlabeling_explist : labeled_exp list -> exp list
 = fun es -> List.map unlabeling_exp es
 
-let unlabeling_decl : labeled_decl -> decl
+let rec unlabeling_decl : labeled_decl -> decl
 = fun l_decl ->
 	match l_decl with
-  	| DExcept t -> DExcept t
-  	| DEqn (x, typ) -> DEqn (x, typ)
+  | DExcept t -> DExcept t
+  | DEqn (x, typ) -> DEqn (x, typ)
 	| DData (x, ctors) -> DData (x, ctors)
 	| DLet (f, is_rec, args, typ, e) -> DLet (f, is_rec, args, typ ,unlabeling_exp e)
+	| DBlock (is_rec, ds) -> 
+		let ds = List.map (fun (f, is_rec, args, typ, e) -> (f, is_rec, args, typ, unlabeling_exp e)) ds in
+		DBlock (is_rec, ds)
+	| TBlock ds -> TBlock (List.map (unlabeling_decl) ds)
 
 let unlabeling_prog : labeled_prog -> prog
 = fun l_pgm -> List.fold_left (fun acc x -> acc@[unlabeling_decl x]) [] l_pgm

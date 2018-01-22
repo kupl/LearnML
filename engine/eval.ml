@@ -6,6 +6,40 @@ open Util
 let count = ref 0
 let infinite_count = ref 0
 let start_time = ref 0.0
+
+(* Block task *)
+let rec is_fun : value -> bool
+= fun v ->
+  match v with
+  | VList vs -> List.exists is_fun vs 
+  | VTuple vs -> List.exists is_fun vs
+  | VCtor (x, vs) -> List.exists is_fun vs
+  | VFun (x, e, closure) -> true
+  | VFunRec (f, x, e, closure) -> true
+  | VBlock (f, vs) -> true
+  | _ -> false
+
+let rec update_closure : env -> value -> value
+= fun env v ->
+  match v with
+  | VList vs -> VList (List.map (update_closure env) vs)
+  | VTuple vs -> VTuple (List.map (update_closure env) vs)
+  | VCtor (x, vs) -> VCtor (x, List.map (update_closure env) vs)
+  | VFun (x, e, closure) -> VFun (x, e, env)
+  | VFunRec (f, x, e, closure) -> VFunRec (f, x, e, env)
+  | _ -> v
+
+let rec find_callee : id -> (id * value) list -> value
+= fun x vs ->
+  match vs with
+  | [] -> raise (Failure "not found")
+  | (y, v)::tl -> if x = y then v else find_callee x tl
+
+let bind_block : env -> (id * value) list -> env
+= fun env vs ->
+  let (xs, _) = List.split vs in
+  List.fold_left (fun env x -> update_env x (VBlock (x, vs)) env) env xs
+
 (* Argument binding *)
 let rec arg_binding : env -> arg -> value -> env
 = fun env arg v ->
@@ -68,7 +102,7 @@ and bind_pat_list : env -> value list -> pat list -> env
 (* exp evaluation *)
 let rec eval : env -> exp -> value
 =fun env e ->
-  if(Unix.gettimeofday() -. !start_time >0.20) then 
+  if (Unix.gettimeofday() -. !start_time >0.20) then 
     let _ = (infinite_count:=!(infinite_count)+1) in
     raise TimeoutError
   else
@@ -139,13 +173,13 @@ let rec eval : env -> exp -> value
       (* Value binding *)
       if is_rec then 
         let v1 = eval env e1 in
-        begin match v1 with
-        | VFun (x, e, closure) -> 
-          begin match f with
-          | BindOne f -> eval (update_env f (VFunRec (f, x, e, closure)) env) e2
+        begin match f with
+          | BindOne f -> 
+            begin match v1 with
+            | VFun (x, e, closure) -> eval (update_env f (VFunRec (f, x, e, closure)) env) e2
+            | _ -> eval (update_env f v1 env) e2
+            end
           | _ -> raise (Failure "left-hand side cannot be a tupple")
-          end
-        | _ -> eval (let_binding env f v1) e2
         end
       else eval (let_binding env f (eval env e1)) e2
     | _ ->
@@ -169,6 +203,31 @@ let rec eval : env -> exp -> value
       in
       eval (let_binding env f vf) e2
     end
+  | EBlock (is_rec, bindings, e2) -> 
+    let env = 
+      begin match is_rec with
+      | true ->
+        let (func_map, const_map) = List.fold_left (
+          fun (func_map, const_map) (f, is_rec, args, typ, exp) ->
+          begin match f with 
+          | BindOne x ->
+            let v = eval env (ELet (BindOne x, is_rec, args, typ, exp, EVar x)) in
+            if is_fun v then ((x, v)::func_map, const_map) else (func_map, (x, v)::const_map)
+          | _ -> raise (Failure "l-value cannot be a tupple")
+          end
+        ) ([], []) bindings
+        in
+        (* constant mapping *)
+        let init_env = List.fold_left (fun env (x, c) -> update_env x c env) env const_map in
+        (* update each function's closure *)
+        let func_map = List.map (fun (x, v) -> (x, update_closure init_env v)) func_map in
+        (* block mapping *)
+        List.fold_left (fun env (x, v) -> update_env x (VBlock (x, func_map)) env) init_env func_map
+      | false ->
+        let vs = List.map (fun (f, is_rec, args, typ, e) -> eval env (ELet (f, is_rec, args, typ, e, let_to_exp f))) bindings in
+        List.fold_left2 (fun env (f, is_rec, args, typ, e) v -> let_binding env f v) env bindings vs
+      end
+    in eval env e2
   | EMatch (e, bs) ->
     let v = eval env e in
     let (p, ex) = find_first_branch v bs in
@@ -179,6 +238,14 @@ let rec eval : env -> exp -> value
     begin match v1 with
     | VFun (x, e, closure) -> eval (arg_binding closure x v2) e
     | VFunRec (f, x, e, closure) -> eval (update_env f v1 (arg_binding closure x v2)) e
+    | VBlock (f, vs) ->
+      let v = find_callee f vs in
+      begin match v with
+      | VFunRec (f, x, e, closure) -> 
+        let block_env = bind_block closure vs in
+        eval (arg_binding block_env x v2) e
+      | _ -> raise (Failure "mutually recursive function call error")
+      end
     | _ -> raise (Failure "function_call error")
     end
   | Hole n -> VHole n
@@ -224,20 +291,44 @@ and eval_equality : env -> exp -> exp -> ('a -> 'a -> bool) -> value
     else VBool (op x y)
   | _ -> VBool (op x y)
 
-let eval_decl : decl -> env -> env
-=fun decl env -> 
+let rec eval_decl : env -> decl -> env
+= fun env decl ->
   match decl with
   | DLet (x,is_rec,args,typ,exp) -> 
-    let exp = ELet (x, is_rec, args, typ, exp, binding_to_exp x) in
+    let exp = ELet (x, is_rec, args, typ, exp, let_to_exp x) in
     let_binding env x (eval env exp)
+  | DBlock (is_rec, bindings) ->
+    begin match is_rec with
+    | true ->
+      let (func_map, const_map) = List.fold_left (
+        fun (func_map, const_map) (f, is_rec, args, typ, exp) ->
+        begin match f with 
+        | BindOne x ->
+          let v = eval env (ELet (BindOne x, is_rec, args, typ, exp, EVar x)) in
+          if is_fun v then ((x, v)::func_map, const_map) else (func_map, (x, v)::const_map)
+        | _ -> raise (Failure "l-value cannot be a tupple")
+        end
+      ) ([], []) bindings
+      in
+      (* constant mapping *)
+      let init_env = List.fold_left (fun env (x, c) -> update_env x c env) env const_map in
+      (* update each function's closure *)
+      let func_map = List.map (fun (x, v) -> (x, update_closure init_env v)) func_map in
+      (* block mapping *)
+      List.fold_left (fun env (x, v) -> update_env x (VBlock (x, func_map)) env) init_env func_map
+    | false ->
+      let envs = List.map (fun binding -> eval_decl env (DLet binding)) bindings in
+      List.fold_left (fun env new_env -> BatMap.union env new_env) env envs
+    end
   | _ -> env
 
 let run : prog -> env
 = fun decls -> 
   count:=(!count)+1;
   start_time:=Unix.gettimeofday();
-  let init_env = list_fold eval_decl (External.init_prog) empty_env in
+  let init_env = List.fold_left eval_decl empty_env (External.init_prog) in
   start_time:=Unix.gettimeofday();
-  let env = (list_fold eval_decl decls init_env) in
+  let env = List.fold_left eval_decl init_env decls in
   BatMap.diff env init_env
+
 

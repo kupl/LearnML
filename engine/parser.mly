@@ -123,67 +123,109 @@ prog:
   | LBRACE es=examples RBRACE EOF
     { (es, []) }
 
-examples:
-  | 
-    { [] }
-  | e=example es=examples
-    { e::es}
-
-example:
-  | i=exp_list FATARR o=value SEMI
-    { (i,o) }
-
-exp_list:
-  | e=exp
-    { [e] }
-  | e=exp SEMI el=exp_list
-    { e::el }
-
-value:
-  | v=value_base COMMA vs=value_comma_list
-    { VTuple (v::vs) }
-  | c=value_base
-    { c }
-
-value_base:
-  | LPAREN RPAREN
-    { VUnit }
-  | c=INT
-    { VInt c }
-  | TRUE
-    { VBool true }
-  | FALSE
-    { VBool false }
-  | c=STRING
-    { VString c }
-  | LBRACKET RBRACKET
-    { VList [] }
-  | LBRACKET v=value vs=value_semi_list RBRACKET
-    { VList (v::vs) }
-  | c=UID
-    { VCtor (c, []) }
-  | c=UID v=value_base
-    { VCtor (c, [v]) }
-  | MINUS c=INT
-    { VInt (-c)}
-  | LPAREN v=value RPAREN
-    { v }
-
-value_semi_list:
-  | 
-    { [] }
-  | SEMI
-    { [] }
-  | SEMI v=value vs=value_semi_list
-    { v::vs }
-
-value_comma_list : 
-  | c=value_base
-    { [c] }
-  | c=value_base COMMA cl=value_comma_list
-    { c::cl }
-
 (***** Declarations {{{ *****)
+
+empty_decls:
+  | 
+    { [] }
+  | SEMI SEMI 
+    { [] }
+    
+decls:  (* NOTE: reversed *)
+  | d=decl
+    { [d] }
+  | e=exp_bind
+    { [e] }
+  | ds=decls d=decl
+    { d::ds }
+  | ds=decls SEMI SEMI d=decl
+    { d::ds }
+  | ds=decls SEMI SEMI e=exp_bind
+    { e::ds }
+
+decl:
+  | d=datatype_block
+    { d }
+  | l=letbind_block
+    { l }
+  | d=except
+    { d }
+
+except:
+  | EXCEPTION c=ctor
+    { DExcept c }
+
+datatype_block:
+  | d=datatype ds=datatype_and_list
+    { TBlock (d::ds) }
+  | d=datatype
+    { d }
+
+datatype:
+  | TYPE d=datatype_bind
+    { d }
+
+datatype_and_list:
+  | DEFAND d=datatype_bind
+    { [d] }
+  | DEFAND d=datatype_bind ds=datatype_and_list
+    { d::ds }
+
+datatype_bind:
+  | d=LID EQ t=typ
+    { DEqn (d, t) }
+  | d=LID EQ cs=ctors
+    { DData (d, List.rev cs) }
+
+ctors:
+  | c=ctor
+    { [c] }
+  | PIPE c=ctor
+    { [c] }
+  | cs=ctors PIPE c=ctor
+    { cs@[c] }
+
+ctor:
+  | c=UID
+    { (c, []) }
+  | c=UID OF t=typ
+    { (c, [t]) }
+
+letbind_block:
+  | LET d=letbind ds=let_and_list
+    { DBlock (false, d::ds) }
+  | LET REC d=letrec_bind ds=letrec_and_list
+    { DBlock (true, d::ds) }
+  | LET d=letbind | LET REC d=letrec_bind
+    { DLet d }
+
+let_and_list:
+  | DEFAND x=bind args=args COLON t=typ EQ e=exp
+    { [(x, false, args,t,e)] }
+  | DEFAND x=bind args=args EQ e=exp 
+    { [(x, false, args, fresh_tvar(), e)] }
+  | DEFAND x=bind args=args COLON t=typ EQ e=exp ds=let_and_list
+    { (x, false, args, t, e)::ds }
+  | DEFAND x=bind args=args EQ e=exp ds=let_and_list
+    { (x, false, args, fresh_tvar(), e)::ds }
+
+letrec_and_list:
+  | DEFAND x=bind args=args COLON t=typ EQ e=exp
+    { [(x, true, args,t,e)] }
+  | DEFAND x=bind args=args EQ e=exp 
+    { [(x, true, args, fresh_tvar(), e)] }
+  | DEFAND x=bind args=args COLON t=typ EQ e=exp ds=letrec_and_list
+    { (x, true, args,t,e)::ds }
+  | DEFAND x=bind args=args EQ e=exp ds=letrec_and_list
+    { (x, true, args, fresh_tvar(), e)::ds }
+
+exp_bind:
+  | e=exp (* e *)
+    { DLet (BindOne "-", false, [], fresh_tvar(), e)}
+
+(***** }}} *****)
+
+(***** Binding {{{ *****)
 
 bind:
   | x=bind_tuple
@@ -207,77 +249,17 @@ bind_base:
   | LPAREN x=bind RPAREN
     { x }
 
-empty_decls:
-  | 
-    { [] }
-  | SEMI SEMI 
-    { [] }
-    
-decls:  (* NOTE: reversed *)
-  | d=decl
-    { [d] }
-  | e=exp_bind
-    { [e] }
-  | ds=decls d=decl
-    { d::ds }
-  | ds=decls SEMI SEMI d=decl
-    { d::ds }
-  | ds=decls SEMI SEMI e=exp_bind
-    { e::ds }
-
-decl:
-  | d=datatype
-    { d }
-  | l=letbind
-    { l }
-  | d=except
-    { d }
-
-except:
-  | EXCEPTION c=ctor
-    { DExcept c }
-
-datatype:
-  | TYPE d=LID EQ t=typ
-    { DEqn (d, t) }
-  | TYPE d=LID EQ cs=ctors
-    { DData (d, List.rev cs) }
-  | DEFAND d=LID EQ t=typ
-    { DEqn (d, t) }
-  | DEFAND d=LID EQ cs=ctors
-    { DData (d,List.rev cs) }
-
-ctors:
-  | c=ctor
-    { [c] }
-  | PIPE c=ctor
-    { [c] }
-  | cs=ctors PIPE c=ctor
-    { cs@[c] }
-
-ctor:
-  | c=UID
-    { (c, []) }
-  | c=UID OF t=typ
-    { (c, [t]) }
-
 letbind:
-  | LET x=bind args=args EQ e=exp (* let f x y = e ;; *)
-    { DLet (x, false, args, fresh_tvar (), e) }
-  | LET x=bind args=args COLON t=typ EQ e=exp (* let f x y : typ = e ;; *)
-    { DLet (x, false, args, t, e) }
-  | LET REC x=bind args=args EQ e=exp (* let rec f x y = e ;; *)
-    { DLet (x, true, args, fresh_tvar(), e) }
-  | LET REC x=bind args=args COLON t=typ EQ e=exp (* let rec f x y : typ = e ;; *)
-    { DLet (x, true, args, t, e) }
-  | DEFAND x=bind args=args COLON t=typ EQ e=exp
-    { DLet (x,true,args,t,e)  }
-  | DEFAND x=bind args=args EQ e=exp (* let rec f x y = e ;; *)
-    { DLet (x, true, args, fresh_tvar(), e) }
+  | x=bind args=args EQ e=exp (* let f x y = e ;; *)
+    { (x, false, args, fresh_tvar (), e) }
+  | x=bind args=args COLON t=typ EQ e=exp (* let f x y : typ = e ;; *)
+    { (x, false, args, t, e) }
 
-exp_bind:
-  | e=exp (* e *)
-    { DLet (BindOne "-", false, [], fresh_tvar(), e)}
+letrec_bind:
+  | x=bind args=args EQ e=exp (* let f x y = e ;; *)
+    { (x, true, args, fresh_tvar (), e) }
+  | x=bind args=args COLON t=typ EQ e=exp (* let f x y : typ = e ;; *)
+    { (x, true, args, t, e) }
 
 (***** }}} *****)
 
@@ -368,18 +350,22 @@ exp_comma_list:
 exp_struct:  
   | MATCH e=exp WITH bs=branches 
     { EMatch (e, bs) }
-  | FUN xs=args ARR e=exp_struct
+  | FUN xs=args ARR e=exp
     { binding_args xs e }
   | FUNCTION bs=branches
     { EFun(ArgOne("__fun__",fresh_tvar()),EMatch(EVar "__fun__",bs)) }
-  | LET f=bind args=args COLON t=typ EQ e1=exp_struct IN e2=exp_struct
+  | LET f=bind args=args COLON t=typ EQ e1=exp IN e2=exp
     { ELet (f, false, args, t, e1, e2) }
-  | LET REC f=bind args=args COLON t=typ EQ e1=exp_struct IN e2=exp_struct
+  | LET REC f=bind args=args COLON t=typ EQ e1=exp IN e2=exp
     { ELet (f, true, args, t, e1, e2) }
-  | LET f=bind args=args EQ e1=exp_struct IN e2=exp_struct
+  | LET f=bind args=args EQ e1=exp IN e2=exp
     { ELet (f, false, args, fresh_tvar(), e1, e2) }
-  | LET REC f=bind args=args EQ e1=exp_struct IN e2=exp_struct
+  | LET REC f=bind args=args EQ e1=exp IN e2=exp
     { ELet (f, true, args, fresh_tvar(), e1, e2) } 
+  | LET d=letbind ds=let_and_list IN e2=exp
+    { EBlock (false, d::ds, e2) }
+  | LET REC d=letrec_bind ds=letrec_and_list IN e2 = exp
+    { EBlock (true, d::ds, e2) }
   | IF e1=exp_struct THEN e2=exp_struct ELSE e3=exp_struct
     { IF (e1, e2, e3) }
   | e=exp_op
@@ -416,7 +402,6 @@ exp_op:
     { EQUAL (e1, e2) }
   | e1=exp_op EQ EQ e2=exp_op
     { EQUAL (e1, e2) }
-
   | e1=exp_op NOTEQ e2=exp_op
     { NOTEQ (e1, e2) }
   | e1=exp_op AT e2=exp_op
@@ -590,5 +575,69 @@ pat_semi_list:
     { [] }
   | SEMI p=pat ps=pat_semi_list
     { p::ps }
+
+(***** }}} *****)
+
+(***** Testcase {{{ *****)
+
+examples:
+  | 
+    { [] }
+  | e=example es=examples
+    { e::es}
+
+example:
+  | i=exp_list FATARR o=value SEMI
+    { (i,o) }
+
+exp_list:
+  | e=exp
+    { [e] }
+  | e=exp SEMI el=exp_list
+    { e::el }
+
+value:
+  | v=value_base COMMA vs=value_comma_list
+    { VTuple (v::vs) }
+  | c=value_base
+    { c }
+
+value_base:
+  | LPAREN RPAREN
+    { VUnit }
+  | c=INT
+    { VInt c }
+  | TRUE
+    { VBool true }
+  | FALSE
+    { VBool false }
+  | c=STRING
+    { VString c }
+  | LBRACKET RBRACKET
+    { VList [] }
+  | LBRACKET v=value vs=value_semi_list RBRACKET
+    { VList (v::vs) }
+  | c=UID
+    { VCtor (c, []) }
+  | c=UID v=value_base
+    { VCtor (c, [v]) }
+  | MINUS c=INT
+    { VInt (-c)}
+  | LPAREN v=value RPAREN
+    { v }
+
+value_semi_list:
+  | 
+    { [] }
+  | SEMI
+    { [] }
+  | SEMI v=value vs=value_semi_list
+    { v::vs }
+
+value_comma_list : 
+  | c=value_base
+    { [c] }
+  | c=value_base COMMA cl=value_comma_list
+    { c::cl }
 
 (***** }}} *****)
