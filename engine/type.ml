@@ -379,11 +379,18 @@ let rec gen_equations : HoleType.t -> VariableType.t -> TEnv.t -> exp -> typ -> 
     let typ_pat = fresh_tvar () in
     let typ_exp = fresh_tvar () in
     let (eqns, hole_typ, var_typ) = gen_equations hole_typ var_typ tenv e typ_pat in
-    List.fold_left (fun (eqns, hole_typ, var_typ) (pat, exp) ->
-      let (tenv, pat_eqn) = gen_pat_equations (tenv, eqns) pat typ_pat in
-      let (exp_eqn, hole_typ, var_typ) = gen_equations hole_typ var_typ tenv exp typ_exp in
-      (eqns@pat_eqn@exp_eqn, hole_typ, var_typ)
-    ) ((ty,typ_exp)::eqns, hole_typ, var_typ) bs
+    (* Inference each branches *)
+    let results = 
+      List.map (fun (pat, exp) ->
+        let (tenv, pat_eqn) = gen_pat_equations (tenv, eqns) pat typ_pat in
+        let (exp_eqn, hole_typ, var_typ) = gen_equations hole_typ var_typ tenv exp typ_exp in
+        (pat_eqn@exp_eqn, hole_typ, var_typ)
+      ) bs
+    in
+    (* Merge them together *)
+    List.fold_left (fun (eqn, hole_typ, var_typ) (eqn', hole_typ', var_typ') -> 
+      (eqn@eqn', BatMap.union hole_typ hole_typ', BatMap.union var_typ var_typ')
+    ) (eqns, hole_typ, var_typ) results
   | Hole n ->
     let t = fresh_tvar () in
     let hole_typ = HoleType.extend n t hole_typ in
@@ -487,6 +494,7 @@ and ctors_to_env : TEnv.t -> typ -> ctor list -> TEnv.t
 
 let run : prog -> (TEnv.t * HoleType.t * VariableType.t)
 = fun decls -> 
+  Print.print_pgm decls;
   let _ = start_time:=Sys.time() in
   let decls = decls@(External.grading_prog) in
   let decls = Converter.convert Converter.empty decls in
