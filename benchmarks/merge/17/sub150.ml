@@ -2,8 +2,9 @@ let rec merge (l1, l2) : int list =
     match (l1, l2) with
     | ([], _) -> l2
     | (_, []) -> l1
-    | (hd1::tl1, hd2::tl2) when hd1 > hd2 -> hd1::(merge (tl1, l2))
-    | (hd1::tl1, hd2::tl2) -> hd2::(merge (l1, tl2))
+    | (hd1::tl1, hd2::tl2) ->
+      if(hd1>hd2) then hd1::(merge (tl1, l2))
+      else hd2::(merge (l1, tl2))
 
 (*let a11 = merge ([7; 2; 1], [5; 4; 3])
 let a12 = merge ([], [])

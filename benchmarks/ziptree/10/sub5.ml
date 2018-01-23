@@ -32,7 +32,7 @@ let goRight loc =
 let goUp loc =
         match loc with
         LOC(t, TOP) -> raise (NOMOVE "up of top")
-        | LOC(t, HAND(left, up, right)) -> LOC( NODE(((List. rev left)@[t])@right), up)
+        | LOC(t, HAND(left, up, right)) -> LOC( NODE(((List.rev left)@[t])@right), up)
 ;;
 
 let goDown loc =

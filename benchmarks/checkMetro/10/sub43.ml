@@ -7,12 +7,9 @@ and name = string ;;
 
 let rec checkMetro metr =
 
-	let makeBool a b =
-		match (String.compare a b) with
-		0 -> true
-		| _ -> false in
-
-	let rec checkArea(namArr, metr) =
+	let makeBool a b = (a=b)
+	
+  let rec checkArea(namArr, metr) =
 		match metr with
 		STATION na -> 	if (List.length namArr) == 1 then makeBool (List.hd namArr) na
 				else (makeBool (List.hd namArr) na) || checkArea((List.tl namArr), metr)

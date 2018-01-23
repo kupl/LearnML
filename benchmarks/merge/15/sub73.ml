@@ -1,4 +1,4 @@
-let rec merge = function ((v1, v2): int list * int list) ->
+let rec merge ((v1:int list), (v2:int list)) =
     match (v1, v2) with
     | ([], l2) -> l2
     | (l1, []) -> l1

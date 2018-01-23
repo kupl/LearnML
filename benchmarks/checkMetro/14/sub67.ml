@@ -3,14 +3,14 @@ type metro = STATION of name
 | CONNECT of metro * metro
 and name = string
 
-let rec check(metro, list) =
+let rec check(metro, lst) =
 	match metro with
     | STATION (name) -> 
-			  List.mem name list
+			  List.mem name lst
 		| CONNECT(metro1,metro2) ->
-			(check(metro1, list) && check(metro2, list))
+			(check(metro1, lst) && check(metro2, lst))
 		| AREA(name, metro) ->
-			(check(metro, List.append [name] list));;
+			(check(metro, List.append [name] lst));;
 			
 let checkMetro (metro) =
 		check(metro, []);;

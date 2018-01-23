@@ -5,10 +5,10 @@ and name = string
 let rec checkcorrect l =
   match l with
   |([],station) -> false
-  |(a::list,station) -> if a=station then true else checkcorrect (list,station)
+  |(a::lst,station) -> if a=station then true else checkcorrect (lst,station)
 let rec checkMetro2 m =
   match m with
-  |(list,AREA(left,right))->checkMetro2 (left::list,right)
-  |(list,STATION(station))->checkcorrect (list,station)
-  |(list,CONNECT(left,right))->checkMetro2 (list,left) && checkMetro2 (list,right)
+  |(lst,AREA(left,right))->checkMetro2 (left::lst,right)
+  |(lst,STATION(station))->checkcorrect (lst,station)
+  |(lst,CONNECT(left,right))->checkMetro2 (lst,left) && checkMetro2 (lst,right)
 let checkMetro n = checkMetro2 ([],n)

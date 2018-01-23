@@ -5,12 +5,12 @@ type metro = STATION of name
 | CONNECT of metro * metro
 and name = string
 
-let rec listSearch ((l, key): (string list * string)): bool= 
+let rec listSearch ((l: string list), (key: string)): bool= 
 	match l with
 	| [] -> false
 	| hd::tl -> if hd = key then true else listSearch (tl, key)
 
-let rec checkNameStation ((n, m): (string list * metro)): bool= 
+let rec checkNameStation ((n:string list), (m:metro)): bool= 
 	match m with
 	| STATION sname -> listSearch (n, sname)
 	| AREA (sname, subm) -> checkNameStation(sname::n, subm)

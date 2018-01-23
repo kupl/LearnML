@@ -12,6 +12,4 @@ let rec env_checker : metro -> string list -> bool =
 				| CONNECT (bm, cm) -> ((env_checker bm myls) && (env_checker cm myls)))))
 
 let checkMetro alp =
-	try
 		(env_checker alp [])
-	with e -> raise (Error "You are idiot.")	

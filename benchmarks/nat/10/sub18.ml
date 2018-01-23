@@ -3,10 +3,10 @@ type nat = ZERO | SUCC of nat
 
 let rec natadd : nat * nat -> nat =
   fun input ->
-    try (match (snd input)
+  (match (snd input)
          with ZERO -> (fst input)
            | SUCC(x) -> natadd(SUCC(fst input),x)
-    ) with _ -> raise (Error "cake is a lie")
+    )
 let natmul : nat*nat -> nat =
   fun input ->
     let rec natadd : nat * nat -> nat =
@@ -19,6 +19,4 @@ let natmul : nat*nat -> nat =
       with ZERO -> (fst mul_input)
         | SUCC(x) -> natmul (natadd((fst input), (fst mul_input)), x)
     in
-      try (
         natmul (ZERO, (snd input))
-      ) with _ -> raise (Error "cake is a lie")

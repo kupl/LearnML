@@ -16,7 +16,7 @@ let rec exclude: metro -> string list -> bool = fun m strl ->
     (match m with
      | STATION sta -> false
      | AREA(area, next) ->
-	if (List.mem area strl) then (exclude next (List.filter ((<>) area) strl))
+	if (List.mem area strl) then (exclude next (List.filter (fun x -> x != area) strl))
 	else (exclude next strl)
      | CONNECT(STATION sta, con2) -> exclude con2 strl
      | CONNECT(con1, STATION sta) -> exclude con1 strl

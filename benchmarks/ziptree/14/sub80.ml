@@ -16,12 +16,6 @@ type zipper = TOP
 
 type location = LOC of tree * zipper
 
-let print_tree t =
-let print_space w = print_string (String.make w '.') in
-let rec print_tree_sub w = function
-| LEAF item -> print_space w; print_string item; print_string "\n"
-| NODE nodes -> List.iter (fun t -> (print_tree_sub (w+2) t); () ) nodes
-in (print_tree_sub 0 t)
 
 exception NOMOVE of string
 

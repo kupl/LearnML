@@ -11,7 +11,7 @@ let rec remainStation: metro->name list=
     fun me->
 	    match me with
 	    |STATION n -> [n]
-		|AREA (n,m) -> List.filter (fun x -> (String.compare n x)!=0) (remainStation m)
+		|AREA (n,m) -> List.filter (fun x -> (n !=x) (remainStation m)
 	    |CONNECT (lm,rm) ->List.append (remainStation lm) (remainStation rm)
 
 let checkMetro: metro->bool=

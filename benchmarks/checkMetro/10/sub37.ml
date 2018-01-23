@@ -7,8 +7,6 @@ type metro  = STATION of name
 			| CONNECT of metro * metro
 	and name = string
 
-open List;;
-
 let rec checkMetro : metro -> bool = fun m ->
 	let rec checkMetroAux env m =
 		match m with

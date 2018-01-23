@@ -43,4 +43,3 @@ let deleteMin = function EMPTY -> raise EmptyHeap
   | NODE(_, _, lh, rh) -> merge(lh, rh) ;;
 
 (* test_case *)
-assert(findMin(deleteMin(deleteMin(insert(6, insert(4, insert(9, insert(5, insert(3, insert(-1, EMPTY))))))))) = 4);;

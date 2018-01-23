@@ -14,7 +14,7 @@ let rec mycheck (m, lst) =
 	match m with
 	| STATION p -> calarea (lst, p)
 	| AREA (p, q) ->
-		mycheck (q, lst @ [p]);
+		mycheck (q, lst @ [p])
 	| CONNECT (p, q) ->
 		mycheck (p, lst) && mycheck (q, lst)
 

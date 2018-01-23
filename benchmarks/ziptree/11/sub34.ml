@@ -18,7 +18,7 @@ let goRight loc = match loc with
 
 let goUp loc = match loc with
 	LOC(t, TOP) -> raise (NOMOVE "up of top")
-	| LOC(t, HAND(left, up, right)) -> LOC( NODE (List.concat [ List.rev(left) ; [t]; right]), up )
+	| LOC(t, HAND(left, up, right)) -> LOC( NODE (List.rev(left)@[t]@right), up )
 
 let goDown loc = match loc with
 	LOC(LEAF x, zip) -> raise (NOMOVE "down of leaf")

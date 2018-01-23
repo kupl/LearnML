@@ -31,8 +31,8 @@ LOC(NODE(List.append (List.append (List.rev left) [t]) right),up)
 let goDown loc = match loc with
 LOC(LEAF(item),z) -> 
 raise (NOMOVE "very bottom")
-| LOC(NODE(l::list),z) -> 
-LOC(l, HAND([],z,list))
+| LOC(NODE(l::lst),z) -> 
+LOC(l, HAND([],z,lst))
 | LOC(NODE [] ,_) ->
 raise (NOMOVE "empty node")
 

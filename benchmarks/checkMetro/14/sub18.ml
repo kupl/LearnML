@@ -4,7 +4,7 @@ type metro = STATION of name
 and name = string
 
 let compareId (idStation: string) (idArea: string): bool = 
-  if (String.compare idStation idArea)==0 then true
+  if (idStation = idArea) then true
   else false
 
 let rec checkArea (idList: string list) (m: metro): bool = 

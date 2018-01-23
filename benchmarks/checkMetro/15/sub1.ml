@@ -6,18 +6,18 @@ type metro = STATION of name
   |AREA of name * metro
   |CONNECT of metro * metro
 
-let rec check_list (list, name) = 
-  match list with
+let rec check_list (lst, name) = 
+  match lst with
   |[] -> false
   |head::tail ->
       (if head = name then true
 	  else (check_list (tail, name)))
   
-let rec list_make (list, metro) =
+let rec list_make (lst, metro) =
   match metro with
-  |STATION a -> check_list (list, a)
-  |AREA (a, b) -> list_make (a::list, b)
-  |CONNECT (a, b) -> list_make (list, a) && list_make (list, b)
+  |STATION a -> check_list (lst, a)
+  |AREA (a, b) -> list_make (a::lst, b)
+  |CONNECT (a, b) -> list_make (lst, a) && list_make (lst, b)
 
 let rec checkMetro metro =
   match metro with

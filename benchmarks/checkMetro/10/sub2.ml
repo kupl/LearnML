@@ -8,7 +8,7 @@ let rec checkstation : string * metro -> bool =
 (
 	function (x, y) ->
 		match y with
-		STATION a -> if String.compare x a == 0 then true else false
+		STATION a -> if x=a then true else false
 		| AREA (a, b) -> checkstation(x, b)
 		| CONNECT (a, b) -> (checkstation (x, a) || checkstation (x, b))
 );;

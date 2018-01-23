@@ -11,7 +11,7 @@ let compare((st, stan): 'a * 'a): bool =
 *)
 
 let checkMetro(m: metro) : bool = 
-	let rec rec_checkMetro((met,area_list): metro*string list): bool = 
+	let rec rec_checkMetro((met:metro),(area_list:string list)): bool = 
 		match met with 
 		| STATION(s) -> List.exists(fun x -> x=s) area_list
 		| AREA(s, _m) -> rec_checkMetro(_m, s::area_list)

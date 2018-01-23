@@ -6,7 +6,7 @@ and name = string
 let rec contains ((n: name), (l: name list)): bool = (*List.contains function*)
 	match l with 
 	| [] -> false
-	| h::t -> if ((String.compare h n) == 0) then true
+	| h::t -> if (n=h) then true
 			  else contains(n, t)
 
 let rec checkMetrosub((m: metro), (l: name list)): bool = 

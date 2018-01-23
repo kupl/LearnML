@@ -13,4 +13,4 @@ let checkMetro : metro -> bool =
           | AREA(n,m) -> (checkMetro m (n::env))
           | CONNECT(m1,m2) -> ((checkMetro m1 env) && (checkMetro m2 env))
     in
-      try (checkMetro metro []) with _ -> raise (Error "cake is a lie")
+    (checkMetro metro []) 

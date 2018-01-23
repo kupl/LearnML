@@ -9,44 +9,36 @@ type location = LOC of tree * zipper
 
 let goLeft : location -> location =
   fun location ->
-    try
       (
         match location
         with LOC(t, TOP) -> raise (NOMOVE "left of top")
           | LOC(t,HAND([], u, r)) -> raise (NOMOVE "left of first")
           | LOC(t,HAND(l::ls,u,r)) -> LOC(l,HAND(ls,u,t::r))
-      ) with NOMOVE s -> raise (NOMOVE s)
-      | _ -> raise (Error "cake is a lie")
+      ) 
 
 let goRight : location -> location =
   fun location ->
-    try
       (
         match location
         with LOC(t, TOP) -> raise (NOMOVE("right of top"))
           | LOC(t,HAND(l, u, [])) -> raise (NOMOVE("left of first"))
           | LOC(t,HAND(l, u, r::rs)) -> LOC(r,HAND(t::l,u,rs))
-      ) with NOMOVE s -> raise (NOMOVE s)
-      | _ -> raise (Error "cake is a lie")
+      )
 
 let goUp : location -> location =
   fun location ->
-    try
       (
         match location
         with LOC(t, TOP) -> raise (NOMOVE("up of top"))
           | LOC(t,HAND(l, TOP, r)) -> raise (NOMOVE("up of first"))
           | LOC(t,HAND(l, u,r)) -> LOC(NODE(l@(t::r)), u)
-      ) with NOMOVE s -> raise (NOMOVE s)
-      | _ -> raise (Error "cake is a lie")
+      ) 
 
 let goDown : location -> location =
   fun location ->
-    try
       (
         match location
         with LOC(LEAF(i), z) -> raise (NOMOVE("down of bottom"))
           | LOC(NODE([]), z) -> raise (NOMOVE("down of first"))
           | LOC(NODE(t::ts), TOP) -> 
-      ) with NOMOVE s -> raise (NOMOVE s)
-      | _ ->raise (Error "cake is a lie")
+      ) 

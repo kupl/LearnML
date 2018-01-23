@@ -28,20 +28,10 @@ let checkMetro m =
   match m_sub with
    STATION id -> (contain_id store id)
    |AREA (id, m1) -> (checkMetro_sub m1 (add_id store id))
-   |CONNECT (m1, m2) -> ((checkMetro_sub m1 store) &
+   |CONNECT (m1, m2) -> ((checkMetro_sub m1 store) &&
    			 (checkMetro_sub m2 store))
  in
 
  (* 본 함수 시작 *)
  (checkMetro_sub m [])
 ;;
-
-(* test code *)
-let t1 = AREA("a", STATION "a");;
-let t2 = AREA("a", AREA("a", STATION "a"));;
-let t3 = AREA("a", AREA("b", CONNECT(STATION "a", STATION "b")));;
-let t4 = AREA("a", CONNECT(STATION "a", AREA("b",STATION "a")));;
-
-let f1 = AREA("a", STATION "b");;
-let f2 = AREA("a", CONNECT(STATION "a", AREA("b", STATION "c")));;
-let f3 = AREA("a", AREA("b", CONNECT(STATION "a", STATION "c")));;

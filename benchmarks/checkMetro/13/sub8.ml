@@ -1,5 +1,3 @@
-open List
-
 type metro = 
     STATION of name
   | AREA of name * metro
@@ -18,7 +16,7 @@ let checkMetro m =
     | AREA (a, n) -> 
 	(checkMetroWithList n (addItem ml a))
     | CONNECT (n, l) -> 
-	(checkMetroWithList n ml & checkMetroWithList l ml)
+	(checkMetroWithList n ml && checkMetroWithList l ml)
     | STATION s -> 
 	if exists (isSame s) ml then true
 	else false in

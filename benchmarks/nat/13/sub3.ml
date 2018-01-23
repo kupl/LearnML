@@ -5,7 +5,7 @@ let rec natadd ((a : nat), (b : nat)) : nat =
     (
         match a with
             ZERO -> b
-        |   SUCC (c : nat) -> natadd(c, (SUCC b))
+        |   SUCC (c) -> natadd(c, (SUCC b))
     )
 
 let natmul ((a : nat), (b : nat)) : nat =
@@ -17,8 +17,8 @@ let natmul ((a : nat), (b : nat)) : nat =
                 |   (_, ZERO) -> ZERO
                 |   ((SUCC ZERO), _) -> natadd(b, c)
                 |   (_, (SUCC ZERO)) -> a
-                |   ((SUCC (d : nat)), _) ->
-                        let (x : nat) = natadd (b, c) in
+                |   ((SUCC (d)), _) ->
+                        let x : nat = natadd (b, c) in
                         (temp_natmul d b x)
             ) in
         (temp_natmul a b ZERO)

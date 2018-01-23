@@ -11,8 +11,6 @@ let rec int_to_nat : int -> nat = fun i ->
     if i == 0 then ZERO
     else SUCC(int_to_nat(i-1))
 
-let print_nat = fun n -> print_endline(string_of_int(nat_to_int(n)))
-
 
 let natadd : nat*nat -> nat = fun(n1, n2) -> int_to_nat(nat_to_int(n1) + nat_to_int(n2))
 let natmul : nat*nat -> nat = fun(n1, n2) -> int_to_nat(nat_to_int(n1) * nat_to_int(n2))

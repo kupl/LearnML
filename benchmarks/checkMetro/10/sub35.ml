@@ -21,4 +21,4 @@ let rec sub_checkMetro metro set=
 	
 
 let rec checkMetro metro =
-	sub_checkMetro metro [];
+	sub_checkMetro metro []

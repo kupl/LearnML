@@ -4,10 +4,10 @@ type metro = STATION of name
 and name = string;;
 
 let checkMetro m =
-	let rec ismem m list = 
+	let rec ismem m lst = 
 		match m with
-		| STATION n -> List.mem n list
-		| AREA (n, m1) -> ismem m1 (n::list)
-		| CONNECT (m1, m2) -> ismem m1 list && ismem m2 list
+		| STATION n -> List.mem n lst
+		| AREA (n, m1) -> ismem m1 (n::lst)
+		| CONNECT (m1, m2) -> ismem m1 lst && ismem m2 lst
 	in
 	ismem m [];;

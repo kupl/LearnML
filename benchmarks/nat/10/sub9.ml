@@ -1,11 +1,5 @@
 type nat = ZERO | SUCC of nat
 
-let print_nat nat =
-  let rec value nat =
-    match nat with ZERO -> 0
-    | SUCC n -> (value n) + 1 in
-  print_int (value nat)
-
 let rec natadd (a, b) =
   match (a, b) with (ZERO, x) -> x
   | (x, ZERO) -> x

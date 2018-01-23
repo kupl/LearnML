@@ -6,7 +6,7 @@ and name = string
 
 let rec checkMetro (m : metro) : bool = checking(m,[])
 
-and checking (m,l : metro * string list) : bool =
+and checking ((m:metro),(l : string list)) : bool =
   match m with
   |STATION(n) -> List.exists (fun x -> x = n) l
   |AREA(n,m) -> checking(m,([n]@l))

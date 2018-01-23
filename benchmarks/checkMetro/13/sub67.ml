@@ -3,11 +3,11 @@ type metro = STATION of name
 | CONNECT of metro * metro
 and name = string
 
-let rec dec met list=
+let rec dec met lst=
   match met with
-  |STATION a -> if(List.mem a list)=true then true else false
-  |CONNECT (m1, m2) -> (dec m1 list)&&(dec m1 list)
-  |AREA(n1, m1)->(dec m1 (n1::list))
+  |STATION a -> if(List.mem a lst)=true then true else false
+  |CONNECT (m1, m2) -> (dec m1 lst)&&(dec m1 lst)
+  |AREA(n1, m1)->(dec m1 (n1::lst))
   
   let rec checkMetro m=
   match m with

@@ -15,13 +15,22 @@ let goRight loc = match loc with
 	| LOC(t, HAND(left, up, r::right)) -> LOC(r, HAND(t::left, up, right))
 	| LOC(t, HAND(left, up, [])) -> raise (NOMOVE "right of first")
 
-let goDown (LOC (tr, zip)) = 
+let sub loc = 
+  match loc with
+  |LOC(tr,zip) -> (tr,zip)
+  |_ -> raise (NOMOVE "")
+
+
+let goDown loc = 
+  let (tr,zip) = sub loc in
 	match tr with
 	  LEAF str -> raise (NOMOVE "down of bottom")
 	| NODE [] -> raise (NOMOVE "empty tree")
 	| NODE (a::lst) -> LOC(a, HAND([], zip, lst))
 
-let goUp (LOC (tr, zip)) = 
+
+let goUp loc = 
+  let (tr,zip) = sub loc in
 	match zip with
 	  TOP -> raise (NOMOVE "up of top")
 	| HAND (left, up, right) -> LOC (NODE (List.append left (tr::right)), up)

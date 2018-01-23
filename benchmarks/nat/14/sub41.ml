@@ -15,4 +15,4 @@ let rec natmul : nat * nat -> nat =
     | ZERO, _ -> ZERO
     | _ , (SUCC ZERO) -> l
     | (SUCC ZERO), _ -> r
-    | _ as left, (SUCC r_in) -> natadd (left, natmul (left, r_in))
+    | left, (SUCC r_in) -> natadd (left, natmul (left, r_in))

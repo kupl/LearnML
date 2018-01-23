@@ -10,28 +10,28 @@ let findMin = function EMPTY -> raise EmptyHeap
 let getlh = function EMPTY -> raise EmptyHeap 
   | NODE (_, _, lh, _) -> lh 	
  
-let rec mergeing = fun (heap1, heap2,list) -> 
+let rec mergeing = fun (heap1, heap2,lst) -> 
 	match (heap1, heap2) with
     | (EMPTY, _) -> 
-			(heap2,list)
+			(heap2,lst)
 		| (_, EMPTY) ->
-			(heap1,list)
+			(heap1,lst)
 		| (NODE(r1,v1,lh1,rh1),NODE(r2, v2,lh2,rh2)) ->
-			if (v1 <= v2) then mergeing(rh1,heap2,List.append [NODE(r1,v1,lh1,rh1)] list)
-			else mergeing(rh2,heap1,List.append [NODE(r2, v2,lh2,rh2)] list)
+			if (v1 <= v2) then mergeing(rh1,heap2,List.append [NODE(r1,v1,lh1,rh1)] lst)
+			else mergeing(rh2,heap1,List.append [NODE(r2, v2,lh2,rh2)] lst)
 
 let shake = function (x,lh,rh) ->
 	if (rank lh) >= (rank rh)
 	then NODE(rank rh + 1, x, lh, rh)
 	else NODE(rank lh + 1, x, rh, lh)		
 	
-let rec shaking(heap, list)=
-	match (heap, list) with
+let rec shaking(heap, lst)=
+	match (heap, lst) with
     | (_, []) -> 
 			heap
 		| (_, _) ->
-			let node = List.hd(list) in
-		shaking(shake(findMin(node),getlh(node),heap),List.tl(list))		
+			let node = List.hd(lst) in
+		shaking(shake(findMin(node),getlh(node),heap),List.tl(lst))		
 
 let merge(heap1, heap2) =
 	shaking(mergeing(heap1, heap2,[]))

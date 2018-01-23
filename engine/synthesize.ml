@@ -469,7 +469,7 @@ let count = ref 0
 let rec work : Workset.t -> components -> examples -> prog option
 = fun workset exp_set examples->
 	iter := !iter +1;
-  if (Sys.time() -. (!start_time) >60.0) then None
+  if (Sys.time() -. (!start_time) >1800.0) then None
   else if (!iter mod 10000 = 0)
 	  then
 		  begin

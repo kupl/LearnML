@@ -23,7 +23,7 @@ let goRight(l:location) : location =
 let goUp(l:location) : location = 
 	 match l with
 	 |LOC(t, TOP) -> raise (NOMOVE "Top")
-	 |LOC(t, HAND(left, up, right)) -> LOC(NODE( List.concat[List.rev left ; [t] ; right] ), up)
+	 |LOC(t, HAND(left, up, right)) -> LOC(NODE(List.rev left@[t]@right), up)
 
 let goDown(l:location) : location = 
 	 match l with

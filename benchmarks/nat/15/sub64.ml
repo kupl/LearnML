@@ -1,6 +1,6 @@
 type nat = ZERO | SUCC of nat;;
 
-let rec natadd = function ((a, b): nat * nat) ->
+let rec natadd ((a:nat), (b:nat)) =
     match (a, b) with     
     | (ZERO, ZERO) -> ZERO
     | (ZERO, SUCC _) -> b
@@ -9,7 +9,7 @@ let rec natadd = function ((a, b): nat * nat) ->
             let prev = natadd(l, b) in
             SUCC (prev);;
 
-let rec natmul = function((a, b): nat * nat) ->
+let rec natmul ((a:nat), (b:nat)) =
     match (a, b) with
     | (ZERO, _) -> ZERO
     | (_, ZERO) -> ZERO

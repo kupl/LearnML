@@ -1,4 +1,4 @@
-let merge ((x,y) : int list * int list) : int list =
+let merge ((x:int list),(y:int list)) : int list =
   let rec merge' acc l l' =
     match l, l' with
     | [], [] -> acc

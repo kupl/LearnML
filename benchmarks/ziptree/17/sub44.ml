@@ -31,26 +31,4 @@ let goDown loc = match loc with
   | LOC(NODE [a; b; c], hand) -> LOC(a, HAND([], hand, [b; c]))
   | _ -> raise (NOMOVE "wrong tree")
 
-let rec printTree tree = match tree with
-  | LEAF a -> print_string ("LEAF "^a^"; ")
-  | NODE [a; b; c] -> print_string "NODE ["; printTree a;
-                     printTree b; printTree c; print_string "] "
-  | _ -> raise (NOMOVE "wrong tree")
-
-let rec printTreeList li = match li with
-  | [] -> print_string "]"
-  | h::t -> printTree h; printTreeList t
-
-let rec printHand hand = match hand with
-  | TOP -> print_string "TOP"
-  | HAND(left, up, right) -> print_string "["; printTreeList left; 
-                             printHand up; print_string "["; printTreeList right
-let printLocation loc = match loc with
-  | LOC(t, hand) -> print_string "LOC ("; printTree t; 
-                    print_string ", "; print_string "HAND (";
-                    printHand hand; print_endline "))"
-
-
-let tree = NODE [ NODE [LEAF "a"; LEAF "*"; LEAF "b"]; LEAF "+"; 
-           NODE [LEAF "c"; LEAF "*"; LEAF "d"]]
 

@@ -1,5 +1,4 @@
 exception TODO
-open Printf
 
 let merge (a, b) =
 	let rec insert (a, l) =

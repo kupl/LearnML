@@ -16,8 +16,4 @@ let rec natmul : nat * nat -> nat = fun (x, y) ->
 
 (* TESTING FIELD BELOW *)
 
-let ans =
-  if natmul ((SUCC (SUCC ZERO)), (SUCC (SUCC ZERO))) = SUCC (SUCC (SUCC (SUCC ZERO)))
-  then 1 else 0
 
-let _ = print_endline(string_of_int(ans))
