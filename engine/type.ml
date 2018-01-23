@@ -331,10 +331,10 @@ let rec gen_equations : HoleType.t -> VariableType.t -> TEnv.t -> exp -> typ -> 
     (eqns@eqns'@eqns'',hole_typ,var_typ)
   | ELet (f, is_rec, args, typ, e1, e2) ->
     let (func_typ, args_env) = (type_of_fun args typ, bind_args tenv args) in
-    let tenv = if is_rec then let_binding args_env f func_typ else args_env in
-    let tenv' = let_binding tenv f func_typ in
-    let (eqns,hole_typ,var_typ) = gen_equations hole_typ var_typ tenv e1 typ in
-    let (eqns',hole_typ,var_typ) = gen_equations hole_typ var_typ tenv' e2 ty in
+    let tenv1 = if is_rec then let_binding args_env f func_typ else args_env in
+    let tenv2 = let_binding tenv f func_typ in
+    let (eqns,hole_typ,var_typ) = gen_equations hole_typ var_typ tenv1 e1 typ in
+    let (eqns',hole_typ,var_typ) = gen_equations hole_typ var_typ tenv2 e2 ty in
     ((eqns@eqns'),hole_typ,var_typ)
   | EBlock (is_rec, bindings, e2) ->
     (* initialize tenv *)
