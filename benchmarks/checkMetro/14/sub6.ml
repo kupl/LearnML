@@ -6,7 +6,7 @@ and name =
   string
 
 let checkMetro(metro: metro): bool =
-  let rec checkMetroInternal(metro, validNames: metro * name list) =
+  let rec checkMetroInternal((metro:metro), (validNames: name list)) =
     match metro with
       STATION(id) ->
         List.mem id validNames

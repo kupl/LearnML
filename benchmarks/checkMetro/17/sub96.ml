@@ -3,7 +3,7 @@ type metro = STATION of name
 | CONNECT of metro * metro
 and name = string
 
-let same y = fun x -> ((String.compare x y) == 0)
+let same y = fun x -> (x= y)
 
 let rec checkMetroName (x, y) = match y with
 							|STATION a -> List.exists (same a) x

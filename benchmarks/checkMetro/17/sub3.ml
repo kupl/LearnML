@@ -5,7 +5,7 @@ and name = string
 
 let rec checkMetroInList metro station_list =
 	match metro with
-	| STATION name -> List.exists (fun x -> (String.compare x name) == 0) station_list
+	| STATION name -> List.exists (fun x -> (x=name)) station_list
 	| AREA (name, sub_metro) -> checkMetroInList sub_metro (name :: station_list)
 	| CONNECT (metro1, metro2) -> (checkMetroInList metro1 station_list) && (checkMetroInList metro2 station_list)
 

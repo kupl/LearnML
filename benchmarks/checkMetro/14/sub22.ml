@@ -20,11 +20,10 @@ let rec checkMetro met =
 			(n1 = n2) 
 		in
 		match m with
-		| STATION s -> (* print_list print_string areanamelist *) (List.exists (search s) areanamelist);
+		| STATION s -> (* print_list print_string areanamelist *) (List.exists (search s) areanamelist)
 		| AREA (a, m1) -> (innerMetro m1 (a::areanamelist)) 
 		| CONNECT (m1, m2) -> (innerMetro m1 areanamelist) && (innerMetro m2 areanamelist)
 	in
-
 	innerMetro met []
 
 (*

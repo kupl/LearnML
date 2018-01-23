@@ -36,16 +36,16 @@ and merge =
                     else NODE((rank lh) + 1, x, rh, lh)
             ) in
         function
-            (EMPTY, (h : heap)) -> h
-        |   ((h : heap), EMPTY) -> h
-        |   ((lh : heap), (rh : heap)) ->
-                let (lv : value) = (findMin lh) in
-                let (rv : value) = (findMin rh) in
+            (EMPTY, (h)) -> h
+        |   ((h), EMPTY) -> h
+        |   ((lh), (rh)) ->
+                let lv = (findMin lh) in
+                let rv = (findMin rh) in
                 if(lv <= rv)
                 then
-                    let (nlh : heap) = (deleteMin lh) in
+                    let nlh = (deleteMin lh) in
                     shake(lv, nlh, rh)
                 else
-                    let (nrh : heap) = (deleteMin rh) in
+                    let nrh = (deleteMin rh) in
                     shake(rv, lh, nrh)
     )

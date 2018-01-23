@@ -3,8 +3,8 @@ type metro = STATION of name
 			| CONNECT of metro * metro
 and name = string
 
-let rec addi i list =
-	match list with
+let rec addi i lst =
+	match lst with
 	| [] -> [i]
 	| h :: t -> h :: addi i t
 
@@ -14,8 +14,8 @@ let rec getpair (stations, metroin) =
 	| AREA (x, y) -> (List.map (addi x) (getpair (stations, y)))
 	| CONNECT (x, y) -> List.append (getpair (stations, x)) (getpair (stations, y))
 
-let exceptFirst list =
-	match list with
+let exceptFirst lst =
+	match lst with
 	| [] -> []
 	| h::t -> t
 

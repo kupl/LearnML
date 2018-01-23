@@ -38,6 +38,6 @@ let goDown loc = match loc with
 	(
 		match tree_list with
 		| [] -> raise (NOMOVE "down of empty node; illegal")
-		| t::right -> LOC (t, HAND([], here, right)); (* go to the leftest element of tree list *)
+		| t::right -> LOC (t, HAND([], here, right)) (* go to the leftest element of tree list *)
 	)
 

@@ -10,7 +10,7 @@ let rec checkmetro_sub : STATION * metro -> bool = (
   function (s, c) ->
   match c with
   STATION x -> if s == STATION x then true else false
-  | AREA (x, y) -> checkmetro_sub (s, y);
+  | AREA (x, y) -> checkmetro_sub (s, y)
   | CONNECT (x, y) -> checkmetro_sub (s, x) or checkmetro_sub (s, y)
 );;
 

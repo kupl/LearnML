@@ -329,7 +329,6 @@ let run : prog -> env
   start_time:=Unix.gettimeofday();
   let init_env = List.fold_left eval_decl empty_env (External.init_prog) in
   start_time:=Unix.gettimeofday();
-  let decls = decls@(External.grading_prog) in
   let env = List.fold_left eval_decl init_env decls in
   BatMap.diff env init_env
 

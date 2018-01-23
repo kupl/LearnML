@@ -11,8 +11,3 @@ let checkMetro: metro -> bool = fun m ->
     | CONNECT (a, b) -> (check a areas) && (check b areas) in
   check m []
 
-let print_bool a = 
-  match a with
-  | true -> print_endline "true"
-  | false -> print_endline "false"
-

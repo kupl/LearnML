@@ -1,5 +1,3 @@
-    open Printf
-    
     type metro = STATION of name
     | AREA of name * metro
     | CONNECT of metro * metro

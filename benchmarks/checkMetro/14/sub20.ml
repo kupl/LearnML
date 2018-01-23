@@ -31,7 +31,7 @@ let rec checkMetroMap area_list target =
 		else false
 and isName str = 
 	match str with
-	| string -> true
+	| str1 -> true
 
 let checkMetro = checkMetroMap []
 

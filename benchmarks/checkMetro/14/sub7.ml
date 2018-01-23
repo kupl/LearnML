@@ -11,7 +11,7 @@ let checkMetro met =
           match l with
             [] -> false
             | e::ll ->
-              if String.compare name e == 0
+              if name=e
                 then true
               else
                 findNameInAreaList (name, ll) in

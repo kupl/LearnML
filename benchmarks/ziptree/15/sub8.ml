@@ -21,8 +21,8 @@ let goRight loc = match loc with
 
 let goUp loc = match loc with
 		LOC(t, TOP) -> raise (NOMOVE "up of top")
-		| LOC(t, HAND(left, HAND (tl, z, tr), right)) -> LOC(NODE (List.concat [(List.rev left); [t]; right]), HAND(tl, z, tr))
-		| LOC(t, HAND(left, TOP,right)) -> LOC(NODE (List.concat [(List.rev left); [t]; right]), TOP)
+		| LOC(t, HAND(left, HAND (tl, z, tr), right)) -> LOC(NODE ((List.rev left)@[t]@right), HAND(tl, z, tr))
+		| LOC(t, HAND(left, TOP,right)) -> LOC(NODE ((List.rev left)@[t]@right), TOP)
 
 let goDown loc = match loc with
 		| LOC(LEAF l, _) -> raise (NOMOVE "down of bottom")

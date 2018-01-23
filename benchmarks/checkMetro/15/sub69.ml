@@ -5,8 +5,8 @@ type metro =
 and name = string;;
 
 let rec checkMetro met =
-    let rec inList list a =
-        match list with
+    let rec inList lst a =
+        match lst with
         |[] -> false
         |b::sublist -> if a = b then true
                         else inList sublist a

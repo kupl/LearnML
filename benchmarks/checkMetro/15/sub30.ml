@@ -11,7 +11,7 @@ let checkMetro : metro -> bool = fun metro ->
   	| [] -> false
   	| hd::tl -> 
   	(
-  		if( (String.compare hd name) == 0 ) then true
+  		if(hd= name) then true
   		else (isProperStation (name, tl))
   	)	in
   

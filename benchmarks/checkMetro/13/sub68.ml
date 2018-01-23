@@ -5,7 +5,7 @@ and name = string
 let rec com(l,n) =
 	match l with
 	| []->false
-	| head::tail -> (((compare head n) = 0) || com(tail,n))
+	| head::tail -> ((head = n) || com(tail,n))
 let rec cMetro(l, m) = 
 	match m with
 	| STATION n -> com(l,n)

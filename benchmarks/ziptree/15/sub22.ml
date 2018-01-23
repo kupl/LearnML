@@ -22,7 +22,13 @@ let goUp (loc:location) :location =
   | LOC(t, TOP) -> raise (NOMOVE "top of top")
   | LOC(t, HAND(left, up, right)) -> LOC(NODE ((List.rev left)@(t::right)), up)
 
-let goDown (LOC(t, zip):location) :location =
+let sub loc = 
+  match loc with
+  |LOC (t,zip) -> (t,zip)
+  |_ -> raise(NOMOVE "")
+
+let goDown (loc:location) :location =
+  let (t,zip) = sub loc in
   match t with
   | LEAF _ -> raise (NOMOVE "at bottom")
   | NODE (l::other) -> LOC(l, HAND([], zip, other))

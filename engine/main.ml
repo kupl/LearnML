@@ -11,6 +11,8 @@ let parse_file (f:string) : (examples * prog) =
     |> Lexing.from_string
     |> Parser.prog Lexer.token
 
+let program_with_grading prog = prog@(External.grading_prog)
+
 let program_with_input prog inputs =
   let res_var = "__res__" in
   prog @ [(DLet (BindOne res_var,false,[],fresh_tvar(),(Lang.appify (EVar !opt_entry_func) inputs)))] 
@@ -34,15 +36,18 @@ let except_handling : exn -> value -> unit
  
 let run_testcases : prog -> examples -> unit
 =fun prog examples ->
-  List.iter (fun (inputs, output) ->
+  let score = List.fold_left (fun score (inputs, output) ->
+    let prog = program_with_grading prog in
     let prog' = program_with_input prog inputs in
 	  try
       let env = Eval.run prog' in
 		  let result_value = Lang.lookup_env "__res__" env in
         print_endline ("Result: " ^ Print.value_to_string result_value ^ " " ^  
                      "Expected: " ^ Print.value_to_string output);
-    with except -> except_handling except output
-  ) examples 
+        if(result_value=output) then score+1 else score
+    with except -> except_handling except output; score
+  ) 0 examples in
+  print_endline("score : "^(string_of_int score))
 
 let run_prog : prog -> examples -> unit
 =fun prog examples ->
@@ -55,6 +60,7 @@ let fix_with_solution : prog -> prog -> examples -> unit
 =fun submission solution examples ->  (* TODO *)
   let _ = Type.run submission in
   let score = Util.list_fold (fun (inputs, output) score->
+    let submission = program_with_grading submission in
     let prog = program_with_input submission inputs in
     let _ = 
       try

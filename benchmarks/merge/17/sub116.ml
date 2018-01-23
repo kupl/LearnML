@@ -15,10 +15,6 @@ let merge ((l1:int list), (l2: int list)): int list=
   in rev (merge_rev_rec (l1, l2, []))
 
 
-let rec print_list l=
-  match l with 
-  |[]-> (print_endline "")
-  |hd::tl-> ((print_int hd); (print_string " "); (print_list tl);)
 
 (*
 let _ = print_list [1;2;3;4]  

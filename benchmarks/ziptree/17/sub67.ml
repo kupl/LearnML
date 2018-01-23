@@ -22,7 +22,7 @@ let goUp loc =
     |LOC(t, z) ->   (match z with
                     |TOP -> raise("top")
                     |HAND(l, u, r) ->   if l = [] then LOC(NODE(t::r), up)
-                                        else LOC(NODE(List.rev_append l t::r), up)
+                                        else LOC(NODE((List.rev_append l t)::r), up)
                     )
 let goDown loc = 
     match loc with

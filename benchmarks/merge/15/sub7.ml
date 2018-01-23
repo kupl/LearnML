@@ -4,15 +4,15 @@ let rec merge ((a:int list),(b:int list)) =
     | ([x],[]) -> [x]
     | ([],[y]) -> [y]
     | (hda::tla,[]) -> 
-        hda::merge(tla,[]);
+        hda::merge(tla,[])
     | ([],hdb::tlb) -> 
-        hdb::merge([],tlb);
+        hdb::merge([],tlb)
     | (hda::tla, hdb::tlb) -> (
         if(hda > hdb) then (
-            hda::merge(tla,b);       
+            hda::merge(tla,b)       
         ) else (
-            hdb:: merge(a,tlb);
-        ); ) 
+            hdb:: merge(a,tlb)
+        ) ) 
 (*
  
 in

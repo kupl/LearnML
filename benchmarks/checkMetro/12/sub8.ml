@@ -9,7 +9,7 @@ let checkMetro mat =
 	let rec checkStringInList(li, st) =
 		match li with
 		|	[] -> false
-		|	a :: remain -> if (compare st a) == 0 then true
+		|	a :: remain -> if (st= a) then true
 						else checkStringInList(remain, st)
 	in
 	let rec checkStationInArea(listOfArea, subMat) =	

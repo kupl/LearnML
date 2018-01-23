@@ -25,21 +25,14 @@ let goUp loc =
 let goDown loc =
   match loc with
   |LOC (LEAF _, _)|LOC (NODE [], _) -> raise (NOMOVE "down of leaf")
-  |LOC (NODE list, zipper) -> (let reverse = list in let a::sublist = reverse in LOC (a, HAND ([], zipper , sublist)))
+  |LOC (NODE lst, zipper) -> (
+      let reverse = lst in 
+      let a = List.hd reverse in
+      let sublist = List.tl reverse in 
+      LOC (a, HAND ([], zipper , sublist)))
 
 let loc1 = LOC (NODE [NODE [LEAF "a"; LEAF "*"; LEAF "b"]; 
                       LEAF "+"; 
                       NODE [LEAF "c"; LEAF "*"; LEAF "d"]], 
                   TOP) 
 
-let (|>) g f = f g 
-
-let a91 = loc1 |> goDown 
-let a92 = loc1 |> goDown |> goDown 
-let a93 = loc1 |> goDown |> goUp |> goDown 
-let a94 = loc1 |> goDown |> goDown |> goRight 
-let a95 = loc1 |> goDown |> goDown |> goRight |> goLeft |> goRight |> goRight 
-let a96 = loc1 |> goDown |> goRight |> goRight |> goDown |> goRight 
-let a97 = 
-      try (loc1 |> goUp |> ignore); false with NOMOVE _ -> true 
-;;

@@ -29,7 +29,7 @@ let goUp loc = match loc with
 let goUp loc = match loc with
 	LOC(t, TOP) -> raise (NOMOVE "illegal location")
 	| LOC(t, HAND(left, TOP, right)) -> raise (NOMOVE "up of top")
-	| LOC(t, HAND(left, HAND(up_left, up, up_right), right)) -> LOC (List.hd (List.concat [List.rev up_left; (NODE (List.concat [List.rev left; t::right])) :: up_right]), HAND ([], up, List.tl (List.concat [List.rev up_left; (NODE (List.concat [List.rev left; t::right])) :: up_right])))
+	| LOC(t, HAND(left, HAND(up_left, up, up_right), right)) -> LOC (List.hd ((List.rev up_left)@ ((NODE ((List.rev left)@ (t::right))) :: up_right)), HAND ([], up, List.tl (List.rev up_left@((NODE (List.rev left@(t::right))) :: up_right))))
 
 let goDown loc = match loc with
 	LOC (LEAF x, _) -> raise (NOMOVE "left? right?")

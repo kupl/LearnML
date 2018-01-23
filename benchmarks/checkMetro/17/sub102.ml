@@ -9,13 +9,8 @@ type metro = STATION of name
 let rec checkList station metList =
 	match metList with
 	| [] -> false
-	| h :: t -> if (compare station h) == 0 then true 
+	| h :: t -> if (station= h) then true 
 		else (checkList station t)
-
-let rec printstringlist listed =
-	match listed with
-	| [] -> print_string ("")
-	| h :: t -> print_string (h); (printstringlist t)
 
 let checkMetro met =
 	let rec makeMetroList met metList =

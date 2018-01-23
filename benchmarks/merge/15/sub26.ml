@@ -7,17 +7,3 @@ let rec merge ( a :int list , b :int list ) =
 		
 	)
 
-
-let x : int list = [8 ; 3 ; 1]
-let y : int list = [8 ; 7; 4; 2]
-
-let z : int list = merge x y
-
-let a = List.hd z
-let b = List.hd (List.tl z)
-let c = List.hd (List.tl (List.tl z))
-
-let _ = print_endline (string_of_int a)
-let _ = print_endline (string_of_int b)
-let _ = print_endline (string_of_int c)
-let _ = z

@@ -19,17 +19,6 @@ let shake = function (x,lh,rh) ->
   if (rank lh) >= (rank rh)
   then NODE(rank rh + 1, x, lh, rh)
   else NODE(rank lh + 1, x, rh, lh)
-
-let print_heap h =
-  let rec print_heap_sub h l =
-    let print_space w = print_string (String.make w '.') in
-    match h with
-    | EMPTY -> print_string ""
-    | NODE(r,x,lh,rh) -> print_string "\n"; print_space l; Printf.printf "(%d:%d)\n" x r;
-     	if lh != EMPTY then (print_space l; print_string "l->"; print_heap_sub lh (l+1));
-     	if rh != EMPTY then (print_space l; print_string "r->"; print_heap_sub rh (l+1))
-  in print_heap_sub h (0)
-
 (* todo *)
 let rec merge : heap * heap -> heap = fun (h1,h2) ->
   let h1,h2 = match h1,h2 with
@@ -38,9 +27,10 @@ let rec merge : heap * heap -> heap = fun (h1,h2) ->
   match (h1,h2) with
   | EMPTY, h | h, EMPTY -> h
   | NODE(r1,x1,lh1,rh1),NODE(_,_,_,_) ->
-    match (if rh1 = EMPTY then NODE(r1,x1,lh1,h2) else NODE(r1,x1,lh1, merge(rh1,h2))) with
+    begin match (if rh1 = EMPTY then NODE(r1,x1,lh1,h2) else NODE(r1,x1,lh1, merge(rh1,h2))) with
     | NODE(_,x,lh,rh) -> shake(x,lh,rh)
     | EMPTY -> EMPTY
+    end
 
 let insert = function (x,h)  -> merge(h, NODE(0,x,EMPTY,EMPTY))
 let findMin = function EMPTY -> raise EmptyHeap

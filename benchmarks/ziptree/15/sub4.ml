@@ -21,8 +21,8 @@ LOC(t, TOP) -> raise (NOMOVE "right of top")
 let goUp : location -> location = fun loc ->
 match loc with
 LOC(t, TOP) -> raise (NOMOVE "top of top")
-| LOC(t, HAND([],up,right)) -> LOC( NODE(List.concat [[t];right]), up)
-| LOC(t, HAND(lh::left,up,right)) -> LOC( NODE (List.concat [left;[lh;t];right] ), up);;
+| LOC(t, HAND([],up,right)) -> LOC( NODE([t]@right), up)
+| LOC(t, HAND(lh::left,up,right)) -> LOC( NODE (left@[lh;t]@right ), up);;
 
 let goDown : location -> location = fun loc ->
 match loc with

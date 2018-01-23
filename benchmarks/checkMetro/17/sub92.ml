@@ -27,4 +27,3 @@ let rec checkMetro : metro -> bool =
 
   fun metro_checking -> checkList(metro_checking, [])
 
-let _ = if (checkMetro (AREA ("c", AREA ("b", STATION "a")))) then print_string "true"

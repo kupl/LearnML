@@ -8,7 +8,7 @@ import subprocess
 ##################################################
 #  Tuple means (folder,entry,grading,testcases)  #
 ##################################################
-#benchmark_info = [("checkMetro","checkMetro","","testcases")]
+#benchmark_info = [("diff","grading","grading.ml","testcases")]
 
 benchmark_info = [
   ("checkMetro","checkMetro","","testcases"),
@@ -38,6 +38,7 @@ test_folders=["nat"]
 fail_count = 0
 succ_count = 0
 
+score_result = dict()
 
 def find_dir(path):
   whole_list = os.listdir(path)
@@ -74,6 +75,7 @@ def execute(submission,path,entry,grading,specs):
   command = gen_command(submission,path,entry,grading,specs)
   p = subprocess.Popen(command,stdout=subprocess.PIPE,stderr=subprocess.PIPE,shell=True)
   out, err = p.communicate ()
+  global score_result
   #global fail_count
   #global succ_count
   #print(command)
@@ -84,6 +86,11 @@ def execute(submission,path,entry,grading,specs):
     #else:
       #fail_count=fail_count+1
     #print(out)
+    score = out.split("score : ")[1]
+    if score in score_result:
+      score_result[score] = score_result[score]+1
+    else:
+      score_result[score] = 1
     return True
   else:
     #print(command)
@@ -94,10 +101,12 @@ def main() :
   path = os.path.dirname(__file__)
   path = os.path.join(path,'benchmarks')
   commands = []
+  global score_result
 
   for (hw,entry,grading,specs) in benchmark_info :
     count=0
     err_count=0
+    score_result=dict()
     year_list = find_dir(os.path.join(path,hw))
     for year in year_list :
       submissions = find_files(year)
@@ -111,6 +120,7 @@ def main() :
     print(hw)
     print("Submissions: ",count)
     print("Error: ",err_count)
+    print("Score: ",score_result)
 
 if __name__ == '__main__':
   main()

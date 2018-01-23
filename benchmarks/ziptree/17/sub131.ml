@@ -27,8 +27,13 @@ let goUp (l : location) : location =
   |LOC(t,TOP) -> raise (NOMOVE "up of top")
   |LOC(t,HAND(left, up, right)) -> LOC((NODE ((List.rev_append left [t])@right)), up)
 
+let sub l = 
+  match l with
+  |LOC(t,z) -> (t,z)
+  |_ -> raise(NOMOVE "")
+
 let goDown (l: location) : location = 
-  let LOC(t,z) = l in
+  let (t,z) = sub l in
   match t with
   |LEAF(i) -> raise (NOMOVE "down of leaf")
   |NODE([]) -> raise (NOMOVE "no more tree")

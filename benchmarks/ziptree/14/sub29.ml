@@ -29,4 +29,4 @@ let goUp loc = match loc with
 let goDown loc = match loc with
 	| LOC(LEAF t, x) -> raise (NOMOVE "down of leaf")
 	| LOC(NODE[], x) -> raise (NOMOVE "node without descendant")
-	| LOC(NODE(l::t), z) -> LOC(l, HAND([], z, t));
+	| LOC(NODE(l::t), z) -> LOC(l, HAND([], z, t))

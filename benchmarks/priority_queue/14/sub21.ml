@@ -21,9 +21,10 @@ let rec merge (heap_1, heap_2) =
   match (heap_1, heap_2) with
   | (heap, EMPTY) -> heap
   | (EMPTY, heap) -> heap
-  | (NODE (_, x_1, _, _), NODE (_, x_2, _, _)) when x_1 > x_2 ->
+  | (NODE (_, x_1, lh_1, rh_1), NODE (_, x_2, _, _)) ->
+    if x_1 > x_2 then
      merge(heap_2, heap_1)
-  | (NODE (_, x_1, lh_1, rh_1), NODE (_, x_2, _, _))->
+    else
      shake (x_1, lh_1, merge(rh_1, heap_2))
 ;;
 

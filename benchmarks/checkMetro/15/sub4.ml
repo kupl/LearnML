@@ -9,7 +9,7 @@ match m with
     if( List.mem n li) then (true) else (false)
     )| AREA (n, mm) -> (
     let childList : name list = n::li in
-    checkMetroLi(mm, childList);
+    checkMetroLi(mm, childList)
     )| CONNECT (mm1, mm2) -> (
     checkMetroLi(mm1,li) && checkMetroLi(mm2,li)
     )

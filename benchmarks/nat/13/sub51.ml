@@ -9,15 +9,4 @@ and natmul (a, b) =
   | ZERO -> ZERO 
   | SUCC pred_b -> natadd(natmul(a, pred_b), a);;
   
-(* test cases *)
-let rec eval nat =
-  match nat with
-  | ZERO -> 0
-  | SUCC n -> eval(n)+1;;
 
-assert(eval(natadd(SUCC(ZERO), SUCC(ZERO)))=2);;
-assert(eval(natadd(SUCC(SUCC(ZERO)), SUCC(ZERO)))=3);;
-assert(eval(natmul(SUCC(SUCC(ZERO)), SUCC(SUCC(ZERO))))=4);;
-assert(eval(natmul(SUCC(SUCC(SUCC(ZERO))), SUCC(SUCC(ZERO))))=6);;
-assert(eval(natmul(ZERO, SUCC(SUCC(ZERO))))=0);;
-assert(eval(natmul(SUCC(SUCC(ZERO)), ZERO))=0);;

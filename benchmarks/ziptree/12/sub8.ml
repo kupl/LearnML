@@ -32,18 +32,3 @@ let goDown loc =
 	| LOC(NODE [], _) -> raise (NOMOVE "down of empty node")
 	| LOC(NODE (a::b), c) -> LOC(a, HAND([], c, b))
 
-let loc1 = LOC (NODE [NODE [LEAF "a"; LEAF "*"; LEAF "b"]; 
-                      LEAF "+"; 
-                      NODE [LEAF "c"; LEAF "*"; LEAF "d"]], 
-                TOP) 
-
-let (|>) g f = f g 
-
-let a91 = loc1 |> goDown 
-let a92 = loc1 |> goDown |> goDown 
-let a93 = loc1 |> goDown |> goUp |> goDown 
-let a94 = loc1 |> goDown |> goDown |> goRight 
-let a95 = loc1 |> goDown |> goDown |> goRight |> goLeft |> goRight |> goRight 
-let a96 = loc1 |> goDown |> goRight |> goRight |> goDown |> goRight 
-let a97 = 
-    try (loc1 |> goUp |> ignore); false with NOMOVE _ -> true

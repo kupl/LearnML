@@ -12,7 +12,6 @@ type zipper = TOP
 
 type location = LOC of tree * zipper 
 
-open List ;;
 
 (* HERE BEGINS *)
 

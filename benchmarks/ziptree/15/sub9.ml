@@ -23,8 +23,13 @@ let goUp loc = match loc with
 	LOC(t, TOP) -> raise (NOMOVE "no more top")
 	| LOC (t, HAND(l1, z, l2)) -> LOC(NODE( List.rev_append (t::l1) l2 ), z)
 
+let sub loc = 
+  match loc with
+  |LOC(t,z) -> (t,z)
+  |_ -> raise (NOMOVE "")
+
 let goDown loc = 
-	let LOC(t, z) = loc in
+	let (t, z) = sub loc in
 	match t with
 	LEAF i -> raise (NOMOVE "no more down")
 	| NODE l -> LOC(List.hd l, HAND([], z, List.tl l))

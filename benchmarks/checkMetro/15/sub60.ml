@@ -1,9 +1,5 @@
 type name = string;;
 
-let rec print_list = function 
-[] -> ()
-| e::l -> print_string e ; print_string " " ; print_list l
-
 type metro = STATION of name
 	| AREA of name * metro
 	| CONNECT of metro * metro;;

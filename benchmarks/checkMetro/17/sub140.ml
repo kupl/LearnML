@@ -22,10 +22,4 @@ and listMetro: metro -> 'a list = fun m ->
 
 (* TESTING FIELD BELOW *)
 
-let _ = print_endline(string_of_bool(checkMetro(AREA("a", STATION "a"))))
-let _ = print_endline(string_of_bool(checkMetro(AREA("a", AREA("a", STATION "a")))))
-let _ = print_endline(string_of_bool(checkMetro(AREA("a", AREA("b", CONNECT(STATION "a", STATION "b"))))))
-let _ = print_endline(string_of_bool(checkMetro(AREA("a", CONNECT(STATION "a", AREA("b", STATION "a"))))))
-let _ = print_endline(string_of_bool(checkMetro(AREA("a", STATION "b"))))
-let _ = print_endline(string_of_bool(checkMetro(AREA("a", CONNECT(STATION "a", AREA("b", STATION "c"))))))
-let _ = print_endline(string_of_bool(checkMetro(AREA("a", AREA("b", CONNECT(STATION "a", STATION "c"))))))
+

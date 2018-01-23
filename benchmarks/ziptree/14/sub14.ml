@@ -90,10 +90,8 @@ let goUp loc = match loc with
 | LOC(t, HAND([], z, r::rs)) -> LOC(t::r::rs, z)
 | LOC(t, HAND(l::ls, z, [])) -> LOC(ls::l::t, z)
 *)
-| LOC(t, HAND([], z, r::rs)) -> let [rse] = rs in
-                                LOC(NODE[t; r; rse], z)
-| LOC(t, HAND(l::ls, z, [])) -> let [lse] = ls in
-	                              LOC(NODE[lse; l; t], z)
+| LOC(t, HAND([], z, r::rs)) -> LOC(NODE([t; r]@rs), z)
+| LOC(t, HAND(l::ls, z, [])) -> LOC(NODE (ls@[l; t]), z)
 | _ -> raise InvalidTree
 
 (* 접합시(::, @..) type check 필요: 원소-원소/원소-리스트/리스트-리스트 *)

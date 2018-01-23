@@ -9,10 +9,8 @@ and name = string
 
 (* helper function isStringExist *)
 let isStringExist e l =
-    try
-        let _ = List.find (fun x -> (String.compare x e == 0)) l in
+        let x = List.find (fun x -> (x=e)) l in
         true
-    with Not_found -> false
 
 (* checkMetro *)
 let checkMetro metro =

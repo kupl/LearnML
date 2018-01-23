@@ -6,7 +6,7 @@ and name = string
 let rec containCheck (n, ll) : bool =
   match ll with
   |hd::tl ->
-    if String.equal hd n then true else containCheck(n,tl)
+    if hd=n then true else containCheck(n,tl)
   |[] -> false
 
 let checkMetro metro : bool =

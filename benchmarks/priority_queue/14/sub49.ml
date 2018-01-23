@@ -10,7 +10,7 @@ let shake = function (x,lh,rh) ->
 		then NODE (rank rh + 1, x, lh, rh)
 		else NODE (rank lh + 1, x, rh, lh)
 
-let rec merge ((lh, rh): heap * heap) : heap = 
+let rec merge ((lh:heap), (rh:heap)) : heap = 
 	match lh, rh with
 		EMPTY, _ -> rh
 	| _, EMPTY -> lh

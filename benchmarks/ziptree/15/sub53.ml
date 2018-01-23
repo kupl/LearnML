@@ -26,7 +26,13 @@ let goUp (loc: location): location =
   | LOC (_, TOP) -> raise (NOMOVE "")
   | LOC (t, HAND(left, up, right)) -> LOC(NODE (List.rev left@[t]@right), up)
 
-let goDown (LOC(t, up): location): location =
+let sub loc =
+  match loc with
+  |LOC(t,up) -> (t,up)
+  |_ -> raise(NOMOVE "")
+
+let goDown (loc: location): location =
+  let (t,up)=sub loc in
   match t with
   | LEAF _
   | NODE [] -> raise (NOMOVE "")

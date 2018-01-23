@@ -27,7 +27,7 @@ let getDown loc = match loc with
 
 let goUp loc = match loc with
   LOC(t, TOP) -> raise NOMOVE "this is top" (* 맨 위에 있을 경우 *)
-| LOC(t, HAND(left, up, right)) -> LOC ( NODE ( left @ [t;] @ right), up);;
+| LOC(t, HAND(left, up, right)) -> LOC ( NODE ( left @ [t] @ right), up);;
 
 (*let testloc1 =
 LOC(LEAF "+",

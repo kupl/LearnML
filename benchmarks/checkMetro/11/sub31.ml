@@ -19,11 +19,11 @@ let rec checkMetro met =
 		= correctMetro ["aaa"; "a"; "b"; "c"] STATION("bbb")
 		= false
 	*) 
-	let rec correctMetro list met =
+	let rec correctMetro lst met =
 		match met with
-		AREA(a, b) -> correctMetro (a::list) b
-		| CONNECT(a, b) -> (correctMetro list a) && (correctMetro list b)
-		| STATION a -> List.mem a list in
+		AREA(a, b) -> correctMetro (a::lst) b
+		| CONNECT(a, b) -> (correctMetro lst a) && (correctMetro lst b)
+		| STATION a -> List.mem a lst in
 
 
 	correctMetro [] met

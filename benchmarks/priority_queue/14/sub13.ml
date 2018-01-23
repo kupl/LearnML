@@ -22,14 +22,15 @@ let rec merge: heap * heap -> heap =
     match (lh, rh) with
     | (EMPTY, _) -> rh
     | (_, EMPTY) -> lh
-    | (NODE (lr, lx, llh, lrh), NODE (rr, rx, rlh, rrh)) when lx < rx ->
-        let newleft = llh in
-        let newright = merge (rh, lrh) in
-        shake (lx, newleft, newright)
-    | (NODE (lr, lx, llh, lrh), NODE (rr, rx, rlh, rrh)) ->
-        let newleft = rlh in
-        let newright = merge (lh, rrh) in
-        shake (rx, newleft, newright)
+    | (NODE (lr, lx, llh, lrh), NODE (rr, rx, rlh, rrh))->
+        if lx < rx then
+          let newleft = llh in
+          let newright = merge (rh, lrh) in
+          shake (lx, newleft, newright)
+        else
+          let newleft = rlh in
+          let newright = merge (lh, rrh) in
+          shake (rx, newleft, newright)
 
 let insert: value * heap -> heap =
   fun (x, h) ->

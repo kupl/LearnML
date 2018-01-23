@@ -8,11 +8,11 @@ let checkMetro (m : metro) : bool =
         let rec checkMetroRec (m : metro) (s : name list) : bool =
             (
                 match m with
-                    STATION (n : name) -> (List.mem n s)
-                |   AREA ((n : name), (m : metro)) ->
-                        let (ns : name list) = (n::s) in
+                    STATION (n) -> (List.mem n s)
+                |   AREA ((n), (m)) ->
+                        let ns : name list = (n::s) in
                         (checkMetroRec m ns)
-                |   CONNECT ((m1 : metro), (m2 : metro)) ->
+                |   CONNECT ((m1), (m2)) ->
                         ((checkMetroRec m1 s) && (checkMetroRec m2 s))
             ) in
         (checkMetroRec m [])

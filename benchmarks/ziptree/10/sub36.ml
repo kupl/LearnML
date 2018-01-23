@@ -24,5 +24,5 @@ let goUp loc =
 
 let goDown loc =
 	match loc with
-		LOC(NODE (t::list),z) -> LOC(t,HAND([],z,list))
+		LOC(NODE (t::lst),z) -> LOC(t,HAND([],z,lst))
 		| _ -> raise (NOMOVE "down of leaf")

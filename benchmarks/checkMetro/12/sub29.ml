@@ -5,7 +5,7 @@ and name = string
 
 
 let isIn (str, areas) =
-	if (List.filter (function a -> (String.compare a str) == 0) areas) == [] then false else true
+	if (List.filter (function a -> a = str) areas) == [] then false else true
 
 let rec subChkMet (met, areas) =
 	match met with
