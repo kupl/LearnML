@@ -27,9 +27,3 @@ let rec toParen t =
     | NODE(a, b) -> String.concat "" ["(";toParen a; " "; toParen b; ")"]
     | LEAF a -> (team_to_string a)
 ;;
-
-(* 
-toParen(NODE(NODE(LEAF Korea, LEAF Portugal), LEAF Brazil));;
-toParen(NODE(NODE(LEAF Korea, NODE(LEAF Usa, LEAF France)), LEAF England));;
-toParen(NODE(NODE(LEAF Korea, LEAF Portugal), LEAF Brazil));;
-*)

@@ -20,8 +20,7 @@ type tourna = LEAF of team
 
 let rec parenize : tourna -> string =
   fun t ->
-    try (
-      match t
+    match t
       with LEAF(t) -> 
         (
           match t
@@ -42,6 +41,3 @@ let rec parenize : tourna -> string =
             | Argentina-> "Argentina"
         )
         | NODE(t1,t2) -> "("^(parenize t1)^" "^(parenize t2)^")"
-    )
-    with Error s -> raise (Error s)
-      | _ -> raise (Error "cake is a lie")

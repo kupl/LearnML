@@ -102,6 +102,8 @@ let rec binding_args : arg list -> exp -> exp
 %token LISTMAPI
 %token LISTFORALL
 %token LISTFIND
+%token LISTASSOC
+%token STRINGCONCAT
 
 %left OR
 %left AND
@@ -488,6 +490,10 @@ exp_base:
     { (EVar "__list_for_all__") }
   | LISTFIND
     { (EVar "__list_find__") }
+  | LISTASSOC
+    { (EVar "__list_assoc__")}
+  | STRINGCONCAT
+    { EVar "__string_concat__" }
 
 exp_semi_list:
   |

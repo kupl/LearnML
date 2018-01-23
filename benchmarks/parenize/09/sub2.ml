@@ -1,3 +1,4 @@
+
 type team = Korea | France | Usa | Brazil | Japan | Nigeria | Cameroon
 			| Poland | Portugal | Italy | Germany | Sweden | England
 			| Croatia | Argentina

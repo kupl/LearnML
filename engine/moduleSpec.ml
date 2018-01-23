@@ -135,6 +135,18 @@ let rec __list_find__ : ('a -> bool) -> 'a list -> 'a
   |[] -> raise ListError
   |hd::tl -> if(pred hd) then hd else __list_find__ pred tl
 
+let rec __list_assoc__ : 'a -> ('a * 'b) list -> 'b
+= fun idx l ->
+  match l with
+  | [] -> raise (Failure "Not_found")
+  | (a, b)::tl -> if a=idx then b else __list_assoc__ idx tl
+
+let rec __string_concat__ : string -> string list -> string
+= fun sep sl ->
+  match sl with
+  | [] -> ""
+  | hd::tl -> hd ^ sep ^ (__string_concat__ sep tl)
+  
 let max_int : int = 4611686018427387903
 
 let min_int : int = -4611686018427387903

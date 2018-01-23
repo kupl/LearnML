@@ -23,6 +23,6 @@ let name a = match a with Korea -> "Korea"
 						| _ -> "There is no matching team"
 
 
-let rec (parenize : tourna -> string) = fun tour ->
+let rec parenize : tourna -> string = fun tour ->
 	match tour with LEAF t -> name(t)
 				|	NODE (lef, rig) -> "("^(parenize lef)^" "^(parenize rig)^")"

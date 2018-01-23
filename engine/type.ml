@@ -378,12 +378,12 @@ let rec gen_equations : HoleType.t -> VariableType.t -> TEnv.t -> exp -> typ -> 
   | EMatch (e, bs) ->
     let typ_pat = fresh_tvar () in
     let typ_exp = fresh_tvar () in
-    let (eqns,hole_typ,var_typ) = gen_equations hole_typ var_typ tenv e typ_pat in
-    list_fold (fun (p,e) (eqns,h_t,v_t) ->
-      let (env,pat_eqn) = gen_pat_equations (tenv,eqns) p typ_pat in
-      let (exp_eqn,h_t,v_t) = gen_equations h_t v_t env e typ_exp in
-      (eqns@pat_eqn@exp_eqn,h_t,v_t)
-    ) bs ((ty,typ_exp)::eqns,hole_typ,var_typ)
+    let (eqns, hole_typ, var_typ) = gen_equations hole_typ var_typ tenv e typ_pat in
+    List.fold_left (fun (eqns, hole_typ, var_typ) (pat, exp) ->
+      let (tenv, pat_eqn) = gen_pat_equations (tenv, eqns) pat typ_pat in
+      let (exp_eqn, hole_typ, var_typ) = gen_equations hole_typ var_typ tenv exp typ_exp in
+      (eqns@pat_eqn@exp_eqn, hole_typ, var_typ)
+    ) ((ty,typ_exp)::eqns, hole_typ, var_typ) bs
   | Hole n ->
     let t = fresh_tvar () in
     let hole_typ = HoleType.extend n t hole_typ in
@@ -407,6 +407,7 @@ and extract_tvar2 : id -> typ list -> bool
 
 let rec unify : Subst.t -> (typ * typ) -> Subst.t
 = fun subst (t1, t2) ->
+  if t1 = t2 then subst else
   match t1, t2 with
   | TList t1, TList t2 -> unify subst (t1, t2)
   | TTuple ts1, TTuple ts2 -> unify_list subst (ts1, ts2)
@@ -426,14 +427,14 @@ let rec unify : Subst.t -> (typ * typ) -> Subst.t
     | _ -> Subst.extend x t subst
     end
   | t, TVar x -> unify subst (TVar x, t)
-  | _ -> if t1 = t2 then subst else raise TypeError (* type base *) 
+  | _ -> raise TypeError (* type base *) 
 
 and unify_list : Subst.t -> (typ list * typ list) -> Subst.t
 = fun subst (ts1, ts2) -> List.fold_left2 (fun subst t1 t2 -> unify subst (t1, t2)) subst ts1 ts2
 
 (* Generate Substitution, HoleType Table, VarType Table using Type equations *)
 let solve : (typ_eqn * HoleType.t * VariableType.t) -> (Subst.t * HoleType.t * VariableType.t)
-= fun (eqns, hole_typ, var_typ) -> 
+= fun (eqns, hole_typ, var_typ) ->
   let subst = List.fold_left (fun subst (t1, t2) -> unify subst ((Subst.apply t1 subst), Subst.apply t2 subst)) Subst.empty eqns in
   let hole_typ = HoleType.update subst hole_typ in
   let var_typ = VariableType.update subst var_typ in

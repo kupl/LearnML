@@ -11,4 +11,4 @@ let rec natadd (n1, n2) =
 let rec natmul (n1, n2) =
 	match n1 with
 	SUCC k -> (natadd (n2, (natmul (k, n2))))
-	| ZERO -> ZERO;
+	| ZERO -> ZERO

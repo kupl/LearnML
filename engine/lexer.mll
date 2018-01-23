@@ -50,6 +50,8 @@ let reserved_words : (string * Parser.token) list =
   ; ("List.mapi", LISTMAPI)
   ; ("List.for_all",LISTFORALL)
   ; ("List.find",LISTFIND)
+  ; ("List.assoc", LISTASSOC)
+  ; ("String.concat", STRINGCONCAT)
   ;
   ]
 
