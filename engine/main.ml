@@ -39,6 +39,7 @@ let run_testcases : prog -> examples -> unit
   let score = List.fold_left (fun score (inputs, output) ->
     let prog = program_with_grading prog in
     let prog' = program_with_input prog inputs in
+    let _ = Type.run prog' in
 	  try
       let env = Eval.run prog' in
 		  let result_value = Lang.lookup_env "__res__" env in

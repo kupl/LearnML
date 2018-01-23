@@ -494,7 +494,6 @@ and ctors_to_env : TEnv.t -> typ -> ctor list -> TEnv.t
 
 let run : prog -> (TEnv.t * HoleType.t * VariableType.t)
 = fun decls -> 
-  Print.print_pgm decls;
   let _ = start_time:=Sys.time() in
   let decls = decls@(External.grading_prog) in
   let decls = Converter.convert Converter.empty decls in
