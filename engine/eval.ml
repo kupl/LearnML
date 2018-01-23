@@ -81,6 +81,19 @@ and pattern_match : value -> pat -> bool
 and pattern_match_list : value list -> pat list -> bool
 = fun vs ps -> try List.for_all2 pattern_match vs ps with _ -> false
 
+let rec check_patterns : pat list -> bool
+= fun ps ->
+  let var_set_list = List.map (gather_vars BatSet.empty) ps in
+  let base = List.hd var_set_list in
+  List.for_all (fun set -> BatSet.equal set base) var_set_list
+
+and gather_vars : id BatSet.t -> pat -> id BatSet.t
+= fun set p ->
+  match p with
+  | PVar x -> BatSet.add x set
+  | PList ps | PTuple ps | PCtor (_, ps) | PCons ps | Pats ps -> List.fold_left gather_vars set ps
+  | _ -> set
+
 let rec bind_pat : env -> value -> pat -> env
 = fun env v p ->
   match (v, p) with
@@ -88,6 +101,7 @@ let rec bind_pat : env -> value -> pat -> env
   | _, PBool b2 -> env
   | _, PUnder -> env
   | _, PVar x -> update_env x v env
+  | _, Pats ps -> if check_patterns ps then bind_pat env v (List.find (pattern_match v) ps) else raise (Failure "Invalid pattern list")
   | VList l1, PList l2 -> bind_pat_list env l1 l2 
   | VTuple l1, PTuple l2 -> bind_pat_list env l1 l2
   | VCtor (x1, l1), PCtor (x2, l2) -> bind_pat_list env l1 l2
