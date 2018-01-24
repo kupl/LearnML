@@ -32,6 +32,7 @@ module Converter = struct
   let rec convert_arg : t -> arg -> arg
   = fun env arg ->
     match arg with
+    | ArgUnder t -> ArgUnder (convert_typ env t)
     | ArgOne (x, t) -> ArgOne (x, convert_typ env t)
     | ArgTuple xs -> ArgTuple (List.map (convert_arg env) xs)
 
@@ -178,6 +179,7 @@ end
 let rec bind_arg : TEnv.t -> arg -> TEnv.t
 = fun tenv arg ->
   match arg with
+  | ArgUnder t -> tenv
   | ArgOne (x, t) -> TEnv.extend (x, t) tenv
   | ArgTuple xs -> List.fold_left bind_arg tenv xs
 
@@ -187,7 +189,7 @@ let rec bind_args : TEnv.t -> arg list -> TEnv.t
 let rec type_of_arg : arg -> typ
 = fun arg ->
   match arg with
-  | ArgOne (x, t) -> t
+  | ArgUnder t | ArgOne (_, t) -> t
   | ArgTuple xs -> TTuple (List.map type_of_arg xs)
 
 let rec type_of_fun : arg list -> typ -> typ
@@ -454,7 +456,12 @@ let rec type_decl : (TEnv.t * HoleType.t * VariableType.t) -> decl -> (TEnv.t * 
   | DEqn (x, typ) -> (tenv, hole_typ, var_typ)
   | DData (id, ctors) -> let tbase = TBase id in (ctors_to_env tenv tbase ctors, hole_typ, var_typ)
   | DLet (f, is_rec, args, typ, exp) ->
-    let exp = ELet(f, is_rec, args, typ, exp, let_to_exp f) in
+    let exp =
+      begin match f with
+      | BindUnder -> exp
+      | _ -> ELet(f, is_rec, args, typ, exp, let_to_exp f)
+      end
+    in
     let ty = type_of_fun args typ in
     let (eqns, hole_typ, var_typ) = gen_equations hole_typ var_typ tenv exp ty in
     let (subst, hole_typ, var_typ) = solve (eqns, hole_typ, var_typ) in

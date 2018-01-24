@@ -57,7 +57,6 @@ let reserved_words : (string * Parser.token) list =
 
 let symbols : (string * Parser.token) list =
   [ ("?", HOLE)
-(*; ("|>", IMPLIES) *)
   ; ("=", EQ)
   ; ("->", ARR)
   ; ("=>", FATARR)
@@ -108,16 +107,11 @@ let create_external lexbuf =
   match Util.lookup str reserved_words with
   | None -> raise @@ Lexer_error ("Unexpected token: "^str)
   | Some t -> t
-(*
-let create_string lexbuf = 
-  let str = lexeme lexbuf in
-  STRING str
-*)
 }
 
 let newline    = '\n' | ('\r' '\n') | '\r'
 let whitespace = ['\t' ' ']
-let lowercase  = ['a'-'z'] | '_'
+let lowercase  = ['a'-'z'] 
 let uppercase  = ['A'-'Z']
 let character  = uppercase | lowercase
 let digit      = ['0'-'9']
@@ -128,9 +122,10 @@ rule token = parse
   | "(*" {comments 0 lexbuf}
   | '"' {STRING (create_string (Buffer.create 100) lexbuf)}
   | whitespace+ | newline+    { token lexbuf }
-  | lowercase (digit | character | ''')*    { create_token lexbuf }
-  | uppercase (digit | character | ''')*    { UID (lexeme lexbuf) }
-  | uppercase (digit | character | ''')*('.')(digit | character | ''')* {create_external lexbuf}
+  | '_' (digit | character | ''' | '_')+    { create_token lexbuf }
+  | lowercase (digit | character | ''' | '_')*    { create_token lexbuf }
+  | uppercase (digit | character | ''' | '_')*    { UID (lexeme lexbuf) }
+  | uppercase (digit | character | ''' | '_')*('.')(digit | character | ''')* {create_external lexbuf}
   | '?' | "|>" | '=' | "->" | "=>" | '*' | ',' | ':' | ';' | '|' | '(' | ')' | '{' | '}' | '[' | ']' 
   | '_' | '+' | '-' | '/'| '%' | "||" | "&&" | "<" | ">" | "<=" | ">=" | "!=" | "<>" | "@"| "::" | "'" |"^" | "&" 
     { create_symbol lexbuf }

@@ -33,10 +33,12 @@ type pat =
   | Pats of pat list
 
 type let_bind =
+  | BindUnder (* let _ = ... in x *)
   | BindOne of id (* let x = ... in x *)
   | BindTuple of let_bind list (* let x,y = (..., ...) in x,y *)
 
 type arg = 
+  | ArgUnder of typ
   | ArgOne of id * typ
   | ArgTuple of arg list
 
@@ -136,9 +138,10 @@ let rec appify : exp -> exp list -> exp
 
 let rec let_to_exp : let_bind -> exp
 = fun x ->
-  match x with
+  match x with 
   | BindOne x -> EVar x
   | BindTuple xs -> ETuple (List.map let_to_exp xs)
+  | _ -> raise (Failure "Wild-card _ is not valid")
 
 (* cost function *)
 let rec exp_cost : exp -> int 

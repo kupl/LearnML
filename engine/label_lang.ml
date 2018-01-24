@@ -82,3 +82,4 @@ let rec let_to_lexp : let_bind -> labeled_exp
   match x with
   | BindOne x -> (dummy_label, EVar x)
   | BindTuple xs -> (dummy_label, ETuple (List.map let_to_lexp xs))
+  | _ -> raise (Failure "Wild-card _ is not valid")

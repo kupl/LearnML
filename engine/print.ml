@@ -82,6 +82,11 @@ let rec type_to_string : typ -> string
 let rec arg_to_string : arg -> string
 = fun arg ->
   match arg with
+  | ArgUnder typ -> 
+    begin match typ with
+    | TVar _ -> "_"
+    | _ -> "(" ^ "_" ^ " : " ^ type_to_string typ ^ ")"
+    end
   | ArgOne (x, typ) -> 
     begin match typ with
     | TVar _ -> x
@@ -103,6 +108,7 @@ let rec user_defined_type_to_string : ctor -> string
 let rec let_to_string : let_bind -> string
 = fun x ->
   match x with
+  | BindUnder -> "_"
   | BindOne x -> x
   | BindTuple xs -> pp_tuple let_to_string xs
 

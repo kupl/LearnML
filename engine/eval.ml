@@ -155,7 +155,7 @@ let rec eval : env -> exp -> value
   | LESSEQ (e1, e2) -> (eval_abbop env e1 e2 (<=))
   | LARGEREQ (e1, e2) -> (eval_abbop env e1 e2 (>=))
   | EQUAL (e1, e2) -> eval_equality env e1 e2 (=)
-  | NOTEQ (e1, e2) -> eval_equality env e1 e2 (!=)
+  | NOTEQ (e1, e2) -> eval_equality env e1 e2 (<>)
   (* lop *)
   | AT (e1, e2) ->
     begin match (eval env e1, eval env e2) with
@@ -310,7 +310,12 @@ let rec eval_decl : env -> decl -> env
 = fun env decl ->
   match decl with
   | DLet (x,is_rec,args,typ,exp) -> 
-    let exp = ELet (x, is_rec, args, typ, exp, let_to_exp x) in
+    let exp = 
+      begin match x with 
+      | BindUnder -> exp
+      | _ -> ELet (x, is_rec, args, typ, exp, let_to_exp x) 
+      end
+    in
     let_binding env x (eval env exp)
   | DBlock (is_rec, bindings) ->
     begin match is_rec with

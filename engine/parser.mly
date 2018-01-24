@@ -248,6 +248,8 @@ bind_comma_list:
     { x::xs }
 
 bind_base:
+  | UNDERBAR
+    { BindUnder }
   | x=LID
     { BindOne x }
   | LPAREN x=bind RPAREN
@@ -316,6 +318,10 @@ args:
     { x :: xs}
 
 arg:
+  | UNDERBAR
+    { ArgUnder (fresh_tvar ()) }
+  | LPAREN UNDERBAR COLON t=typ RPAREN
+    { ArgUnder t }
   | x=LID
     { ArgOne (x, fresh_tvar ()) }
   | LPAREN x=LID COLON t=typ RPAREN
