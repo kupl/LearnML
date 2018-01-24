@@ -261,9 +261,9 @@ let rec type_directed exp hole_typ env (h_t,h_e) =
 				end
 			| (_,TVar _) -> check_correct x_t typ h_t env
 			| (TList t1,TList t2) -> check_correct t1 t2 h_t env
-			| (TTuple tl1, TTuple tl2) -> List.fold_right2 (fun t1 t2 (result,h_t,env) -> let (b,h_t,env)= check_correct t1 t2 h_t env in (b&&result,h_t,env)) tl1 tl2 (true,h_t,env)
+			| (TTuple tl1, TTuple tl2) -> ((try (List.for_all2(fun t1 t2 -> let (b,_,_) = check_correct t1 t2 h_t env in b) tl1 tl2) with _-> false),h_t,env)
 			| (TCtor (id1,tl1),TCtor (id2,tl2)) ->
-				if(id1=id2) then List.fold_right2 (fun t1 t2 (result,h_t,env) -> let (b,h_t,env)= check_correct t1 t2 h_t env in (b&&result,h_t,env)) tl1 tl2 (true,h_t,env)
+				if(id1=id2) then ((try (List.for_all2(fun t1 t2 -> let (b,_,_) = check_correct t1 t2 h_t env in b) tl1 tl2) with _-> false),h_t,env)
 				else (false,h_t,env)
 			| (TArr (t1,t2),TArr (t3,t4)) ->
 				let (b,h_t,env) = check_correct t1 t3 h_t env in
@@ -453,6 +453,7 @@ let rec is_solution : prog -> examples -> bool
 (
 	List.for_all (fun (inputs,output) ->
 		let res_var = "__res__" in
+    let prog = prog@(External.grading_prog) in
 		let prog' = prog @ [(DLet (BindOne res_var,false,[],fresh_tvar(),(appify (EVar !Options.opt_entry_func) inputs)))] in
 		try
 			let env = Eval.run prog' in
@@ -469,7 +470,7 @@ let count = ref 0
 let rec work : Workset.t -> components -> examples -> prog option
 = fun workset exp_set examples->
 	iter := !iter +1;
-  if (Sys.time() -. (!start_time) >1800.0) then None
+  if (Sys.time() -. (!start_time) >1200.0) then None
   else if (!iter mod 10000 = 0)
 	  then
 		  begin

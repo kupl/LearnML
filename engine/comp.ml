@@ -99,7 +99,7 @@ let rec find_component : exp-> components -> components
 	| EFun (arg,e1) -> 
 		let comps = find_component e1 comps in
 		(BatSet.add (EFun (ArgOne("__x__",TVar "comp"),Hole (0))) comps)
-	| ECtor (x,lst) -> comps
+	| ECtor (x,lst) -> list_fold find_component lst comps
 	| EMatch (e,lst) ->
 		let comps = find_component e comps in
 	 	let (pl,el) = List.split lst in

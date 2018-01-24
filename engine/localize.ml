@@ -20,6 +20,7 @@ let start_time = ref 0.0
 (* Find counter exampels *)
 let rec is_counter_example : prog -> example -> bool
 = fun pgm (input, output) ->
+  let pgm=pgm@(External.grading_prog) in
   let res_var = "__res__" in
   let pgm' = pgm @ [(DLet (BindOne res_var,false,[],fresh_tvar(),(Lang.appify (EVar !Options.opt_entry_func) input)))] in
   try
@@ -355,6 +356,7 @@ let run : labeled_prog -> labeled_env
 
 let rec collect_execution_trace : labeled_prog -> example -> trace_set
 = fun pgm (input, output) ->
+  let pgm = pgm @ labeling_prog (External.grading_prog) in
   let res_var = "__res__" in
   let pgm' = pgm @ labeling_prog [(DLet (BindOne res_var, false, [], fresh_tvar(), (Lang.appify (EVar !Options.opt_entry_func) input)))] in
   try
