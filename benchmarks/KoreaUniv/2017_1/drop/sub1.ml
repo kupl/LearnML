@@ -1,0 +1,1 @@
+let drop : int list -> int -> int list = fun l n -> let rec dr l n = match l with | [] -> [] | hd::tl -> if n > 0 then dr tl (n-1) else hd::dr tl (n-1) in dr l n

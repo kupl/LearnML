@@ -1,0 +1,1 @@
+(* problem 2*) let smallest_divisor : int -> int = fun n -> let rec mod_cal x = if n mod x = 0 then x else if x*x > n then n else mod_cal (x+1) in mod_cal 2;;
