@@ -27,6 +27,10 @@ let rec update_closure : env -> value -> value
   | VCtor (x, vs) -> VCtor (x, List.map (update_closure env) vs)
   | VFun (x, e, closure) -> VFun (x, e, env)
   | VFunRec (f, x, e, closure) -> VFunRec (f, x, e, env)
+  | VBlock (f, vs) -> 
+    let (xs, vs) = List.split vs in
+    let vs = List.map (update_closure env) vs in
+    VBlock (f, List.combine xs vs)
   | _ -> v
 
 let rec find_callee : id -> (id * value) list -> value
@@ -44,6 +48,7 @@ let bind_block : env -> (id * value) list -> env
 let rec arg_binding : env -> arg -> value -> env
 = fun env arg v ->
   match (arg, v) with
+  | ArgUnder t, _ -> env
   | ArgOne (x, t), _ -> update_env x v env 
   | ArgTuple xs, VTuple vs -> (try List.fold_left2 arg_binding env xs vs with _ -> raise (Failure "argument binding failure - tuples are not compatible"))
   | _ -> raise (Failure "argument binding failure")
@@ -51,6 +56,7 @@ let rec arg_binding : env -> arg -> value -> env
 let rec let_binding : env -> let_bind -> value -> env
 = fun env x v ->
   match (x, v) with
+  | BindUnder, _ -> env
   | BindOne x, _ -> update_env x v env
   | BindTuple xs, VTuple vs -> (try List.fold_left2 let_binding env xs vs with _ -> raise (Failure "argument binding failure - tuples are not compatible"))
   | _ -> raise (Failure "let binding failure")
@@ -116,7 +122,7 @@ and bind_pat_list : env -> value list -> pat list -> env
 (* exp evaluation *)
 let rec eval : env -> exp -> value
 =fun env e ->
-  if (Unix.gettimeofday() -. !start_time >0.20) then 
+  if (Unix.gettimeofday() -. !start_time >0.05) then 
     let _ = (infinite_count:=!(infinite_count)+1) in
     raise TimeoutError
   else
@@ -193,7 +199,7 @@ let rec eval : env -> exp -> value
             | VFun (x, e, closure) -> eval (update_env f (VFunRec (f, x, e, closure)) env) e2
             | _ -> eval (update_env f v1 env) e2
             end
-          | _ -> raise (Failure "left-hand side cannot be a tupple")
+          | _ -> raise (Failure "Only variables are allowed as left-hand side of `let rec'")
         end
       else eval (let_binding env f (eval env e1)) e2
     | _ ->
@@ -210,7 +216,7 @@ let rec eval : env -> exp -> value
         if is_rec then
           begin match f with
           | BindOne f -> VFunRec (f, x, (binding (List.tl args) e1), env)
-          | _ -> raise (Failure "left-hand side cannot be a tupple")
+          | _ -> raise (Failure "Only variables are allowed as left-hand side of `let rec'")
           end
         else 
           VFun (x, (binding (List.tl args) e1), env)

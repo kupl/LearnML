@@ -55,6 +55,10 @@ let rec update_closure : labeled_env -> labeled_value -> labeled_value
   | VCtor (x, vs) -> VCtor (x, List.map (update_closure env) vs)
   | VFun (x, e, closure) -> VFun (x, e, env)
   | VFunRec (f, x, e, closure) -> VFunRec (f, x, e, env)
+  | VBlock (f, vs) -> 
+    let (xs, vs) = List.split vs in
+    let vs = List.map (update_closure env) vs in
+    VBlock (f, List.combine xs vs)
   | _ -> v
 
 let rec find_callee : id -> (id * labeled_value) list -> labeled_value
@@ -72,6 +76,7 @@ let bind_block : labeled_env -> (id * labeled_value) list -> labeled_env
 let rec arg_binding : labeled_env -> arg -> labeled_value -> labeled_env
 = fun env arg v ->
   match (arg, v) with
+  | ArgUnder t, _ -> env
   | ArgOne (x, t), _ -> update_env x v env 
   | ArgTuple xs, VTuple vs -> List.fold_left2 arg_binding env xs vs
   | _ -> raise (Failure "argument binding failure")
@@ -79,6 +84,7 @@ let rec arg_binding : labeled_env -> arg -> labeled_value -> labeled_env
 let rec let_binding : labeled_env -> let_bind -> labeled_value -> labeled_env
 = fun env x v ->
   match (x, v) with
+  | BindUnder, _ -> env
   | BindOne x, _ -> update_env x v env
   | BindTuple xs, VTuple vs -> (try List.fold_left2 let_binding env xs vs with _ -> raise (Failure "argument binding failure - tuples are not compatible"))
   | _ -> raise (Failure "let binding failure")
@@ -214,7 +220,7 @@ let rec eval : labeled_env -> labeled_exp -> labeled_value
         | VFun (x, e, closure) -> 
           begin match f with
           | BindOne f -> eval (update_env f (VFunRec (f, x, e, closure)) env) e2
-          | _ -> raise (Failure "left-hand side cannot be a tupple")
+          | _ -> raise (Failure "Only variables are allowed as left-hand side of `let rec'")
           end
         | _ -> eval (let_binding env f v1) e2
         end
@@ -233,7 +239,7 @@ let rec eval : labeled_env -> labeled_exp -> labeled_value
         if is_rec then
           begin match f with
           | BindOne f -> VFunRec (f, x, (binding (List.tl args) e1), env)
-          | _ -> raise (Failure "left-hand side cannot be a tupple")
+          | _ -> raise (Failure "Only variables are allowed as left-hand side of `let rec'")
           end
         else 
           VFun (x, (binding (List.tl args) e1), env)
