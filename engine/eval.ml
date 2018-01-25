@@ -27,6 +27,10 @@ let rec update_closure : env -> value -> value
   | VCtor (x, vs) -> VCtor (x, List.map (update_closure env) vs)
   | VFun (x, e, closure) -> VFun (x, e, env)
   | VFunRec (f, x, e, closure) -> VFunRec (f, x, e, env)
+  | VBlock (f, vs) -> 
+    let (xs, vs) = List.split vs in
+    let vs = List.map (update_closure env) vs in
+    VBlock (f, List.combine xs vs)
   | _ -> v
 
 let rec find_callee : id -> (id * value) list -> value
@@ -44,7 +48,7 @@ let bind_block : env -> (id * value) list -> env
 let rec arg_binding : env -> arg -> value -> env
 = fun env arg v ->
   match (arg, v) with
-  | ArgUnder, _ -> env
+  | ArgUnder t, _ -> env
   | ArgOne (x, t), _ -> update_env x v env 
   | ArgTuple xs, VTuple vs -> (try List.fold_left2 arg_binding env xs vs with _ -> raise (Failure "argument binding failure - tuples are not compatible"))
   | _ -> raise (Failure "argument binding failure")

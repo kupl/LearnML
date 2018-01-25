@@ -55,6 +55,10 @@ let rec update_closure : labeled_env -> labeled_value -> labeled_value
   | VCtor (x, vs) -> VCtor (x, List.map (update_closure env) vs)
   | VFun (x, e, closure) -> VFun (x, e, env)
   | VFunRec (f, x, e, closure) -> VFunRec (f, x, e, env)
+  | VBlock (f, vs) -> 
+    let (xs, vs) = List.split vs in
+    let vs = List.map (update_closure env) vs in
+    VBlock (f, List.combine xs vs)
   | _ -> v
 
 let rec find_callee : id -> (id * labeled_value) list -> labeled_value
@@ -72,7 +76,7 @@ let bind_block : labeled_env -> (id * labeled_value) list -> labeled_env
 let rec arg_binding : labeled_env -> arg -> labeled_value -> labeled_env
 = fun env arg v ->
   match (arg, v) with
-  | ArgUnder, _ -> env
+  | ArgUnder t, _ -> env
   | ArgOne (x, t), _ -> update_env x v env 
   | ArgTuple xs, VTuple vs -> List.fold_left2 arg_binding env xs vs
   | _ -> raise (Failure "argument binding failure")
