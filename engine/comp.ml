@@ -106,7 +106,7 @@ let rec find_component : exp-> components -> components
 	 	let comps = list_fold find_component el comps in
 	 	let el = list_map (fun e -> Hole (0)) el in
 	 	BatSet.add (EMatch (Hole (0),list_combine pl el)) comps
-	|_ -> BatSet.add e comps
+	|_ -> comps
 
 let extracts : decl -> components -> components
 = fun decl comps ->
