@@ -1,0 +1,1 @@
+(* problem 4*) let rec product : (int -> int) -> int -> int -> int = fun f a b -> let func = fun x -> f(x) in if a < b then (func a) * (product f (a+1) b) else if a == b then func a else failwith "failure";;
