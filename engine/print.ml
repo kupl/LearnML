@@ -5,6 +5,35 @@ open Label_lang
 (*****************************)
 (********language*************)
 (*****************************)
+let external_words : (string * string) list = 
+  [ ("assert'","assert")
+  ; ("__list_hd__","List.hd")
+  ; ("__list_tl__","List.tl")
+  ; ("__list_map__","List.map")
+  ; ("__list_mem__","List.mem")
+  ; ("__list_exists__","List.exists")
+  ; ("__list_filter__","List.filter")
+  ; ("__list_length__","List.length")
+  ; ("__list_nth__","List.nth")
+  ; ("__list_rev__","List.rev")
+  ; ("__list_foldl__","List.fold_left")
+  ; ("__list_foldr__","List.fold_right")
+  ; ("__list_rev_map__","List.rev_map")
+  ; ("__list_sort__","List.sort")
+  ; ("__list_memq__","List.memq")
+  ; ("__list_rev_append__","List.rev_append")
+  ; ("__list_map_i__","List.mapi")
+  ; ("__list_for_all__","List.for_all")
+  ; ("__list_find__","List.find")
+  ; ("__list_assoc__","List.assoc")
+  ; ("__string_concat__","Str.concat")
+  ]
+
+let exchange_external str =
+  match lookup str external_words with
+  | None -> str
+  | Some t -> t
+
 
 let rec tab_to_string : int -> string
 = fun n ->
@@ -120,7 +149,7 @@ let rec exp_to_string : exp -> string
   |String id -> "\"" ^ id ^"\""
   |TRUE -> "true"
   |FALSE -> "false"
-  |EVar x -> x
+  |EVar x -> exchange_external x
   |EList lst -> pp_list exp_to_string lst
   |ETuple lst -> pp_tuple exp_to_string lst
   |ECtor (x,lst) -> x ^ (if lst=[] then "" else " " ^ exp_to_string (List.hd lst))

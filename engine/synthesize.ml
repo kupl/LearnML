@@ -1,5 +1,6 @@
 open Lang
 open Util
+open Printf
 (*
  ******************************************************
  	Code for Synthesizing the "Hole"
@@ -226,7 +227,7 @@ let rec type_directed exp hole_typ env (h_t,h_e) =
 		let (t,tl) = get_ctor_type ctor_typ in
 		let holes_typ = list_map (fun (h,t) -> (extract_holenum h,t)) (list_combine l tl) in
 		begin match hole_typ with
-		|TBase id -> if(hole_typ = t) then determined_type exp holes_typ env h_t h_e else None
+		|TBase _ -> if(hole_typ = t) then determined_type exp holes_typ env h_t h_e else None
 		|TVar _ -> polymorphic_type exp (hole_typ,t) holes_typ env h_t h_e
 		|_ -> None
 		end
@@ -279,7 +280,7 @@ let rec type_directed exp hole_typ env (h_t,h_e) =
 		let (n1,n2) = (extract_holenum e1,extract_holenum e2) in
 		let tv = fresh_tvar() in
 		determined_type exp [(n1,TArr(tv,hole_typ));(n2,tv)] env h_t h_e
-	| _ -> raise (Failure "Components set includes hole expressions")
+	| _ -> raise (Failure (Print.exp_to_string exp ^ " is included in Components set"))
 
 
 let rec update_components : exp -> exp
@@ -410,10 +411,10 @@ let bound_var_to_comp tenv cand =
     match t with
     | TCtor(t,tl) ->
       begin match tl with
-      |[] -> BatSet.add (ECtor(v,[])) cand
-      |hd::tl -> BatSet.add (ECtor(v,[gen_hole()])) cand
+      |[] -> BatSet.add (ECtor(v,[])) r
+      |hd::tl -> BatSet.add (ECtor(v,[gen_hole()])) r
       end
-    |_ -> BatSet.add (EVar v) cand
+    |_ -> BatSet.add (EVar v) r
   ) tenv cand
 
 let gen_exp_nextstates : exp BatSet.t -> (Workset.work * exp) -> Workset.work BatSet.t
@@ -421,7 +422,8 @@ let gen_exp_nextstates : exp BatSet.t -> (Workset.work * exp) -> Workset.work Ba
 	let n = extract_holenum hole in
 	let hole_type = BatMap.find n h_t in
 	let env = BatMap.find n h_e in
-	let candidates = BatMap.foldi (fun v _ r -> BatSet.add (EVar v) r) env candidates in
+	(*let candidates = BatMap.foldi (fun v _ r -> BatSet.add (EVar v) r) env candidates in*)
+  let candidates = bound_var_to_comp env candidates in
 	let nextstates = BatSet.fold (fun c r-> 
 		let result = type_directed c hole_type env (h_t,h_e) in
 		match result with
@@ -446,7 +448,7 @@ let next : Workset.work -> components -> Workset.work BatSet.t
 
 let start_time = ref 0.0
 let iter = ref 0
-
+let debug = ref (open_out "debug.txt")
 
 let rec is_solution : prog -> examples -> bool
 = fun prog examples ->
@@ -483,6 +485,7 @@ let rec work : Workset.t -> components -> examples -> prog option
 	| None -> None
 	| Some ((rank,prog,h_t,h_e),remaining_workset) ->
 	  if is_closed prog then
+      let _ = fprintf (!debug) "%s\n" (Print.program_to_string prog) in
 	  	let _ = count := !count +1 in
 	  	if is_solution prog examples then Some prog
 			else work remaining_workset exp_set examples

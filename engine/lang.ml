@@ -147,8 +147,8 @@ let rec let_to_exp : let_bind -> exp
 let rec exp_cost : exp -> int 
 = fun exp ->
   match exp with
-  | EUnit -> 7
-  | Const n -> 7
+  | EUnit -> 50
+  | Const n -> 15
   | TRUE -> 15
   | FALSE -> 15
   | String x -> 15
@@ -168,11 +168,11 @@ let rec exp_cost : exp -> int
   | STRCON (e1,e2) -> 15 + (exp_cost e1) + (exp_cost e2)
   | MINUS e1 -> 15 + (exp_cost e1)
   | NOT e1 -> 15 + (exp_cost e1)
-  | EVar x -> 7
+  | EVar x -> 10
   | EApp (e1,e2) -> 10 + (exp_cost e1) + (exp_cost e2)
   | ELet (x,is_rec,args,typ,e1,e2) -> (if (is_rec) then 50 else 40) + (exp_cost e1) + (exp_cost e2)
   | EBlock (is_rec, es, e2) -> List.fold_left (fun acc (x, is_rec, args, typ, e) -> acc+(exp_cost e)) 0 es
-  | ECtor (x,l) -> 15 + (list_fold(fun e r -> exp_cost e + r) l 0)
+  | ECtor (x,l) -> 10 + (list_fold(fun e r -> exp_cost e + r) l 0)
   | EMatch (e1,bl) -> 
     let (pl,el) = list_split bl in
     40 + (exp_cost e1)+(list_fold(fun p r -> pat_cost p+r) pl 0) + (list_fold(fun e r ->exp_cost e+r) el 0)
@@ -180,9 +180,9 @@ let rec exp_cost : exp -> int
   | IF (e1,e2,e3) -> 40 + (exp_cost e1) + (exp_cost e2) + (exp_cost e3)
   | AT (e1,e2) -> 15 + (exp_cost e1) + (exp_cost e2)
   | DOUBLECOLON (e1,e2) -> 15 + (exp_cost e1) + (exp_cost e2)
-  | EList l -> 20 + (list_fold (fun e r -> exp_cost e + r) l 0)
-  | ETuple l-> 20 + (list_fold (fun e r -> exp_cost e + r) l 0) 
-  | Hole n-> 15
+  | EList l -> 10 + (list_fold (fun e r -> exp_cost e + r) l 0)
+  | ETuple l-> 10 + (list_fold (fun e r -> exp_cost e + r) l 0) 
+  | Hole n-> 30
   | Raise e -> 30 + (exp_cost e) 
 
 and pat_cost : pat -> int

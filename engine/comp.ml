@@ -9,6 +9,7 @@ open Util
 let rec find_component : exp-> components -> components
 = fun e comps->
 	match e with
+  | Const _ | TRUE | FALSE | String _ -> BatSet.add e comps
 	| ADD (e1,e2) ->
 		let comps = find_component e1 comps in
 		let comps = find_component e2 comps in
@@ -67,7 +68,6 @@ let rec find_component : exp-> components -> components
 		let comps = find_component e1 comps in
 		let comps = find_component e2 comps in
 		(BatSet.add (LESSEQ (Hole (0),Hole (0))) comps)
-	| EVar _ -> comps
 	| EApp (e1,e2) ->
 		let comps = find_component e1 comps in
 		let comps = find_component e2 comps in

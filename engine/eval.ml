@@ -122,7 +122,7 @@ and bind_pat_list : env -> value list -> pat list -> env
 (* exp evaluation *)
 let rec eval : env -> exp -> value
 =fun env e ->
-  if (Unix.gettimeofday() -. !start_time >0.05) then 
+  if (Unix.gettimeofday() -. !start_time >0.20) then 
     let _ = (infinite_count:=!(infinite_count)+1) in
     raise TimeoutError
   else
