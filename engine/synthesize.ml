@@ -448,7 +448,7 @@ let next : Workset.work -> components -> Workset.work BatSet.t
 
 let start_time = ref 0.0
 let iter = ref 0
-let debug = ref (open_out "debug.txt")
+(*let debug = ref (open_out "debug.txt")*)
 
 let rec is_solution : prog -> examples -> bool
 = fun prog examples ->
@@ -485,7 +485,7 @@ let rec work : Workset.t -> components -> examples -> prog option
 	| None -> None
 	| Some ((rank,prog,h_t,h_e),remaining_workset) ->
 	  if is_closed prog then
-      let _ = fprintf (!debug) "%s\n" (Print.program_to_string prog) in
+      (*let _ = fprintf (!debug) "%s\n" (Print.program_to_string prog) in*)
 	  	let _ = count := !count +1 in
 	  	if is_solution prog examples then Some prog
 			else work remaining_workset exp_set examples
