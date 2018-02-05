@@ -172,7 +172,7 @@ let rec exp_cost : exp -> int
   | EApp (e1,e2) -> 10 + (exp_cost e1) + (exp_cost e2)
   | ELet (x,is_rec,args,typ,e1,e2) -> (if (is_rec) then 50 else 40) + (exp_cost e1) + (exp_cost e2)
   | EBlock (is_rec, es, e2) -> List.fold_left (fun acc (x, is_rec, args, typ, e) -> acc+(exp_cost e)) 0 es
-  | ECtor (x,l) -> 10 + (list_fold(fun e r -> exp_cost e + r) l 0)
+  | ECtor (x,l) -> 40 + (list_fold(fun e r -> exp_cost e + r) l 0)
   | EMatch (e1,bl) -> 
     let (pl,el) = list_split bl in
     40 + (exp_cost e1)+(list_fold(fun p r -> pat_cost p+r) pl 0) + (list_fold(fun e r ->exp_cost e+r) el 0)
@@ -181,7 +181,7 @@ let rec exp_cost : exp -> int
   | AT (e1,e2) -> 15 + (exp_cost e1) + (exp_cost e2)
   | DOUBLECOLON (e1,e2) -> 15 + (exp_cost e1) + (exp_cost e2)
   | EList l -> 10 + (list_fold (fun e r -> exp_cost e + r) l 0)
-  | ETuple l-> 10 + (list_fold (fun e r -> exp_cost e + r) l 0) 
+  | ETuple l-> 5 + (list_fold (fun e r -> exp_cost e + r) l 0) 
   | Hole n-> 30
   | Raise e -> 30 + (exp_cost e) 
 
