@@ -47,6 +47,7 @@ module Workset = struct
     "To explore : " ^ (string_of_int (Heap.size heap)) ^
     " Explored : " ^ (string_of_int (BatSet.cardinal sset))
 end
+let debug = ref (open_out "debug.txt")
 
 let extract_holenum e = 
 	match e with
@@ -314,9 +315,54 @@ let rec update_components : exp -> exp
 		let (pl,el) = list_split bl in
 		EMatch (gen_hole(),(list_combine pl (list_map (fun _ -> gen_hole()) el)))
 	| _ -> exp 
-	
 
 let rec expholes : exp -> exp BatSet.t
+= fun exp ->
+	match exp with
+	| ADD (e1,e2) 
+	| SUB (e1,e2)
+	| MUL (e1,e2)
+	| DIV (e1,e2)
+	| MOD (e1,e2)
+	| OR (e1,e2)
+	| AND (e1,e2)	
+	| LESS (e1,e2)
+	| LARGER (e1,e2)
+	| EQUAL (e1,e2)
+	| NOTEQ (e1,e2)
+	| LESSEQ (e1,e2)
+	| LARGEREQ (e1,e2) 
+	| AT (e1,e2) 
+	| DOUBLECOLON (e1,e2)
+	| ELet (_,_,_,_,e1,e2)
+	| EApp (e1,e2) -> 
+    let t = expholes e1 in
+    if(BatSet.is_empty t) then expholes e2
+    else t
+	| MINUS e1
+  | NOT e1 
+  | EFun (_,e1) -> expholes e1
+	| IF (e1,e2,e3) ->
+    let t = expholes e1 in
+    if(BatSet.is_empty t) then
+      let t = expholes e2 in
+      if(BatSet.is_empty t) then
+        expholes e3
+      else t
+    else t
+	| ECtor (_,l) 
+	| EList l 
+	| ETuple l -> list_fold (fun e r -> if(BatSet.is_empty r) then expholes e else r) l BatSet.empty
+	| EMatch (e,bl) -> 
+    let t = expholes e in
+    if(BatSet.is_empty t) then
+      (list_fold (fun (_,e) r -> if(BatSet.is_empty r) then expholes e else r) bl BatSet.empty)
+    else t
+	| Hole _ -> BatSet.singleton exp
+	|_ -> BatSet.empty
+
+
+(*let rec expholes : exp -> exp BatSet.t
 = fun exp ->
 	match exp with
 	| ADD (e1,e2) 
@@ -347,7 +393,7 @@ let rec expholes : exp -> exp BatSet.t
 	| EMatch (e,bl) -> BatSet.union (expholes e) (list_fold (fun (_,e) r -> BatSet.union (expholes e) r) bl BatSet.empty)
 	| Hole _ -> BatSet.singleton exp
 	|_ -> BatSet.empty
-
+*)
 let find_expholes : prog -> exp BatSet.t
 = fun decls -> 
 	list_fold(fun decl set ->
@@ -430,7 +476,7 @@ let gen_exp_nextstates : exp BatSet.t -> (Workset.work * exp) -> Workset.work Ba
 		|Some (e,h_t,h_e) -> BatSet.add (e,h_t,h_e) r
 		|None -> r
 	) candidates BatSet.empty in
-	BatSet.map (fun (e,h_t,h_e)-> 
+	BatSet.map (fun (e,h_t,h_e)->
 		(rank,replace_exp prog hole e,BatMap.remove n h_t,BatMap.remove n h_e)
 	) nextstates 
 
@@ -448,7 +494,6 @@ let next : Workset.work -> components -> Workset.work BatSet.t
 
 let start_time = ref 0.0
 let iter = ref 0
-(*let debug = ref (open_out "debug.txt")*)
 
 let rec is_solution : prog -> examples -> bool
 = fun prog examples ->
@@ -460,14 +505,15 @@ let rec is_solution : prog -> examples -> bool
 		try
 			let env = Eval.run prog' in
 			let result = lookup_env res_var env in
-			(result=output)
+      Eval.value_equality result output
 		with
-    |TimeoutError -> (*Print.print_pgm prog;*)false
+    |TimeoutError -> (*fprintf (!debug) "%s\n" (Print.program_to_string prog);*) false
 		|_ -> false
 	) examples
 )
 
 let count = ref 0
+
 
 let rec work : Workset.t -> components -> examples -> prog option
 = fun workset exp_set examples->
@@ -485,14 +531,13 @@ let rec work : Workset.t -> components -> examples -> prog option
 	| None -> None
 	| Some ((rank,prog,h_t,h_e),remaining_workset) ->
 	  if is_closed prog then
-      (*let _ = fprintf (!debug) "%s\n" (Print.program_to_string prog) in*)
 	  	let _ = count := !count +1 in
 	  	if is_solution prog examples then Some prog
 			else work remaining_workset exp_set examples
 	  else
     let exp_set = BatSet.map update_components exp_set in
     let nextstates = next (rank,prog,h_t,h_e) exp_set in
-	  let new_workset = BatSet.fold Workset.add nextstates remaining_workset in
+    let new_workset = BatSet.fold Workset.add nextstates remaining_workset in
 	  	work new_workset exp_set examples
 
 let hole_synthesize : prog -> Workset.work BatSet.t -> components -> examples ->prog option

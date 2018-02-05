@@ -25,7 +25,7 @@ let rec constant_exp : exp -> exp
   | OR (e1,e2) -> 
     let e1 = constant_exp e1 in
     let e2 = constant_exp e2 in
-    if(e1=FALSE || e2=FALSE) then FALSE else if(e1=TRUE || e2=TRUE) then TRUE else OR(e1,e2) 
+    if(e1=FALSE && e2=FALSE) then FALSE else if(e1=TRUE || e2=TRUE) then TRUE else OR(e1,e2) 
   | AND (e1,e2) -> 
     let e1 = constant_exp e1 in
     let e2 = constant_exp e2 in
@@ -235,7 +235,7 @@ let rec reorder_exp : exp -> exp
   | MOD (e1,e2) -> MOD (reorder_exp e1,reorder_exp e2)
   | MINUS e -> MINUS (reorder_exp e)
   | NOT e -> NOT (reorder_exp e)
-  | LESS (e1,e2) -> if compare_exp e1 e2 then LESS (reorder_exp e1,reorder_exp e2) else LESS (reorder_exp e2,reorder_exp e1)
+  | LESS (e1,e2) -> LESS (reorder_exp e1,reorder_exp e2)   
   | LARGER (e1,e2) -> reorder_exp (LESS (e2,e1))
   | LESSEQ (e1,e2) -> reorder_exp (OR (LESS (e1,e2),EQUAL(e1,e2)))
   | LARGEREQ (e1,e2) -> reorder_exp (OR (LESS (e2,e1),EQUAL(e1,e2)))
@@ -272,3 +272,11 @@ let normalize : prog -> prog
 	let normalize_func = (fun x ->reorder_pgm x) in
   let pgm = fix constant_func pgm in
 	fix normalize_func pgm
+
+(************Simple infinite checking********)
+
+let infinite_decl : decl -> bool
+= fun decl -> true
+  
+let check_infinite : prog -> bool
+= fun pgm -> List.for_all infinite_decl pgm
