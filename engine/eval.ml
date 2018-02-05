@@ -119,6 +119,17 @@ let rec bind_pat : env -> value -> pat -> env
 and bind_pat_list : env -> value list -> pat list -> env
 = fun env vs ps -> List.fold_left2 bind_pat env vs ps
 
+let rec value_equality : value -> value -> bool
+= fun v1 v2 ->
+  match v1,v2 with
+  | VBool b1,VBool b2 -> b1=b2
+  | VInt n1,VInt n2 -> n1=n2
+  | VString id1,VString id2 -> id1=id2
+  | VList l1, VList l2
+  | VTuple l1, VTuple l2 -> List.for_all2 value_equality l1 l2
+  | VCtor (x1,l1), VCtor(x2,l2) -> (x1=x2) && List.for_all2 value_equality l1 l2
+  | _ -> false
+
 (* exp evaluation *)
 let rec eval : env -> exp -> value
 =fun env e ->
@@ -160,8 +171,8 @@ let rec eval : env -> exp -> value
   | LARGER (e1, e2) -> (eval_abbop env e1 e2 (>))
   | LESSEQ (e1, e2) -> (eval_abbop env e1 e2 (<=))
   | LARGEREQ (e1, e2) -> (eval_abbop env e1 e2 (>=))
-  | EQUAL (e1, e2) -> eval_equality env e1 e2 (=)
-  | NOTEQ (e1, e2) -> eval_equality env e1 e2 (<>)
+  | EQUAL (e1, e2) -> VBool (eval_equality env e1 e2)
+  | NOTEQ (e1, e2) -> VBool (not (eval_equality env e1 e2))
   (* lop *)
   | AT (e1, e2) ->
     begin match (eval env e1, eval env e2) with
@@ -291,27 +302,11 @@ and eval_bbop : env -> exp -> exp -> (bool -> bool -> bool) -> value
   | VBool b1, VBool b2 -> VBool (op b1 b2)
   | _ -> raise (Failure "boolean_operation error")
 
-and eval_equality : env -> exp -> exp -> ('a -> 'a -> bool) -> value
-= fun env e1 e2 op ->
+and eval_equality : env -> exp -> exp -> bool
+= fun env e1 e2->
   let (x,y) = (eval env e1, eval env e2) in
-  match (x, y) with
-  | VFun _, _  
-  | VFunRec _, _
-  | _, VFun _
-  | _, VFunRec _ -> raise (Failure "Unable to check functions equality")
-  | VList l1, VList l2
-  | VTuple l1, VTuple l2
-  | VCtor (_,l1), VCtor(_,l2) ->
-    let check v = 
-      match v with
-      | VFun _ | VFunRec _ -> true
-      | _ -> false
-    in
-    let b = (List.exists check l1) || (List.exists check l2) in
-    if b then raise (Failure "Unable to check functions equality")
-    else VBool (op x y)
-  | _ -> VBool (op x y)
-
+  (value_equality x y)
+  
 let rec eval_decl : env -> decl -> env
 = fun env decl ->
   match decl with
