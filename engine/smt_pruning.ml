@@ -192,7 +192,7 @@ let solve : symbolic_value -> bool
   let f =
     try 
       Converter.symbol_to_formula sv 
-    with _ -> False (* Invalid Formula i.e type miss match *)
+    with _ -> False (* Invalid Formula e.g) type miss match *)
   in
   let aez_formula = Aez_Encoder.encode_formula f in
   try

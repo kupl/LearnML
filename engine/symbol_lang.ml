@@ -25,6 +25,7 @@ type operator =
   | Div
   | Mod
 
+(************* Partial Evaluation **************)
 type symbolic_value = 
   (* Const *)
   | Unit
