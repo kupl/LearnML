@@ -530,22 +530,22 @@ let rec work : Workset.t -> components -> examples -> prog option
 	match Workset.choose workset with
 	| None -> None
 	| Some ((rank,prog,h_t,h_e),remaining_workset) ->
-	  if is_closed prog then
-	  	let _ = count := !count +1 in
-	  	if is_solution prog examples then Some prog
-			else work remaining_workset exp_set examples
-	  else
-    let exp_set = BatSet.map update_components exp_set in
-    let nextstates = next (rank,prog,h_t,h_e) exp_set in
-    let new_workset = BatSet.fold Workset.add nextstates remaining_workset in
-	  	work new_workset exp_set examples
+	  	if is_closed prog then
+		  	let _ = count := !count +1 in
+		  	if is_solution prog examples then Some prog else work remaining_workset exp_set examples
+		else if (Smt_pruning.smt_pruning prog examples) && true then
+		    let exp_set = BatSet.map update_components exp_set in
+		    let nextstates = next (rank,prog,h_t,h_e) exp_set in
+			let new_workset = BatSet.fold Workset.add nextstates remaining_workset in
+			work new_workset exp_set examples
+		else work remaining_workset exp_set examples
 
 let hole_synthesize : prog -> Workset.work BatSet.t -> components -> examples ->prog option
 = fun pgm pgm_set components examples -> 
 	Print.print_header "expression component set is below";
 	Print.print_exp_set components;
 	let workset = BatSet.fold (fun t set-> Workset.add t set) pgm_set Workset.empty in
-  let _ = start_time := 0.0 in
+  	let _ = start_time := 0.0 in
 	let result = work workset components examples in
 	let result_prog_string = 
 	match result with
@@ -560,5 +560,10 @@ let hole_synthesize : prog -> Workset.work BatSet.t -> components -> examples ->
 	Print.print_header "eval count";
 	print_endline(string_of_int (!Eval.count));
 	Print.print_header "infinite count";
-	print_endline(string_of_int (!Eval.infinite_count));
-  result
+	print_endline(string_of_int (!Eval.infinite_count + !Symbol_eval.infinite_count));
+	Print.print_header "SMT time";
+	print_endline(string_of_float (!Smt_pruning.smt_time));
+	Print.print_header "UNSAT count";
+	print_endline(string_of_int (!Smt_pruning.unsat_count));
+	result
+

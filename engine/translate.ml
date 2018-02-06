@@ -118,13 +118,17 @@ let rec translate_exp : exp -> exp
 let translate_decl : decl -> decl
 = fun decl ->
 	match decl with
-  | DData _ -> decl
   | DLet (f, is_rec, args, typ, exp) -> 
-    let exp = ELet (f, is_rec, args, typ, exp, EVar f) in
+    let exp = ELet (f, is_rec, args, typ, exp, let_to_exp f) in
     begin match translate_exp exp with
 	  | ELet (f, is_rec, args, typ, e1, e2) -> DLet (f, is_rec, args, typ, e1)
 	  | _ -> raise (Failure "Translation Failure")
     end
+  | DBlock (is_rec, bindings) ->
+    let bindings = List.map (fun (f, is_rec, args, typ, e) -> (f, is_rec, args, typ, translate_exp e)) bindings in
+    DBlock (is_rec, bindings)
+  | _ -> decl
+ 
 
 let translate : prog -> prog
 = fun decls -> List.map translate_decl decls
