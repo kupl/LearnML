@@ -216,7 +216,7 @@ let smt_pruning : prog -> examples -> bool
       let t = List.for_all (
         fun example ->
           let sv = Symbol_eval.gen_constraint pgm' example in
-          solve (Symbol_eval.normalize sv)
+          solve sv
       ) examples in
       cache := Cache.add key t !cache;
       t
