@@ -319,29 +319,13 @@ let rec update_components : exp -> exp
 let rec expholes : exp -> exp BatSet.t
 = fun exp ->
 	match exp with
-	| ADD (e1,e2) 
-	| SUB (e1,e2)
-	| MUL (e1,e2)
-	| DIV (e1,e2)
-	| MOD (e1,e2)
-	| OR (e1,e2)
-	| AND (e1,e2)	
-	| LESS (e1,e2)
-	| LARGER (e1,e2)
-	| EQUAL (e1,e2)
-	| NOTEQ (e1,e2)
-	| LESSEQ (e1,e2)
-	| LARGEREQ (e1,e2) 
-	| AT (e1,e2) 
-	| DOUBLECOLON (e1,e2)
-	| ELet (_,_,_,_,e1,e2)
-	| EApp (e1,e2) -> 
+	| ADD (e1,e2) | SUB (e1,e2) | MUL (e1,e2) | DIV (e1,e2)	| MOD (e1,e2)	| OR (e1,e2) | AND (e1,e2) | LESS (e1,e2)
+	| LARGER (e1,e2) | EQUAL (e1,e2) | NOTEQ (e1,e2) | LESSEQ (e1,e2) | LARGEREQ (e1,e2)  | AT (e1,e2) 
+	| DOUBLECOLON (e1,e2) | ELet (_,_,_,_,e1,e2) | EApp (e1,e2) -> 
     let t = expholes e1 in
     if(BatSet.is_empty t) then expholes e2
     else t
-	| MINUS e1
-  | NOT e1 
-  | EFun (_,e1) -> expholes e1
+	| MINUS e1 | NOT e1 | EFun (_,e1) -> expholes e1
 	| IF (e1,e2,e3) ->
     let t = expholes e1 in
     if(BatSet.is_empty t) then
@@ -350,9 +334,7 @@ let rec expholes : exp -> exp BatSet.t
         expholes e3
       else t
     else t
-	| ECtor (_,l) 
-	| EList l 
-	| ETuple l -> list_fold (fun e r -> if(BatSet.is_empty r) then expholes e else r) l BatSet.empty
+	| ECtor (_,l) | EList l | ETuple l -> list_fold (fun e r -> if(BatSet.is_empty r) then expholes e else r) l BatSet.empty
 	| EMatch (e,bl) -> 
     let t = expholes e in
     if(BatSet.is_empty t) then
@@ -463,13 +445,22 @@ let bound_var_to_comp tenv cand =
     |_ -> BatSet.add (EVar v) r
   ) tenv cand
 
+let except_alias_vars alias_info candidates =
+	BatSet.diff candidates (BatSet.fold (fun (p1,p2) acc -> 
+			match p2 with
+			|PVar x -> BatSet.add (EVar x) acc
+			|_ -> acc
+		)alias_info BatSet.empty
+	)
+
 let gen_exp_nextstates : exp BatSet.t -> (Workset.work * exp) -> Workset.work BatSet.t
 = fun candidates ((rank,prog,h_t,h_e),hole) ->
+	let alias_info = MustAlias.Sem.run prog in
 	let n = extract_holenum hole in
 	let hole_type = BatMap.find n h_t in
 	let env = BatMap.find n h_e in
-	(*let candidates = BatMap.foldi (fun v _ r -> BatSet.add (EVar v) r) env candidates in*)
   let candidates = bound_var_to_comp env candidates in
+	let candidates = except_alias_vars (MustAlias.Sem.get_aliasSet alias_info n) candidates in
 	let nextstates = BatSet.fold (fun c r-> 
 		let result = type_directed c hole_type env (h_t,h_e) in
 		match result with
