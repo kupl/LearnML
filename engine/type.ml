@@ -198,6 +198,17 @@ let rec type_of_fun : arg list -> typ -> typ
   | [] -> typ
   | hd::tl -> TArr (type_of_arg hd, type_of_fun tl typ)
 
+let rec update_arg_type : arg -> typ -> arg
+= fun arg t ->
+	match arg with
+	| ArgUnder _ -> ArgUnder t
+	| ArgOne (x, _) -> ArgOne (x,t)
+	| ArgTuple xs -> 
+		begin match t with
+		| TTuple l -> ArgTuple(List.map2 update_arg_type xs l)
+		| _ -> arg
+		end
+
 let rec let_binding : TEnv.t -> let_bind -> typ -> TEnv.t
 = fun tenv x typ->
   match (x, typ) with
