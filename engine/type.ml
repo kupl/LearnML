@@ -200,14 +200,14 @@ let rec type_of_fun : arg list -> typ -> typ
 
 let rec update_arg_type : arg -> typ -> arg
 = fun arg t ->
-	match arg with
-	| ArgUnder _ -> ArgUnder t
-	| ArgOne (x, _) -> ArgOne (x,t)
-	| ArgTuple xs -> 
-		begin match t with
-		| TTuple l -> ArgTuple(List.map2 update_arg_type xs l)
-		| _ -> arg
-		end
+  match arg with
+  | ArgUnder _ -> ArgUnder t
+  | ArgOne (x, _) -> ArgOne (x,t)
+  | ArgTuple xs -> 
+    begin match t with
+    | TTuple l -> ArgTuple(List.map2 update_arg_type xs l)
+    | _ -> arg
+    end
 
 let rec let_binding : TEnv.t -> let_bind -> typ -> TEnv.t
 = fun tenv x typ->
@@ -390,7 +390,7 @@ let rec gen_equations : HoleType.t -> VariableType.t -> TEnv.t -> exp -> typ -> 
     (eqns@eqns',hole_typ,var_typ)
   | EMatch (e, bs) ->
     let typ_pat = fresh_tvar () in
-    let typ_exp = fresh_tvar () in
+    let typ_exp = ty in
     let (eqns, hole_typ, var_typ) = gen_equations hole_typ var_typ tenv e typ_pat in
     (* Inference each branches *)
     let results = 
