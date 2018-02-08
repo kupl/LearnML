@@ -235,11 +235,12 @@ let rec type_directed exp hole_typ env (h_t,h_e) =
 	| EFun (arg, e) ->
 		let n = extract_holenum e in
 		let t = Type.type_of_arg arg in
-		let env = Type.bind_arg env arg in
 		begin match hole_typ with
 		|TArr (t1,t2) -> 
 			let t = (match t with |TVar _ -> t1 |_ -> t) in
 			if(t=t1) then
+				let arg = Type.update_arg_type arg t1 in
+				let env = Type.bind_arg env arg in
 				determined_type exp [(n,t2)] env h_t h_e 
 			else None
 		|TVar _ -> 
@@ -248,7 +249,7 @@ let rec type_directed exp hole_typ env (h_t,h_e) =
 		|_ -> None
 		end
 	| EMatch(e,bl) -> None
-	| EVar x -> 
+	| EVar x ->
 		let x_t = BatMap.find x env in
 		let rec check_correct typ x_t h_t env=
 			begin match (typ,x_t) with
@@ -276,7 +277,6 @@ let rec type_directed exp hole_typ env (h_t,h_e) =
 		let (result,h_t',h_e')=check_correct hole_typ x_t h_t h_e in
 		if result then Some (exp,h_t',h_e')
 		else None
-
 	| EApp (e1,e2) -> 
 		let (n1,n2) = (extract_holenum e1,extract_holenum e2) in
 		let tv = fresh_tvar() in
@@ -344,38 +344,6 @@ let rec expholes : exp -> exp BatSet.t
 	|_ -> BatSet.empty
 
 
-(*let rec expholes : exp -> exp BatSet.t
-= fun exp ->
-	match exp with
-	| ADD (e1,e2) 
-	| SUB (e1,e2)
-	| MUL (e1,e2)
-	| DIV (e1,e2)
-	| MOD (e1,e2)
-	| OR (e1,e2)
-	| AND (e1,e2)	
-	| LESS (e1,e2)
-	| LARGER (e1,e2)
-	| EQUAL (e1,e2)
-	| NOTEQ (e1,e2)
-	| LESSEQ (e1,e2)
-	| LARGEREQ (e1,e2) 
-	| AT (e1,e2) 
-	| DOUBLECOLON (e1,e2)
-	| ELet (_,_,_,_,e1,e2)
-	| EApp (e1,e2) -> BatSet.union (expholes e1) (expholes e2)
-	| MINUS e1
-  | NOT e1 
-  | EFun (_,e1) -> expholes e1
-	| IF (e1,e2,e3) -> 
-		BatSet.union (expholes e1) (BatSet.union (expholes e2) (expholes e3))
-	| ECtor (_,l) 
-	| EList l 
-	| ETuple l -> list_fold (fun e r -> BatSet.union (expholes e) r) l BatSet.empty
-	| EMatch (e,bl) -> BatSet.union (expholes e) (list_fold (fun (_,e) r -> BatSet.union (expholes e) r) bl BatSet.empty)
-	| Hole _ -> BatSet.singleton exp
-	|_ -> BatSet.empty
-*)
 let find_expholes : prog -> exp BatSet.t
 = fun decls -> 
 	list_fold(fun decl set ->
@@ -483,8 +451,6 @@ let next : Workset.work -> components -> Workset.work BatSet.t
 	) exp_holes BatSet.empty in
 	next_exp
 
-let start_time = ref 0.0
-let iter = ref 0
 
 let rec is_solution : prog -> examples -> bool
 = fun prog examples ->
@@ -499,12 +465,19 @@ let rec is_solution : prog -> examples -> bool
       Eval.value_equality result output
 		with
     |TimeoutError -> (*fprintf (!debug) "%s\n" (Print.program_to_string prog);*) false
-		|_ -> false
+		|StackOverflow _ -> Eval.infinite_count:=(!Eval.infinite_count)+1; false
+		|Stack_overflow -> Eval.infinite_count:=(!Eval.infinite_count)+1; false
+		|e -> 
+			let msg = Printexc.to_string e in
+			fprintf (!debug) "%s\n" (Print.program_to_string prog);
+			fprintf (!debug) "%s\n" (msg);
+			false
 	) examples
 )
 
+let start_time = ref 0.0
+let iter = ref 0
 let count = ref 0
-
 
 let rec work : Workset.t -> components -> examples -> prog option
 = fun workset exp_set examples->
@@ -523,12 +496,13 @@ let rec work : Workset.t -> components -> examples -> prog option
 	| Some ((rank,prog,h_t,h_e),remaining_workset) ->
 	  	if is_closed prog then
 		  	let _ = count := !count +1 in
-		  	if is_solution prog examples then Some prog else work remaining_workset exp_set examples
-		else if (Smt_pruning.smt_pruning prog examples) && true then
+		  	if is_solution prog examples then Some prog
+				else work remaining_workset exp_set examples
+			else if (Smt_pruning.smt_pruning prog examples) && true then
 		    let exp_set = BatSet.map update_components exp_set in
-		    let nextstates = next (rank,prog,h_t,h_e) exp_set in
-			let new_workset = BatSet.fold Workset.add nextstates remaining_workset in
-			work new_workset exp_set examples
+				let nextstates = next (rank,prog,h_t,h_e) exp_set in
+				let new_workset = BatSet.fold Workset.add nextstates remaining_workset in
+				work new_workset exp_set examples
 		else work remaining_workset exp_set examples
 
 let hole_synthesize : prog -> Workset.work BatSet.t -> components -> examples ->prog option
@@ -536,7 +510,7 @@ let hole_synthesize : prog -> Workset.work BatSet.t -> components -> examples ->
 	Print.print_header "expression component set is below";
 	Print.print_exp_set components;
 	let workset = BatSet.fold (fun t set-> Workset.add t set) pgm_set Workset.empty in
-  	let _ = start_time := 0.0 in
+  let _ = start_time := 0.0 in
 	let result = work workset components examples in
 	let result_prog_string = 
 	match result with
