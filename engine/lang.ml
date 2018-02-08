@@ -2,6 +2,7 @@ open Util
 
 exception EvalError of string
 exception TimeoutError
+exception StackOverflow of string
 
 type id = string 
 type typ = 

@@ -55,7 +55,7 @@ let rec arg_binding : env -> arg -> value -> env
       try List.fold_left2 arg_binding env xs vs 
       with 
       | Invalid_argument _ -> raise (Failure "argument binding failure - tuples are not compatible")
-      | _ -> raise (Failure "Stack overflow during evaluation (looping recursion?)")
+      | _ -> raise (StackOverflow "Stack overflow during evaluation (looping recursion?)")
     )
   | _ -> raise (Failure "argument binding failure")
 
@@ -69,9 +69,9 @@ let rec let_binding : env -> let_bind -> value -> env
       try List.fold_left2 let_binding env xs vs 
       with 
       | Invalid_argument _ -> raise (Failure "argument binding failure - tuples are not compatible")
-      | _ -> raise (Failure "Stack overflow during evaluation (looping recursion?)")
+      | _ -> raise (StackOverflow "Stack overflow during evaluation (looping recursion?)")
     )
-  | _ -> raise (Failure "let binding failure")
+	| _ -> raise (Failure "let binding failure")
 
 (* Pattern Matching *)
 let rec find_first_branch : value -> branch list -> (pat * exp)
