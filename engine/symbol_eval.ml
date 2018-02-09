@@ -44,6 +44,7 @@ let bind_block : symbolic_env -> (id * symbolic_value) list -> symbolic_env
   List.fold_left (fun env x -> extend_env (x, FunBlock (x, svs)) env) env xs
 
 (* Argument binding *)
+
 let rec arg_binding : symbolic_env -> arg -> symbolic_value -> symbolic_env
 = fun env arg sv ->
   match (arg, sv) with
@@ -52,7 +53,13 @@ let rec arg_binding : symbolic_env -> arg -> symbolic_value -> symbolic_env
   | ArgTuple xs, Symbol _ ->
     let svs = List.map (fun x -> fresh_symbol ()) xs in
     arg_binding env arg (Tuple svs)
-  | ArgTuple xs, Tuple svs -> (try List.fold_left2 arg_binding env xs svs with _ -> raise (Failure "argument binding failure - tuples are not compatible"))
+  | ArgTuple xs, Tuple svs -> 
+    (
+      try List.fold_left2 arg_binding env xs svs 
+      with 
+      | Invalid_argument _ -> raise (Failure "argument binding failure - tuples are not compatible")
+      | _ -> raise (Failure "Stack overflow during evaluation (looping recursion?)")
+    )
   | _ -> raise (Failure "argument binding failure")
 
 let rec let_binding : symbolic_env -> let_bind -> symbolic_value -> symbolic_env
@@ -60,7 +67,13 @@ let rec let_binding : symbolic_env -> let_bind -> symbolic_value -> symbolic_env
   match (x, sv) with
   | BindUnder, _ -> env
   | BindOne x, _ -> extend_env (x, sv) env
-  | BindTuple xs, Tuple svs -> (try List.fold_left2 let_binding env xs svs with _ -> raise (Failure "argument binding failure - tuples are not compatible"))
+  | BindTuple xs, Tuple svs -> 
+    (
+      try List.fold_left2 let_binding env xs svs 
+      with 
+      | Invalid_argument _ -> raise (Failure "argument binding failure - tuples are not compatible")
+      | _ -> raise (Failure "Stack overflow during evaluation (looping recursion?)")
+    )
   | _ -> raise (Failure "let binding failure")
 
 (* Pattern Matching *)
@@ -470,5 +483,5 @@ let gen_constraint : prog -> example -> symbolic_value
   try
     let sv1 = symbolic_execution pgm input in
     let sv2 = value_to_symbol output in
-    EQop (Eq, sv1, sv2)
+    normalize (EQop (Eq, sv1, sv2))
   with _ -> Bool false

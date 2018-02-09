@@ -1,11 +1,12 @@
 # LearnML
 A framework for generating personalized feedbacks on functional programming assignments
 
-## Install
+## Install Packages
 ```sh
 $ opam install core
 $ opam install batteries
 $ opam install menhir
+$ opam install aez
 ```
 
 ## Running

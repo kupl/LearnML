@@ -183,16 +183,16 @@ let new_try () = (try_count := !try_count + 1); !try_count
 
 let unsat_count = ref 0
 let smt_time = ref 0.0
-
+(*
 let out1 = ref (open_out "sat.txt")
 let out2 = ref (open_out "unsat.txt")
-
+*)
 let solve : symbolic_value -> bool
 = fun sv ->
   let f =
     try 
       Converter.symbol_to_formula sv 
-    with _ -> False (* Invalid Formula i.e type miss match *)
+    with _ -> False (* Invalid Formula e.g) type miss match *)
   in
   let aez_formula = Aez_Encoder.encode_formula f in
   try
@@ -216,7 +216,7 @@ let smt_pruning : prog -> examples -> bool
       let t = List.for_all (
         fun example ->
           let sv = Symbol_eval.gen_constraint pgm' example in
-          solve (Symbol_eval.normalize sv)
+          solve sv
       ) examples in
       cache := Cache.add key t !cache;
       t
@@ -224,10 +224,10 @@ let smt_pruning : prog -> examples -> bool
   let _ =
     (* checking *)
     unsat_count := if result then !unsat_count else 1 + !unsat_count;
-    smt_time := Unix.gettimeofday() -. start_time;
+    smt_time := (!smt_time)+.(Unix.gettimeofday() -. start_time);
   in
   (* Debuging *)
-  let svs = List.map (Symbol_eval.gen_constraint pgm') examples in
+  (*let svs = List.map (Symbol_eval.gen_constraint pgm') examples in
   let s = List.fold_left (fun acc sv -> acc ^ "\n" ^ Print.symbol_to_string sv) "" svs in 
   let str = Print.program_to_string pgm ^ s in
   let _ =
@@ -235,5 +235,5 @@ let smt_pruning : prog -> examples -> bool
       Printf.fprintf (!out1) "--------------------------------\n%s\n" (str)
     else
       Printf.fprintf (!out2) "--------------------------------\n%s\n" (str)
-  in
+  in*)
   result

@@ -78,7 +78,13 @@ let rec arg_binding : labeled_env -> arg -> labeled_value -> labeled_env
   match (arg, v) with
   | ArgUnder t, _ -> env
   | ArgOne (x, t), _ -> update_env x v env 
-  | ArgTuple xs, VTuple vs -> List.fold_left2 arg_binding env xs vs
+  | ArgTuple xs, VTuple vs ->
+    (
+      try List.fold_left2 arg_binding env xs vs 
+      with 
+      | Invalid_argument _ -> raise (Failure "argument binding failure - tuples are not compatible")
+      | _ -> raise (Failure "Stack overflow during evaluation (looping recursion?)")
+    )
   | _ -> raise (Failure "argument binding failure")
 
 let rec let_binding : labeled_env -> let_bind -> labeled_value -> labeled_env
@@ -86,7 +92,13 @@ let rec let_binding : labeled_env -> let_bind -> labeled_value -> labeled_env
   match (x, v) with
   | BindUnder, _ -> env
   | BindOne x, _ -> update_env x v env
-  | BindTuple xs, VTuple vs -> (try List.fold_left2 let_binding env xs vs with _ -> raise (Failure "argument binding failure - tuples are not compatible"))
+  | BindTuple xs, VTuple vs -> 
+    (
+      try List.fold_left2 let_binding env xs vs 
+      with 
+      | Invalid_argument _ -> raise (Failure "argument binding failure - tuples are not compatible")
+      | _ -> raise (Failure "Stack overflow during evaluation (looping recursion?)")
+    )
   | _ -> raise (Failure "let binding failure")
 
 (* Pattern Matching *)

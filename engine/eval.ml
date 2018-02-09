@@ -50,7 +50,13 @@ let rec arg_binding : env -> arg -> value -> env
   match (arg, v) with
   | ArgUnder t, _ -> env
   | ArgOne (x, t), _ -> update_env x v env 
-  | ArgTuple xs, VTuple vs -> (try List.fold_left2 arg_binding env xs vs with _ -> raise (Failure "argument binding failure - tuples are not compatible"))
+  | ArgTuple xs, VTuple vs -> 
+    (
+      try List.fold_left2 arg_binding env xs vs 
+      with 
+      | Invalid_argument _ -> raise (Failure "argument binding failure - tuples are not compatible")
+      | _ -> raise (StackOverflow "Stack overflow during evaluation (looping recursion?)")
+    )
   | _ -> raise (Failure "argument binding failure")
 
 let rec let_binding : env -> let_bind -> value -> env
@@ -58,8 +64,14 @@ let rec let_binding : env -> let_bind -> value -> env
   match (x, v) with
   | BindUnder, _ -> env
   | BindOne x, _ -> update_env x v env
-  | BindTuple xs, VTuple vs -> (try List.fold_left2 let_binding env xs vs with _ -> raise (Failure "argument binding failure - tuples are not compatible"))
-  | _ -> raise (Failure "let binding failure")
+  | BindTuple xs, VTuple vs -> 
+    (
+      try List.fold_left2 let_binding env xs vs 
+      with 
+      | Invalid_argument _ -> raise (Failure "argument binding failure - tuples are not compatible")
+      | _ -> raise (StackOverflow "Stack overflow during evaluation (looping recursion?)")
+    )
+	| _ -> raise (Failure "let binding failure")
 
 (* Pattern Matching *)
 let rec find_first_branch : value -> branch list -> (pat * exp)
@@ -126,8 +138,8 @@ let rec value_equality : value -> value -> bool
   | VInt n1,VInt n2 -> n1=n2
   | VString id1,VString id2 -> id1=id2
   | VList l1, VList l2
-  | VTuple l1, VTuple l2 -> List.for_all2 value_equality l1 l2
-  | VCtor (x1,l1), VCtor(x2,l2) -> (x1=x2) && List.for_all2 value_equality l1 l2
+  | VTuple l1, VTuple l2 -> (try List.for_all2 value_equality l1 l2 with _ -> false)
+  | VCtor (x1,l1), VCtor(x2,l2) -> (try ((x1=x2) && List.for_all2 value_equality l1 l2) with _ -> false)
   | _ -> false
 
 (* exp evaluation *)

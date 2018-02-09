@@ -1,39 +1,10 @@
 open Lang
 open Util
 open Label_lang
-
+open Symbol_lang
 (*****************************)
 (********language*************)
 (*****************************)
-let external_words : (string * string) list = 
-  [ ("assert'","assert")
-  ; ("__list_hd__","List.hd")
-  ; ("__list_tl__","List.tl")
-  ; ("__list_map__","List.map")
-  ; ("__list_mem__","List.mem")
-  ; ("__list_exists__","List.exists")
-  ; ("__list_filter__","List.filter")
-  ; ("__list_length__","List.length")
-  ; ("__list_nth__","List.nth")
-  ; ("__list_rev__","List.rev")
-  ; ("__list_foldl__","List.fold_left")
-  ; ("__list_foldr__","List.fold_right")
-  ; ("__list_rev_map__","List.rev_map")
-  ; ("__list_sort__","List.sort")
-  ; ("__list_memq__","List.memq")
-  ; ("__list_rev_append__","List.rev_append")
-  ; ("__list_map_i__","List.mapi")
-  ; ("__list_for_all__","List.for_all")
-  ; ("__list_find__","List.find")
-  ; ("__list_assoc__","List.assoc")
-  ; ("__string_concat__","Str.concat")
-  ]
-
-let exchange_external str =
-  match lookup str external_words with
-  | None -> str
-  | Some t -> t
-
 
 let rec tab_to_string : int -> string
 = fun n ->
@@ -149,7 +120,7 @@ let rec exp_to_string : exp -> string
   |String id -> "\"" ^ id ^"\""
   |TRUE -> "true"
   |FALSE -> "false"
-  |EVar x -> exchange_external x
+  |EVar x -> x
   |EList lst -> pp_list exp_to_string lst
   |ETuple lst -> pp_tuple exp_to_string lst
   |ECtor (x,lst) -> x ^ (if lst=[] then "" else " " ^ exp_to_string (List.hd lst))
@@ -404,7 +375,7 @@ let rec labeled_value_to_string : labeled_value -> string
   | VFun (arg, exp, lenv) -> "VFun" ^ arg_to_string arg
   | VFunRec (f, arg, exp, lenv) -> "VFun" ^ f ^ arg_to_string arg
   | VHole n -> "?"
-  | VBlock (f, vs) -> "{" ^ f ^ "|->" ^ pp_block (labeled_value_block_to_string) vs
+  | VBlock (f, vs) -> "{" ^ f ^ "|->" ^ pp_block (labeled_value_block_to_string) vs ^ "}"
 
 and labeled_value_block_to_string : id * labeled_value -> string
 = fun (x, v) -> x ^ " : " ^ labeled_value_to_string v
@@ -458,3 +429,87 @@ let print_REPL : prog -> (id,typ) BatMap.t -> env -> unit
     ("val "^id^" : " ^ t_string ^ " = " ^ (value_to_string v)^"\n")^r
   ) env "" in
   print_string str
+
+(* Symbols *)
+let op_to_string : operator -> string
+= fun op ->
+  match op with
+  | Add -> "+" | Sub -> "-" | Mul -> "*" | Div -> "/" | Mod -> "mod"
+
+let cmb_to_string : combinator -> string 
+= fun op ->
+  match op with
+  | And -> "/\\" | Or -> "\\/"
+
+let cmp_to_string : comparator -> string
+= fun op ->
+  match op with
+  | Lt -> "<" | Gt -> ">" | Le -> "<=" | Ge -> ">="
+
+let eq_to_string : eq_operator -> string
+= fun op ->
+  match op with
+  | Eq -> "=" | NEq -> "<>"
+
+let rec symbol_to_string : symbolic_value -> string
+= fun sv ->
+  match sv with
+  | Unit -> "()"
+  | Int n -> string_of_int n
+  | Bool b -> string_of_bool b
+  | Str s -> s
+  | List svs -> pp_list symbol_to_string svs
+  | Tuple svs -> pp_tuple symbol_to_string svs
+  | Ctor (x, svs) -> if svs = [] then x else x ^ " " ^ pp_tuple symbol_to_string svs
+  | Exn sv -> "Exception " ^ symbol_to_string sv
+  | Symbol n -> "#S (" ^ string_of_int n ^ ")"
+  | Fun (x, e, closure) -> "Fun (" ^ arg_to_string x ^ ")"
+  | FunRec (f, x, e, closure) -> "FunRec (" ^ f ^ ", " ^ arg_to_string x ^ ")"
+  | FunBlock (f, svs) -> "{" ^ f ^ "|->" ^ pp_block symbol_block_to_string svs ^ "}"
+  | Minus sv -> "-(" ^ symbol_to_string sv ^ ")"
+  | Not sv -> "not (" ^ symbol_to_string sv ^ ")"
+  (* binary operation *)
+  | Aop (op, sv1, sv2) -> "(" ^ symbol_to_string sv1 ^ " " ^ op_to_string op ^ " " ^ symbol_to_string sv2 ^ ")"
+  | Bop (op, sv1, sv2) -> "(" ^ symbol_to_string sv1 ^ " " ^ cmb_to_string op ^ " " ^ symbol_to_string sv2 ^ ")"
+  | ABop (op, sv1, sv2) -> "(" ^ symbol_to_string sv1 ^ " " ^ cmp_to_string op ^ " " ^ symbol_to_string sv2 ^ ")"
+  | EQop (op, sv1, sv2) -> "(" ^ symbol_to_string sv1 ^ " " ^ eq_to_string op ^ " " ^ symbol_to_string sv2 ^ ")"
+  | Cons (sv1, sv2) -> "(" ^ symbol_to_string sv1 ^ "::" ^ symbol_to_string sv2 ^ ")"
+  | Append (sv1, sv2) -> "(" ^ symbol_to_string sv1 ^ "@" ^ symbol_to_string sv2 ^ ")"
+  | Strcon (sv1, sv2) -> "(" ^ symbol_to_string sv1 ^ "^" ^ symbol_to_string sv2 ^ ")"
+
+and symbol_block_to_string : id * symbolic_value -> string
+= fun (x, sv) -> x ^ " : " ^ symbol_to_string sv
+
+(* Formula *)
+let rec aterm_to_string : aterm -> string
+= fun t ->
+  match t with
+  | ASymbol n -> "#A(" ^ string_of_int n ^ ")"
+  | Int n -> string_of_int n
+  | Op (op, t1, t2) -> "(" ^ aterm_to_string t1 ^ op_to_string op ^ aterm_to_string t2 ^ ")"
+
+let rec sterm_to_string : sterm -> string
+= fun t ->
+  match t with
+  | SSymbol n -> "#S(" ^ string_of_int n ^ ")"
+  | Str s -> s
+
+let rec term_to_string : term -> string
+= fun t ->
+  match t with
+  | A t -> aterm_to_string t
+  | S t -> sterm_to_string t
+  
+let rec formula_to_string : formula -> string
+= fun f ->
+  match f with
+  | True -> "true"
+  | False -> "false"
+  | FSymbol n -> "#F(" ^ string_of_int n ^ ")"
+  | Not f -> "not (" ^ formula_to_string f ^ ")"  
+  | And (f1, f2) -> "(" ^ formula_to_string f1 ^ "/\\" ^ formula_to_string f2 ^ ")"
+  | Or (f1, f2) -> "(" ^ formula_to_string f1 ^ "\\/" ^ formula_to_string f2 ^ ")"
+  | Iff (f1, f2) -> "(" ^ formula_to_string f1 ^ "=" ^ formula_to_string f2 ^ ")"
+  | Lt (f1, f2) -> "(" ^ aterm_to_string f1 ^ "<" ^ aterm_to_string f2 ^ ")"
+  | Le (f1, f2) -> "(" ^ aterm_to_string f1 ^ "<=" ^ aterm_to_string f2 ^ ")"
+  | Eq (f1, f2) -> "(" ^ term_to_string f1 ^ "=" ^ term_to_string f2 ^ ")"
