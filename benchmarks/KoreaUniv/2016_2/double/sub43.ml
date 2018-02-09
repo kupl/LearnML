@@ -1,0 +1,1 @@
+let double (f : 'a -> 'a ) (x : 'a) : 'a  = f (f x)

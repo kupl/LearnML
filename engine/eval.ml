@@ -138,8 +138,8 @@ let rec value_equality : value -> value -> bool
   | VInt n1,VInt n2 -> n1=n2
   | VString id1,VString id2 -> id1=id2
   | VList l1, VList l2
-  | VTuple l1, VTuple l2 -> List.for_all2 value_equality l1 l2
-  | VCtor (x1,l1), VCtor(x2,l2) -> (x1=x2) && List.for_all2 value_equality l1 l2
+  | VTuple l1, VTuple l2 -> (try List.for_all2 value_equality l1 l2 with _ -> false)
+  | VCtor (x1,l1), VCtor(x2,l2) -> (try ((x1=x2) && List.for_all2 value_equality l1 l2) with _ -> false)
   | _ -> false
 
 (* exp evaluation *)
