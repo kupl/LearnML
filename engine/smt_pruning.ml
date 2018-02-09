@@ -86,7 +86,7 @@ module Converter = struct
     (* Integer *)
     | _, Int _ | Int _, _ | _, Aop _ | Aop _ , _ | _, Minus _ | Minus _, _ -> Eq (A (symbol_to_aterm sv1),A (symbol_to_aterm sv2))
     (* String *)
-    | _, Str _ | Str _, _ | _, Strcon _ | Strcon _ ,_ -> Eq (S (symbol_to_sterm sv1), S (symbol_to_sterm sv2))
+    | _, Str _ | Str _, _ | _, Strcon _ | Strcon _ ,_ -> (*Eq (S (symbol_to_sterm sv1), S (symbol_to_sterm sv2))*) True
     (* Bool *)
     | Symbol _, Symbol _ | _, Bool _ | Bool _, _ | _, Bop _ | Bop _, _ | _, ABop _ | ABop _, _ | _, EQop _ | EQop _, _ | _, Not _ | Not _, _ -> 
       Iff (symbol_to_formula sv1, symbol_to_formula sv2)
