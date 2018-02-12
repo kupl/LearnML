@@ -81,12 +81,14 @@ module Converter = struct
   and eq_to_formula : eq_operator -> symbolic_value -> symbolic_value -> formula
   = fun op sv1 sv2 ->
     match (sv1, sv2) with
-    (* Unit -> trivial ??? *)
-    | Unit, Unit | Unit, Symbol _ | Symbol _, Unit -> True
+    (* Symbol *)
+    | Symbol _, _ | _, Symbol _ -> True
+    (* Unit *)
+    | Unit, Unit -> True
     (* Integer *)
     | _, Int _ | Int _, _ | _, Aop _ | Aop _ , _ | _, Minus _ | Minus _, _ -> Eq (A (symbol_to_aterm sv1),A (symbol_to_aterm sv2))
     (* String *)
-    | _, Str _ | Str _, _ | _, Strcon _ | Strcon _ ,_ -> (*Eq (S (symbol_to_sterm sv1), S (symbol_to_sterm sv2))*) True
+    | _, Str _ | Str _, _ | _, Strcon _ | Strcon _ ,_ -> True (* TODO *) 
     (* Bool *)
     | Symbol _, Symbol _ | _, Bool _ | Bool _, _ | _, Bop _ | Bop _, _ | _, ABop _ | ABop _, _ | _, EQop _ | EQop _, _ | _, Not _ | Not _, _ -> 
       Iff (symbol_to_formula sv1, symbol_to_formula sv2)
@@ -117,8 +119,6 @@ module Converter = struct
       And (f1, f2)
     (* List Append => Convert to List cons form *)
     | _, Append (l1, l2) | Append (l1, l2), _ -> True (* TODO *)
-    (* Symbol -> Use Env ..? *)
-    | Symbol _, _ | _, Symbol _ -> True
     | _ -> raise (Failure "Invalid Eq") 
 
 end
@@ -213,11 +213,8 @@ let smt_pruning : prog -> examples -> bool
     if Cache.mem key !cache then
       Cache.find key !cache
     else
-      let t = List.for_all (
-        fun example ->
-          let sv = Symbol_eval.gen_constraint pgm' example in
-          solve sv
-      ) examples in
+      let svs = List.map (Symbol_eval.gen_constraint pgm') examples in
+      let t = List.for_all solve svs in
       cache := Cache.add key t !cache;
       t
   in
