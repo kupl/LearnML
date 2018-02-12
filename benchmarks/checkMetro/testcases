@@ -8,5 +8,6 @@
 	AREA("a", CONNECT(STATION "a", AREA("b", STATION "a"))) => true;
 	AREA("a", AREA("b", CONNECT(STATION "a", STATION "c"))) => false; 
 	CONNECT (AREA ("a", AREA ("b", STATION "a")), AREA ("c", STATION "a")) => false;
+	CONNECT (AREA ("a", AREA ("b", STATION "c")), AREA ("x", AREA ("y", STATION "x"))) => false;
 	CONNECT (AREA ("a", CONNECT (STATION "a", AREA ("c", STATION "c"))), AREA ("b", CONNECT (AREA ("a", STATION "a"), STATION "b"))) => true;
 }
