@@ -107,7 +107,6 @@ module Simplification = struct
       let (e1, e2) = (simplify_exp e1, simplify_exp e2) in
       begin match (e1, e2) with
       | EList es1, EList es2 -> EList (es1 @ es2)
-      | EList es, EList [] | EList [], EList es -> EList es
       | _ -> AT (e1, e2)
       end
     | DOUBLECOLON (e1, e2) ->
