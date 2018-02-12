@@ -20,13 +20,13 @@ let start_time = ref 0.0
 (* Find counter exampels *)
 let rec is_counter_example : prog -> example -> bool
 = fun pgm (input, output) ->
-  let pgm=pgm@(External.grading_prog) in
   let res_var = "__res__" in
+  let pgm = pgm@(External.grading_prog) in
   let pgm' = pgm @ [(DLet (BindOne res_var,false,[],fresh_tvar(),(Lang.appify (EVar !Options.opt_entry_func) input)))] in
   try
     let env = Eval.run pgm' in
-    let result_value = Lang.lookup_env res_var env in
-    result_value <> output
+    let result = Lang.lookup_env res_var env in
+    not (Eval.value_equality result output)
   with _ -> true
 
 let rec find_counter_examples : prog -> examples -> examples
@@ -83,7 +83,7 @@ let rec arg_binding : labeled_env -> arg -> labeled_value -> labeled_env
       try List.fold_left2 arg_binding env xs vs 
       with 
       | Invalid_argument _ -> raise (Failure "argument binding failure - tuples are not compatible")
-      | _ -> raise (Failure "Stack overflow during evaluation (looping recursion?)")
+      | _ -> raise (StackOverflow "Stack overflow during evaluation (looping recursion?)")
     )
   | _ -> raise (Failure "argument binding failure")
 
@@ -97,7 +97,7 @@ let rec let_binding : labeled_env -> let_bind -> labeled_value -> labeled_env
       try List.fold_left2 let_binding env xs vs 
       with 
       | Invalid_argument _ -> raise (Failure "argument binding failure - tuples are not compatible")
-      | _ -> raise (Failure "Stack overflow during evaluation (looping recursion?)")
+      | _ -> raise (StackOverflow "Stack overflow during evaluation (looping recursion?)")
     )
   | _ -> raise (Failure "let binding failure")
 
@@ -157,6 +157,17 @@ let rec bind_pat : labeled_env -> labeled_value -> pat -> labeled_env
 and bind_pat_list : labeled_env -> labeled_value list -> pat list -> labeled_env
 = fun env vs ps -> List.fold_left2 bind_pat env vs ps
 
+let rec value_equality : labeled_value -> labeled_value -> bool
+= fun v1 v2 ->
+  match v1,v2 with
+  | VBool b1,VBool b2 -> b1=b2
+  | VInt n1,VInt n2 -> n1=n2
+  | VString id1,VString id2 -> id1=id2
+  | VList l1, VList l2
+  | VTuple l1, VTuple l2 -> (try List.for_all2 value_equality l1 l2 with _ -> false)
+  | VCtor (x1,l1), VCtor(x2,l2) -> (try ((x1=x2) && List.for_all2 value_equality l1 l2) with _ -> false)
+  | _ -> false
+
 (* exp evaluation *)
 let rec eval : labeled_env -> labeled_exp -> labeled_value
 = fun env (label, e) -> 
@@ -174,11 +185,12 @@ let rec eval : labeled_env -> labeled_exp -> labeled_value
   | EList es -> VList (List.map (eval env) es)
   | ETuple es -> VTuple (List.map (eval env) es)
   | ECtor (c, es) ->  VCtor (c, List.map (eval env) es)
-  | ADD (e1, e2) -> VInt (eval_abop env e1 e2 (+)) 
-  | SUB (e1, e2) -> VInt (eval_abop env e1 e2 (-))
-  | MUL (e1, e2) -> VInt (eval_abop env e1 e2 ( * ))
-  | DIV (e1, e2) -> VInt (eval_abop env e1 e2 (/))
-  | MOD (e1, e2) -> VInt (eval_abop env e1 e2 (mod))
+  (* aop *)
+  | ADD (e1, e2) -> (eval_abop env e1 e2 (+))
+  | SUB (e1, e2) -> (eval_abop env e1 e2 (-))
+  | MUL (e1, e2) -> (eval_abop env e1 e2 ( * ))
+  | DIV (e1, e2) -> (eval_abop env e1 e2 (/))
+  | MOD (e1, e2) -> (eval_abop env e1 e2 (mod))
   | MINUS e ->
     begin match (eval env e) with
     | VInt n -> VInt (-n)
@@ -190,14 +202,14 @@ let rec eval : labeled_env -> labeled_exp -> labeled_value
     | VBool b -> VBool (not b)
     | _ -> raise (Failure "boolean_operation error")
     end
-  | OR (e1, e2) -> VBool (eval_bbop env e1 e2 (||))
-  | AND (e1, e2) -> VBool (eval_bbop env e1 e2 (&&))
-  | LESS (e1, e2) -> VBool (eval_abbop env e1 e2 (<))
-  | LARGER (e1, e2) -> VBool (eval_abbop env e1 e2 (>))
-  | LESSEQ (e1, e2) -> VBool (eval_abbop env e1 e2 (<=))
-  | LARGEREQ (e1, e2) -> VBool (eval_abbop env e1 e2 (>=))
-  | EQUAL (e1, e2) -> VBool ((eval env e1) = (eval env e2))
-  | NOTEQ (e1, e2) -> VBool ((eval env e1) = (eval env e2))
+  | OR (e1, e2) -> (eval_bbop env e1 e2 (||))
+  | AND (e1, e2) -> (eval_bbop env e1 e2 (&&))
+  | LESS (e1, e2) -> (eval_abbop env e1 e2 (<))
+  | LARGER (e1, e2) -> (eval_abbop env e1 e2 (>))
+  | LESSEQ (e1, e2) -> (eval_abbop env e1 e2 (<=))
+  | LARGEREQ (e1, e2) -> (eval_abbop env e1 e2 (>=))
+  | EQUAL (e1, e2) -> VBool (eval_equality env e1 e2)
+  | NOTEQ (e1, e2) -> VBool (not (eval_equality env e1 e2))
   (* lop *)
   | AT (e1, e2) ->
     begin match (eval env e1, eval env e2) with
@@ -308,23 +320,28 @@ let rec eval : labeled_env -> labeled_exp -> labeled_value
     let e = eval env e in
     raise (LExcept e)
 
-and eval_abop : labeled_env -> labeled_exp -> labeled_exp -> (int -> int -> int) -> int
+and eval_abop : labeled_env -> labeled_exp -> labeled_exp -> (int -> int -> int) -> labeled_value
 = fun env e1 e2 op ->
   match (eval env e1, eval env e2) with
-  | VInt n1, VInt n2 -> op n1 n2
+  | VInt n1, VInt n2 -> VInt (op n1 n2)
   | _ -> raise (Failure "arithmetic_operation error")
 
-and eval_abbop : labeled_env -> labeled_exp -> labeled_exp -> (int -> int -> bool) -> bool
+and eval_abbop : labeled_env -> labeled_exp -> labeled_exp -> (int -> int -> bool) -> labeled_value
 = fun env e1 e2 op ->
   match (eval env e1, eval env e2) with
-  | VInt n1, VInt n2 -> op n1 n2
+  | VInt n1, VInt n2 -> VBool (op n1 n2)
   | _ -> raise (Failure "int_relation error")
 
-and eval_bbop : labeled_env -> labeled_exp -> labeled_exp -> (bool -> bool -> bool) -> bool
+and eval_bbop : labeled_env -> labeled_exp -> labeled_exp -> (bool -> bool -> bool) -> labeled_value
 = fun env e1 e2 op ->
   match (eval env e1, eval env e2) with
-  | VBool b1, VBool b2 -> op b1 b2
+  | VBool b1, VBool b2 -> VBool (op b1 b2)
   | _ -> raise (Failure "boolean_operation error")
+
+and eval_equality : labeled_env -> labeled_exp -> labeled_exp -> bool
+= fun env e1 e2->
+  let (x,y) = (eval env e1, eval env e2) in
+  (value_equality x y)
 
 let check_entry f entry_func =
   match f with
