@@ -10,6 +10,7 @@ let opt_fix = ref false
 let opt_external_filename = ref "moduleSpec.ml"
 let opt_gentest = ref false
 let opt_execute = ref false
+let opt_localize = ref false
 
 
 let options =
@@ -26,6 +27,7 @@ let options =
     ("-entry", Arg.String (fun f -> opt_entry_func := f), " Name of the entry function (default: f)");
     ("-verbose" , Arg.Set opt_verbose, " Verbose mode");
     ("-pp", Arg.Set opt_pp, " Print AST");
+    ("-localize", Arg.Set opt_localize, " Localize")
   ]
   |> Arg.align
 

@@ -57,6 +57,17 @@ let run_prog : prog -> examples -> unit
   print_header "Test-cases"; print_examples examples;
   print_header "Run test-cases"; run_testcases prog examples 
 
+let localization : prog -> examples -> unit
+= fun pgm examples ->
+  let basic_candidate = Localize.localization pgm examples in
+  let smt_candidate =
+  BatSet.filter (
+    fun (_, pgm) -> Smt_pruning.smt_pruning pgm examples
+  ) basic_candidate in
+  print_header ("Candidate Set (base) : " ^ string_of_int (BatSet.cardinal basic_candidate)); BatSet.iter (fun (_, pgm) -> Print.print_pgm pgm) basic_candidate;
+  print_header ("Candidate Set (smt) : " ^ string_of_int (BatSet.cardinal smt_candidate)); BatSet.iter (fun (_, pgm) -> Print.print_pgm pgm) smt_candidate;
+  ()
+
 let fix_with_solution : prog -> prog -> examples -> unit
 =fun submission solution examples ->  (* TODO *)
   let _ = Type.run submission in
@@ -124,6 +135,13 @@ let main () =
          with _ -> raise (Failure ("error during parsing testcases: " ^ !opt_testcases_filename)) in 
   let submission = read_prog !opt_submission_filename in
   let solution = read_prog !opt_solution_filename in
+    if !opt_localize then 
+      begin
+        match submission with
+        | Some sub -> localization sub testcases
+        | _ -> raise (Failure (!opt_submission_filename ^ " does not exist"))
+      end
+    else
     match !opt_run, !opt_fix, !opt_gentest, !opt_execute with
     | true, false, false, false -> (* execution mode *)
       begin
