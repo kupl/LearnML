@@ -157,6 +157,9 @@ let rec gen_hole_exp : int -> labeled_exp -> labeled_exp
 	| NOT e -> (label, NOT (gen_hole_exp n e))
 	| EFun (x, e) -> (label, EFun (x, gen_hole_exp n e))
 	| ELet (f, is_rec, args, typ, e1, e2) -> (label, ELet (f, is_rec, args, typ, gen_hole_exp n e1, gen_hole_exp n e2))
+	| EBlock (is_rec, ds, e2) -> 
+		let ds = List.map (fun (f, is_rec, args, typ, e) -> (f, is_rec, args, typ, gen_hole_exp n e)) ds in
+		(label, EBlock (is_rec, ds, gen_hole_exp n e2))
 	| EMatch (e, bs) ->
 		let (ps, es) = List.split bs in
 		(label, EMatch (gen_hole_exp n e, List.combine ps (gen_hole_explist n es)))
@@ -170,6 +173,9 @@ let rec gen_hole_decl : int -> labeled_decl -> labeled_decl
 = fun n l_decl ->
 	match l_decl with
 	| DLet (f, is_rec, args, typ, e) -> DLet (f, is_rec, args, typ, gen_hole_exp n e)
+	| DBlock (is_rec, ds) -> 
+		let ds = List.map (fun (f, is_rec, args, typ, e) -> (f, is_rec, args, typ, gen_hole_exp n e)) ds in
+		DBlock (is_rec, ds)
 	| _ -> l_decl
 
 let rec gen_hole_pgm : int -> labeled_prog -> labeled_prog

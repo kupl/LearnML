@@ -26,6 +26,8 @@ let rec is_counter_example : prog -> example -> bool
   try
     let env = Eval.run pgm' in
     let result = Lang.lookup_env res_var env in
+    print_endline (value_to_string result);
+    print_endline (value_to_string output);
     not (Eval.value_equality result output)
   with _ -> true
 
@@ -412,6 +414,7 @@ let localization : prog -> examples -> (int * prog) BatSet.t
     fun label set ->
       let hole_pgm = gen_hole_pgm label l_pgm in
       let candidate_pgm = unlabeling_prog hole_pgm in
+      Print.print_pgm candidate_pgm;
       let rank = (cost pgm) - (cost candidate_pgm) in
       if (Synthesize.is_closed candidate_pgm) then set else extend_set (rank, candidate_pgm) set
   ) trace_set empty_set in

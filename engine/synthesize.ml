@@ -349,6 +349,8 @@ let find_expholes : prog -> exp BatSet.t
 	list_fold(fun decl set ->
 		match decl with
 		| DLet (x,is_rec,args,typ,exp) -> BatSet.union (expholes exp) set
+		| DBlock (is_rec, bindings) ->
+			List.fold_left (fun set (f, is_rec, args, typ, e) -> BatSet.union (expholes e) set) set bindings
 		| _ -> set
 	) decls BatSet.empty
 
@@ -482,7 +484,7 @@ let count = ref 0
 let rec work : Workset.t -> components -> examples -> prog option
 = fun workset exp_set examples->
 	iter := !iter +1;
-  if (Sys.time() -. (!start_time) >1200.0) then None
+  if (Sys.time() -. (!start_time) > 1200.0) then None
   else if (!iter mod 10000 = 0)
 	  then
 		  begin
