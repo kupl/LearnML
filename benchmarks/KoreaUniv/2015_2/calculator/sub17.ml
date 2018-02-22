@@ -5,28 +5,20 @@ type exp = X
          | MUL of exp * exp
          | DIV of exp * exp
          | SIGMA of exp * exp * exp
-module type Iter = sig
-  type t
-  exception Not_found
-  val empty : t
-  val have : t -> exp
-  val extend : exp -> t -> t
-end
 
-module Iter : Iter = struct
-  type t = exp list
-  exception Not_found
-  let empty = []
-  let have e = 
-    match e with
-    | [] -> raise Not_found
-    | hd::tl -> hd
-  let extend x e = x::e
-end
+type t = exp list
 
-let rec eval : exp -> Iter.t -> exp
+exception Not_found
+let empty = []
+let have e = 
+  match e with
+  | [] -> raise Not_found
+  | hd::tl -> hd
+let extend x e = x::e
+
+let rec eval : exp -> t -> exp
 =fun ev t -> match ev with
-  | X -> Iter.have t
+  | X -> have t
   | INT a -> INT a
   | ADD (a,b) -> 
     let evala = eval a t in
@@ -62,11 +54,11 @@ let rec eval : exp -> Iter.t -> exp
       else eval (
         ADD(
 	(eval (SIGMA (ADD (i,INT 1), f, form)) t),
-	(eval form (Iter.extend evali t))
+	(eval form (extend evali t))
 	  )
 	) t
 
 let calculator : exp -> int
-=fun e -> match eval e Iter.empty with
+=fun e -> match eval e empty with
   | INT a -> a
   | _ -> raise (Failure "error")

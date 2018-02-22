@@ -15,7 +15,7 @@ let rec apply : exp -> int -> exp
   | SUB (e1, e2) -> SUB ((apply e1 n), (apply e2 n))
   | MUL (e1, e2) -> MUL ((apply e1 n), (apply e2 n))
   | DIV (e1, e2) -> DIV ((apply e1 n), (apply e2 n))
-  | SIGMA (e1, e2, e3) -> SIGMA ((apply e1 n), (apply e2 n), (apply e3 n))
+  | SIGMA (e1, e2, e3) -> SIGMA ((apply e1 n), (apply e2 n), e3)
   | X -> INT n
 
 let rec calculator : exp -> int
