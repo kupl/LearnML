@@ -185,7 +185,7 @@ module Sem : S = struct
 				) bs empty_alias
 			)
 
-	let analysis_decl : decl -> env -> env
+	let rec analysis_decl : decl -> env -> env
 	= fun decl (s,map) ->
 		match decl with
 		| DLet (x, is_rec, args, typ, exp) ->
@@ -200,8 +200,11 @@ module Sem : S = struct
 				let s = gen s (let_bind_to_pat x, exp) in
 				let s = closure s in
 				(s,Map.union map alias)
-
-		| DBlock (is_rec, bindings)-> (s,map) (*TODO*)
+		| DBlock (is_rec, bindings)-> (* TODO *)
+			list_fold (
+				fun (f, is_rec, args, typ, e) (s, map) ->
+					analysis_decl (DLet (f, is_rec, args, typ, e)) (s, map)
+			) bindings (s, map)
 		| _ -> (s,map)
 
 	let run : prog -> aliasinfo
