@@ -197,6 +197,8 @@ and normalize_aop : operator -> symbolic_value -> symbolic_value -> symbolic_val
     begin match (sv1, sv2) with
     | Int n1, Int n2 -> Int (n1 + n2)
     | Int 0, sv | sv, Int 0 -> sv
+    | Int n1, Aop (Add, Int n2, sv') | Int n1, Aop (Add, sv', Int n2) -> Aop (Add, Int (n1 + n2), sv')
+    | Aop (Add, Int n1, sv'), Int n2 | Aop (Add, sv', Int n1), Int n2 -> Aop (Add, Int (n1 + n2), sv')
     | _ -> Aop (op, sv1, sv2)
     end
   | Sub ->
@@ -204,13 +206,18 @@ and normalize_aop : operator -> symbolic_value -> symbolic_value -> symbolic_val
     | Int n1, Int n2 -> Int (n1 - n2)
     | Int 0, _ -> Minus sv2
     | _, Int 0 -> sv1
+    | Int n1, Aop (Sub, Int n2, sv') | Int n1, Aop (Sub, sv', Int n2) -> Aop (Sub, Int (n1 - n2), sv')
+    | Aop (Sub, Int n1, sv'), Int n2 | Aop (Sub, sv', Int n1), Int n2 -> Aop (Sub, Int (n1 - n2), sv')
     | _ -> Aop (op, sv1, sv2)
     end
   | Mul ->
     begin match (sv1, sv2) with
     | Int n1, Int n2 -> Int (n1 * n2)
     | Int 0, _ | _, Int 0 -> Int 0
-    | Int 1, sv | sv, Int 1 -> sv 
+    | Int 1, sv | sv, Int 1 -> sv
+    | Int n1, Aop (Mul, Int n2, sv') | Int n1, Aop (Mul, sv', Int n2) -> Aop (Mul, Int (n1 * n2), sv')
+    | Aop (Mul, Int n1, sv'), Int n2 | Aop (Mul, sv', Int n1), Int n2  -> Aop (Mul, Int (n1 * n2), sv')
+    | Symbol _, Symbol _ -> fresh_symbol ()
     | _ -> Aop (op, sv1, sv2)
     end
   | Div ->
@@ -219,6 +226,8 @@ and normalize_aop : operator -> symbolic_value -> symbolic_value -> symbolic_val
     | Int n1, Int n2 -> Int (n1 / n2)
     | Int 0, _ -> Int 0
     | _, Int 1 -> sv1
+    | Aop (Div, sv', Int n1), Int n2  -> Aop (Div, sv' , Int (n1 * n2))
+    | Symbol _, Symbol _ -> fresh_symbol ()
     | _ -> Aop (op, sv1, sv2)
     end
   | Mod ->
@@ -227,6 +236,7 @@ and normalize_aop : operator -> symbolic_value -> symbolic_value -> symbolic_val
     | Int n1, Int n2 -> Int (n1 mod n2)
     | Int 0, _ -> Int 0
     | _, Int 1 -> Int 0
+    | Symbol _, Symbol _ -> fresh_symbol ()
     | _ -> Aop (op, sv1, sv2)
     end
 
@@ -278,139 +288,145 @@ and normalize_eqop : eq_operator -> symbolic_value -> symbolic_value -> symbolic
 (* Encoding *)
 let rec partial_eval_exp : symbolic_env -> exp -> symbolic_value
 = fun env exp ->
+  (*print_endline (Print.exp_to_string exp);*)
   if (Unix.gettimeofday() -. !start_time >0.20) then 
     let _ = (infinite_count:=!(infinite_count)+1) in
     raise TimeoutError
   else
-  match exp with 
-  (* Const *)
-  | EUnit -> Unit
-  | Const n -> Int n
-  | TRUE -> Bool true
-  | FALSE -> Bool false
-  | String str -> Str str
-  | EVar x -> find_env x env
-  | EList es -> List (List.map (partial_eval_exp env) es)
-  | ETuple es -> Tuple (List.map (partial_eval_exp env) es)
-  | ECtor (x, es) -> Ctor (x, List.map (partial_eval_exp env) es)
-  | Raise e -> Exn (partial_eval_exp env e)
-  | Hole n -> Symbol n
-  | EFun (arg, e) -> Fun (arg, e, env)
-  (* Unary Operator *)
-  | MINUS e -> Minus (partial_eval_exp env e)
-  | NOT e -> Not (partial_eval_exp env e)
-  (* Binary Operator *)
-  | ADD (e1, e2) -> Aop (Add, partial_eval_exp env e1, partial_eval_exp env e2)
-  | SUB (e1, e2) -> Aop (Sub, partial_eval_exp env e1, partial_eval_exp env e2)
-  | MUL (e1, e2) -> Aop (Mul, partial_eval_exp env e1, partial_eval_exp env e2)
-  | DIV (e1, e2) -> Aop (Div, partial_eval_exp env e1, partial_eval_exp env e2)
-  | MOD (e1, e2) -> Aop (Mod, partial_eval_exp env e1, partial_eval_exp env e2)
-  | OR (e1, e2) -> Bop (Or, partial_eval_exp env e1, partial_eval_exp env e2)
-  | AND (e1, e2) -> Bop (And, partial_eval_exp env e1, partial_eval_exp env e2)
-  | LESS (e1, e2) -> ABop (Lt, partial_eval_exp env e1, partial_eval_exp env e2)
-  | LESSEQ (e1, e2) -> ABop (Le, partial_eval_exp env e1, partial_eval_exp env e2)
-  | LARGER (e1, e2) -> ABop (Gt, partial_eval_exp env e1, partial_eval_exp env e2)
-  | LARGEREQ (e1, e2) -> ABop (Ge, partial_eval_exp env e1, partial_eval_exp env e2)
-  | EQUAL (e1, e2) -> EQop (Eq, partial_eval_exp env e1, partial_eval_exp env e2)
-  | NOTEQ (e1, e2) -> EQop (NEq, partial_eval_exp env e1, partial_eval_exp env e2)
-  | DOUBLECOLON (e1, e2) -> Cons (partial_eval_exp env e1, partial_eval_exp env e2)
-  | AT (e1, e2) -> Append (partial_eval_exp env e1, partial_eval_exp env e2)
-  | STRCON (e1,e2) -> Strcon (partial_eval_exp env e1, partial_eval_exp env e2)
-  (* Branch expressions => normalize & condition hole *)
-  | IF (e1, e2, e3) ->
-    let sv1 = partial_eval_exp env e1 in
-    let sv1 = normalize sv1 in
-    if is_symbol_const sv1 then
-      begin match sv1 with
-      | Bool b -> if b then partial_eval_exp env e2 else partial_eval_exp env e3
-      | _ -> raise (Failure "if_type error")
-      end
-    else fresh_symbol () (* Check SAT?? *)
-  | EMatch (e, bs) ->
-    let sv = partial_eval_exp env e in
-    let sv = normalize sv in
-    if is_symbol_const sv then 
-      let (p, ex) = find_first_branch sv bs in
-      partial_eval_exp (bind_pat env sv p) ex
-    else fresh_symbol () (* Merge all branchs *)
-  (* Binding expressions *)
-  | ELet (f, is_rec, args, typ, e1, e2) -> 
-    begin match args with
-    |[] ->
-      (* variable binding *)
-      if is_rec then
-        let sv1 = partial_eval_exp env e1 in
-        begin match f with
-        | BindOne f ->
-          begin match sv1 with
-          | Fun (x, e, closure) -> partial_eval_exp (extend_env (f, FunRec (f, x, e, closure)) env) e2
-          | _ -> partial_eval_exp (extend_env (f, sv1) env) e2
-          end
-        | _ -> raise (Failure "Only variables are allowed as left-hand side of `let rec'")
+  let sv = 
+    match exp with 
+    (* Const *)
+    | EUnit -> Unit
+    | Const n -> Int n
+    | TRUE -> Bool true
+    | FALSE -> Bool false
+    | String str -> Str str
+    | EVar x -> find_env x env
+    | EList es -> List (List.map (partial_eval_exp env) es)
+    | ETuple es -> Tuple (List.map (partial_eval_exp env) es)
+    | ECtor (x, es) -> Ctor (x, List.map (partial_eval_exp env) es)
+    | Raise e -> Exn (partial_eval_exp env e)
+    | Hole n -> Symbol n
+    | EFun (arg, e) -> Fun (arg, e, env)
+    (* Unary Operator *)
+    | MINUS e -> Minus (partial_eval_exp env e)
+    | NOT e -> Not (partial_eval_exp env e)
+    (* Binary Operator *)
+    | ADD (e1, e2) -> Aop (Add, partial_eval_exp env e1, partial_eval_exp env e2)
+    | SUB (e1, e2) -> Aop (Sub, partial_eval_exp env e1, partial_eval_exp env e2)
+    | MUL (e1, e2) -> Aop (Mul, partial_eval_exp env e1, partial_eval_exp env e2)
+    | DIV (e1, e2) -> Aop (Div, partial_eval_exp env e1, partial_eval_exp env e2)
+    | MOD (e1, e2) -> Aop (Mod, partial_eval_exp env e1, partial_eval_exp env e2)
+    | OR (e1, e2) -> Bop (Or, partial_eval_exp env e1, partial_eval_exp env e2)
+    | AND (e1, e2) -> Bop (And, partial_eval_exp env e1, partial_eval_exp env e2)
+    | LESS (e1, e2) -> ABop (Lt, partial_eval_exp env e1, partial_eval_exp env e2)
+    | LESSEQ (e1, e2) -> ABop (Le, partial_eval_exp env e1, partial_eval_exp env e2)
+    | LARGER (e1, e2) -> ABop (Gt, partial_eval_exp env e1, partial_eval_exp env e2)
+    | LARGEREQ (e1, e2) -> ABop (Ge, partial_eval_exp env e1, partial_eval_exp env e2)
+    | EQUAL (e1, e2) -> EQop (Eq, partial_eval_exp env e1, partial_eval_exp env e2)
+    | NOTEQ (e1, e2) -> EQop (NEq, partial_eval_exp env e1, partial_eval_exp env e2)
+    | DOUBLECOLON (e1, e2) -> Cons (partial_eval_exp env e1, partial_eval_exp env e2)
+    | AT (e1, e2) -> Append (partial_eval_exp env e1, partial_eval_exp env e2)
+    | STRCON (e1,e2) -> Strcon (partial_eval_exp env e1, partial_eval_exp env e2)
+    (* Branch expressions => normalize & condition hole *)
+    | IF (e1, e2, e3) ->
+      let sv1 = partial_eval_exp env e1 in
+      if is_symbol_const sv1 then
+        begin match sv1 with
+        | Bool b -> if b then partial_eval_exp env e2 else partial_eval_exp env e3
+        | _ -> raise (Failure "if_type error")
         end
-      else partial_eval_exp (let_binding env f (partial_eval_exp env e1)) e2
-    |_ ->
-      (* function binding *)
-      let rec binding : arg list -> exp -> exp 
-      = fun xs e -> 
-        begin match xs with
-        | [] -> e
-        | hd::tl -> EFun (hd, binding tl e)
-        end 
-      in
-      let x = List.hd args in
-      let vf =
+      else fresh_symbol () (* Check SAT?? *)
+    | EMatch (e, bs) ->
+      let sv = partial_eval_exp env e in
+      if is_symbol_const sv then 
+        let (p, ex) = find_first_branch sv bs in
+        partial_eval_exp (bind_pat env sv p) ex
+      else fresh_symbol () (* Merge all branchs *)
+    (* Binding expressions *)
+    | ELet (f, is_rec, args, typ, e1, e2) -> 
+      begin match args with
+      |[] ->
+        (* variable binding *)
         if is_rec then
+          let sv1 = partial_eval_exp env e1 in
           begin match f with
-          | BindOne f -> FunRec (f, x, (binding (List.tl args) e1), env)
+          | BindOne f ->
+            begin match sv1 with
+            | Fun (x, e, closure) -> partial_eval_exp (extend_env (f, FunRec (f, x, e, closure)) env) e2
+            | _ -> partial_eval_exp (extend_env (f, sv1) env) e2
+            end
           | _ -> raise (Failure "Only variables are allowed as left-hand side of `let rec'")
           end
-        else
-          Fun (x, (binding (List.tl args) e1), env)
-      in
-      partial_eval_exp (let_binding env f vf) e2
-    end
-  | EBlock (is_rec, bindings, e2) -> 
-    let env = 
-      begin match is_rec with
-      | true ->
-        let (func_map, const_map) = List.fold_left (
-          fun (func_map, const_map) (f, is_rec, args, typ, exp) ->
-            match f with 
-            | BindOne x ->
-              let sv = partial_eval_exp env (ELet (BindOne x, is_rec, args, typ, exp, EVar x)) in
-              if is_fun sv then ((x, sv)::func_map, const_map) else (func_map, (x, sv)::const_map)
-            | _ -> raise (Failure "Only variables are allowed as left-hand side of `let rec'")
-        ) ([], []) bindings
+        else partial_eval_exp (let_binding env f (partial_eval_exp env e1)) e2
+      |_ ->
+        (* function binding *)
+        let rec binding : arg list -> exp -> exp 
+        = fun xs e -> 
+          begin match xs with
+          | [] -> e
+          | hd::tl -> EFun (hd, binding tl e)
+          end 
         in
-        (* constant mapping *)
-        let init_env = List.fold_left (fun env (x, c) -> extend_env (x, c) env) env const_map in
-        (* update each function's closure *)
-        let func_map = List.map (fun (x, sv) -> (x, update_closure init_env sv)) func_map in
-        (* block mapping *)
-        List.fold_left (fun env (x, sv) -> extend_env (x, FunBlock (x, func_map)) env) init_env func_map
-      | false ->
-        let svs = List.map (fun (f, is_rec, args, typ, e) -> partial_eval_exp env (ELet (f, is_rec, args, typ, e, let_to_exp f))) bindings in
-        List.fold_left2 (fun env (f, is_rec, args, typ, e) sv -> let_binding env f sv) env bindings svs
+        let x = List.hd args in
+        let vf =
+          if is_rec then
+            begin match f with
+            | BindOne f -> FunRec (f, x, (binding (List.tl args) e1), env)
+            | _ -> raise (Failure "Only variables are allowed as left-hand side of `let rec'")
+            end
+          else
+            Fun (x, (binding (List.tl args) e1), env)
+        in
+        partial_eval_exp (let_binding env f vf) e2
       end
-    in partial_eval_exp env e2
-  (* Function call *)
-  | EApp (e1, e2) ->
-    let (sv1, sv2) = (partial_eval_exp env e1, partial_eval_exp env e2) in
-    begin match sv1 with
-    | Fun (x, e, closure) -> partial_eval_exp (arg_binding closure x sv2) e
-    | FunRec (f, x, e, closure) -> partial_eval_exp (extend_env (f, sv1) (arg_binding closure x sv2)) e
-    | FunBlock (f, svs) ->
-      let sv = find_callee f svs in
-      begin match sv with
+    | EBlock (is_rec, bindings, e2) -> 
+      let env = 
+        begin match is_rec with
+        | true ->
+          let (func_map, const_map) = List.fold_left (
+            fun (func_map, const_map) (f, is_rec, args, typ, exp) ->
+              match f with 
+              | BindOne x ->
+                let sv = partial_eval_exp env (ELet (BindOne x, is_rec, args, typ, exp, EVar x)) in
+                if is_fun sv then ((x, sv)::func_map, const_map) else (func_map, (x, sv)::const_map)
+              | _ -> raise (Failure "Only variables are allowed as left-hand side of `let rec'")
+          ) ([], []) bindings
+          in
+          (* constant mapping *)
+          let init_env = List.fold_left (fun env (x, c) -> extend_env (x, c) env) env const_map in
+          (* update each function's closure *)
+          let func_map = List.map (fun (x, sv) -> (x, update_closure init_env sv)) func_map in
+          (* block mapping *)
+          List.fold_left (fun env (x, sv) -> extend_env (x, FunBlock (x, func_map)) env) init_env func_map
+        | false ->
+          let svs = List.map (fun (f, is_rec, args, typ, e) -> partial_eval_exp env (ELet (f, is_rec, args, typ, e, let_to_exp f))) bindings in
+          List.fold_left2 (fun env (f, is_rec, args, typ, e) sv -> let_binding env f sv) env bindings svs
+        end
+      in partial_eval_exp env e2
+    (* Function call *)
+    | EApp (e1, e2) ->
+      let (sv1, sv2) = (partial_eval_exp env e1, partial_eval_exp env e2) in
+      begin match sv1 with
+      | Fun (x, e, closure) -> 
+        (*print_endline ("Arg : " ^ Print.symbol_to_string sv2);*)
+        partial_eval_exp (arg_binding closure x sv2) e
       | FunRec (f, x, e, closure) -> 
-        let block_env = bind_block closure svs in
-        partial_eval_exp (arg_binding block_env x sv2) e
-      | _ -> raise (Failure "mutually recursive function call error")
+        (*print_endline ("Arg : " ^ Print.symbol_to_string sv2);*)
+        partial_eval_exp (extend_env (f, sv1) (arg_binding closure x sv2)) e
+      | FunBlock (f, svs) ->
+        let sv = find_callee f svs in
+        begin match sv with
+        | FunRec (f, x, e, closure) -> 
+          let block_env = bind_block closure svs in
+          partial_eval_exp (arg_binding block_env x sv2) e
+        | _ -> raise (Failure "mutually recursive function call error")
+        end
+      | Symbol _ -> fresh_symbol () (* ??? *)
+      | _ -> raise (Failure "function_call error")
       end
-    | Symbol _ -> fresh_symbol () (* ??? *)
-    | _ -> raise (Failure "function_call error")
-    end
+    in 
+    normalize sv
 
 let rec partial_eval_decl : symbolic_env -> decl -> symbolic_env
 = fun env decl ->
@@ -484,4 +500,4 @@ let gen_constraint : prog -> example -> symbolic_value
     let sv1 = symbolic_execution pgm input in
     let sv2 = value_to_symbol output in
     normalize (EQop (Eq, sv1, sv2))
-  with _ -> Bool false
+  with e -> raise e
