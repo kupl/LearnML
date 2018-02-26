@@ -500,4 +500,4 @@ let gen_constraint : prog -> example -> symbolic_value
     let sv1 = symbolic_execution pgm input in
     let sv2 = value_to_symbol output in
     normalize (EQop (Eq, sv1, sv2))
-  with e -> raise e
+  with _ -> Bool false
