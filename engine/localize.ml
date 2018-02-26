@@ -12,7 +12,6 @@ let extend_set = BatSet.add
 
 (* set of execution traces *)
 let trace_set = ref empty_set
-let entry_function_label = ref 0
 let init_set () = (trace_set := empty_set)
 
 let start_time = ref 0.0
@@ -29,8 +28,8 @@ let rec is_counter_example : prog -> example -> bool
     not (Eval.value_equality result output)
   with _ -> true
 
-let rec find_counter_examples : prog -> examples -> examples
-= fun pgm examples -> List.filter (is_counter_example pgm) examples
+let rec find_counter_examples : prog -> examples -> examples * examples
+= fun pgm examples -> List.partition (is_counter_example pgm) examples
 
 (*****************************************************************)
 (* labeled exp evaluation -> should merge it with non-labeld ver *)
@@ -172,7 +171,6 @@ let rec value_equality : labeled_value -> labeled_value -> bool
 let rec eval : labeled_env -> labeled_exp -> labeled_value
 = fun env (label, e) -> 
   (trace_set := extend_set label !trace_set);  (* gather execution traces *)
-  (*(print_endline (Print.exp_to_string (unlabeling_exp (label, e))));*)
   if (Unix.gettimeofday() -. !start_time >0.2) then raise (Failure "Timeout")
   else
   match e with
@@ -352,7 +350,6 @@ let rec eval_decl : labeled_env -> labeled_decl -> labeled_env
 = fun env decl -> 
   match decl with
   | DLet (f, is_rec, args, typ, e) -> 
-    if (check_entry f (!Options.opt_entry_func)) then entry_function_label:=(fst e);
     let e = (dummy_label, ELet (f, is_rec, args, typ, e, (let_to_lexp f))) in
     let_binding env f (eval env e)
   | DBlock (is_rec, bindings) ->
@@ -399,20 +396,56 @@ let rec collect_execution_trace : labeled_prog -> example -> trace_set
     !trace_set
   with _ -> !trace_set
 
+let gen_label_map (ex : examples) (pgm : labeled_prog) : (int, int) BatMap.t =
+	List.fold_left (fun map example ->
+		let label_set = collect_execution_trace pgm example in
+		BatSet.fold (fun label m ->
+			if BatMap.mem label m then BatMap.add label ((BatMap.find label m)+1) m
+			else BatMap.add label 1 m
+		) label_set map
+	) BatMap.empty ex
+
+let weight : labeled_prog -> examples -> examples -> (int, float) BatMap.t
+= fun l_pgm pos neg ->
+	let counter_map = gen_label_map neg l_pgm in
+	let pass_map = gen_label_map pos l_pgm in
+	let weight_function = BatMap.foldi (fun label n result ->
+		(* TODO *)
+		if(BatMap.mem label pass_map) then 
+			let w = (float_of_int (BatMap.find label pass_map)) /. (float_of_int (List.length pos + List.length neg)) in
+			BatMap.add label (1.0 +. w) result
+		else BatMap.add label 1.0 result
+	) counter_map BatMap.empty in
+	weight_function
+
+let cost_avg : (int, float) BatMap.t -> labeled_prog -> float
+= fun w l_pgm->
+	let pgm_set = BatMap.foldi (fun l _ acc ->
+		let hole_pgm = gen_hole_pgm l l_pgm in
+		BatSet.add (unlabeling_prog hole_pgm) acc
+	) w BatSet.empty in
+	let sum = BatSet.fold (fun pgm acc->
+		let rank = (cost (unlabeling_prog l_pgm)) - (cost pgm) in
+		acc +. (float_of_int rank)
+	) pgm_set 0.0 in
+	sum /. (float_of_int (BatSet.cardinal pgm_set))
+
+
 (* Find inital candidates *)
 let localization : prog -> examples -> (int * prog) BatSet.t
 = fun pgm examples ->
-  let counter_examples = find_counter_examples pgm examples in
+  let (counter_examples,pass_examples) = find_counter_examples pgm examples in
   let l_pgm = Labeling.labeling_prog pgm in
-  let trace_set = List.fold_left (
-    fun set example -> BatSet.union (collect_execution_trace l_pgm example) set
-   ) empty_set counter_examples in
-  let trace_set = BatSet.remove (!entry_function_label) trace_set in
-  let candidate_set = BatSet.fold (
-    fun label set ->
+	let weight_function = weight l_pgm pass_examples counter_examples in
+	let avg = cost_avg weight_function l_pgm in
+	let candidate_set = BatMap.foldi (fun label weight set ->
       let hole_pgm = gen_hole_pgm label l_pgm in
-      let candidate_pgm = unlabeling_prog hole_pgm in
-      let rank = (cost pgm) - (cost candidate_pgm) in
-      if (Synthesize.is_closed candidate_pgm) then set else extend_set (rank, candidate_pgm) set
-  ) trace_set empty_set in
+			let candidate_pgm = unlabeling_prog hole_pgm in
+			let rank = (cost pgm) - (cost candidate_pgm) in
+			let rank = int_of_float ((float_of_int rank) +. (weight *. avg))
+				(*if (rank>0) then int_of_float (weight *. (float_of_int rank))
+				else (int_of_float ((1.0 /. weight) *. (float_of_int rank)))*)
+			in
+			if (Synthesize.is_closed candidate_pgm) then set else extend_set (rank, candidate_pgm) set
+  ) weight_function empty_set in
   candidate_set
