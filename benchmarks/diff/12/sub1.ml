@@ -20,5 +20,3 @@ type ae = CONST of int
 	| SUM [] -> CONST 0
 	| SUM (h::[]) -> CONST 0
 	| SUM (h::t) -> SUM [diff (h, str);diff (SUM t, str)]
-
-	let test= SUM[ TIMES [VAR "a";POWER ("x",2)];TIMES[VAR "b";VAR "x"];VAR "c"]
