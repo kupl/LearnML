@@ -6,5 +6,4 @@ let rec mem : int -> btree -> bool
 = fun n tree ->
 	match tree with
 	| Empty ->	false
-	| Node (n1, _, _) when n1 = n ->	true
-	| Node (_, ltree, rtree) -> (mem n ltree) || (mem n rtree)
+	| Node (n1, ltree, rtree) -> if n1 = n then true else (mem n ltree) || (mem n rtree)
