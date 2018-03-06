@@ -100,9 +100,7 @@ module Converter = struct
       with _ -> False)
     (* Constructor *)
     | Ctor (x, svs1), Ctor (y, svs2) ->
-      let f1 = if (x = y) then True else False in
-      let f2 = eq_to_formula op (Tuple svs1) (Tuple svs2) in
-      And (f1, f2)
+      if (x = y) then eq_to_formula op (Tuple svs1) (Tuple svs2) else False
     (* List *)
     | List svs1, List svs2 ->
       (try 

@@ -283,7 +283,15 @@ and normalize_eqop : eq_operator -> symbolic_value -> symbolic_value -> symbolic
     | Eq -> Bool (sv1 = sv2)
     | NEq -> Bool (sv1 <> sv2)
     end
-  else EQop (op, sv1, sv2)
+  else 
+    begin match (sv1, sv2) with
+    | Ctor (x, svs1), Ctor (y, svs2) ->
+      if op = Eq then 
+        if (x <> y) then Bool false else normalize_eqop Eq (Tuple svs1) (Tuple svs2)
+      else
+        if (x = y) then Bool false else normalize_eqop NEq (Tuple svs1) (Tuple svs2)
+    | _ -> EQop (op, sv1, sv2) 
+    end 
 
 (* Encoding *)
 let rec partial_eval_exp : symbolic_env -> exp -> symbolic_value
