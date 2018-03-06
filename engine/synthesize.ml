@@ -401,6 +401,8 @@ let rec replace_exp : prog -> exp -> exp -> prog
 		match hd with
 		  | DLet (x,is_rec,args,typ,exp) -> 
 		  	DLet (x,is_rec,args,typ, (replace_exp' exp hole candidate)) :: (replace_exp tl hole candidate)
+			| DBlock (is_rec, bindings) ->
+				(DBlock(is_rec,(List.map (fun (f, is_rec, args, typ, e) -> (f, is_rec, args, typ, (replace_exp' e hole candidate))) bindings))) :: (replace_exp tl hole candidate)
 		  | x -> x :: (replace_exp tl hole candidate)
 	)
 
@@ -425,12 +427,12 @@ let except_alias_vars alias_info candidates =
 
 let gen_exp_nextstates : exp BatSet.t -> (Workset.work * exp) -> Workset.work BatSet.t
 = fun candidates ((rank,prog,h_t,h_e),hole) ->
-	let alias_info = MustAlias.Sem.run prog in
+	(*let alias_info = MustAlias.Sem.run prog in*)
 	let n = extract_holenum hole in
 	let hole_type = BatMap.find n h_t in
 	let env = BatMap.find n h_e in
   let candidates = bound_var_to_comp env candidates in
-	let candidates = except_alias_vars (MustAlias.Sem.get_aliasSet alias_info n) candidates in
+	(*let candidates = except_alias_vars (MustAlias.Sem.get_aliasSet alias_info n) candidates in*)
 	let nextstates = BatSet.fold (fun c r-> 
 		let result = type_directed c hole_type env (h_t,h_e) in
 		match result with
@@ -496,14 +498,14 @@ let rec work : Workset.t -> components -> examples -> prog option
 	match Workset.choose workset with
 	| None -> None
 	| Some ((rank,prog,h_t,h_e),remaining_workset) ->
-		if (Infinite.Static.run prog) then
+		(*if (Infinite.Static.run prog) then
 			work remaining_workset exp_set examples
-  	else
+  	else*)
 	  	if is_closed prog then
 		  	let _ = count := !count +1 in
 		  	if is_solution prog examples then Some prog
 				else work remaining_workset exp_set examples
-			else if (Smt_pruning.smt_pruning prog examples) then
+			else if (true || Smt_pruning.smt_pruning prog examples) then
 	    	let exp_set = BatSet.map update_components exp_set in
 				let nextstates = next (rank,prog,h_t,h_e) exp_set in
 				let new_workset = BatSet.fold Workset.add nextstates remaining_workset in
