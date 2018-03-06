@@ -125,7 +125,7 @@ rule token = parse
   | '_' (digit | character | ''' | '_')+    { create_token lexbuf }
   | lowercase (digit | character | ''' | '_')*    { create_token lexbuf }
   | uppercase (digit | character | ''' | '_')*    { UID (lexeme lexbuf) }
-  | uppercase (digit | character | ''' | '_')*('.')(digit | character | ''')* {create_external lexbuf}
+  | uppercase (digit | character | ''' | '_')*('.')(digit | character | ''' | '_')* {create_external lexbuf}
   | '?' | "|>" | '=' | "->" | "=>" | '*' | ',' | ':' | ';' | '|' | '(' | ')' | '{' | '}' | '[' | ']' 
   | '_' | '+' | '-' | '/'| '%' | "||" | "&&" | "<" | ">" | "<=" | ">=" | "!=" | "<>" | "@"| "::" | "'" |"^" | "&" 
     { create_symbol lexbuf }
