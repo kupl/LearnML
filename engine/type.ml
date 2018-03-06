@@ -212,6 +212,7 @@ let rec update_arg_type : arg -> typ -> arg
 let rec let_binding : TEnv.t -> let_bind -> typ -> TEnv.t
 = fun tenv x typ->
   match (x, typ) with
+  | BindUnder, _ -> tenv
   | BindOne x, _ -> TEnv.extend (x, typ) tenv
   | BindTuple xs, TTuple ts -> (try List.fold_left2 (let_binding) tenv xs ts with _ -> raise TypeError)
   | BindTuple xs, TVar _ -> List.fold_left (
