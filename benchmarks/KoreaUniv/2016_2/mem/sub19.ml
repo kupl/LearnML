@@ -5,6 +5,5 @@ type btree =
 let rec mem : int -> btree -> bool
 = fun n tree ->  (* TODO *)
 match tree with
-|Node (a, b, c) when n=a -> true
-|Node (a, b, c) -> mem n b || mem n c
+|Node (a, b, c) -> if n = a then true else mem n b || mem n c
 |Empty -> false

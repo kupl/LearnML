@@ -1,5 +1,4 @@
 let rec filter p = function
 | [] -> []
-| hd :: tl when p hd -> hd :: filter p tl
-| _ :: tl -> filter p tl
+| hd :: tl -> if (p hd) then hd :: filter p tl else filter p tl
 ;;
