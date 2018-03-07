@@ -13,8 +13,8 @@ let rec allvar: exp -> string list
  | C (ex1, ex2) -> allvar ex1 @ allvar ex2;;
 
 let rec searchlist: (var list * var) -> bool
-  = fun (list, var) ->
-  match list with
+  = fun (lst, var) ->
+  match lst with
   | [] -> false
   | hd::tl -> if (hd = var) then true
               else searchlist (tl, var);;

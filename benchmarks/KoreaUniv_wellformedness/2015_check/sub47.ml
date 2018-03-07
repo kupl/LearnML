@@ -5,7 +5,6 @@
   
 	let rec change : (var * exp) -> exp
 	= fun (v,e) -> match e with
-	V "" -> raise(Failure "error")
 	|V v' -> V v'
 	|P(v', e') -> change (v', e')
 	|C(e1, e2) -> if (V v) = e1 then (if (V v) = e2 then change(v, e1) 
@@ -14,7 +13,6 @@
 
   let check : exp -> bool
   =fun e -> match e with
-	V "" -> raise(Failure "error")
 	|V v -> false
 	|P(v, e') -> if (V v) = (change (v, e')) then true else false
 	|C(e1, e2) -> false

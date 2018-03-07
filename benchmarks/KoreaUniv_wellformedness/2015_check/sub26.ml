@@ -17,4 +17,4 @@ match e with
 | C (v1,v2) -> if(helpcheck(v1,lst)=true) then (if(helpcheck(v2,lst)=true) then true else false) else false
 
 let check : exp -> bool
-=fun e ->  (* TODO *)
+=fun e -> helpcheck (e,[]) (* TODO *)

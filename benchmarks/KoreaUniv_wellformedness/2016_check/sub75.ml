@@ -6,19 +6,19 @@
   and var = string
 
   let rec lcheck : exp * string list -> bool
-  = fun (exp,list) ->
+  = fun (exp,lst) ->
   match exp with
   | V (a) ->(
-    match list with
+    match lst with
     | [] -> false
     | hd::tl ->
       if hd = a then true
       else lcheck (V a, tl)
   )
   | P (a,b) ->
-    lcheck (b, a::list)
+    lcheck (b, a::lst)
   | C (a,b) ->
-    lcheck (a, list) && lcheck (b, list)
+    lcheck (a, lst) && lcheck (b, lst)
 
   let check : exp -> bool
   = fun exp -> (* TODO *)

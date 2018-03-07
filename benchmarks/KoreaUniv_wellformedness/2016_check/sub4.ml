@@ -1,4 +1,3 @@
-
   type exp =
   | V of var
   | P of var * exp
@@ -13,8 +12,8 @@
       | [] -> []
       | hd::tl -> 
         if hd = v then removeMatch tl v
-        else hd::(removeMatch tl v)
-    and eval : exp -> (var list)
+        else hd::(removeMatch tl v) in
+    let rec eval : exp -> (var list)
     = fun exp ->
       match exp with
       | V v -> [v]

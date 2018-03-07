@@ -1,4 +1,3 @@
-
   type exp =
   | V of var
   | P of var * exp
@@ -6,13 +5,13 @@
   and var = string
 
 let isinthelist l a = 
-let temp = List.find_all ((fun x y -> if x <> y then false else true) a) l in
+let temp = List.filter ((fun x y -> if x <> y then false else true) a) l in
 match temp with
 | [] -> false
 | hd::tl -> true
 
 let isnotinthelist l a = 
-let temp = List.find_all ((fun x y -> if x <> y then false else true) a) l in
+let temp = List.filter ((fun x y -> if x <> y then false else true) a) l in
 match temp with
 | [] -> true
 | hd::tl -> false

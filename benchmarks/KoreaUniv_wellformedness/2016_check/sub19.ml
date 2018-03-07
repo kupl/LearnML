@@ -16,8 +16,8 @@
 
   let rec findVar : exp * string list -> bool
   = fun (e, l) -> match e with
-                  | V ((a:var)) -> isFreeVar (a, l)
-                  | P ((v:var),e1) -> findVar (e1, (l @ [v]))
+                  | V (a) -> isFreeVar (a, l)
+                  | P (v,e1) -> findVar (e1, (l @ [v]))
                   | C (e1,e2) -> if (findVar(e1,l) && findVar(e2,l))= true then true else false;;
 
 

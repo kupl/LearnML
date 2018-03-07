@@ -1,15 +1,11 @@
-
   type exp =
   | V of var
   | P of var * exp
   | C of exp * exp
-  and var = string
-
- 
 
   let rec checklst (*true if there is no this value before*)
   = fun lst val1 -> match lst with
-  | hd::tl -> if((compare hd val1) == 0) then false else checklst tl val1
+  | hd::tl -> if(hd = val1) then false else checklst tl val1
   | [] -> true
 
   let rec checkExp

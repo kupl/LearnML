@@ -20,4 +20,4 @@
       | C(V var1, V var2) 
         -> false
       | P(var1, P(var2, P(var3, V var4)))
-        -> if var1 = var4 || var2 = var4 || var3 = var4 then true else false;
+        -> if var1 = var4 || var2 = var4 || var3 = var4 then true else false

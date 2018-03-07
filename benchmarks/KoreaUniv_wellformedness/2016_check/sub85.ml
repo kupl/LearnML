@@ -7,8 +7,8 @@
 
   let rec evaluate_vpc expression vpc =
     match expression with
-    |V a -> let rec check list st = 
-          match list with      
+    |V a -> let rec check lst st = 
+          match lst with      
           [] -> false 
           | head::tail -> if head=st then true else (check tail st) in if (check vpc a) then true else false 
     | P (pa, ex1) -> if ( evaluate_vpc ex1 (vpc @ [pa]) ) then true else false

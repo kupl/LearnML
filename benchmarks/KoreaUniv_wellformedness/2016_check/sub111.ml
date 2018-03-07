@@ -14,8 +14,8 @@
 
   let rec checkForm : exp * string list -> bool
   = fun (e, l) -> match e with
-    | V ((a:var)) -> isFree (a, l)
-    | P ((v:var), e1) -> checkForm (e1, (l @ [v]))
+    | V (a) -> isFree (a, l)
+    | P (v, e1) -> checkForm (e1, (l @ [v]))
     | C (e1, e2) -> if ((checkForm(e1, l) && checkForm(e2, l)) = true) then true else false;;
 
   let check  : exp -> bool

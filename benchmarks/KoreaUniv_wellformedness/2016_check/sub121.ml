@@ -13,7 +13,7 @@
   let rec get_variables exp result =
   match exp with
     | V v -> v :: result
-    | P (v, e) -> get_variables e (v :: result); 
+    | P (v, e) -> get_variables e (v :: result) 
     | C (e1, e2) -> append_list (get_variables e1 result) (get_variables e2 result)
 
   let rec var_in_exp variable exp = 
