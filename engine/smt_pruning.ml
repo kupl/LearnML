@@ -32,6 +32,9 @@ module Converter = struct
   let find = BatMap.find
   let extend = BatMap.add
 
+  let symbol_num = ref 0
+  let fresh_symbol () = (symbol_num := !symbol_num + 1); (FSymbol !symbol_num)
+
   let rec connect_formula : formula list -> formula
   = fun fs ->
     match fs with
@@ -61,7 +64,7 @@ module Converter = struct
   = fun sv ->
     match sv with
     | Bool b -> if b then True else False
-    | Symbol n -> FSymbol n
+    | Symbol n -> fresh_symbol ()
     | Not sv -> Not (symbol_to_formula sv)
     | Bop (op, sv1, sv2) ->
       begin match op with
@@ -82,13 +85,13 @@ module Converter = struct
   = fun op sv1 sv2 ->
     match (sv1, sv2) with
     (* Symbol *)
-    | Symbol _, _ | _, Symbol _ -> True
+    | Symbol _, _ | _, Symbol _ -> fresh_symbol ()
     (* Unit *)
     | Unit, Unit -> True
     (* Integer *)
     | _, Int _ | Int _, _ | _, Aop _ | Aop _ , _ | _, Minus _ | Minus _, _ -> Eq (A (symbol_to_aterm sv1),A (symbol_to_aterm sv2))
     (* String *)
-    | _, Str _ | Str _, _ | _, Strcon _ | Strcon _ ,_ -> True (* TODO *) 
+    | _, Str _ | Str _, _ | _, Strcon _ | Strcon _ ,_ -> fresh_symbol () (* TODO *) 
     (* Bool *)
     | _, Bool _ | Bool _, _ | _, Bop _ | Bop _, _ | _, ABop _ | ABop _, _ | _, EQop _ | EQop _, _ | _, Not _ | Not _, _ -> 
       Iff (symbol_to_formula sv1, symbol_to_formula sv2)
@@ -116,7 +119,7 @@ module Converter = struct
       let f2 = eq_to_formula op tl1 tl2 in
       And (f1, f2)
     (* List Append => Convert to List cons form *)
-    | _, Append (l1, l2) | Append (l1, l2), _ -> True (* TODO *)
+    | _, Append (l1, l2) | Append (l1, l2), _ -> fresh_symbol ()(* TODO *)
     | _ -> raise (Failure "Invalid Eq") 
 
 end
@@ -181,10 +184,10 @@ let new_try () = (try_count := !try_count + 1); !try_count
 
 let unsat_count = ref 0
 let smt_time = ref 0.0
-(*
+
 let out1 = ref (open_out "sat.txt")
 let out2 = ref (open_out "unsat.txt")
-*)
+
 let solve : symbolic_value -> bool
 = fun sv ->
   let f =
@@ -222,13 +225,15 @@ let smt_pruning : prog -> examples -> bool
     smt_time := (!smt_time)+.(Unix.gettimeofday() -. start_time);
   in
   (* Debuging *)
-  (*let svs = List.map (Symbol_eval.gen_constraint pgm') examples in
-  let s = List.fold_left (fun acc sv -> acc ^ "\n" ^ Print.symbol_to_string sv) "" svs in 
+  (*
+  let svs = List.map (Symbol_eval.gen_constraint pgm') examples in
+  let s = List.fold_left (fun acc sv -> acc ^ "\n" ^ Print.symbol_to_string sv ^ "=>" ^ (if solve sv then "SAT" else "UNSAT")) "" svs in 
   let str = Print.program_to_string pgm ^ s in
   let _ =
     if result then
       Printf.fprintf (!out1) "--------------------------------\n%s\n" (str)
     else
       Printf.fprintf (!out2) "--------------------------------\n%s\n" (str)
-  in*)
+  in
+*)
   result

@@ -314,7 +314,7 @@ let rec partial_eval_exp : symbolic_env -> exp -> symbolic_value
     | ETuple es -> Tuple (List.map (partial_eval_exp env) es)
     | ECtor (x, es) -> Ctor (x, List.map (partial_eval_exp env) es)
     | Raise e -> Exn (partial_eval_exp env e)
-    | Hole n -> Symbol n
+    | Hole n -> fresh_symbol ()
     | EFun (arg, e) -> Fun (arg, e, env)
     (* Unary Operator *)
     | MINUS e -> Minus (partial_eval_exp env e)

@@ -57,7 +57,7 @@ and symbolic_env = (id, symbolic_value) BatMap.t
 (* new symbol *)
 let symbol_num = ref 0
 let init_symbol () = symbol_num := 0
-let fresh_symbol () = (symbol_num := !symbol_num - 1; (Symbol (!symbol_num)))
+let fresh_symbol () = (symbol_num := !symbol_num + 1; (Symbol (!symbol_num)))
 
 (************* SMT formula **************)
 (* Int *)

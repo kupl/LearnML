@@ -172,7 +172,7 @@ let rec exp_cost : exp -> int
   | EVar x -> 10
   | EApp (e1,e2) -> 10 + (exp_cost e1) + (exp_cost e2)
   | ELet (x,is_rec,args,typ,e1,e2) -> (if (is_rec) then 50 else 40) + (exp_cost e1) + (exp_cost e2)
-  | EBlock (is_rec, es, e2) -> List.fold_left (fun acc (x, is_rec, args, typ, e) -> acc+(exp_cost e)) 0 es
+  | EBlock (is_rec, es, e2) -> 100 + List.fold_left (fun acc (x, is_rec, args, typ, e) -> acc+(exp_cost e)) 0 es
   | ECtor (x,l) -> 40 + (list_fold(fun e r -> exp_cost e + r) l 0)
   | EMatch (e1,bl) -> 
     let (pl,el) = list_split bl in
