@@ -5,4 +5,4 @@ let rec mirror : btree -> btree
 = fun t ->
 match t with 
 Empty -> Empty
-|Node (int, tl, tr) -> Node (int, (mirror tr), (mirror tl))
+|Node (n, tl, tr) -> Node (n, (mirror tr), (mirror tl))

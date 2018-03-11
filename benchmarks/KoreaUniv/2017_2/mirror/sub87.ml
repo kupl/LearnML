@@ -6,6 +6,6 @@ let rec mirror : btree -> btree
 = fun t ->
 match t with 
 |Empty -> Empty
-|Node(int, Empty, Empty) -> Node(int, Empty, Empty)
-|Node(int, left, right) -> Node(int, mirror right, mirror left)
+|Node(n, Empty, Empty) -> Node(n, Empty, Empty)
+|Node(n, left, right) -> Node(n, mirror right, mirror left)
 
