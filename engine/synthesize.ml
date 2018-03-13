@@ -1,6 +1,7 @@
 open Lang
 open Util
 open Printf
+
 (*
  ******************************************************
  	Code for Synthesizing the "Hole"
@@ -118,8 +119,7 @@ let rec type_directed exp hole_typ env (h_t,h_e) =
 		|TVar _ -> polymorphic_type exp (hole_typ,TInt) [] env h_t h_e
 		|_ -> None
 		end
-	| TRUE 
-	| FALSE -> 
+	| TRUE | FALSE -> 
 		begin match hole_typ with
 		|TBool -> Some (exp,h_t,h_e)
 		|TVar _ -> polymorphic_type exp (hole_typ,TBool) [] env h_t h_e
@@ -131,34 +131,32 @@ let rec type_directed exp hole_typ env (h_t,h_e) =
 		|TVar _ -> polymorphic_type exp (hole_typ,TString) [] env h_t h_e
 		|_ -> None
 		end
-	| ADD (e1,e2)
-	| SUB (e1,e2) 
-	| MUL (e1,e2)
-	| DIV (e1,e2)
-	| MOD (e1,e2) -> let (n1,n2) = (extract_holenum e1,extract_holenum e2) in 
+	| ADD (e1,e2) | SUB (e1,e2) | MUL (e1,e2) | DIV (e1,e2) | MOD (e1,e2) -> 
+		let (n1,n2) = (extract_holenum e1,extract_holenum e2) in 
 		let holes_typ = [(n1,TInt);(n2,TInt)] in
 		begin match hole_typ with
 		|TInt -> determined_type exp holes_typ env h_t h_e
 		|TVar _ -> polymorphic_type exp (hole_typ,TInt) holes_typ env h_t h_e 
 		|_ -> None
 		end
-	| MINUS e1 -> let n1 =extract_holenum e1 in 
+	| MINUS e1 -> 
+		let n1 =extract_holenum e1 in 
 		let holes_typ = [(n1,TInt)] in
 		begin match hole_typ with
 		|TInt -> determined_type exp holes_typ env h_t h_e
 		|TVar _ -> polymorphic_type exp (hole_typ,TInt) holes_typ env h_t h_e 
 		|_ -> None
 		end
-	| OR (e1,e2)
-	| AND (e1,e2) -> let (n1,n2) = (extract_holenum e1,extract_holenum e2) in
+	| OR (e1,e2) | AND (e1,e2) -> 
+		let (n1,n2) = (extract_holenum e1,extract_holenum e2) in
 		let holes_typ = [(n1,TBool);(n2,TBool)] in
 		begin match hole_typ with
 		|TBool -> determined_type exp holes_typ env h_t h_e
 		|TVar _ -> polymorphic_type exp (hole_typ,TBool) holes_typ env h_t h_e
 		|_ -> None
 		end
-	| EQUAL (e1,e2)
-	| NOTEQ (e1,e2) -> let (n1,n2) = (extract_holenum e1,extract_holenum e2) in
+	| EQUAL (e1,e2) | NOTEQ (e1,e2) -> 
+		let (n1,n2) = (extract_holenum e1,extract_holenum e2) in
 		let tv = fresh_tvar () in
 		let holes_typ = [(n1,tv);(n2,tv)] in
 		begin match hole_typ with
@@ -166,10 +164,8 @@ let rec type_directed exp hole_typ env (h_t,h_e) =
 		|TVar _ -> polymorphic_type exp (hole_typ,TBool) holes_typ env h_t h_e 
 		|_ -> None
 		end
-	| LESS (e1,e2)
-	| LARGER (e1,e2) 
-	| LESSEQ (e1,e2)
-	| LARGEREQ (e1,e2) -> let (n1,n2) = (extract_holenum e1,extract_holenum e2) in
+	| LESS (e1,e2) | LARGER (e1,e2) | LESSEQ (e1,e2) | LARGEREQ (e1,e2) -> 
+		let (n1,n2) = (extract_holenum e1,extract_holenum e2) in
 		let holes_typ = [(n1,TInt);(n2,TInt)] in
 		begin match hole_typ with
 		|TBool -> determined_type exp holes_typ env h_t h_e
@@ -248,7 +244,37 @@ let rec type_directed exp hole_typ env (h_t,h_e) =
 			polymorphic_type exp (hole_typ,TArr(t,tv)) [(n,tv)] env h_t h_e
 		|_ -> None
 		end
-	| EMatch(e,bl) -> None
+	| EMatch(e, bs) ->
+		let (ps, es) = List.split bs in
+		(* find type of branch condition *)
+		let typ_pat = fresh_tvar () in
+		let (tenvs, eqns) = List.fold_left (fun (tenvs, eqns) pat ->
+      let (tenv, pat_eqn) = Type.gen_pat_equations (env, eqns) pat typ_pat in
+      (tenv::tenvs, pat_eqn@eqns)
+		) ([], []) ps 
+		in
+		let subst = List.fold_left (fun subst (t1, t2) -> Type.unify subst ((Type.Subst.apply t1 subst), Type.Subst.apply t2 subst)) Type.Subst.empty eqns in
+		let typ_pat = Type.Subst.apply typ_pat subst in
+		(* keep the branch condition type in hole_type *)
+		let h_t' = BatMap.add (extract_holenum e) typ_pat h_t in
+		(* compute type env of each branch *)
+		let tenvs = List.fold_left (fun tenvs tenv ->
+			let tenv = BatMap.foldi (fun x typ tenv ->
+				let ty = Type.Subst.apply typ subst in
+				BatMap.add x ty tenv
+			) tenv BatMap.empty in
+			tenv::tenvs
+		) [] tenvs 
+		in 
+    (* bound each variable type info to hole in body *)
+		let (h_t', h_e') = List.fold_left2 (fun (h_t, h_e) e tenv ->
+			let n = (extract_holenum e) in
+			let h_t' = BatMap.add n hole_typ h_t in
+			let h_e' = BatMap.add n tenv h_e in
+			(h_t', h_e')
+		) (h_t', h_e) es tenvs
+		in
+		Some (exp,h_t',h_e')
 	| EVar x ->
 		let x_t = BatMap.find x env in
 		let rec check_correct typ x_t h_t env=
@@ -427,12 +453,12 @@ let except_alias_vars alias_info candidates =
 
 let gen_exp_nextstates : exp BatSet.t -> (Workset.work * exp) -> Workset.work BatSet.t
 = fun candidates ((rank,prog,h_t,h_e),hole) ->
-	(*let alias_info = MustAlias.Sem.run prog in*)
 	let n = extract_holenum hole in
 	let hole_type = BatMap.find n h_t in
 	let env = BatMap.find n h_e in
-  let candidates = bound_var_to_comp env candidates in
-	(*let candidates = except_alias_vars (MustAlias.Sem.get_aliasSet alias_info n) candidates in*)
+	let candidates = bound_var_to_comp env candidates in
+	let alias_info = MustAlias.Sem.run prog in
+	let candidates = except_alias_vars (MustAlias.Sem.get_aliasSet alias_info n) candidates in
 	let nextstates = BatSet.fold (fun c r-> 
 		let result = type_directed c hole_type env (h_t,h_e) in
 		match result with
@@ -486,7 +512,7 @@ let count = ref 0
 let rec work : Workset.t -> components -> examples -> prog option
 = fun workset exp_set examples->
 	iter := !iter +1;
-  if (Sys.time() -. (!start_time) > 1200.0) then None
+  if (Sys.time()) -. (!start_time) > 180.0 then None
   else if (!iter mod 10000 = 0)
 	  then
 		  begin
@@ -498,14 +524,13 @@ let rec work : Workset.t -> components -> examples -> prog option
 	match Workset.choose workset with
 	| None -> None
 	| Some ((rank,prog,h_t,h_e),remaining_workset) ->
-		(*if (Infinite.Static.run prog) then
+		if (Infinite.Static.run prog) then
 			work remaining_workset exp_set examples
-  	else*)
-	  	if is_closed prog then
+  		else if is_closed prog then
 		  	let _ = count := !count +1 in
 		  	if is_solution prog examples then Some prog
 				else work remaining_workset exp_set examples
-			else if (true || Smt_pruning.smt_pruning prog examples) then
+			else if Smt_pruning.smt_pruning prog examples then
 	    	let exp_set = BatSet.map update_components exp_set in
 				let nextstates = next (rank,prog,h_t,h_e) exp_set in
 				let new_workset = BatSet.fold Workset.add nextstates remaining_workset in
