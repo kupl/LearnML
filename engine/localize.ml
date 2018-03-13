@@ -409,12 +409,17 @@ let weight : labeled_prog -> examples -> examples -> (int, float) BatMap.t
 = fun l_pgm pos neg ->
 	let counter_map = gen_label_map neg l_pgm in
 	let pass_map = gen_label_map pos l_pgm in
+	let counter_num = List.length neg in
+	let pass_num = List.length pos in
 	let weight_function = BatMap.foldi (fun label n result ->
-		(* TODO *)
-		if(BatMap.mem label pass_map) then 
-			let w = (float_of_int (BatMap.find label pass_map)) /. (float_of_int (List.length pos + List.length neg)) in
-			BatMap.add label (1.0 +. w) result
-		else BatMap.add label 1.0 result
+		if (n <> counter_num) then result
+		else if(BatMap.mem label pass_map) then 
+			let w = (float_of_int (BatMap.find label pass_map)) /. float_of_int(counter_num+pass_num)(*BatMap.find label pass_map+n)*) in
+			(*let pass_ratio = (float_of_int (BatMap.find label pass_map)) /. float_of_int pass_num in
+			let counter_ratio = (float_of_int n) /. float_of_int counter_num in
+			let w = pass_ratio /. (pass_ratio +. counter_ratio) in*)
+			BatMap.add label w result
+		else BatMap.add label 0.0 result
 	) counter_map BatMap.empty in
 	weight_function
 
@@ -446,6 +451,6 @@ let localization : prog -> examples -> (int * prog) BatSet.t
 				(*if (rank>0) then int_of_float (weight *. (float_of_int rank))
 				else (int_of_float ((1.0 /. weight) *. (float_of_int rank)))*)
 			in
-			if (Synthesize.is_closed candidate_pgm) then set else extend_set (rank, candidate_pgm) set
+			if (Synthesize.is_closed candidate_pgm) then  set else extend_set (rank, candidate_pgm) set
   ) weight_function empty_set in
   candidate_set
