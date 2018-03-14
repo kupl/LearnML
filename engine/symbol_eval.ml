@@ -199,6 +199,7 @@ and normalize_aop : operator -> symbolic_value -> symbolic_value -> symbolic_val
     | Int 0, sv | sv, Int 0 -> sv
     | Int n1, Aop (Add, Int n2, sv') | Int n1, Aop (Add, sv', Int n2) -> Aop (Add, Int (n1 + n2), sv')
     | Aop (Add, Int n1, sv'), Int n2 | Aop (Add, sv', Int n1), Int n2 -> Aop (Add, Int (n1 + n2), sv')
+    | Symbol _, _ | _, Symbol _ -> fresh_symbol ()
     | _ -> Aop (op, sv1, sv2)
     end
   | Sub ->
@@ -208,6 +209,7 @@ and normalize_aop : operator -> symbolic_value -> symbolic_value -> symbolic_val
     | _, Int 0 -> sv1
     | Int n1, Aop (Sub, Int n2, sv') | Int n1, Aop (Sub, sv', Int n2) -> Aop (Sub, Int (n1 - n2), sv')
     | Aop (Sub, Int n1, sv'), Int n2 | Aop (Sub, sv', Int n1), Int n2 -> Aop (Sub, Int (n1 - n2), sv')
+    | Symbol _, _ | _, Symbol _ -> fresh_symbol ()
     | _ -> Aop (op, sv1, sv2)
     end
   | Mul ->
@@ -227,7 +229,7 @@ and normalize_aop : operator -> symbolic_value -> symbolic_value -> symbolic_val
     | Int 0, _ -> Int 0
     | _, Int 1 -> sv1
     | Aop (Div, sv', Int n1), Int n2  -> Aop (Div, sv' , Int (n1 * n2))
-    | Symbol _, Symbol _ -> fresh_symbol ()
+    | Symbol _, _ | Symbol _, Symbol _ -> fresh_symbol ()
     | _ -> Aop (op, sv1, sv2)
     end
   | Mod ->
