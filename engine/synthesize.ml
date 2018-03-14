@@ -249,14 +249,16 @@ let rec type_directed exp hole_typ env (h_t,h_e) =
 		(* find type of branch condition *)
 		let typ_pat = fresh_tvar () in
 		let (tenvs, eqns) = List.fold_left (fun (tenvs, eqns) pat ->
-      let (tenv, pat_eqn) = Type.gen_pat_equations (env, eqns) pat typ_pat in
-      (tenv::tenvs, pat_eqn@eqns)
+      	let (tenv, pat_eqn) = Type.gen_pat_equations (env, eqns) pat typ_pat in
+      	(tenv::tenvs, pat_eqn@eqns)
 		) ([], []) ps 
 		in
 		let subst = List.fold_left (fun subst (t1, t2) -> Type.unify subst ((Type.Subst.apply t1 subst), Type.Subst.apply t2 subst)) Type.Subst.empty eqns in
 		let typ_pat = Type.Subst.apply typ_pat subst in
 		(* keep the branch condition type in hole_type *)
-		let h_t' = BatMap.add (extract_holenum e) typ_pat h_t in
+		let n = extract_holenum e in
+		let h_t' = BatMap.add n typ_pat h_t in
+		let h_e' = BatMap.add n env h_e in
 		(* compute type env of each branch *)
 		let tenvs = List.fold_left (fun tenvs tenv ->
 			let tenv = BatMap.foldi (fun x typ tenv ->
@@ -266,13 +268,13 @@ let rec type_directed exp hole_typ env (h_t,h_e) =
 			tenv::tenvs
 		) [] tenvs 
 		in 
-    (* bound each variable type info to hole in body *)
+    	(* bound each variable type info to hole in body *)
 		let (h_t', h_e') = List.fold_left2 (fun (h_t, h_e) e tenv ->
 			let n = (extract_holenum e) in
 			let h_t' = BatMap.add n hole_typ h_t in
 			let h_e' = BatMap.add n tenv h_e in
 			(h_t', h_e')
-		) (h_t', h_e) es tenvs
+		) (h_t', h_e') es tenvs
 		in
 		Some (exp,h_t',h_e')
 	| EVar x ->
@@ -405,7 +407,7 @@ let rec replace_exp' : exp -> exp -> exp -> exp
 	| EApp (e1,e2) -> EApp(replace_exp' e1 h c,replace_exp' e2 h c)
 	| NOT e1 -> NOT(replace_exp' e1 h c)
 	| MINUS e1 -> MINUS(replace_exp' e1 h c)
-  | IF (e1,e2,e3) -> IF(replace_exp' e1 h c,replace_exp' e2 h c,replace_exp' e3 h c)
+ 	| IF (e1,e2,e3) -> IF(replace_exp' e1 h c,replace_exp' e2 h c,replace_exp' e3 h c)
 	| ECtor (x,l) -> ECtor(x,replace_exp_list l h c)
 	| EList l -> EList (replace_exp_list l h c)
 	| ETuple l -> ETuple (replace_exp_list l h c)
@@ -512,7 +514,7 @@ let count = ref 0
 let rec work : Workset.t -> components -> examples -> prog option
 = fun workset exp_set examples->
 	iter := !iter +1;
-  if (Sys.time()) -. (!start_time) > 180.0 then None
+  if (Sys.time()) -. (!start_time) > 300.0 then None
   else if (!iter mod 10000 = 0)
 	  then
 		  begin
@@ -542,7 +544,7 @@ let hole_synthesize : prog -> Workset.work BatSet.t -> components -> examples ->
 	Print.print_header "expression component set is below";
 	Print.print_exp_set components;
 	let workset = BatSet.fold (fun t set-> Workset.add t set) pgm_set Workset.empty in
-  let _ = start_time := 0.0 in
+  	let _ = start_time := 0.0 in
 	let result = work workset components examples in
 	let result_prog_string = 
 	match result with
