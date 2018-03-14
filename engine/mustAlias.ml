@@ -75,7 +75,6 @@ module Sem : S = struct
 	let rec inverse : pat * pat -> (pat * pat) Set.t
 	= fun (p1,p2) ->
 		match (p1,p2) with
-		| _, PVar x -> if (is_exist x p1) then Set.empty else Set.singleton (p1,p2)
 		| PCtor (x1, l1), PCtor (x2, l2) -> if (x1=x2) then List.fold_left2 (fun acc p1 p2 ->  
 					Set.union acc (inverse (p1,p2))
 				) Set.empty l1 l2 else Set.singleton (p1,p2)
@@ -83,10 +82,11 @@ module Sem : S = struct
 					Set.union acc (inverse (p1,p2))
 				) Set.empty l1 l2
 		| PUnder, _ -> Set.empty
+		| _, PVar x -> if (is_exist x p1) then Set.empty else Set.singleton (p1,p2)
 		| _ -> Set.singleton (p1,p2)
 
 	let closure : equivSet -> equivSet
-	= fun set -> set (*TODO*)
+	= fun set -> set
 
 	let empty_set = Set.empty
 
