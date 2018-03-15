@@ -29,17 +29,3 @@ let rec crazy2add : (crazy2 * crazy2) -> crazy2
 		| ONE c2' -> ZERO (crazy2add (c1', c2'))
 		| MONE c2' -> ZERO (crazy2add ((MONE NIL), crazy2add (c1', c2')))
 		end
-
-(* grading function *)
-
-let rec crazy2val : crazy2 -> int
-= fun c ->
-	match c with
-	| NIL -> 0
-	| ZERO a -> 2 * (crazy2val a)
-	| ONE a -> 2 * (crazy2val a) + 1
-	| MONE a -> 2 * (crazy2val a) - 1
-
-let grading : crazy2 * crazy2 -> int 
-= fun input ->
-	crazy2val (crazy2add input)
