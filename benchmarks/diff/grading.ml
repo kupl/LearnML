@@ -1,5 +1,7 @@
 type env = (string * int) list
 
+exception Invalid
+
 let rec find_env : env -> string -> int
 = fun env x ->
 	match env with
@@ -16,14 +18,14 @@ let rec ae_eval : ae -> (string * int) list -> int
 	| TIMES l ->
 		begin 
 			match l with
-			| [] -> raise (Failure "Invalid")
+			| [] -> 0
 			| [hd] -> ae_eval hd env
 			| hd::tl -> (ae_eval hd env) * (ae_eval (TIMES tl) env)
 		end
 	| SUM l -> 
 		begin
 			match l with
-			| [] -> raise (Failure "Invalid")
+			| [] -> 0
 			| [hd] -> ae_eval hd env
 			| hd::tl -> (ae_eval hd env) + (ae_eval (SUM tl) env)
 		end
