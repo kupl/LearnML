@@ -24,11 +24,3 @@ let rec checkMetro m =
 	| AREA (n, mtr) ->
 		checkName (n,mtr)
 	| _ -> false
-
-let a81 = checkMetro (AREA("a", STATION "a"))
-let a82 = checkMetro (AREA("a", AREA("a", STATION "a")))
-let a83 = checkMetro (AREA("a", AREA("b", CONNECT(STATION "a", STATION "b"))))
-let a84 = checkMetro (AREA("a", CONNECT(STATION "a", AREA("b", STATION "a"))))
-let a85 = checkMetro (AREA("a", STATION "b"))
-let a86 = checkMetro (AREA("a", CONNECT(STATION "a", AREA("b", STATION "c"))))
-let a87 = checkMetro (AREA("a", AREA("b", CONNECT(STATION "a", STATION "c"))))
