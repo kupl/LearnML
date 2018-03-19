@@ -46,13 +46,6 @@ let rec checkMetro (m : metro) =
                                 else false;;
 
 
-checkMetro( AREA("a", 
-                        AREA("b", 
-                               CONNECT (AREA("c", AREA("d", STATION "a")),  AREA("e", STATION "b") )
-                                 )
-                          )
-                 );;
-
 
 
       
