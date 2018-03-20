@@ -4,6 +4,37 @@ open Options
 
 exception Arg_exception
 
+let all_component () =
+  let e_t = BatSet.empty in
+  let e_t = BatSet.add (Const 0) e_t in
+  let e_t = BatSet.add (Const 1) e_t in
+  let e_t = BatSet.add TRUE e_t in
+  let e_t = BatSet.add FALSE e_t in
+  let e_t = BatSet.add (EList []) e_t in
+  let e_t = BatSet.add (ADD (Hole (0),Hole (0))) e_t in
+  let e_t = BatSet.add (SUB (Hole (0),Hole (0))) e_t in
+  let e_t = BatSet.add (MUL (Hole (0),Hole (0))) e_t in
+  let e_t = BatSet.add (DIV (Hole (0),Hole (0))) e_t in
+  let e_t = BatSet.add (MOD (Hole (0),Hole (0))) e_t in
+  let e_t = BatSet.add (MINUS (Hole 0)) e_t in
+  let e_t = BatSet.add (NOT (Hole (0))) e_t in
+  let e_t = BatSet.add (OR (Hole (0),Hole (0))) e_t in
+  let e_t = BatSet.add (AND (Hole (0),Hole (0))) e_t in
+  let e_t = BatSet.add (LESS (Hole (0),Hole (0))) e_t in
+  let e_t = BatSet.add (LARGER (Hole (0),Hole (0))) e_t in
+  let e_t = BatSet.add (EQUAL (Hole (0),Hole (0))) e_t in
+  let e_t = BatSet.add (NOTEQ (Hole (0),Hole (0))) e_t in
+  let e_t = BatSet.add (LESSEQ (Hole (0),Hole (0))) e_t in
+  let e_t = BatSet.add (LARGEREQ (Hole (0),Hole (0))) e_t in
+  let e_t = BatSet.add (EApp (Hole (0),Hole (0))) e_t in
+  let e_t = BatSet.add (AT (Hole (0),Hole (0))) e_t in
+  let e_t = BatSet.add (DOUBLECOLON (Hole (0),Hole (0))) e_t in
+  let e_t = BatSet.add (IF (Hole (0),Hole (0),Hole (0))) e_t in
+  (* let e_t = BatSet.add EUnit e_t in *)
+  (* let e_t = BatSet.add (STRCON (Hole 0, Hole 0)) e_t in *)
+  (* let e_t = BatSet.add (Raise (Hole 0)) e_t in *)
+  e_t
+
 let usage_msg = "main.native -run (or -fix) -submission <filename> -solution <filename>"
 
 let parse_file (f:string) : (examples * prog) =
@@ -99,6 +130,16 @@ let fix_with_solution : prog -> prog -> examples -> unit
     ) ranked_prog_set in
   print_header "initial-set"; print_endline(string_of_int (BatSet.cardinal initial_set));
   let components = Comp.extract_component solution in
+  (*
+  let components = BatSet.filter (fun x ->
+    match x with
+    | Const _ -> false
+    | EList _ -> false
+    | _ -> true
+  ) components
+  in
+  let components = BatSet.union components (all_component ()) in
+  *)
   let _ = Synthesize.hole_synthesize submission initial_set components examples in
   ()
  
@@ -134,6 +175,26 @@ let main () =
     else try fst (parse_file !opt_testcases_filename) 
          with _ -> raise (Failure ("error during parsing testcases: " ^ !opt_testcases_filename)) in 
   let submission = read_prog !opt_submission_filename in
+  (**) 
+  (*
+  let Some pgm = submission in
+  Print.print_pgm pgm;
+  print_endline (string_of_bool (Smt_pruning.smt_pruning pgm testcases));
+  List.iter (
+    fun example ->
+      let sv = Symbol_eval.gen_constraint pgm example in
+      let f = 
+        try 
+          Smt_pruning.Converter.symbol_to_formula sv 
+        with _ -> False
+      in
+      let t = if Smt_pruning.solve sv then "SAT" else "UNSAT" in
+      print_examples [example];
+      print_endline ("Constraint : " ^ Print.symbol_to_string sv ^ " => " ^ t);
+      print_endline ("Formula : " ^ Print.formula_to_string f  ^ "\n")
+  ) testcases;
+  *)
+  (**)
   let solution = read_prog !opt_solution_filename in
     if !opt_localize then 
       begin
