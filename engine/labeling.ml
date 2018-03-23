@@ -63,9 +63,7 @@ let rec labeling_decl : decl -> labeled_decl
 	| TBlock ds -> TBlock (List.map (labeling_decl) ds)
 
 let labeling_prog : prog -> labeled_prog
-= fun pgm -> 
-	init_label ();
-	List.fold_left (fun acc x -> acc@[labeling_decl x]) [] pgm
+= fun pgm -> List.fold_left (fun acc x -> acc@[labeling_decl x]) [] pgm
 
 (* labeld AST -> AST *)
 let rec unlabeling_exp : labeled_exp -> exp
