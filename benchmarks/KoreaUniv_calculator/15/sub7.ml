@@ -20,8 +20,6 @@ let rec calculator : exp -> int
 				| SUB (e1, e2) -> (evaluateExpInSig e1 xValue) - (evaluateExpInSig e2 xValue)
 				| MUL (e1, e2) -> (evaluateExpInSig e1 xValue) * (evaluateExpInSig e2 xValue)
 				| DIV (e1, e2) -> (evaluateExpInSig e1 xValue) / (evaluateExpInSig e2 xValue)
-			(*  | DIV (e1, e2) -> (evaluateExpInSig(e1, xValue)) / (evaluateExpInSig(e2, xValue)) 
-				 이렇게 하면 오류남... ㅠㅠㅠㅠㅠㅠㅠㅠㅠㅠ 왜인지 질문해서 확실하게 알자*)
 				| SIGMA (e'1, e'2, e'3) -> raise (Failure "nested sigma is not applicable for a expression with only one variable \"X\"")
 				
 			in let rec calcSum : int-> int-> exp -> int

@@ -1,5 +1,5 @@
 (*problem5*)
-
+exception Problem
 type exp = 
 	| X 
 	| INT of int 

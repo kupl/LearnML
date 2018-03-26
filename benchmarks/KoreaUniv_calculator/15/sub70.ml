@@ -28,13 +28,13 @@ let rec mecalculate
 						|INT x, INT y -> x/y
 						|_,_ -> mecalculate (e1, x) / mecalculate (e2, x))
 			|(SIGMA (exp1, exp2, exp3),_)->
-						let  a= mecalculate (e1, x) and b=mecalculate (e2, x) in
+						let a = mecalculate (e1, x) in
+						let b = mecalculate (e2, x) in
 						( if a<b then 0
 							else if (a=b) then mecalculate (exp3, INT a)
 							else mecalculate (exp3, INT a) + mecalculate (SIGMA (INT (a+1), INT b, exp3), x))
 
 let calculator :exp -> int
 =fun f-> mecalculate (f, X)
-
 ;;
 

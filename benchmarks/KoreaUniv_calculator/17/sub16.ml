@@ -11,7 +11,7 @@ type exp = X
 let rec calc : exp -> int -> int
 = fun e n -> match e with
 |X -> n
-|INT int -> int
+|INT n -> n
 |ADD(a, b) -> (calc a n) + (calc b n)
 |SUB(a, b) -> (calc a n) - (calc b n)
 |MUL(a, b) -> (calc a n) * (calc b n)
@@ -21,7 +21,7 @@ let rec calc : exp -> int -> int
 let rec calculator : exp -> int
 = fun e -> match e with
 |X -> raise (Failure "Wrong input")
-|INT int -> int
+|INT n -> n
 |ADD(a,b) -> calculator a + calculator b
 |SUB(a,b) -> calculator a - calculator b
 |MUL(a,b) -> calculator a * calculator b

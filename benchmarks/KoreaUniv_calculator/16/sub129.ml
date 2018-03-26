@@ -27,7 +27,7 @@
     )
   in
   
-  let sumlist list = fold (fun x y -> x+y) list 0
+  let sumlist lst = fold (fun x y -> x+y) lst 0
   in
   
   let rec makelist startp endp =

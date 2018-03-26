@@ -9,13 +9,11 @@ type exp = X
 
 type value5 = Int of int
 
-type env5 = (value5)
-
 let apply_env5 e=
   match e with
   Int n-> Int n
 
-let rec eval5 :exp->env5->value5
+let rec eval5 :exp->value5->value5
 = fun exp env ->
   match exp with
   X-> apply_env5 env

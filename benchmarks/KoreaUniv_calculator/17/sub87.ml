@@ -1,3 +1,4 @@
+exception NOANSWER
 (* problem 5*)
 type exp = X
          | INT of int

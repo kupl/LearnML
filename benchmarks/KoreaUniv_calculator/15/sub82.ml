@@ -7,6 +7,7 @@ type exp = X
          | SIGMA of exp * exp * exp
 
 exception DivideByZero
+exception InvalidArgument
 
 let rec eval
 =fun e ->
@@ -37,7 +38,6 @@ let rec eval
 			(
 				eval (SIGMA (INT (sc'+1), INT tc', e)) + (sigma e sc')
 			)
-
 and sigma
 =fun e i ->
 	match e with

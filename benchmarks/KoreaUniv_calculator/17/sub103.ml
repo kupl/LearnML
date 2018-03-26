@@ -9,14 +9,14 @@
 
      let rec calculator : exp -> int
        = fun e -> (* TODO *)
-        let rec etoi (exp,int)=
+        let rec etoi (exp,n)=
           match exp with
-      | X->etoi(int,int)
+      | X->etoi(n,n)
       | INT n->n
-      | ADD(f1,f2)->etoi(f1,int)+etoi(f2,int)
-      | SUB(f1,f2)->etoi(f1,int)-etoi(f2,int)
-      | MUL(f1,f2)->etoi(f1,int)*etoi(f2,int)
-      | DIV(f1,f2) ->if etoi(f2,int)=0 then raise(Faliure "0 division") else etoi(f1,int)/etoi(f2,int)
+      | ADD(f1,f2)->etoi(f1,n)+etoi(f2,n)
+      | SUB(f1,f2)->etoi(f1,n)-etoi(f2,n)
+      | MUL(f1,f2)->etoi(f1,n)*etoi(f2,n)
+      | DIV(f1,f2) ->if etoi(f2,n)=0 then raise(Faliure "0 division") else etoi(f1,n)/etoi(f2,n)
       in
       match e with
       | INT i->i

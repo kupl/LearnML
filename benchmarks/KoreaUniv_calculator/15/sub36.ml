@@ -29,7 +29,9 @@ let rec cal (exp) =
           | (INT x,INT y) -> x / y
           | (_,_) -> (cal (e1)/cal (e2)))
 	  | SIGMA (e1,e2,e3) ->
-					let x = cal e1 and y = cal e2 in(
+					let x = cal e1 in
+					let y = cal e2 in
+					(
 					if x>y then 0
 					else if x=y then cal e3
 					else cal e3 + cal ((SIGMA (INT (x+1),INT y,e3))));;

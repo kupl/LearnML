@@ -1,4 +1,4 @@
-
+exception NotImplemented
   type exp =
   | X
   | INT of int

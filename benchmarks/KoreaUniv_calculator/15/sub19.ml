@@ -1,3 +1,4 @@
+exception INVALID_INPUT
 type exp = X
          | INT of int
          | ADD of exp * exp

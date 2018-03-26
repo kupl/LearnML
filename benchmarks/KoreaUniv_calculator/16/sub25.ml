@@ -1,4 +1,3 @@
-open Printf
 
 (*
   1. You can modify the given function specifications as recursive.

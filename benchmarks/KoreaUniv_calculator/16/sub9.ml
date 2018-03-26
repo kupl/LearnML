@@ -17,7 +17,7 @@
   = fun exp k ->
   match exp with
   | X -> k
-  | INT i -> i;
+  | INT i -> i
   | ADD (e1, e2) -> (eval e1 k) + (eval e2 k)
   | SUB (e1, e2) -> (eval e1 k) - (eval e2 k)
   | MUL (e1, e2) -> (eval e1 k) * (eval e2 k)

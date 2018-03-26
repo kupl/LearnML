@@ -20,13 +20,12 @@ exception NotImplemented
 	match exp with
 	| INT n -> n
 	| ADD (a,b) -> (calculator a)+(calculator b)
-	| DIV (a,b) when calculator(b)=0 -> raise (NotImplemented) 
-	| DIV (a,b) -> (calculator a)/ (calculator b)
+	| DIV (a,b) -> if calculator b = 0 then raise (NotImplemented) else (calculator a)/ (calculator b)
 	| MUL (a,b) -> (calculator a)*(calculator b)
 	| SUB (a,b) -> (calculator a)-(calculator b)
-	| SIGMA (a,b,c) when (calculator a)>(calculator b) -> raise(NotImplemented)
-	| SIGMA (a,b,c) when (calculator a) = (calculator b) -> substi(c, calculator a) 
-	| SIGMA (a,b,c) -> substi(c,calculator a) + (calculator (SIGMA(ADD(a, INT 1), b, c)))
+	| SIGMA (a,b,c) -> if (calculator a)>(calculator b) then raise(NotImplemented)
+							else if (calculator a) = (calculator b) then substi(c, calculator a) 
+							else substi(c,calculator a) + (calculator (SIGMA(ADD(a, INT 1), b, c)))
 	| _ -> raise(NotImplemented)
 and substi : exp*int -> int
 = fun exp ->

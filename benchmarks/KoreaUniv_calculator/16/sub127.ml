@@ -1,3 +1,4 @@
+exception NotImplemented
 
   type exp =
   | X

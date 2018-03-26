@@ -1,5 +1,4 @@
-
-module Problem3 = struct
+exception IllegalInput
   type exp =
   | X
   | INT of int
