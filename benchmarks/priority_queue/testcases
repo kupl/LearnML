@@ -1,4 +1,6 @@
 {
+  merge(merge(insert(-1,EMPTY),EMPTY),merge(insert(-3,EMPTY),insert(-2,EMPTY))) => (-3,-2);
+  merge(insert(-2,EMPTY),insert(-1,EMPTY)) => (-2,-1);
   merge(insert(1,EMPTY),insert(2,EMPTY)) => (1,2);
   merge(insert(2,EMPTY),insert(1,EMPTY)) => (1,2);
   merge(insert(3,EMPTY),insert(2,insert(1,EMPTY))) => (1,2);
@@ -9,4 +11,6 @@
   merge(insert(3,insert(5,EMPTY)),insert(7,insert(10,insert(8,EMPTY)))) => (3,5);
   merge(merge(insert(5,insert(8,EMPTY)),insert(3,insert(6,EMPTY))),merge(insert(2,insert(10,EMPTY)),insert(11,EMPTY))) => (2,3);
   merge(merge(insert(2,insert(8,EMPTY)),insert(5,insert(6,EMPTY))),merge(insert(13,insert(10,EMPTY)),insert(11,EMPTY))) => (2,5);
+  merge(merge(insert(-22,insert(-8,EMPTY)),insert(-15,insert(-6,EMPTY))),merge(insert(-11,insert(-14,EMPTY)),insert(-13,EMPTY))) => (-22,-15);
+
 }
