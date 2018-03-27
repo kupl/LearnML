@@ -229,7 +229,7 @@ and normalize_aop : operator -> symbolic_value -> symbolic_value -> symbolic_val
     | Int 0, _ -> Int 0
     | _, Int 1 -> sv1
     | Aop (Div, sv', Int n1), Int n2  -> Aop (Div, sv' , Int (n1 * n2))
-    | Symbol _, _ | Symbol _, Symbol _ -> fresh_symbol ()
+    | Symbol _, _ -> fresh_symbol ()
     | _ -> Aop (op, sv1, sv2)
     end
   | Mod ->
@@ -285,13 +285,16 @@ and normalize_eqop : eq_operator -> symbolic_value -> symbolic_value -> symbolic
     | Eq -> Bool (sv1 = sv2)
     | NEq -> Bool (sv1 <> sv2)
     end
-  else 
+  else
     begin match (sv1, sv2) with
+    | Symbol _, _ | _, Symbol _ -> fresh_symbol ()
     | Ctor (x, svs1), Ctor (y, svs2) ->
       if op = Eq then 
-        if (x <> y) then Bool false else normalize_eqop Eq (Tuple svs1) (Tuple svs2)
+        if (x <> y) then Bool false else normalize_eqop Eq ((List.hd svs1)) ((List.hd svs2))
       else
-        if (x = y) then Bool false else normalize_eqop NEq (Tuple svs1) (Tuple svs2)
+        if (x = y) then Bool false else normalize_eqop NEq ((List.hd svs1)) ((List.hd svs2))
+    | Ctor (x, svs), _ | _, Ctor (x, svs) -> 
+      if op = Eq then Bool false else Bool true
     | _ -> EQop (op, sv1, sv2) 
     end 
 
