@@ -16,14 +16,14 @@ let rec ae_eval : aexp -> (string * int) list -> int
 	| Times l ->
 		begin 
 			match l with
-			| [] -> raise (Failure "Invalid")
+			| [] -> 0
 			| [hd] -> ae_eval hd env
 			| hd::tl -> (ae_eval hd env) * (ae_eval (Times tl) env)
 		end
 	| Sum l -> 
 		begin
 			match l with
-			| [] -> raise (Failure "Invalid")
+			| [] -> 0
 			| [hd] -> ae_eval hd env
 			| hd::tl -> (ae_eval hd env) + (ae_eval (Sum tl) env)
 		end

@@ -1,7 +1,13 @@
 {
+		(Const 1,"x");[("x",1)] => 0;
+		(Var "x","y");[("y",1)] => 0;
+		(Var "y","x");[("y",1)] => 0;
+		(Power ("x",2),"y");[("x",5)] => 0;
+		(Sum [Const 0; Var "x"],"x");[("x",10)] => 1;
     (Sum [Power ("x", 2); Times [Const 2; Var "x"]; Const 1], "x");[("x", 2)] => 6;
     (Sum [Power ("x", 2); Power ("x", 2); Const 1], "x");[("x",3)] => 12;
-    (Sum [Power ("x", 2); Power ("x", 2); Const 1], "y");[] => 0;
+    (Sum [Power ("x", 2); Power ("x", 2); Const 1], "y");[("x",1)] => 0;
+		(Sum [Const 2; Power ("x",2); Power ("x",3)], "x");["x",2] => 16;
     (Times [Power ("x", 3); Power ("y", 2)], "x");[("x", 10); ("y", 5)] => 7500;
     (Sum [Times [Sum [Var "x"; Var "y"]; Times [Var "x"; Var "y"]]; Power ("x", 2)], "x");[("x", 3); ("y", 4)] => 46;
     (Times [Times [Sum [Var "x"; Var "y"]; Var "x"]; Var "x"], "x");[("x", 2); ("y", 5)] =>  32;
