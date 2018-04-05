@@ -31,10 +31,12 @@ module Workset = struct
 
   let add : work -> t -> t
   = fun (n,pgm,h_t,h_e) (heap,sset) ->
-    if explored (Normalize.normalize pgm) (heap,sset) then (heap,sset)
-    else
-      (Heap.add (n,pgm,h_t,h_e) heap, BatSet.add (Print.program_to_string (Normalize.normalize pgm)) sset)
-
+		try
+    	if explored (Normalize.normalize pgm) (heap,sset) then (heap,sset)
+    	else
+      	(Heap.add (n,pgm,h_t,h_e) heap, BatSet.add (Print.program_to_string (Normalize.normalize pgm)) sset)
+		with
+			|_ -> (heap,sset)
   let choose : t -> (work * t) option
   = fun (heap,sset) ->
     try
@@ -269,7 +271,8 @@ let rec type_directed exp hole_typ env (h_t,h_e) =
 		) [] tenvs 
 		in 
     	(* bound each variable type info to hole in body *)
-		let (h_t', h_e') = List.fold_left2 (fun (h_t, h_e) e tenv ->
+		begin try
+			let (h_t', h_e') = List.fold_left2 (fun (h_t, h_e) e tenv ->
 			let n = (extract_holenum e) in
 			let h_t' = BatMap.add n hole_typ h_t in
 			let h_e' = BatMap.add n tenv h_e in
@@ -277,6 +280,8 @@ let rec type_directed exp hole_typ env (h_t,h_e) =
 		) (h_t', h_e') es tenvs
 		in
 		Some (exp,h_t',h_e')
+		with
+		|_ -> let _ = print_endline (string_of_int(List.length es) ^ " , "^ string_of_int (List.length tenvs)) in raise (Failure (Print.exp_to_string exp)) end
 	| EVar x ->
 		let x_t = BatMap.find x env in
 		let rec check_correct typ x_t h_t env=
@@ -453,7 +458,7 @@ let except_alias_vars alias_info candidates =
 		)alias_info BatSet.empty
 	)
 
-let gen_exp_nextstates : exp BatSet.t -> (Workset.work * exp) -> Workset.work BatSet.t
+let gen_exp_nextstates : components -> (Workset.work * exp) -> Workset.work BatSet.t
 = fun candidates ((rank,prog,h_t,h_e),hole) ->
 	let n = extract_holenum hole in
 	let hole_type = BatMap.find n h_t in
@@ -467,6 +472,7 @@ let gen_exp_nextstates : exp BatSet.t -> (Workset.work * exp) -> Workset.work Ba
 		|Some (e,h_t,h_e) -> BatSet.add (e,h_t,h_e) r
 		|None -> r
 	) candidates BatSet.empty in
+	(*let nextstates = BatSet.fold (fun c r -> BatSet.add (c,BatMap.empty,BatMap.empty) r) (BatSet.union candidates (Bv.run prog n)) BatSet.empty in*)
 	BatSet.map (fun (e,h_t,h_e)->
 		(rank,replace_exp prog hole e,BatMap.remove n h_t,BatMap.remove n h_e)
 	) nextstates 
@@ -500,9 +506,9 @@ let rec is_solution : prog -> examples -> bool
 		|StackOverflow _ -> Eval.infinite_count:=(!Eval.infinite_count)+1; false
 		|Stack_overflow -> Eval.infinite_count:=(!Eval.infinite_count)+1; false
 		|e -> 
-			let msg = Printexc.to_string e in
+			(*let msg = Printexc.to_string e in
 			fprintf (!debug) "%s\n" (Print.program_to_string prog);
-			fprintf (!debug) "%s\n" (msg);
+			fprintf (!debug) "%s\n" (msg);*)
 			false
 	) examples
 )
@@ -514,14 +520,14 @@ let count = ref 0
 let rec work : Workset.t -> components -> examples -> prog option
 = fun workset exp_set examples->
 	iter := !iter +1;
-  if (Sys.time()) -. (!start_time) > 300.0 then None
-  else if (!iter mod 10000 = 0)
+  if (Sys.time()) -. (!start_time) > 180.0 then None
+  (*else if (!iter mod 10000 = 0)
 	  then
 		  begin
 			  print_string("Iter : " ^ (string_of_int !iter) ^ " ");
 			  print_endline((Workset.workset_info workset) ^ (" Total elapsed : " ^ (string_of_float (Sys.time() -. !start_time))));
 			  work workset exp_set examples
-		  end
+		  end*)
 	else
 	match Workset.choose workset with
 	| None -> None
@@ -541,28 +547,27 @@ let rec work : Workset.t -> components -> examples -> prog option
 
 let hole_synthesize : prog -> Workset.work BatSet.t -> components -> examples ->prog option
 = fun pgm pgm_set components examples -> 
-	Print.print_header "expression component set is below";
-	Print.print_exp_set components;
+	(*Print.print_header "expression component set is below";
+	Print.print_exp_set components;*)
 	let workset = BatSet.fold (fun t set-> Workset.add t set) pgm_set Workset.empty in
   	let _ = start_time := 0.0 in
 	let result = work workset components examples in
 	let result_prog_string = 
 	match result with
-	|None -> "None"
-	|Some prog -> Print.program_to_string (prog) in
+	|None -> print_endline("None");"None"
+	|Some prog -> print_endline("Total time :" ^ string_of_float (Sys.time() -. !start_time));Print.program_to_string (prog) in
 	Print.print_header "original" ;
 	Print.print_pgm pgm;
 	Print.print_header "result";
 	print_endline(result_prog_string);
-	Print.print_header "Total time";
-	print_endline(string_of_float (Sys.time() -. !start_time));
-	Print.print_header "eval count";
+	(*print_endline("Total time :" ^ string_of_float (Sys.time() -. !start_time));*)
+	(*Print.print_header "eval count";
 	print_endline(string_of_int (!Eval.count));
 	Print.print_header "infinite count";
 	print_endline(string_of_int (!Eval.infinite_count + !Symbol_eval.infinite_count));
 	Print.print_header "SMT time";
 	print_endline(string_of_float (!Smt_pruning.smt_time));
 	Print.print_header "UNSAT count";
-	print_endline(string_of_int (!Smt_pruning.unsat_count));
+	print_endline(string_of_int (!Smt_pruning.unsat_count));*)
 	result
 
