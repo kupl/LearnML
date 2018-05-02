@@ -37,8 +37,8 @@ type symbolic_value =
   | Ctor of id * symbolic_value list
   | Exn of symbolic_value
   | Symbol of int
-  | Fun of arg * exp * symbolic_env
-  | FunRec of id * arg * exp * symbolic_env
+  | Fun of arg * lexp * symbolic_env
+  | FunRec of id * arg * lexp * symbolic_env
   | FunBlock of id * (id * symbolic_value) list
   (* unary operation *)
   | Minus of symbolic_value

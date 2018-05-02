@@ -7,6 +7,10 @@ let count = ref 0
 let infinite_count = ref 0
 let start_time = ref 0.0
 
+let trace_set = ref BatSet.empty
+
+let trace_option = ref false
+
 (* Block task *)
 let rec is_fun : value -> bool
 = fun v ->
@@ -74,7 +78,7 @@ let rec let_binding : env -> let_bind -> value -> env
 	| _ -> raise (Failure "let binding failure")
 
 (* Pattern Matching *)
-let rec find_first_branch : value -> branch list -> (pat * exp)
+let rec find_first_branch : value -> branch list -> (pat * lexp)
 = fun v bs -> 
   match bs with 
   | [] -> raise (Failure "Pattern matching failure")
@@ -138,13 +142,14 @@ let rec value_equality : value -> value -> bool
   | VInt n1,VInt n2 -> n1=n2
   | VString id1,VString id2 -> id1=id2
   | VList l1, VList l2
-  | VTuple l1, VTuple l2 -> (try List.for_all2 value_equality l1 l2 with _ -> false)
-  | VCtor (x1,l1), VCtor(x2,l2) -> (try ((x1=x2) && List.for_all2 value_equality l1 l2) with _ -> false)
-  | _ -> false
+  | VTuple l1, VTuple l2 -> (try List.for_all2 value_equality l1 l2 with _ -> raise EqualError)
+  | VCtor (x1,l1), VCtor(x2,l2) -> (try ((x1=x2) && List.for_all2 value_equality l1 l2) with _ -> raise EqualError)
+  | _ -> raise EqualError
 
 (* exp evaluation *)
-let rec eval : env -> exp -> value
-=fun env e ->
+let rec eval : env -> lexp -> value
+= fun env (l,e) ->
+  let _ = if !trace_option then trace_set := BatSet.add l (!trace_set) in
   if (Unix.gettimeofday() -. !start_time >0.2) then 
     let _ = (infinite_count:=!(infinite_count)+1) in
     raise TimeoutError
@@ -227,11 +232,11 @@ let rec eval : env -> exp -> value
       else eval (let_binding env f (eval env e1)) e2
     | _ ->
       (* Function binding *)
-      let rec binding : arg list -> exp -> exp 
+      let rec binding : arg list -> lexp -> lexp 
       = fun xs e -> 
         begin match xs with
         | [] -> e
-        | hd::tl -> EFun (hd, binding tl e)
+        | hd::tl -> (l, EFun (hd, binding tl e))
         end 
       in
       let x = List.hd args in
@@ -254,9 +259,9 @@ let rec eval : env -> exp -> value
           fun (func_map, const_map) (f, is_rec, args, typ, exp) ->
           begin match f with 
           | BindOne x ->
-            let v = eval env (ELet (BindOne x, is_rec, args, typ, exp, EVar x)) in
+            let v = eval env (gen_label(), ELet (BindOne x, is_rec, args, typ, exp, (gen_label(),EVar x))) in
             if is_fun v then ((x, v)::func_map, const_map) else (func_map, (x, v)::const_map)
-          | _ -> raise (Failure "l-value cannot be a tupple")
+          | _ -> raise (Failure "Only variables are allowed as left-hand side of `let rec'")
           end
         ) ([], []) bindings
         in
@@ -267,7 +272,7 @@ let rec eval : env -> exp -> value
         (* block mapping *)
         List.fold_left (fun env (x, v) -> update_env x (VBlock (x, func_map)) env) init_env func_map
       | false ->
-        let vs = List.map (fun (f, is_rec, args, typ, e) -> eval env (ELet (f, is_rec, args, typ, e, let_to_exp f))) bindings in
+        let vs = List.map (fun (f, is_rec, args, typ, e) -> eval env (gen_label(),ELet (f, is_rec, args, typ, e, let_to_exp f))) bindings in
         List.fold_left2 (fun env (f, is_rec, args, typ, e) v -> let_binding env f v) env bindings vs
       end
     in eval env e2
@@ -296,28 +301,30 @@ let rec eval : env -> exp -> value
     let e = eval env e in
     raise (EExcept e)
 
-and eval_abop : env -> exp -> exp -> (int -> int -> int) -> value
+and eval_abop : env -> lexp -> lexp -> (int -> int -> int) -> value
 = fun env e1 e2 op ->
   match (eval env e1, eval env e2) with
   | VInt n1, VInt n2 -> VInt (op n1 n2)
   | _ -> raise (Failure "arithmetic_operation error")
 
-and eval_abbop : env -> exp -> exp -> (int -> int -> bool) -> value
+and eval_abbop : env -> lexp -> lexp -> (int -> int -> bool) -> value
 = fun env e1 e2 op ->
   match (eval env e1, eval env e2) with
   | VInt n1, VInt n2 -> VBool (op n1 n2)
   | _ -> raise (Failure "int_relation error")
 
-and eval_bbop : env -> exp -> exp -> (bool -> bool -> bool) -> value
+and eval_bbop : env -> lexp -> lexp -> (bool -> bool -> bool) -> value
 = fun env e1 e2 op ->
   match (eval env e1, eval env e2) with
   | VBool b1, VBool b2 -> VBool (op b1 b2)
   | _ -> raise (Failure "boolean_operation error")
 
-and eval_equality : env -> exp -> exp -> bool
+and eval_equality : env -> lexp -> lexp -> bool
 = fun env e1 e2->
   let (x,y) = (eval env e1, eval env e2) in
-  (value_equality x y)
+  try
+		(value_equality x y)
+	with _ -> false
   
 let rec eval_decl : env -> decl -> env
 = fun env decl ->
@@ -326,7 +333,7 @@ let rec eval_decl : env -> decl -> env
     let exp = 
       begin match x with 
       | BindUnder -> exp
-      | _ -> ELet (x, is_rec, args, typ, exp, let_to_exp x) 
+      | _ -> (gen_label(),ELet (x, is_rec, args, typ, exp, let_to_exp x))
       end
     in
     let_binding env x (eval env exp)
@@ -337,7 +344,7 @@ let rec eval_decl : env -> decl -> env
         fun (func_map, const_map) (f, is_rec, args, typ, exp) ->
         begin match f with 
         | BindOne x ->
-          let v = eval env (ELet (BindOne x, is_rec, args, typ, exp, EVar x)) in
+          let v = eval env (gen_label(),(ELet (BindOne x, is_rec, args, typ, exp, (gen_label(),EVar x)))) in
           if is_fun v then ((x, v)::func_map, const_map) else (func_map, (x, v)::const_map)
         | _ -> raise (Failure "l-value cannot be a tupple")
         end
@@ -361,7 +368,6 @@ let run : prog -> env
   start_time:=Unix.gettimeofday();
   let init_env = List.fold_left eval_decl empty_env (External.init_prog) in
   start_time:=Unix.gettimeofday();
+  (if !trace_option then trace_set:=BatSet.empty);
   let env = List.fold_left eval_decl init_env decls in
   BatMap.diff env init_env
-
-

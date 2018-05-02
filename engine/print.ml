@@ -1,7 +1,7 @@
 open Lang
 open Util
-open Label_lang
 open Symbol_lang
+
 (*****************************)
 (********language*************)
 (*****************************)
@@ -13,14 +13,16 @@ let rec tab_to_string : int -> string
   | 0 -> ""
   | _ -> "  " ^ tab_to_string (n-1)
 
-let pp_tuple func tup =
+let pp_tuple : ('a -> string) -> 'a list -> string
+= fun func tup ->
   match tup with
   |[] -> "()"
   |hd::tl -> 
     "(" ^ (func hd) ^
     (list_fold (fun elem r -> r ^ ", " ^ (func elem)) tl "") ^ ")"
 
-let pp_list func lst =
+let pp_list : ('a -> string) -> 'a list -> string
+= fun func lst ->
   match lst with
   |[] -> "[]"
   |hd::tl ->
@@ -112,8 +114,8 @@ let rec let_to_string : let_bind -> string
   | BindOne x -> x
   | BindTuple xs -> pp_tuple let_to_string xs
 
-let rec exp_to_string : exp -> string
-= fun exp ->
+let rec exp_to_string : lexp -> string
+= fun (_, exp) ->
   match exp with
   |EUnit -> "()"
   |Const n -> string_of_int n
@@ -144,7 +146,7 @@ let rec exp_to_string : exp -> string
   |NOT e -> "not (" ^ exp_to_string e ^ ")"
   |EApp (e1,e2) -> 
     exp_to_string e1 ^ " " ^
-    begin match e2 with
+    begin match snd e2 with
     |EApp _ -> "(" ^ exp_to_string e2 ^ ")"
     |_ -> exp_to_string e2
     end
@@ -160,14 +162,14 @@ let rec exp_to_string : exp -> string
     (if is_rec then "rec " else "") ^
     pp_block (binding_to_string) es ^ "}" ^ " in \n" ^ exp_to_string e2 
   |EFun (arg,e1) -> 
-    let rec multi_args (e : exp) r =
-      begin match e with
+    let rec multi_args (e : lexp) r =
+      begin match snd e with
       |EFun (a,exp) -> 
         let arg_seq = r ^ " " ^ arg_to_string a in
         multi_args exp arg_seq
       |_ -> "\nfun " ^ r ^ " -> " ^ exp_to_string e
     end in
-    multi_args e1 (arg_to_string arg) 
+    multi_args e1 (arg_to_string arg)
   |EMatch (e,lst) ->  
     "\nmatch " ^ exp_to_string e ^ " with " ^ 
     (list_fold (fun (p,e) r -> r ^ "\n|" ^ pat_to_string p ^ " -> " ^ exp_to_string e) lst "")
@@ -222,8 +224,8 @@ let rec value_to_string : value -> string
   | VList l1 -> pp_list value_to_string l1
   | VTuple l1 -> pp_tuple value_to_string l1
   | VCtor (id,l1) -> id ^ (if(l1=[]) then "" else pp_tuple value_to_string l1)
-  | VFun  (xs, exp, env) -> "<fun>"
-  | VFunRec (f, xs, exp, env) -> "<fun>"
+  | VFun  (xs, _, _) -> "<fun>"
+  | VFunRec (f, _, _, _) -> "<fun>"
   | VHole _ -> "?"
   | VBlock (f, vs) -> "{" ^ f ^ "|->" ^ pp_block (value_block_to_string) vs ^ "}"
 
@@ -235,10 +237,10 @@ let env_to_string env = BatMap.foldi (fun x v r -> r^" " ^x ^ "|-> " ^ value_to_
 let print_env : env -> unit
 = fun env -> print_endline (env_to_string env)
 
-let print_exp : exp -> unit
+let print_exp : lexp -> unit
 = fun exp -> print_endline (exp_to_string exp)
 
-let print_exp_set : exp BatSet.t -> unit
+let print_exp_set : lexp BatSet.t -> unit
 = fun exps -> BatSet.iter print_exp exps
 
 let rec print_pgm : prog -> unit
@@ -248,8 +250,10 @@ let rec print_pgm : prog -> unit
 (*****************************)
 (******typechecking***********)
 (*****************************)
+
 let print_typ_eqns eqns = 
   List.iter (fun (ty1,ty2) -> print_endline(type_to_string ty1^" = "^type_to_string ty2)) eqns
+
 (*****************************)
 (********labeling*************)
 (*****************************)
@@ -262,123 +266,6 @@ let rec print_examples : examples -> unit
       print_endline(input_string ^ "-> "^output_string)
   ) examples
 
-let rec labeled_exp_to_string : labeled_exp -> string
-= fun (n,exp) ->
-  "( " ^ (string_of_int n) ^ ", "^ 
-  begin match exp with
-  | EUnit -> "()"
-  |Const n -> string_of_int n
-  |TRUE -> "true"
-  |FALSE -> "false"
-  |EVar x -> x
-  |EList lst -> pp_list labeled_exp_to_string lst
-  |ETuple lst -> pp_tuple labeled_exp_to_string lst
-  |ECtor (x,lst) -> x ^ (if lst=[] then "" else pp_tuple labeled_exp_to_string lst)
-  |ADD (e1,e2) -> "(" ^ labeled_exp_to_string e1 ^ " + " ^ labeled_exp_to_string e2 ^")"  
-  |SUB (e1,e2) -> "(" ^ labeled_exp_to_string e1 ^ " - " ^ labeled_exp_to_string e2 ^")"  
-  |MUL (e1,e2) -> "(" ^ labeled_exp_to_string e1 ^ " * " ^ labeled_exp_to_string e2 ^")"  
-  |DIV (e1,e2) -> "(" ^ labeled_exp_to_string e1 ^ " / " ^ labeled_exp_to_string e2 ^")"  
-  |MOD (e1,e2) -> "(" ^ labeled_exp_to_string e1 ^ " % " ^ labeled_exp_to_string e2 ^")"  
-  |MINUS (e) -> "(-" ^ labeled_exp_to_string e ^ ")"
-  |OR (e1,e2) -> "(" ^ labeled_exp_to_string e1 ^ " || " ^ labeled_exp_to_string e2 ^")"
-  |AND (e1,e2) -> "(" ^ labeled_exp_to_string e1 ^ " && " ^ labeled_exp_to_string e2 ^")"
-  |LESS (e1,e2) -> "(" ^ labeled_exp_to_string e1 ^ " < " ^ labeled_exp_to_string e2 ^")"
-  |LARGER (e1,e2) -> "(" ^ labeled_exp_to_string e1 ^ " > " ^ labeled_exp_to_string e2 ^")"
-  |LARGEREQ (e1,e2) -> "(" ^ labeled_exp_to_string e1 ^ " >= " ^ labeled_exp_to_string e2 ^")"
-  |EQUAL (e1,e2) -> "(" ^ labeled_exp_to_string e1 ^ " = " ^ labeled_exp_to_string e2 ^")"
-  |NOTEQ (e1,e2) -> "(" ^ labeled_exp_to_string e1 ^ " != " ^ labeled_exp_to_string e2 ^")"
-  |LESSEQ (e1,e2) -> "(" ^ labeled_exp_to_string e1 ^ " <= " ^ labeled_exp_to_string e2 ^")"
-  |AT (e1,e2) -> "(" ^ labeled_exp_to_string e1 ^ " @ " ^ labeled_exp_to_string e2 ^")"
-  |DOUBLECOLON (e1,e2) -> "(" ^ labeled_exp_to_string e1 ^ " :: " ^ labeled_exp_to_string e2 ^")"
-  |NOT e -> "not (" ^ labeled_exp_to_string e ^ ")"
-  |EApp (e1,e2) -> labeled_exp_to_string e1 ^ " " ^ labeled_exp_to_string e2
-  |IF (e1,e2,e3) -> 
-    "if " ^ labeled_exp_to_string e1 ^ "" ^ 
-    " then " ^ labeled_exp_to_string e2 ^ "\n" ^
-    " else " ^ labeled_exp_to_string e3 ^ ""
-  |ELet (f,is_rec,xs,t,e1,e2) -> 
-    begin match xs with
-    | [] -> (* variable binding *)
-      "\n" ^ "let " ^ (let_to_string f) ^ " = "^(labeled_exp_to_string e1) ^ " in " ^ (labeled_exp_to_string e2)
-    | _ ->  (* function binding *)
-      let args_string = args_to_string xs "" in
-      let typ_string = type_to_string t in
-      if is_rec then
-        "\n" ^ "let rec " ^ (let_to_string f) ^ args_string ^ " : " ^ typ_string ^ " = \n" ^(labeled_exp_to_string e1) ^ " in " ^ (labeled_exp_to_string e2)
-      else
-        "\n" ^ "let " ^ (let_to_string f) ^ args_string ^ " : " ^ typ_string ^ " = \n" ^(labeled_exp_to_string e1) ^ " in " ^ (labeled_exp_to_string e2)
-    end
-  |EFun (arg ,e1) -> "fun " ^ (arg_to_string arg) ^ " -> " ^ labeled_exp_to_string e1 
-  |Hole n -> "?"
-  |EMatch (e,lst) ->  
-    let rec f lst =
-    match lst with
-    |[] -> ""
-    |(pat,exp)::tl -> "\n|" ^ pat_to_string pat ^ " -> " ^ labeled_exp_to_string exp ^ (f tl)
-  in "match " ^ labeled_exp_to_string e ^ " with " ^ f lst
-  |_ -> ""
-  end ^ ")"
-
-and labeled_binding_to_string : labeled_binding -> string
-= fun (f, is_rec, args, typ, exp) ->
-    (let_to_string f) ^ " " ^ args_to_string args "" ^
-    (match typ with |TVar _ -> "" |_ -> " : " ^ type_to_string typ) ^
-    " = " ^ (labeled_exp_to_string exp) ^ "\n"
-
-let rec labeled_decl_to_string : labeled_decl -> string -> string
-= fun decl str ->
-  match decl with
-  | DExcept t ->
-    str ^ "exception " ^ user_defined_type_to_string t
-  | DEqn (x, typ) ->
-    str ^ "type " ^ x ^ " = " ^ type_to_string typ ^ "\n"
-  | DData (id,lst) -> 
-    str ^ "type " ^ id ^ " =" ^ 
-    (list_fold (fun t r -> r ^ "\n|" ^ user_defined_type_to_string t) lst "") ^ "\n"
-  | DLet (f,is_rec,args,typ,exp) -> 
-    str ^ "\n" ^ "let " ^ (if is_rec then "rec " else "") ^
-    labeled_binding_to_string (f, is_rec, args, typ, exp)
-  | DBlock (is_rec, ds) ->
-    str ^ "\n" ^ "{\n" ^ "let " ^ (if is_rec then "rec " else "") ^
-    pp_block (labeled_binding_to_string) ds ^ "}"
-  | TBlock decls ->
-    str ^ "\n" ^ "{\n" ^ "type " ^
-    pp_block (labeled_type_decl_to_string) decls ^ "}"
-
-and labeled_type_decl_to_string : labeled_decl -> string
-= fun decl ->
-  match decl with
-  | DEqn (x, typ) -> x ^ " = " ^ type_to_string typ ^ "\n"
-  | DData (id,lst) -> 
-    id ^ " =" ^ 
-    (list_fold (fun t r -> r ^ "\n|" ^ user_defined_type_to_string t) lst "") ^ "\n"
-  | _ -> raise (Failure "Invalid type decl")
-
-let labeled_program_to_string : labeled_prog -> string
-= fun pgm ->
-  list_fold labeled_decl_to_string pgm "" 
-
-let print_labeled_pgm : labeled_prog -> unit
-= fun pgm ->
-  print_endline (labeled_program_to_string pgm)
-
-let rec labeled_value_to_string : labeled_value -> string
-= fun v ->
-  match v with
-  | VUnit -> "()"
-  | VInt n -> (string_of_int n)
-  | VBool b -> if b then "true" else "false"
-  | VString str -> str
-  | VList vs -> "[" ^ (list_fold (fun x str -> (labeled_value_to_string x) ^ ";" ^ str) vs "") ^"]" 
-  | VTuple vs -> "(" ^ (list_fold (fun x str -> (labeled_value_to_string x) ^ "," ^ str) vs "") ^")" 
-  | VCtor (x, vs) -> x ^ "(" ^ (list_fold (fun x str -> (labeled_value_to_string x) ^ "," ^ str) vs "") ^")" 
-  | VFun (arg, exp, lenv) -> "VFun" ^ arg_to_string arg
-  | VFunRec (f, arg, exp, lenv) -> "VFun" ^ f ^ arg_to_string arg
-  | VHole n -> "?"
-  | VBlock (f, vs) -> "{" ^ f ^ "|->" ^ pp_block (labeled_value_block_to_string) vs ^ "}"
-
-and labeled_value_block_to_string : id * labeled_value -> string
-= fun (x, v) -> x ^ " : " ^ labeled_value_to_string v
 
 let print_header str = 
  let _ = print_endline "-----------------------------" in

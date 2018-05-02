@@ -175,7 +175,9 @@ module Aez_Encoder = struct
     | Eq (t1, t2) -> F.make_lit F.Eq [encode_term t1; encode_term t2]
 end
 
-(********************* SMT Pruning ***********************) 
+(*****************************************)
+(************** SMT Pruning **************) 
+(*****************************************)
 
 let cache = ref Cache.empty
 
@@ -184,9 +186,6 @@ let new_try () = (try_count := !try_count + 1); !try_count
 
 let unsat_count = ref 0
 let smt_time = ref 0.0
-
-let out1 = ref (open_out "sat.txt")
-let out2 = ref (open_out "unsat.txt")
 
 let solve : symbolic_value -> bool
 = fun sv ->

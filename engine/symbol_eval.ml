@@ -77,7 +77,7 @@ let rec let_binding : symbolic_env -> let_bind -> symbolic_value -> symbolic_env
   | _ -> raise (Failure "let binding failure")
 
 (* Pattern Matching *)
-let rec find_first_branch : symbolic_value -> branch list -> (pat * exp)
+let rec find_first_branch : symbolic_value -> branch list -> (pat * lexp)
 = fun sv bs -> 
   match bs with 
   | [] -> raise (Failure "Pattern matching failure")
@@ -142,7 +142,7 @@ let rec is_symbol_const : symbolic_value -> bool
   | Exn sv -> is_symbol_const sv
   | _ -> false
 
-(* Normalize *)
+(* Symbolic value normalize *)
 let rec normalize : symbolic_value -> symbolic_value
 = fun sv ->
   match sv with
@@ -299,8 +299,8 @@ and normalize_eqop : eq_operator -> symbolic_value -> symbolic_value -> symbolic
     end 
 
 (* Encoding *)
-let rec partial_eval_exp : symbolic_env -> exp -> symbolic_value
-= fun env exp ->
+let rec partial_eval_exp : symbolic_env -> lexp -> symbolic_value
+= fun env (_, exp) ->
   (*print_endline (Print.exp_to_string exp);*)
   if (Unix.gettimeofday() -. !start_time >0.20) then 
     let _ = (infinite_count:=!(infinite_count)+1) in
@@ -374,11 +374,11 @@ let rec partial_eval_exp : symbolic_env -> exp -> symbolic_value
         else partial_eval_exp (let_binding env f (partial_eval_exp env e1)) e2
       |_ ->
         (* function binding *)
-        let rec binding : arg list -> exp -> exp 
+        let rec binding : arg list -> lexp -> lexp 
         = fun xs e -> 
           begin match xs with
           | [] -> e
-          | hd::tl -> EFun (hd, binding tl e)
+          | hd::tl -> (gen_label(),EFun (hd, binding tl e))
           end 
         in
         let x = List.hd args in
@@ -401,7 +401,7 @@ let rec partial_eval_exp : symbolic_env -> exp -> symbolic_value
             fun (func_map, const_map) (f, is_rec, args, typ, exp) ->
               match f with 
               | BindOne x ->
-                let sv = partial_eval_exp env (ELet (BindOne x, is_rec, args, typ, exp, EVar x)) in
+                let sv = partial_eval_exp env (gen_label(),ELet (BindOne x, is_rec, args, typ, exp, (gen_label(), EVar x))) in
                 if is_fun sv then ((x, sv)::func_map, const_map) else (func_map, (x, sv)::const_map)
               | _ -> raise (Failure "Only variables are allowed as left-hand side of `let rec'")
           ) ([], []) bindings
@@ -413,7 +413,7 @@ let rec partial_eval_exp : symbolic_env -> exp -> symbolic_value
           (* block mapping *)
           List.fold_left (fun env (x, sv) -> extend_env (x, FunBlock (x, func_map)) env) init_env func_map
         | false ->
-          let svs = List.map (fun (f, is_rec, args, typ, e) -> partial_eval_exp env (ELet (f, is_rec, args, typ, e, let_to_exp f))) bindings in
+          let svs = List.map (fun (f, is_rec, args, typ, e) -> partial_eval_exp env (gen_label(), ELet (f, is_rec, args, typ, e, let_to_exp f))) bindings in
           List.fold_left2 (fun env (f, is_rec, args, typ, e) sv -> let_binding env f sv) env bindings svs
         end
       in partial_eval_exp env e2
@@ -448,7 +448,7 @@ let rec partial_eval_decl : symbolic_env -> decl -> symbolic_env
     let exp = 
       begin match f with 
       | BindUnder -> e
-      | _ -> ELet (f, is_rec, args, typ, e, let_to_exp f) 
+      | _ -> (gen_label(), ELet (f, is_rec, args, typ, e, let_to_exp f))
       end
     in
     let_binding env f (partial_eval_exp env exp)
@@ -458,7 +458,7 @@ let rec partial_eval_decl : symbolic_env -> decl -> symbolic_env
         fun (func_map, const_map) (f, is_rec, args, typ, exp) ->
         begin match f with 
         | BindOne x ->
-          let sv = partial_eval_exp env (ELet (BindOne x, is_rec, args, typ, exp, EVar x)) in
+          let sv = partial_eval_exp env (gen_label(), ELet (BindOne x, is_rec, args, typ, exp, (gen_label(), EVar x))) in
           if is_fun sv then ((x, sv)::func_map, const_map) else (func_map, (x, sv)::const_map)
         | _ -> raise (Failure "Only variables are allowed as left-hand side of `let rec'")
         end
@@ -471,7 +471,7 @@ let rec partial_eval_decl : symbolic_env -> decl -> symbolic_env
       (* block mapping *)
       List.fold_left (fun env (x, sv) -> extend_env (x, FunBlock (x, func_map)) env) init_env func_map
     else
-      let svs = List.map (fun (f, is_rec, args, typ, e) -> partial_eval_exp env (ELet (f, is_rec, args, typ, e, let_to_exp f))) bindings in
+      let svs = List.map (fun (f, is_rec, args, typ, e) -> partial_eval_exp env (gen_label(), ELet (f, is_rec, args, typ, e, let_to_exp f))) bindings in
       List.fold_left2 (fun env (f, is_rec, args, typ, e) sv -> let_binding env f sv) env bindings svs
   | _ -> env
 
@@ -499,11 +499,11 @@ let rec value_to_symbol : value -> symbolic_value
   | _ -> raise (Failure "Output must be a constant")
 
 (* Execution result to Symbolic value*)
-let rec symbolic_execution : prog -> exp list -> symbolic_value
+let rec symbolic_execution : prog -> lexp list -> symbolic_value
 = fun pgm input ->
   let res_var = "__res__" in
   let pgm = pgm@(External.grading_prog) in
-  let pgm' = pgm @ [(DLet (BindOne res_var,false,[],fresh_tvar(),(appify (EVar !Options.opt_entry_func) input)))] in
+  let pgm' = pgm @ [(DLet (BindOne res_var,false,[],fresh_tvar(),(appify (gen_label(), (EVar !Options.opt_entry_func)) input)))] in
   let env = partial_run pgm' in
   find_env res_var env
 

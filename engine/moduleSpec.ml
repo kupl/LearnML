@@ -155,7 +155,7 @@ let fst (t,_) = t
 
 let snd (_,t) = t
 
-let max a b = if(a>b) then a else b
+(*let max a b = if(a>b) then a else b*)
 
 let min a b = if(a>b) then b else a
 

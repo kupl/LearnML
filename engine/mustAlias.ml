@@ -13,7 +13,7 @@ module type S = sig
 
 	val empty_set : equivSet
 	val kill : equivSet -> id -> equivSet
-	val gen : equivSet -> (pat * exp) -> equivSet 
+	val gen : equivSet -> (pat * lexp) -> equivSet 
 
 	val empty_alias : aliasinfo
 	val update_alias : aliasinfo -> (int * equivSet) -> aliasinfo
@@ -34,7 +34,8 @@ module Sem : S = struct
 	type env = equivSet * aliasinfo
 
 	let print : aliasinfo -> unit
-	= fun map -> Map.iter (fun n set ->
+	= fun map -> 
+		Map.iter (fun n set ->
 			print_endline (string_of_int n ^ " -> " ^ "{");
 			Set.iter (fun (p1, p2) ->
 				print_endline (Print.pat_to_string p1 ^ " = " ^ Print.pat_to_string p2)
@@ -45,8 +46,9 @@ module Sem : S = struct
 	let get_aliasSet : aliasinfo -> int -> equivSet
 	= fun map n -> BatMap.find n map
 
-	let rec exp_to_pat : exp -> pat
-	= function
+	let rec exp_to_pat : lexp -> pat
+	= fun (_, exp) ->
+		match exp with
 		| EUnit -> PUnit
 		| Const n -> PInt n
 		| TRUE -> PBool true
@@ -58,8 +60,9 @@ module Sem : S = struct
 		| DOUBLECOLON (e1, e2) -> PCons [exp_to_pat e1;exp_to_pat e2] (*TODO*)
 		| _ -> raise (Failure "Must alias analysis : expression type error")
 
-	let rec check_pat : exp -> bool
-	= function
+	let rec check_pat : lexp -> bool
+	= fun (_, exp) ->
+		match exp with
 		| EUnit | Const _ | TRUE | FALSE | String _ | EVar _ -> true
 		| ETuple l | ECtor(_, l) | EList l -> List.for_all check_pat l
 		| DOUBLECOLON (e1,e2) -> (check_pat e1) && (check_pat e2)
@@ -102,7 +105,7 @@ module Sem : S = struct
 			else Set.add (p1,p2) acc
 		) set empty_set
 
-	let gen : equivSet -> (pat * exp) -> equivSet
+	let gen : equivSet -> (pat * lexp) -> equivSet
 	= fun set (pattern,exp) ->
 		if (check_pat exp) then Set.union (inverse (pattern,exp_to_pat exp)) set
 		else set
@@ -147,8 +150,8 @@ module Sem : S = struct
 		| BindTuple l -> list_fold kill_let_bind l s
 		| _ -> s
 
-	let rec analysis_exp : equivSet -> exp -> aliasinfo
-	= fun s exp ->
+	let rec analysis_exp : equivSet -> lexp -> aliasinfo
+	= fun s (_, exp) ->
 		match exp with
 		| Hole n -> update_alias empty_alias (n,s)
 		| EUnit | Const _ | TRUE | FALSE | String _ | EVar _ -> empty_alias
@@ -199,7 +202,7 @@ module Sem : S = struct
 			let alias = 
 				begin match x with
 				| BindUnder -> analysis_exp s exp
-				| _ -> analysis_exp s (ELet (x, is_rec, args, typ, exp, let_to_exp x))
+				| _ -> analysis_exp s (gen_label(), ELet (x, is_rec, args, typ, exp, let_to_exp x))
 				end in
 			if (args != []) then (s,Map.union map alias)
 			else
@@ -217,8 +220,5 @@ module Sem : S = struct
 	let run : prog -> aliasinfo
 	= fun pgm -> 
 		let env = list_fold analysis_decl pgm empty_env in
-		(*Print.print_header "alias information";
-		Print.print_pgm pgm;
-		(print (snd env));*)
 		snd env
 end

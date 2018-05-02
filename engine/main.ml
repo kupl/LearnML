@@ -6,30 +6,30 @@ exception Arg_exception
 
 let all_component () =
   let e_t = BatSet.empty in
-  let e_t = BatSet.add (Const 0) e_t in
-  let e_t = BatSet.add (Const 1) e_t in
-  let e_t = BatSet.add TRUE e_t in
-  let e_t = BatSet.add FALSE e_t in
-  let e_t = BatSet.add (EList []) e_t in
-  let e_t = BatSet.add (ADD (Hole (0),Hole (0))) e_t in
-  let e_t = BatSet.add (SUB (Hole (0),Hole (0))) e_t in
-  let e_t = BatSet.add (MUL (Hole (0),Hole (0))) e_t in
-  let e_t = BatSet.add (DIV (Hole (0),Hole (0))) e_t in
-  let e_t = BatSet.add (MOD (Hole (0),Hole (0))) e_t in
-  let e_t = BatSet.add (MINUS (Hole 0)) e_t in
-  let e_t = BatSet.add (NOT (Hole (0))) e_t in
-  let e_t = BatSet.add (OR (Hole (0),Hole (0))) e_t in
-  let e_t = BatSet.add (AND (Hole (0),Hole (0))) e_t in
-  let e_t = BatSet.add (LESS (Hole (0),Hole (0))) e_t in
-  let e_t = BatSet.add (LARGER (Hole (0),Hole (0))) e_t in
-  let e_t = BatSet.add (EQUAL (Hole (0),Hole (0))) e_t in
-  let e_t = BatSet.add (NOTEQ (Hole (0),Hole (0))) e_t in
-  let e_t = BatSet.add (LESSEQ (Hole (0),Hole (0))) e_t in
-  let e_t = BatSet.add (LARGEREQ (Hole (0),Hole (0))) e_t in
-  let e_t = BatSet.add (EApp (Hole (0),Hole (0))) e_t in
-  let e_t = BatSet.add (AT (Hole (0),Hole (0))) e_t in
-  let e_t = BatSet.add (DOUBLECOLON (Hole (0),Hole (0))) e_t in
-  let e_t = BatSet.add (IF (Hole (0),Hole (0),Hole (0))) e_t in
+  let e_t = BatSet.add (0,Const 0) e_t in
+  let e_t = BatSet.add (0,Const 1) e_t in
+  let e_t = BatSet.add (0,TRUE) e_t in
+  let e_t = BatSet.add (0,FALSE) e_t in
+  let e_t = BatSet.add (0,EList []) e_t in
+  let e_t = BatSet.add (0,(ADD (dummy_hole (),dummy_hole ()))) e_t in
+  let e_t = BatSet.add (0,(SUB (dummy_hole (),dummy_hole ()))) e_t in
+  let e_t = BatSet.add (0,(MUL (dummy_hole (),dummy_hole ()))) e_t in
+  let e_t = BatSet.add (0,(DIV (dummy_hole (),dummy_hole ()))) e_t in
+  let e_t = BatSet.add (0,(MOD (dummy_hole (),dummy_hole ()))) e_t in
+  let e_t = BatSet.add (0,(MINUS (dummy_hole ()))) e_t in
+  let e_t = BatSet.add (0,(NOT (dummy_hole ()))) e_t in
+  let e_t = BatSet.add (0,(OR (dummy_hole (),dummy_hole ()))) e_t in
+  let e_t = BatSet.add (0,(AND (dummy_hole (),dummy_hole ()))) e_t in
+  let e_t = BatSet.add (0,(LESS (dummy_hole (),dummy_hole ()))) e_t in
+  let e_t = BatSet.add (0,(LARGER (dummy_hole (),dummy_hole ()))) e_t in
+  let e_t = BatSet.add (0,(EQUAL (dummy_hole (),dummy_hole ()))) e_t in
+  let e_t = BatSet.add (0,(NOTEQ (dummy_hole (),dummy_hole ()))) e_t in
+  let e_t = BatSet.add (0,(LESSEQ (dummy_hole (),dummy_hole ()))) e_t in
+  let e_t = BatSet.add (0,(LARGEREQ (dummy_hole (),dummy_hole ()))) e_t in
+  let e_t = BatSet.add (0,(EApp (dummy_hole (),dummy_hole ()))) e_t in
+  let e_t = BatSet.add (0,(AT (dummy_hole (),dummy_hole ()))) e_t in
+  let e_t = BatSet.add (0,(DOUBLECOLON (dummy_hole (),dummy_hole ()))) e_t in
+  let e_t = BatSet.add (0,(IF (dummy_hole (),dummy_hole (),dummy_hole ()))) e_t in
   (* let e_t = BatSet.add EUnit e_t in *)
   (* let e_t = BatSet.add (STRCON (Hole 0, Hole 0)) e_t in *)
   (* let e_t = BatSet.add (Raise (Hole 0)) e_t in *)
@@ -46,7 +46,7 @@ let program_with_grading prog = prog@(External.grading_prog)
 
 let program_with_input prog inputs =
   let res_var = "__res__" in
-  prog @ [(DLet (BindOne res_var,false,[],fresh_tvar(),(Lang.appify (EVar !opt_entry_func) inputs)))] 
+  prog @ [(DLet (BindOne res_var,false,[],fresh_tvar(),(Lang.appify (gen_label(),EVar !opt_entry_func) inputs)))] 
 
 let except_handling : exn -> value -> unit
 = fun except output ->
@@ -60,6 +60,7 @@ let except_handling : exn -> value -> unit
   |Failure s ->
     print_endline("Result : Error "^ s ^ " " ^
                   "Expected: " ^ Print.value_to_string output);
+	|EqualError -> raise except
   |_ ->
      print_endline("Result : Evaluation Error "^
                   "Expected: " ^ Print.value_to_string output);
@@ -76,8 +77,10 @@ let run_testcases : prog -> examples -> unit
 		  let result_value = Lang.lookup_env "__res__" env in
         print_endline ("Result: " ^ Print.value_to_string result_value ^ " " ^  
                      "Expected: " ^ Print.value_to_string output);
-        if(result_value=output) then score+1 else score
-    with except -> except_handling except output; score
+        if(Eval.value_equality result_value output) then score+1 else score
+    with except -> except_handling except output; 
+		(*let _ = Eval.value_equality (Lang.lookup_env "__res__" (Eval.run prog')) output in*)
+		score
   ) 0 examples in
   print_endline("score : "^(string_of_int score))
 
@@ -117,29 +120,32 @@ let fix_with_solution : prog -> prog -> examples -> unit
     with |_ -> score
   ) examples 0 in
   let _ = if(score=List.length examples) then raise (Failure "The submission is correct code") in
-  print_header "Score"; print_endline(string_of_int score);
+  (*print_header "Score"; print_endline(string_of_int score);
   print_header "Solution"; Print.print_pgm solution;
   print_header "Submission"; Print.print_pgm submission;
-  print_header "Test-cases"; print_examples examples;
+  print_header "Test-cases"; print_examples examples;*)
   let ranked_prog_set = Localize.localization submission examples in
   let initial_set = BatSet.map
    (
       fun (n,prog)->
         let (_,hole_type,variable_type) = Type.run prog in
+				(*Print.print_pgm prog;
+				print_endline(string_of_int n);*)
+				(*Type.HoleType.print hole_type;
+				Type.VariableType.print variable_type;*)
         (n,prog,hole_type,variable_type)
     ) ranked_prog_set in
-  print_header "initial-set"; print_endline(string_of_int (BatSet.cardinal initial_set));
+  (*print_header "initial-set"; print_endline(string_of_int (BatSet.cardinal initial_set));*)
   let components = Comp.extract_component solution in
-  (*
-  let components = BatSet.filter (fun x ->
+  
+	(*let components = BatSet.filter (fun x ->
     match x with
     | Const _ -> false
     | EList _ -> false
     | _ -> true
   ) components
   in
-  let components = BatSet.union components (all_component ()) in
-  *)
+  let components = BatSet.union components (all_component ()) in*)
   let _ = Synthesize.hole_synthesize submission initial_set components examples in
   ()
  

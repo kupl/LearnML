@@ -39,38 +39,41 @@ module Converter = struct
   let rec convert_args : t -> arg list -> arg list
   = fun env args -> List.map (convert_arg env) args
 
-  let rec convert_exp : t -> exp -> exp
-  = fun env exp ->
-    match exp with 
-    | EList es -> EList (List.map (convert_exp env) es)
-    | ETuple es -> ETuple (List.map (convert_exp env) es)
-    | ECtor (x, es) -> ECtor (x, List.map (convert_exp env) es)
-    | MINUS e -> MINUS (convert_exp env e)
-    | NOT e -> NOT (convert_exp env e)
-    | ADD (e1, e2) -> ADD (convert_exp env e1, convert_exp env e2)
-    | SUB (e1, e2) -> SUB (convert_exp env e1, convert_exp env e2)
-    | MUL (e1, e2) -> MUL (convert_exp env e1, convert_exp env e2)
-    | DIV (e1, e2) -> DIV (convert_exp env e1, convert_exp env e2) 
-    | MOD (e1, e2) -> MOD (convert_exp env e1, convert_exp env e2)
-    | OR (e1, e2) -> OR (convert_exp env e1, convert_exp env e2)
-    | AND (e1, e2) -> AND (convert_exp env e1, convert_exp env e2)
-    | LESS (e1, e2) -> LESS (convert_exp env e1, convert_exp env e2)
-    | LARGER (e1, e2) -> LARGER (convert_exp env e1, convert_exp env e2)
-    | LESSEQ (e1, e2) -> LESSEQ (convert_exp env e1, convert_exp env e2)
-    | LARGEREQ (e1, e2) -> LARGEREQ (convert_exp env e1, convert_exp env e2)
-    | EQUAL (e1, e2) -> EQUAL (convert_exp env e1, convert_exp env e2)
-    | NOTEQ (e1, e2) -> NOTEQ (convert_exp env e1, convert_exp env e2)
-    | AT (e1, e2) -> AT (convert_exp env e1, convert_exp env e2)
-    | DOUBLECOLON (e1, e2) -> DOUBLECOLON (convert_exp env e1, convert_exp env e2)
-    | IF (e1, e2, e3) -> IF (convert_exp env e1, convert_exp env e2, convert_exp env e3)
-    | ELet (f, is_rec, args, typ, e1, e2) -> ELet (f, is_rec, convert_args env args, convert_typ env typ, convert_exp env e1, convert_exp env e2)
-    | EFun (arg, e) -> EFun (convert_arg env arg, convert_exp env e)
-    | EApp (e1, e2) -> EApp (convert_exp env e1, convert_exp env e2)
-    | EMatch (e, bs) ->
-      let (ps, es) = List.split bs in
-      EMatch (convert_exp env e, List.combine ps (List.map (convert_exp env) es))
-    | Raise e -> Raise (convert_exp env e)
-    | _ -> exp
+  let rec convert_exp : t -> lexp -> lexp
+  = fun env (l,exp) ->
+    let exp = 
+      begin match exp with 
+      | EList es -> EList (List.map (convert_exp env) es)
+      | ETuple es -> ETuple (List.map (convert_exp env) es)
+      | ECtor (x, es) -> ECtor (x, List.map (convert_exp env) es)
+      | MINUS e -> MINUS (convert_exp env e)
+      | NOT e -> NOT (convert_exp env e)
+      | ADD (e1, e2) -> ADD (convert_exp env e1, convert_exp env e2)
+      | SUB (e1, e2) -> SUB (convert_exp env e1, convert_exp env e2)
+      | MUL (e1, e2) -> MUL (convert_exp env e1, convert_exp env e2)
+      | DIV (e1, e2) -> DIV (convert_exp env e1, convert_exp env e2) 
+      | MOD (e1, e2) -> MOD (convert_exp env e1, convert_exp env e2)
+      | OR (e1, e2) -> OR (convert_exp env e1, convert_exp env e2)
+      | AND (e1, e2) -> AND (convert_exp env e1, convert_exp env e2)
+      | LESS (e1, e2) -> LESS (convert_exp env e1, convert_exp env e2)
+      | LARGER (e1, e2) -> LARGER (convert_exp env e1, convert_exp env e2)
+      | LESSEQ (e1, e2) -> LESSEQ (convert_exp env e1, convert_exp env e2)
+      | LARGEREQ (e1, e2) -> LARGEREQ (convert_exp env e1, convert_exp env e2)
+      | EQUAL (e1, e2) -> EQUAL (convert_exp env e1, convert_exp env e2)
+      | NOTEQ (e1, e2) -> NOTEQ (convert_exp env e1, convert_exp env e2)
+      | AT (e1, e2) -> AT (convert_exp env e1, convert_exp env e2)
+      | DOUBLECOLON (e1, e2) -> DOUBLECOLON (convert_exp env e1, convert_exp env e2)
+      | IF (e1, e2, e3) -> IF (convert_exp env e1, convert_exp env e2, convert_exp env e3)
+      | ELet (f, is_rec, args, typ, e1, e2) -> ELet (f, is_rec, convert_args env args, convert_typ env typ, convert_exp env e1, convert_exp env e2)
+      | EFun (arg, e) -> EFun (convert_arg env arg, convert_exp env e)
+      | EApp (e1, e2) -> EApp (convert_exp env e1, convert_exp env e2)
+      | EMatch (e, bs) ->
+        let (ps, es) = List.split bs in
+        EMatch (convert_exp env e, List.combine ps (List.map (convert_exp env) es))
+      | Raise e -> Raise (convert_exp env e)
+      | _ -> exp
+      end in
+    (l,exp)
 
   let rec convert_ctor : t -> ctor -> ctor
   = fun env (x, ts) -> (x, List.map (convert_typ env) ts)
@@ -271,8 +274,8 @@ and gen_pat_cons_equations : (TEnv.t * typ_eqn) -> pat list -> typ -> (TEnv.t * 
     gen_pat_cons_equations (env, eqn) tl typ
 
 (* Construct type equations of expressions *)
-let rec gen_equations : HoleType.t -> VariableType.t -> TEnv.t -> exp -> typ -> (typ_eqn * HoleType.t * VariableType.t)
-= fun hole_typ var_typ tenv exp ty ->
+let rec gen_equations : HoleType.t -> VariableType.t -> TEnv.t -> lexp -> typ -> (typ_eqn * HoleType.t * VariableType.t)
+= fun hole_typ var_typ tenv (l,exp) ty ->
   match exp with
   | EUnit -> ([ty, TUnit], hole_typ, var_typ)
   | Const n -> ([(ty, TInt)],hole_typ,var_typ)
@@ -362,7 +365,7 @@ let rec gen_equations : HoleType.t -> VariableType.t -> TEnv.t -> exp -> typ -> 
     in
     (* gen each (eqn, hole_typ, var_typ) of decls *)
     let results = List.map (fun (f, is_rec, args, typ, exp) -> 
-      let exp = ELet(f, is_rec, args, typ, exp, let_to_exp f) in
+      let exp = (gen_label(), ELet(f, is_rec, args, typ, exp, let_to_exp f)) in
       let ty = type_of_fun args typ in
       gen_equations hole_typ var_typ tenv exp ty
     ) bindings in 
@@ -471,7 +474,7 @@ let rec type_decl : (TEnv.t * HoleType.t * VariableType.t) -> decl -> (TEnv.t * 
     let exp =
       begin match f with
       | BindUnder -> exp
-      | _ -> ELet(f, is_rec, args, typ, exp, let_to_exp f)
+      | _ -> (gen_label(), ELet(f, is_rec, args, typ, exp, let_to_exp f))
       end
     in
     let ty = type_of_fun args typ in
@@ -491,7 +494,7 @@ let rec type_decl : (TEnv.t * HoleType.t * VariableType.t) -> decl -> (TEnv.t * 
     in
     (* gen each (eqn, hole_typ, var_typ) of decls *)
     let results = List.map (fun (f, is_rec, args, typ, exp) -> 
-      let exp = ELet(f, is_rec, args, typ, exp, let_to_exp f) in
+      let exp = (gen_label(), ELet(f, is_rec, args, typ, exp, let_to_exp f)) in
       let ty = type_of_fun args typ in
       gen_equations hole_typ var_typ tenv exp ty
     ) bindings in 

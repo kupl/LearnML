@@ -3,16 +3,16 @@ open Lang
 
 exception Internal_error of string
 
-let rec appify (e:exp) (es:exp list) : exp =
+let rec appify (e:lexp) (es:lexp list) : lexp =
   match es with
   | [] -> e
-  | e'::es -> appify (EApp (e, e')) es
+  | e'::es -> appify (gen_label(),EApp (e, e')) es
 
-let rec binding_args : arg list -> exp -> exp
+let rec binding_args : arg list -> lexp -> lexp
 = fun args e ->
   match args with
   | [] -> e
-  | hd::tl -> EFun (hd, binding_args tl e)
+  | hd::tl -> (gen_label(),EFun (hd, binding_args tl e))
 %}
 
 %token <string> LID   (* lowercase identifiers *)
@@ -347,7 +347,7 @@ exp:
 
 exp_tuple:
   | e=exp_struct es=exp_comma_list
-    { ETuple (e::es) }
+    { (gen_label(),ETuple (e::es)) }
   | e=exp_struct
     { e }
 
@@ -359,73 +359,73 @@ exp_comma_list:
 
 exp_struct:  
   | MATCH e=exp WITH bs=branches 
-    { EMatch (e, bs) }
+    { (gen_label(),EMatch (e, bs)) }
   | FUN xs=args ARR e=exp
     { binding_args xs e }
   | FUNCTION bs=branches
-    { EFun(ArgOne("__fun__",fresh_tvar()),EMatch(EVar "__fun__",bs)) }
+    { (gen_label(), EFun(ArgOne("__fun__",fresh_tvar()),(gen_label(),EMatch((gen_label(),EVar "__fun__"),bs)))) }
   | LET f=bind args=args COLON t=typ EQ e1=exp IN e2=exp
-    { ELet (f, false, args, t, e1, e2) }
+    { (gen_label(), ELet (f, false, args, t, e1, e2)) }
   | LET REC f=bind args=args COLON t=typ EQ e1=exp IN e2=exp
-    { ELet (f, true, args, t, e1, e2) }
+    { (gen_label(), ELet (f, true, args, t, e1, e2)) }
   | LET f=bind args=args EQ e1=exp IN e2=exp
-    { ELet (f, false, args, fresh_tvar(), e1, e2) }
+    { (gen_label(), ELet (f, false, args, fresh_tvar(), e1, e2)) }
   | LET REC f=bind args=args EQ e1=exp IN e2=exp
-    { ELet (f, true, args, fresh_tvar(), e1, e2) } 
+    { (gen_label(), ELet (f, true, args, fresh_tvar(), e1, e2) )} 
   | LET d=letbind ds=let_and_list IN e2=exp
-    { EBlock (false, d::ds, e2) }
+    { (gen_label(), EBlock (false, d::ds, e2)) }
   | LET REC d=letrec_bind ds=letrec_and_list IN e2 = exp
-    { EBlock (true, d::ds, e2) }
+    { (gen_label(), EBlock (true, d::ds, e2)) }
   | IF e1=exp_struct THEN e2=exp_struct ELSE e3=exp_struct
-    { IF (e1, e2, e3) }
+    { (gen_label(), IF (e1, e2, e3)) }
   | e=exp_op
     { e }
   
 exp_op:
   | e1=exp_op PLUS e2=exp_op
-    { ADD (e1, e2) }
+    { (gen_label(), ADD (e1, e2)) }
   | e1=exp_op MINUS e2=exp_op
-    { SUB (e1, e2) }
+    { (gen_label(), SUB (e1, e2)) }
   | e1=exp_op STAR e2=exp_op
-    { MUL (e1, e2) }
+    { (gen_label(), MUL (e1, e2)) }
   | e1=exp_op DIVIDE e2=exp_op
-    { DIV (e1, e2) }
+    { (gen_label(), DIV (e1, e2)) }
   | e1=exp_op MOD e2=exp_op
-    { MOD (e1, e2) }
+    { (gen_label(), MOD (e1, e2)) }
   | NOT e=exp_op %prec UNARY
-    { NOT e }
+    { (gen_label(), NOT e) }
   | MINUS e=exp_op %prec UNARY
-    { MINUS e }
+    { (gen_label(), MINUS e) }
   | e1=exp_op OR e2=exp_op
-    { OR (e1, e2) }
+    { (gen_label(), OR (e1, e2)) }
   | e1=exp_op AND e2=exp_op
-    { AND (e1, e2) }
+    { (gen_label(), AND (e1, e2)) }
   | e1=exp_op LESS e2=exp_op
-    { LESS (e1, e2) }
+    { (gen_label(), LESS (e1, e2)) }
   | e1=exp_op LARGER e2=exp_op
-    { LARGER (e1, e2) }
+    { (gen_label(), LARGER (e1, e2)) }
   | e1=exp_op LESSEQ e2=exp_op
-    { LESSEQ (e1, e2) }
+    { (gen_label(), LESSEQ (e1, e2)) }
   | e1=exp_op LARGEREQ e2=exp_op
-    { LARGEREQ (e1, e2) }
+    { (gen_label(), LARGEREQ (e1, e2)) }
   | e1=exp_op EQ e2=exp_op
-    { EQUAL (e1, e2) }
+    { (gen_label(), EQUAL (e1, e2)) }
   | e1=exp_op EQ EQ e2=exp_op
-    { EQUAL (e1, e2) }
+    { (gen_label(), EQUAL (e1, e2)) }
   | e1=exp_op NOTEQ e2=exp_op
-    { NOTEQ (e1, e2) }
+    { (gen_label(), NOTEQ (e1, e2)) }
   | e1=exp_op AT e2=exp_op
-    { AT (e1, e2) }
+    { (gen_label(), AT (e1, e2)) }
   | e1=exp_op DOUBLECOLON e2=exp_op
-    { DOUBLECOLON (e1, e2) }
+    { (gen_label(), DOUBLECOLON (e1, e2)) }
   | e1=exp_op STRCON e2 = exp_op
-    { STRCON (e1,e2) }
+    { (gen_label(), STRCON (e1,e2)) }
   | RAISE e=exp_base
-    { Raise e}
+    { (gen_label(), Raise e) }
   | e=exp_base es=exp_app_list (* funcion call or constant *)
     { appify e es }
   | c=UID e=exp_base
-    { ECtor (c, [e]) }
+    { (gen_label(), ECtor (c, [e])) }
 
 exp_app_list:     
   | 
@@ -435,71 +435,71 @@ exp_app_list:
   
 exp_base:
   | c=INT
-    { Const c }
+    { (gen_label(), Const c) }
   | x=LID
-    { EVar x }
+    { (gen_label(), EVar x) }
   | c=STRING
-    { String c }
+    { (gen_label(), String c) }
   | TRUE
-    { TRUE }
+    { (gen_label(), TRUE) }
   | FALSE
-    { FALSE }
+    { (gen_label(), FALSE) }
   | LPAREN RPAREN
-    { EUnit }
+    { (gen_label(), EUnit) }
   | LBRACKET RBRACKET
-    { EList [] }
+    { (gen_label(), EList []) }
   | LBRACKET e=exp es=exp_semi_list RBRACKET
-    { EList (e::es) }
+    { (gen_label(), EList (e::es)) }
   | c=UID
-    { ECtor (c, []) }
+    { (gen_label(), ECtor (c, [])) }
   | LPAREN e=exp RPAREN
     { e }
   | BEGIN e=exp END
     { e }
   | HOLE
-    { Lang.gen_hole() }
+    { (gen_label(), Lang.gen_hole()) }
   | LISTHD
-    { (EVar "__list_hd__") }
+    { (gen_label(), (EVar "__list_hd__")) }
   | LISTTL
-    { (EVar "__list_tl__") }
+    { (gen_label(), (EVar "__list_tl__")) }
   | LISTMAP
-    { (EVar "__list_map__") }
+    { (gen_label(), (EVar "__list_map__")) }
   | LISTMEM
-    { (EVar "__list_mem__") }
+    { (gen_label(), (EVar "__list_mem__")) }
   | LISTEXISTS
-    { (EVar "__list_exists__") }
+    { (gen_label(), (EVar "__list_exists__")) }
   | LISTFILTER
-    { (EVar "__list_filter__") }
+    { (gen_label(), (EVar "__list_filter__")) }
   | LISTAPPEND
-    { (EVar "__list_append__") }
+    { (gen_label(), (EVar "__list_append__")) }
   | LISTLENGTH
-    { (EVar "__list_length__") }
+    { (gen_label(), (EVar "__list_length__")) }
   | LISTNTH
-    { (EVar "__list_nth__") }
+    { (gen_label(), (EVar "__list_nth__")) }
   | LISTREV
-    { (EVar "__list_rev__") }
+    { (gen_label(), (EVar "__list_rev__")) }
   | LISTFOLDL
-    { (EVar "__list_foldl__") }
+    { (gen_label(), (EVar "__list_foldl__")) }
   | LISTFOLDR
-    { (EVar "__list_foldr__") }
+    { (gen_label(), (EVar "__list_foldr__")) }
   | LISTSORT
-    { (EVar "__list_sort__") }
+    { (gen_label(), (EVar "__list_sort__")) }
   | LISTREVMAP
-    { (EVar "__list_rev_map__") }
+    { (gen_label(), (EVar "__list_rev_map__")) }
   | LISTMEMQ
-    { (EVar "__list_memq__") }
+    { (gen_label(), (EVar "__list_memq__")) }
   | LISTREVAPD
-    { (EVar "__list_rev_append__") }
+    { (gen_label(), (EVar "__list_rev_append__")) }
   | LISTMAPI
-    { (EVar "__list_map_i__") }
+    { (gen_label(), (EVar "__list_map_i__")) }
   | LISTFORALL
-    { (EVar "__list_for_all__") }
+    { (gen_label(), (EVar "__list_for_all__")) }
   | LISTFIND
-    { (EVar "__list_find__") }
+    { (gen_label(), (EVar "__list_find__")) }
   | LISTASSOC
-    { (EVar "__list_assoc__")}
+    { (gen_label(), (EVar "__list_assoc__")) }
   | STRINGCONCAT
-    { EVar "__string_concat__" }
+    { (gen_label(), EVar "__string_concat__") }
 
 exp_semi_list:
   |
