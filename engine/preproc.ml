@@ -1,6 +1,6 @@
 (* NOTE: no Core used here... how do you do file IO in core!? *)
 
-open Consts
+let include_directories : string list ref = ref ["."]
 
 let open_file_with_include_dirs (filename:string) : in_channel =
   let rec try_open is =

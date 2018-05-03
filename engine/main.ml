@@ -4,37 +4,6 @@ open Options
 
 exception Arg_exception
 
-let all_component () =
-  let e_t = BatSet.empty in
-  let e_t = BatSet.add (0,Const 0) e_t in
-  let e_t = BatSet.add (0,Const 1) e_t in
-  let e_t = BatSet.add (0,TRUE) e_t in
-  let e_t = BatSet.add (0,FALSE) e_t in
-  let e_t = BatSet.add (0,EList []) e_t in
-  let e_t = BatSet.add (0,(ADD (dummy_hole (),dummy_hole ()))) e_t in
-  let e_t = BatSet.add (0,(SUB (dummy_hole (),dummy_hole ()))) e_t in
-  let e_t = BatSet.add (0,(MUL (dummy_hole (),dummy_hole ()))) e_t in
-  let e_t = BatSet.add (0,(DIV (dummy_hole (),dummy_hole ()))) e_t in
-  let e_t = BatSet.add (0,(MOD (dummy_hole (),dummy_hole ()))) e_t in
-  let e_t = BatSet.add (0,(MINUS (dummy_hole ()))) e_t in
-  let e_t = BatSet.add (0,(NOT (dummy_hole ()))) e_t in
-  let e_t = BatSet.add (0,(OR (dummy_hole (),dummy_hole ()))) e_t in
-  let e_t = BatSet.add (0,(AND (dummy_hole (),dummy_hole ()))) e_t in
-  let e_t = BatSet.add (0,(LESS (dummy_hole (),dummy_hole ()))) e_t in
-  let e_t = BatSet.add (0,(LARGER (dummy_hole (),dummy_hole ()))) e_t in
-  let e_t = BatSet.add (0,(EQUAL (dummy_hole (),dummy_hole ()))) e_t in
-  let e_t = BatSet.add (0,(NOTEQ (dummy_hole (),dummy_hole ()))) e_t in
-  let e_t = BatSet.add (0,(LESSEQ (dummy_hole (),dummy_hole ()))) e_t in
-  let e_t = BatSet.add (0,(LARGEREQ (dummy_hole (),dummy_hole ()))) e_t in
-  let e_t = BatSet.add (0,(EApp (dummy_hole (),dummy_hole ()))) e_t in
-  let e_t = BatSet.add (0,(AT (dummy_hole (),dummy_hole ()))) e_t in
-  let e_t = BatSet.add (0,(DOUBLECOLON (dummy_hole (),dummy_hole ()))) e_t in
-  let e_t = BatSet.add (0,(IF (dummy_hole (),dummy_hole (),dummy_hole ()))) e_t in
-  (* let e_t = BatSet.add EUnit e_t in *)
-  (* let e_t = BatSet.add (STRCON (Hole 0, Hole 0)) e_t in *)
-  (* let e_t = BatSet.add (Raise (Hole 0)) e_t in *)
-  e_t
-
 let usage_msg = "main.native -run (or -fix) -submission <filename> -solution <filename>"
 
 let parse_file (f:string) : (examples * prog) =
@@ -78,9 +47,7 @@ let run_testcases : prog -> examples -> unit
         print_endline ("Result: " ^ Print.value_to_string result_value ^ " " ^  
                      "Expected: " ^ Print.value_to_string output);
         if(Eval.value_equality result_value output) then score+1 else score
-    with except -> except_handling except output; 
-		(*let _ = Eval.value_equality (Lang.lookup_env "__res__" (Eval.run prog')) output in*)
-		score
+    with except -> except_handling except output; score
   ) 0 examples in
   print_endline("score : "^(string_of_int score))
 
@@ -145,7 +112,7 @@ let fix_with_solution : prog -> prog -> examples -> unit
     | _ -> true
   ) components
   in
-  let components = BatSet.union components (all_component ()) in*)
+  let components = BatSet.union components (Comp.all_component ()) in*)
   let _ = Synthesize.hole_synthesize submission initial_set components examples in
   ()
  
@@ -175,32 +142,13 @@ let read_prog : string -> prog option
   with _ -> raise (Failure ("parsing error: " ^ filename)) 
 
 let main () = 
+	let _ = print_endline("file: "^Sys.argv.(0)) in
   let _ = Arg.parse options (fun s->()) usage_msg in
   let testcases = 
     if !opt_testcases_filename = "" then [] 
     else try fst (parse_file !opt_testcases_filename) 
          with _ -> raise (Failure ("error during parsing testcases: " ^ !opt_testcases_filename)) in 
   let submission = read_prog !opt_submission_filename in
-  (**) 
-  (*
-  let Some pgm = submission in
-  Print.print_pgm pgm;
-  print_endline (string_of_bool (Smt_pruning.smt_pruning pgm testcases));
-  List.iter (
-    fun example ->
-      let sv = Symbol_eval.gen_constraint pgm example in
-      let f = 
-        try 
-          Smt_pruning.Converter.symbol_to_formula sv 
-        with _ -> False
-      in
-      let t = if Smt_pruning.solve sv then "SAT" else "UNSAT" in
-      print_examples [example];
-      print_endline ("Constraint : " ^ Print.symbol_to_string sv ^ " => " ^ t);
-      print_endline ("Formula : " ^ Print.formula_to_string f  ^ "\n")
-  ) testcases;
-  *)
-  (**)
   let solution = read_prog !opt_solution_filename in
     if !opt_localize then 
       begin

@@ -9,8 +9,14 @@ let parse_file f =
   |> Lexing.from_string
   |> Parser.prog Lexer.token
 
+let rec path_to_str : string list -> string
+= fun str_lst ->
+	match str_lst with
+	|[] -> ""
+	|hd::tl -> (path_to_str tl)^hd^"/"
+
 let parse_init_prog () =
-  let (_,prog) = parse_file (!Options.opt_external_filename) in
+	let (_,prog) = parse_file (!Options.opt_external_filename) in
   prog
 
 let parse_grading_prog () =

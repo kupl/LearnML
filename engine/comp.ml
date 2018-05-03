@@ -1,6 +1,41 @@
 open Lang
 open Util
 
+(********************************************************)
+(* naive components, including all syntactic components *)
+(********************************************************)
+
+let all_component () =
+  let e_t = BatSet.empty in
+  let e_t = BatSet.add (0,Const 0) e_t in
+  let e_t = BatSet.add (0,Const 1) e_t in
+  let e_t = BatSet.add (0,TRUE) e_t in
+  let e_t = BatSet.add (0,FALSE) e_t in
+  let e_t = BatSet.add (0,EList []) e_t in
+  let e_t = BatSet.add (0,(ADD (dummy_hole (),dummy_hole ()))) e_t in
+  let e_t = BatSet.add (0,(SUB (dummy_hole (),dummy_hole ()))) e_t in
+  let e_t = BatSet.add (0,(MUL (dummy_hole (),dummy_hole ()))) e_t in
+  let e_t = BatSet.add (0,(DIV (dummy_hole (),dummy_hole ()))) e_t in
+  let e_t = BatSet.add (0,(MOD (dummy_hole (),dummy_hole ()))) e_t in
+  let e_t = BatSet.add (0,(MINUS (dummy_hole ()))) e_t in
+  let e_t = BatSet.add (0,(NOT (dummy_hole ()))) e_t in
+  let e_t = BatSet.add (0,(OR (dummy_hole (),dummy_hole ()))) e_t in
+  let e_t = BatSet.add (0,(AND (dummy_hole (),dummy_hole ()))) e_t in
+  let e_t = BatSet.add (0,(LESS (dummy_hole (),dummy_hole ()))) e_t in
+  let e_t = BatSet.add (0,(LARGER (dummy_hole (),dummy_hole ()))) e_t in
+  let e_t = BatSet.add (0,(EQUAL (dummy_hole (),dummy_hole ()))) e_t in
+  let e_t = BatSet.add (0,(NOTEQ (dummy_hole (),dummy_hole ()))) e_t in
+  let e_t = BatSet.add (0,(LESSEQ (dummy_hole (),dummy_hole ()))) e_t in
+  let e_t = BatSet.add (0,(LARGEREQ (dummy_hole (),dummy_hole ()))) e_t in
+  let e_t = BatSet.add (0,(EApp (dummy_hole (),dummy_hole ()))) e_t in
+  let e_t = BatSet.add (0,(AT (dummy_hole (),dummy_hole ()))) e_t in
+  let e_t = BatSet.add (0,(DOUBLECOLON (dummy_hole (),dummy_hole ()))) e_t in
+  let e_t = BatSet.add (0,(IF (dummy_hole (),dummy_hole (),dummy_hole ()))) e_t in
+  (* let e_t = BatSet.add EUnit e_t in *)
+  (* let e_t = BatSet.add (STRCON (Hole 0, Hole 0)) e_t in *)
+  (* let e_t = BatSet.add (Raise (Hole 0)) e_t in *)
+  e_t
+
 (******************************************************)
 (* 	 Code for extract components from correct code    *)
 (******************************************************)
