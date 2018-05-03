@@ -183,8 +183,8 @@ let rec arg_num : lexp -> int
 let compare_exp : lexp -> lexp -> bool
 = fun (l1, e1) (l2, e2) ->
   match (e1,e2) with
-  | (EVar x1,EVar x2) -> x1 > x2
-  | (Const x1,Const x2) -> x1 > x2
+  | (EVar x1,EVar x2) -> x1 >= x2
+  | (Const x1,Const x2) -> x1 >= x2
   | (EVar _,_) -> true
   | (_,EVar _) -> false
   | (Hole _,_) -> true

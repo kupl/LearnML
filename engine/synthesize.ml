@@ -36,9 +36,10 @@ module Workset = struct
   let add : work -> t -> t
   = fun (n,pgm,h_t,h_e) (heap,sset) ->
     try
-      if explored (Normalize.normalize pgm) (heap,sset) then (heap,sset)
+			let normalized_pgm = Normalize.normalize pgm in
+      if explored normalized_pgm (heap,sset) then (heap,sset)
       else
-        (Heap.add (n,pgm,h_t,h_e) heap, BatSet.add (Print.program_to_string (Normalize.normalize pgm)) sset)
+        (Heap.add (n,pgm,h_t,h_e) heap, BatSet.add (Print.program_to_string normalized_pgm) sset)
     with
       |_ -> (heap,sset)
   let choose : t -> (work * t) option
@@ -318,33 +319,6 @@ let rec type_directed : lexp -> typ -> Type.TEnv.t -> type_env -> state option
     with
     |_ -> None
     end
-    (*let x_t = BatMap.find x env in
-    let rec check_correct typ x_t h_t env=
-      begin match (typ,x_t) with
-      | (TVar x,_) -> 
-        begin match x_t with
-        |TVar y -> if(x=y) then (true,h_t,env) else (true,update_hole_type typ x_t h_t,update_type_env typ x_t env)
-        |TList t1 -> if(is_exist t1 typ) then (false,h_t,env) else (true,update_hole_type typ x_t h_t,update_type_env typ x_t env)
-        |TTuple tl -> if(List.for_all (fun t -> not (is_exist t typ)) tl) then (true,update_hole_type typ x_t h_t,update_type_env typ x_t env) else (false,h_t,env)
-        |TCtor(id,tl) -> if(List.for_all (fun t -> not (is_exist t typ)) tl) then (true,update_hole_type typ x_t h_t,update_type_env typ x_t env) else (false,h_t,env)
-        |TArr (t1,t2) -> if((is_exist t1 typ) || (is_exist t2 typ)) then (false,h_t,env) else (true,update_hole_type typ x_t h_t,update_type_env typ x_t env)
-        |_ -> (true,update_hole_type typ x_t h_t,update_type_env typ x_t env)
-        end
-      | (_,TVar _) -> check_correct x_t typ h_t env
-      | (TList t1,TList t2) -> check_correct t1 t2 h_t env
-      | (TTuple tl1, TTuple tl2) -> ((try (List.for_all2(fun t1 t2 -> let (b,_,_) = check_correct t1 t2 h_t env in b) tl1 tl2) with _-> false),h_t,env)
-      | (TCtor (id1,tl1),TCtor (id2,tl2)) ->
-        if(id1=id2) then ((try (List.for_all2(fun t1 t2 -> let (b,_,_) = check_correct t1 t2 h_t env in b) tl1 tl2) with _-> false),h_t,env)
-        else (false,h_t,env)
-      | (TArr (t1,t2),TArr (t3,t4)) ->
-        let (b,h_t,env) = check_correct t1 t3 h_t env in
-        if(b=false) then (b,h_t,env)
-        else check_correct t2 t4 h_t env
-      |_ -> if(typ=x_t) then (true,h_t,env) else (false,h_t,env)
-    end in
-    let (result,h_t',h_e')=check_correct hole_typ x_t h_t h_e in
-    if result then Some (exp,h_t',h_e')
-    else None *)
   | EApp (e1,e2) -> 
     let (n1,n2) = (extract_holenum e1,extract_holenum e2) in
     let tv = fresh_tvar() in
@@ -567,8 +541,8 @@ let rec work : Workset.t -> components -> examples -> prog option
   else if (!iter mod 10000 = 0)
     then
       begin
-        (*print_string("Iter : " ^ (string_of_int !iter) ^ " ");
-        print_endline((Workset.workset_info workset) ^ (" Total elapsed : " ^ (string_of_float (Sys.time() -. !start_time))));*)
+        print_string("Iter : " ^ (string_of_int !iter) ^ " ");
+        print_endline((Workset.workset_info workset) ^ (" Total elapsed : " ^ (string_of_float (Sys.time() -. !start_time))));
         work workset exp_set examples
       end
   else
@@ -577,18 +551,18 @@ let rec work : Workset.t -> components -> examples -> prog option
   | Some ((rank,prog,h_t,h_e),remaining_workset) ->
     if (Infinite.Static.run prog) then
       work remaining_workset exp_set examples
-      else
-        let _ = fprintf (!debug) "%s\n" (Print.program_to_string prog) in
-        if is_closed prog then
-        let _ = count := !count +1 in
-        if is_solution prog examples then Some prog
-        else work remaining_workset exp_set examples
-      else if Smt_pruning.smt_pruning prog examples then
-        let exp_set = BatSet.map update_components exp_set in
-        let nextstates = next (rank,prog,h_t,h_e) exp_set in
-        let new_workset = BatSet.fold Workset.add nextstates remaining_workset in
-        work new_workset exp_set examples
-      else work remaining_workset exp_set examples
+    else
+      let _ = fprintf (!debug) "%s\n" (Print.program_to_string prog) in
+      if is_closed prog then
+      	let _ = count := !count +1 in
+      	if is_solution prog examples then Some prog
+      	else work remaining_workset exp_set examples
+    	else if Smt_pruning.smt_pruning prog examples then
+      	let exp_set = BatSet.map update_components exp_set in
+      	let nextstates = next (rank,prog,h_t,h_e) exp_set in
+      	let new_workset = BatSet.fold Workset.add nextstates remaining_workset in
+      	work new_workset exp_set examples
+    	else work remaining_workset exp_set examples
 
 let hole_synthesize : prog -> Workset.work BatSet.t -> components -> examples ->prog option
 = fun pgm pgm_set components examples -> 
