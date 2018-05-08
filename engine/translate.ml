@@ -8,35 +8,21 @@ let is_hole : lexp -> bool
 	| _ -> false
 
 let rec exp_is_closed : lexp -> bool
-= fun (_, exp) ->
-	match exp with
-  | EList es -> List.for_all exp_is_closed es
-  | ETuple es -> List.for_all exp_is_closed es
-  | ECtor (x, es) -> List.for_all exp_is_closed es
-  | ADD (e1, e2) -> exp_is_closed e1 && exp_is_closed e2
-  | SUB (e1, e2) -> exp_is_closed e1 && exp_is_closed e2
-  | MUL (e1, e2) -> exp_is_closed e1 && exp_is_closed e2
-  | DIV (e1, e2) -> exp_is_closed e1 && exp_is_closed e2
-  | MOD (e1, e2) -> exp_is_closed e1 && exp_is_closed e2
-  | MINUS e -> exp_is_closed e
-  | NOT e -> exp_is_closed e
-  | OR (e1, e2) -> exp_is_closed e1 && exp_is_closed e2
-  | AND (e1, e2) -> exp_is_closed e1 && exp_is_closed e2
-  | LESS (e1, e2) -> exp_is_closed e1 && exp_is_closed e2
-  | LARGER (e1, e2) -> exp_is_closed e1 && exp_is_closed e2
-  | EQUAL (e1, e2) -> exp_is_closed e1 && exp_is_closed e2
-  | NOTEQ (e1, e2) -> exp_is_closed e1 && exp_is_closed e2
-  | LESSEQ (e1, e2) -> exp_is_closed e1 && exp_is_closed e2
-  | LARGEREQ (e1, e2) -> exp_is_closed e1 && exp_is_closed e2
-  | EApp (e1, e2) -> exp_is_closed e1 && exp_is_closed e2
-  | EFun (args, e) -> exp_is_closed e
-  | ELet (f, is_rec, args, typ, e1, e2) -> exp_is_closed e1 && exp_is_closed e2
+= fun (l, e) ->
+  match e with
+  | EList es | ECtor (_, es) | ETuple es -> List.for_all exp_is_closed es
+  | MINUS e | NOT e | EFun (_, e) | Raise e -> exp_is_closed e
+  | ADD (e1, e2) | SUB (e1, e2) | MUL (e1, e2) | DIV (e1, e2) | MOD (e1, e2)
+  | OR (e1, e2) | AND (e1, e2) | LESS (e1, e2) | LARGER (e1, e2) | EQUAL (e1, e2) | NOTEQ (e1, e2)
+  | LESSEQ (e1, e2) | LARGEREQ (e1, e2) | AT (e1, e2) | DOUBLECOLON (e1, e2) | STRCON (e1, e2)
+  | EApp (e1, e2) | ELet (_, _, _, _, e1, e2) -> exp_is_closed e1 && exp_is_closed e2
+  | EBlock (_, ds, e2) -> 
+    let es = List.map (fun (f, is_rec, args, typ, e) -> e) ds in
+    (exp_is_closed e2) && (List.for_all exp_is_closed es)
   | EMatch (e, bs) ->
-  	let (ps, es) = List.split bs in
-  	exp_is_closed e && (List.for_all exp_is_closed es)
+    let (ps, es) = List.split bs in
+    exp_is_closed e && (List.for_all exp_is_closed es)
   | IF (e1, e2, e3) -> exp_is_closed e1 && exp_is_closed e2 && exp_is_closed e3
-  | AT (e1, e2) -> exp_is_closed e1 && exp_is_closed e2
-  | DOUBLECOLON (e1, e2) -> exp_is_closed e1 && exp_is_closed e2
   | Hole n -> false
   | _ -> true
 

@@ -5,14 +5,6 @@ open Symbol_lang
 (*****************************)
 (********language*************)
 (*****************************)
-
-let rec tab_to_string : int -> string
-= fun n ->
-  "" ^
-  match n with
-  | 0 -> ""
-  | _ -> "  " ^ tab_to_string (n-1)
-
 let pp_tuple : ('a -> string) -> 'a list -> string
 = fun func tup ->
   match tup with
@@ -257,16 +249,19 @@ let print_typ_eqns eqns =
 (*****************************)
 (********labeling*************)
 (*****************************)
+let rec input_to_string : input -> string
+= fun es ->
+  list_fold (fun e r-> r ^ exp_to_string e ^ " ;" ) es ""
+
+let rec example_to_string : example -> string
+= fun (i, o) ->
+  (input_to_string i) ^ "=> " ^ (value_to_string o)
+
 let rec print_examples : examples -> unit
-= fun examples -> List.iter 
-  (
-    fun (i,o) -> 
-      let input_string = list_fold (fun e r-> r ^ exp_to_string e ^ " " ) i "" in
-      let output_string = value_to_string o in
-      print_endline(input_string ^ "-> "^output_string)
+= fun examples -> List.iter (
+    fun (i,o) -> print_endline (example_to_string (i, o))
   ) examples
-
-
+  
 let print_header str = 
  let _ = print_endline "-----------------------------" in
  let _ = print_endline str in

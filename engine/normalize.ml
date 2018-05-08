@@ -6,6 +6,25 @@ open Util
 (**************************)
 
 module Simplification = struct
+  
+  let rec exp_is_closed : lexp -> bool
+  = fun (l, e) ->
+    match e with
+    | EList es | ECtor (_, es) | ETuple es -> List.for_all exp_is_closed es
+    | MINUS e | NOT e | EFun (_, e) | Raise e -> exp_is_closed e
+    | ADD (e1, e2) | SUB (e1, e2) | MUL (e1, e2) | DIV (e1, e2) | MOD (e1, e2)
+    | OR (e1, e2) | AND (e1, e2) | LESS (e1, e2) | LARGER (e1, e2) | EQUAL (e1, e2) | NOTEQ (e1, e2)
+    | LESSEQ (e1, e2) | LARGEREQ (e1, e2) | AT (e1, e2) | DOUBLECOLON (e1, e2) | STRCON (e1, e2)
+    | EApp (e1, e2) | ELet (_, _, _, _, e1, e2) -> exp_is_closed e1 && exp_is_closed e2
+    | EBlock (_, ds, e2) -> 
+      let es = List.map (fun (f, is_rec, args, typ, e) -> e) ds in
+      (exp_is_closed e2) && (List.for_all exp_is_closed es)
+    | EMatch (e, bs) ->
+      let (ps, es) = List.split bs in
+      exp_is_closed e && (List.for_all exp_is_closed es)
+    | IF (e1, e2, e3) -> exp_is_closed e1 && exp_is_closed e2 && exp_is_closed e3
+    | Hole n -> false
+    | _ -> true
 
   let rec simplify_exp : lexp -> lexp
   = fun (l, exp) ->
@@ -103,10 +122,14 @@ module Simplification = struct
       (* equality *)
       | EQUAL (e1, e2) ->
         let (e1, e2) = (simplify_exp e1, simplify_exp e2) in
-        if (snd e1 = snd e2) then TRUE else EQUAL (e1, e2)
+        if (snd e1 = snd e2) then TRUE 
+        else if (exp_is_closed e1 && exp_is_closed e2) then FALSE
+        else EQUAL (e1, e2)
       | NOTEQ (e1, e2) ->
         let (e1, e2) = (simplify_exp e1, simplify_exp e2) in
-        if (snd e1 = snd e2) then FALSE else NOTEQ (e1, e2)
+        if (snd e1 = snd e2) then FALSE 
+        else if (exp_is_closed e1 && exp_is_closed e2) then TRUE
+        else NOTEQ (e1, e2)
       (* lop *)
       | AT (e1, e2) -> 
         let (e1, e2) = (simplify_exp e1, simplify_exp e2) in
@@ -238,6 +261,13 @@ let reorder_decl : decl -> decl
 
 let reorder_pgm : prog -> prog 
 = fun pgm -> list_map reorder_decl pgm
+
+let normalize_exp : lexp -> lexp
+= fun e ->
+  let constant_func = (fun x -> Simplification.simplify_exp x) in
+  let normalize_func = (fun x -> reorder_exp x) in
+  let e = fix constant_func e in
+  fix normalize_func e
 
 let normalize : prog -> prog
 = fun pgm ->

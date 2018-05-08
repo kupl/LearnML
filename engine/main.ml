@@ -58,17 +58,6 @@ let run_prog : prog -> examples -> unit
   print_header "Test-cases"; print_examples examples;
   print_header "Run test-cases"; run_testcases prog examples 
 
-let localization : prog -> examples -> unit
-= fun pgm examples ->
-  let basic_candidate = Localize.localization pgm examples in
-  let smt_candidate =
-  BatSet.filter (
-    fun (_, pgm) -> Smt_pruning.smt_pruning pgm examples
-  ) basic_candidate in
-  print_header ("Candidate Set (base) : " ^ string_of_int (BatSet.cardinal basic_candidate)); BatSet.iter (fun (_, pgm) -> Print.print_pgm pgm) basic_candidate;
-  print_header ("Candidate Set (smt) : " ^ string_of_int (BatSet.cardinal smt_candidate)); BatSet.iter (fun (_, pgm) -> Print.print_pgm pgm) smt_candidate;
-  ()
-
 let fix_with_solution : prog -> prog -> examples -> unit
 =fun submission solution examples ->  (* TODO *)
   let _ = Type.run submission in
@@ -115,7 +104,50 @@ let fix_with_solution : prog -> prog -> examples -> unit
   let components = BatSet.union components (Comp.all_component ()) in*)
   let _ = Synthesize.hole_synthesize submission initial_set components examples in
   ()
- 
+
+let generate_testcases : prog -> prog -> examples
+= fun submission solution -> []
+
+let fix_without_testcases : prog -> prog -> unit
+= fun submission solution ->
+  let _ = Type.run submission in
+  let task_time = ref 0.0 in
+  let components = Comp.extract_component solution in 
+  let rec iter : prog -> prog -> prog -> examples -> (prog * examples) option
+  = fun pgm cpgm candidate examples ->
+    let _ = 
+      Print.print_header "Generated examples"; Print.print_examples examples;
+      Print.print_header "Repair candidate"; Print.print_pgm candidate;
+    in
+    let temp_time = Unix.gettimeofday() in 
+    let test_gen_result = TestGenerator.gen_counter_example candidate cpgm in
+    match test_gen_result with
+    | None -> Some (candidate, examples)
+    | Some ex ->
+      let examples = ex::examples in
+      let ranked_pgm_set = Localize.localization pgm examples in
+      let initial_set = BatSet.map
+      (
+      fun (rank, pgm)->   
+        let (_, h_t, v_t) = Type.run pgm in
+        (rank, pgm, h_t, v_t)
+      ) ranked_pgm_set in
+      let correction_result = Synthesize.hole_synthesize pgm initial_set components examples in
+      task_time := Unix.gettimeofday() -. temp_time;
+      match correction_result with
+      | None -> None
+      | Some pgm' -> iter pgm cpgm pgm' examples
+  in
+  match iter submission solution submission [] with
+  | None -> print_endline ("None")
+  | Some (pgm, examples) -> 
+    if (examples = []) then ()
+    else (
+      Print.print_header "Generated examples"; Print.print_examples examples;
+      Print.print_header "Correction"; Print.print_pgm pgm;
+      print_endline ("Total Time : " ^ string_of_float !task_time)
+    )
+
 let execute : prog -> unit
 =fun prog ->
   let (tenv,_,_) = Type.run prog in
@@ -127,9 +159,6 @@ let fix_without_solution : prog -> examples -> unit
 
 let synthesize : prog -> examples -> prog
 =fun sketch examples -> [] (* TODO *)
-
-let generate_testcases : prog -> prog -> examples
-=fun submission solution -> [] (* TODO *)
 
 let clonecheck : prog list -> prog list list
 =fun submissions -> [] (* TOOD *)
@@ -150,13 +179,6 @@ let main () =
          with _ -> raise (Failure ("error during parsing testcases: " ^ !opt_testcases_filename)) in 
   let submission = read_prog !opt_submission_filename in
   let solution = read_prog !opt_solution_filename in
-    if !opt_localize then 
-      begin
-        match submission with
-        | Some sub -> localization sub testcases
-        | _ -> raise (Failure (!opt_submission_filename ^ " does not exist"))
-      end
-    else
     match !opt_run, !opt_fix, !opt_gentest, !opt_execute with
     | true, false, false, false -> (* execution mode *)
       begin
@@ -167,7 +189,11 @@ let main () =
     | false, true, false, false -> (* fix mode *)
       begin
         match submission, solution with
-        | Some sub, Some sol -> fix_with_solution sub sol testcases 
+        | Some sub, Some sol -> 
+          begin match testcases with
+          | [] -> fix_without_testcases sub sol
+          | _ -> fix_with_solution sub sol testcases
+          end
         | Some sub, None -> fix_without_solution sub testcases 
         | _ -> raise (Failure (!opt_submission_filename ^ " does not exist"))
       end

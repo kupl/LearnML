@@ -121,8 +121,9 @@ and components = lexp BatSet.t
 
 exception EExcept of value
 
-type example = (lexp list * value)
-type examples = (lexp list* value) list
+type input = lexp list
+type example = (input * value)
+type examples = (input * value) list
 
 let hole_count = ref 0
 let gen_hole : unit -> exp
