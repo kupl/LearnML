@@ -292,7 +292,7 @@ and normalize_eqop : eq_operator -> symbolic_value -> symbolic_value -> symbolic
       if op = Eq then 
         if (x <> y) then Bool false else normalize_eqop Eq ((List.hd svs1)) ((List.hd svs2))
       else
-        if (x = y) then Bool false else normalize_eqop NEq ((List.hd svs1)) ((List.hd svs2))
+        if (x <> y) then Bool true else normalize_eqop NEq ((List.hd svs1)) ((List.hd svs2))
     | Ctor (x, svs), _ | _, Ctor (x, svs) -> 
       if op = Eq then Bool false else Bool true
     | _ -> EQop (op, sv1, sv2) 
@@ -438,6 +438,7 @@ let rec partial_eval_exp : symbolic_env -> lexp -> symbolic_value
       | Symbol _ -> fresh_symbol () (* ??? *)
       | _ -> raise (Failure "function_call error")
       end
+    | SInt _ -> raise (Failure "unexpected input")
     in 
     normalize sv
 
