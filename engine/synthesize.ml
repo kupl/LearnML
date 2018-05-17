@@ -359,7 +359,7 @@ let rec update_components : lexp -> lexp
       EMatch (gen_labeled_hole(),(list_combine pl (list_map (fun _ -> gen_labeled_hole()) el)))
     | _ -> exp
     end 
-  in (l,exp) 
+  in (gen_label(),exp) 
 
 let rec expholes : lexp -> lexp BatSet.t
 = fun (l,exp) ->
@@ -479,6 +479,11 @@ let gen_exp_nextstates : components -> (Workset.work * lexp) -> Workset.work Bat
 = fun candidates ((rank,prog,h_t,h_e),hole) ->
   let n = extract_holenum hole in
   let hole_type = BatMap.find n h_t in
+	let candidates =
+		begin match hole_type with
+		|TTuple lst -> BatSet.add (gen_label(),ETuple (List.map (fun _ -> gen_labeled_hole()) lst)) candidates
+		|_ -> candidates
+		end in
   let env = BatMap.find n h_e in
   let candidates = bound_var_to_comp env candidates in
   let alias_info = MustAlias.Sem.run prog in
