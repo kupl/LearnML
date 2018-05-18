@@ -438,7 +438,7 @@ let rec partial_eval_exp : symbolic_env -> lexp -> symbolic_value
       | Symbol _ -> fresh_symbol () (* ??? *)
       | _ -> raise (Failure "function_call error")
       end
-    | SInt _ -> raise (Failure "unexpected input")
+    (*| SInt _ -> raise (Failure "unexpected input")*) (* What does the SInt mean? *)
     in 
     normalize sv
 

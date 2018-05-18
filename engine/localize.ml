@@ -8,6 +8,28 @@ let float : int -> float = float_of_int
 
 let int : float -> int = int_of_float
 
+(* Preprocessing for the function entry *)
+
+let rec extract_args : lexp -> label BatSet.t
+= fun (l, e) ->
+	match e with
+	| EFun (arg, e) -> BatSet.add l (extract_args e)
+	|_ -> BatSet.empty
+	
+
+let preprocess_decl : decl -> label BatSet.t -> label BatSet.t
+= fun decl label_set ->
+	match decl with
+	| DLet (f, is_rec, args, typ, e) ->
+		BatSet.union (extract_args e) label_set
+	| DBlock (is_rec, bindings) ->
+		list_fold (fun (_, _, _, _, e) acc -> BatSet.union (extract_args e) acc) bindings label_set
+	|_  -> label_set
+
+let preprocess : prog -> label BatSet.t
+= fun pgm -> list_fold preprocess_decl pgm BatSet.empty
+
+
 (* Find counter exampels *)
 
 let run_pgm : prog -> example -> env
@@ -23,7 +45,7 @@ let rec is_counter_example : prog -> example -> bool
     let env = run_pgm pgm (input,output) in
     let result = Lang.lookup_env "__res__" env in
     not (Eval.value_equality result output)
-  with _ -> true
+  with e -> print_endline(Printexc.to_string e);true
 
 let rec find_counter_examples : prog -> examples -> examples * examples
 = fun pgm examples -> List.partition (is_counter_example pgm) examples
@@ -92,8 +114,8 @@ let gen_partial_pgm : label -> prog -> prog
 let rec trace_info : prog -> examples -> (label, count) BatMap.t
 = fun pgm examples ->
   list_fold(fun example map ->
-  	let _ = run_pgm pgm example in
-    let trace = !Eval.trace_set in
+  	let _ = try run_pgm pgm example with |_ -> empty_env in
+    let trace = list2set (!Eval.trace_set) in
     BatSet.fold(fun label map ->
       let count = BatMap.find_default 0 label map in
       BatMap.add label (count+1) map
@@ -102,11 +124,13 @@ let rec trace_info : prog -> examples -> (label, count) BatMap.t
 
 let localization : prog -> examples -> (int * prog) BatSet.t
 = fun pgm examples ->
-  let (neg,pos) = find_counter_examples pgm examples in
+	let dummy_labels = preprocess pgm in
+	let (neg,pos) = find_counter_examples pgm examples in
   Eval.trace_option := true;
   let neg_map = trace_info pgm neg in
   let pos_map = trace_info pgm pos in
   Eval.trace_option := false;
+	let neg_map = BatMap.filter (fun label _ -> not(BatSet.mem label dummy_labels)) neg_map in
   let cand_pgm_set = BatMap.foldi (fun label _ set -> 
     let cand_pgm = gen_partial_pgm label pgm in
     if (pgm = cand_pgm) then set
@@ -118,9 +142,10 @@ let localization : prog -> examples -> (int * prog) BatSet.t
   let weight_sum = BatSet.fold (fun (_, _, size) sum -> sum + size) cand_pgm_set 0 in
   let average = weight_sum / cand_count in
   BatSet.map (fun (label, cand_pgm, size) ->
-    let neg_count = (BatMap.find_default 0 label neg_map) in
     let pos_count = (BatMap.find_default 0 label pos_map) in
-    let total = neg_count + pos_count in
+		(*let neg_count = (BatMap.find_default 0 label neg_map) in
+		let total = neg_count + pos_count in*)
+		let total = List.length examples in
     let score = size + int((float(pos_count) /. float(total)) *. (float(average))) in
     (score,cand_pgm)
   ) cand_pgm_set

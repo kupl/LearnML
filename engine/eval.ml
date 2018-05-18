@@ -7,7 +7,7 @@ let count = ref 0
 let infinite_count = ref 0
 let start_time = ref 0.0
 
-let trace_set = ref BatSet.empty
+let trace_set = ref []
 
 let trace_option = ref false
 
@@ -149,7 +149,7 @@ let rec value_equality : value -> value -> bool
 (* exp evaluation *)
 let rec eval : env -> lexp -> value
 = fun env (l,e) ->
-  let _ = if !trace_option then trace_set := BatSet.add l (!trace_set) in
+  let _ = if !trace_option then trace_set := l::(!trace_set) in
   if (Unix.gettimeofday() -. !start_time >0.2) then 
     let _ = (infinite_count:=!(infinite_count)+1) in
     raise TimeoutError
@@ -368,6 +368,6 @@ let run : prog -> env
   start_time:=Unix.gettimeofday();
   let init_env = List.fold_left eval_decl empty_env (External.init_prog) in
   start_time:=Unix.gettimeofday();
-  (if !trace_option then trace_set:=BatSet.empty);
+  (if !trace_option then trace_set:=[]);
   let env = List.fold_left eval_decl init_env decls in
   BatMap.diff env init_env
