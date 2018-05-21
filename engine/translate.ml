@@ -93,7 +93,7 @@ let rec translate_exp : lexp -> lexp
     	let es = List.map translate_exp es in
     	if (exp_is_closed e) then EMatch (e, List.combine ps es) else gen_hole () 
     | IF (e1, e2, e3) ->
-    	if (exp_is_closed e1) then IF (translate_exp e1, translate_exp e2, translate_exp e3) else gen_hole() 
+    	if (is_hole e1) then IF (translate_exp e1, translate_exp e2, translate_exp e3) else gen_hole() 
     | AT (e1, e2) ->
     	let (e1, e2) = (translate_exp e1, translate_exp e2) in
     	if ((is_hole e1) && (is_hole e2)) then gen_hole () else AT (e1, e2)

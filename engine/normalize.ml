@@ -26,6 +26,102 @@ module Simplification = struct
     | Hole n -> false
     | _ -> true
 
+  let rec extract_variables : arg -> string list
+	= fun arg ->
+	  match arg with
+		| ArgUnder _ -> []
+		| ArgTuple args -> list_fold (fun arg acc-> extract_variables arg @ acc) args []
+		| ArgOne (id, _) -> [id]
+
+	let rec arg_equality : arg * lexp -> bool
+	= fun (arg, (l, e)) ->
+		match (arg, e) with
+		| (ArgUnder _, _) -> false
+		| (ArgTuple args, ETuple lst) -> 
+		  if (List.length args = List.length lst) then 
+			  List.for_all arg_equality (list_combine args lst)
+			else false
+		| (ArgOne (x1, _), EVar x2) -> if x1=x2 then true else false
+		| _ -> false
+	
+  let rec var_in_arg : string -> arg -> bool
+	= fun var arg ->
+	  match arg with
+		| ArgUnder _ -> false
+		| ArgTuple args -> List.exists (var_in_arg var) args
+		| ArgOne (x, _) -> x=var
+
+	let rec var_in_bind : string -> let_bind -> bool
+	= fun var bind ->
+	  match bind with
+		| BindUnder -> false
+		| BindOne x -> x=var
+		| BindTuple lst -> List.exists (var_in_bind var) lst
+
+	let rec var_in_pat : string -> pat -> bool
+	= fun var pat ->
+	  match pat with
+		| PList l | PTuple l | PCtor (_, l) | PCons l |Pats l -> List.exists (var_in_pat var) l
+		| PVar x -> x=var
+		| _ -> false
+
+	let rec var_exist : string -> lexp -> bool
+	= fun var (l, e) -> 
+    match e with
+    | EList es | ECtor (_, es) | ETuple es -> List.exists (var_exist var) es
+    | MINUS e | NOT e | Raise e -> var_exist var e
+    | ADD (e1, e2) | SUB (e1, e2) | MUL (e1, e2) | DIV (e1, e2) | MOD (e1, e2)
+    | OR (e1, e2) | AND (e1, e2) | LESS (e1, e2) | LARGER (e1, e2) | EQUAL (e1, e2) | NOTEQ (e1, e2)
+    | LESSEQ (e1, e2) | LARGEREQ (e1, e2) | AT (e1, e2) | DOUBLECOLON (e1, e2) | STRCON (e1, e2)
+    | EApp (e1, e2) -> var_exist var e1 || var_exist var e2
+		| EFun (arg, e) -> if var_in_arg var arg then false else var_exist var e
+		| ELet (f, is_rec, args, _, e1, e2) ->
+			let e1_existence = 
+			  if (List.exists (var_in_arg var) args) then false
+			  else if (is_rec && var_in_bind var f) then false
+				else var_exist var e1
+			in
+		  let e2_existence = 
+			  if (var_in_bind var f) then false else var_exist var e2
+		  in
+			e1_existence || e2_existence
+    | EBlock (is_rec, ds, e2) ->
+		  if is_rec then 
+			  if (List.exists (fun (bind, _, _, _, _) -> var_in_bind var bind) ds) then false
+				else 
+				  (
+					  List.exists (fun (_, _, args, _, e) -> 
+						  if (List.exists (var_in_arg var) args) then false
+						  else var_exist var e
+					  ) ds
+					) || var_exist var e2 
+		  else
+				List.exists (fun (bind, _, args, _, e) ->
+					if (List.exists (var_in_arg var) args || var_in_bind var bind) then false
+					else var_exist var e
+				) ds || (if List.exists (fun (bind, _, _, _, _) -> var_in_bind var bind) ds then false else var_exist var e2)
+
+
+    | EMatch (e, bs) ->
+		  var_exist var e || (List.exists (fun (p,e) -> if var_in_pat var p then false else var_exist var e) bs)
+    | IF (e1, e2, e3) -> var_exist var e1 || var_exist var e2 || var_exist var e3
+		| EVar x -> x=var
+    | _ -> false
+
+  let rec is_id : lexp -> bool
+  = fun (l, e) ->
+	  match e with
+		| EFun (arg, e) -> arg_equality (arg, e)
+		| _ -> false
+
+	let rec is_const : lexp -> bool
+  = fun (l, e) ->
+	  match e with
+		| EFun (arg, e) ->
+		  let vars = extract_variables arg in
+		  List.for_all (fun var -> not(var_exist var e)) vars
+		| _ -> false
+
   let rec simplify_exp : lexp -> lexp
   = fun (l, exp) ->
     let exp = 
@@ -38,6 +134,7 @@ module Simplification = struct
         let e = simplify_exp e in
         begin match snd e with
         | Const n -> Const (-n)
+        | MINUS e2 -> snd e2
         | _ -> MINUS e
         end
       | ADD (e1, e2) ->
@@ -45,6 +142,7 @@ module Simplification = struct
         begin match (snd e1, snd e2) with
         | Const n1, Const n2 -> Const (n1 + n2)
         | Const 0, e | e, Const 0 -> e
+				| x1, MINUS x2 | MINUS x2, x1 -> if(x1 = snd x2) then Const 0 else ADD (e1,e2)
         | _ -> ADD (e1, e2)
         end
       | SUB (e1, e2) ->
@@ -53,7 +151,7 @@ module Simplification = struct
         | Const n1, Const n2 -> Const (n1 - n2)
         | Const 0, e -> MINUS e2
         | e, Const 0 -> e
-        | _ -> SUB (e1, e2)
+        | _ -> if (snd e1 = snd e2) then Const 0 else SUB (e1, e2)
         end
       | MUL (e1, e2) ->
         let (e1, e2) = (simplify_exp e1, simplify_exp e2) in
@@ -71,7 +169,7 @@ module Simplification = struct
         | Const n1, Const n2 -> Const (n1 / n2)
         | Const 0, _ -> Const 0
         | e, Const 1 -> e
-        | _ -> DIV (e1, e2)
+        | _ -> if (snd e1 = snd e2) then Const 1 else DIV (e1, e2)
         end
       | MOD (e1, e2) ->
         let (e1, e2) = (simplify_exp e1, simplify_exp e2) in
@@ -80,7 +178,7 @@ module Simplification = struct
         | Const n1, Const n2 -> Const (n1 mod n2)
         | Const 0, _ -> Const 0
         | _, Const 1 -> Const 0
-        | _ -> MOD (e1, e2)
+        | _ -> if (snd e1 = snd e2) then Const 0 else MOD (e1, e2)
         end
       (* bop *)
       | NOT e ->
@@ -88,6 +186,7 @@ module Simplification = struct
         begin match snd e with
         | TRUE -> FALSE
         | FALSE -> TRUE
+				| NOT x -> snd x
         | _ -> NOT e
         end
       | OR (e1, e2) ->
@@ -95,41 +194,49 @@ module Simplification = struct
         begin match (snd e1, snd e2) with
         | TRUE, _ | _, TRUE -> TRUE
         | FALSE, e | e, FALSE -> e
-        | _ -> OR (e1, e2)
+				| x1, NOT x2 | NOT x2, x1 -> if (snd x2 = x1) then TRUE else OR (e1,e2)
+        | x1, x2 -> if x1=x2 then x1 else OR (e1, e2)
         end
       | AND (e1, e2) ->
         let (e1, e2) = (simplify_exp e1, simplify_exp e2) in
         begin match (snd e1, snd e2) with
         | FALSE, _ | _, FALSE -> FALSE
         | TRUE, e | e, TRUE -> e
-        | _ -> AND (e1, e2)
+				| x1, NOT x2 | NOT x2, x1 -> if (snd x2 = x1) then FALSE else AND (e1,e2)
+        | x1, x2 -> if x1=x2 then x1 else AND (e1, e2)
         end
       (* abop *)
       | LESS (e1, e2) ->
         let (e1, e2) = (simplify_exp e1, simplify_exp e2) in
         begin match (snd e1, snd e2) with
         | Const n1, Const n2 -> if (n1 < n2) then TRUE else FALSE
-        | _, _ -> if (e1 = e2) then FALSE else LESS (e1, e2)
+        | x1, x2 -> if (x1 = x2) then FALSE else LESS (e1, e2)
         end
       | LESSEQ (e1, e2) ->
         let (e1, e2) = (simplify_exp e1, simplify_exp e2) in
         begin match (snd e1, snd e2) with
         | Const n1, Const n2 -> if (n1 <= n2) then TRUE else FALSE
-        | _, _ -> if (e1 = e2) then TRUE else LESSEQ (e1, e2)
+        | x1, x2 -> if (x1 = x2) then TRUE else LESSEQ (e1, e2)
         end
       | LARGER (e1, e2) -> snd (simplify_exp (l, LESS (e2, e1)))
       | LARGEREQ (e1, e2) -> snd (simplify_exp (l, (LESSEQ (e2, e1))))
       (* equality *)
       | EQUAL (e1, e2) ->
         let (e1, e2) = (simplify_exp e1, simplify_exp e2) in
-        if (snd e1 = snd e2) then TRUE 
-        else if (exp_is_closed e1 && exp_is_closed e2) then FALSE
-        else EQUAL (e1, e2)
+				begin match (snd e1, snd e2) with
+				| TRUE, x | x, TRUE -> x
+				| FALSE, _ -> NOT e2
+	      | _, FALSE -> NOT e1
+				| x1, x2 -> if (x1 = x2) then TRUE else EQUAL (e1, e2)
+	      end
       | NOTEQ (e1, e2) ->
         let (e1, e2) = (simplify_exp e1, simplify_exp e2) in
-        if (snd e1 = snd e2) then FALSE 
-        else if (exp_is_closed e1 && exp_is_closed e2) then TRUE
-        else NOTEQ (e1, e2)
+				begin match (snd e1, snd e2) with
+				| FALSE, x | x, FALSE -> x
+				| TRUE, _ -> NOT e2
+				| _, TRUE -> NOT e1
+				| x1, x2 -> if (x1 = x2) then FALSE else NOTEQ (e1, e2)
+	      end
       (* lop *)
       | AT (e1, e2) -> 
         let (e1, e2) = (simplify_exp e1, simplify_exp e2) in
@@ -150,7 +257,16 @@ module Simplification = struct
         | _ -> STRCON (e1, e2)
         end
       (* else *)
-      | EApp (e1, e2) -> EApp (simplify_exp e1, simplify_exp e2)
+      | EApp (e1, e2) -> 
+        begin match snd e1 with
+				| EFun (arg, e) -> 
+	        if (exp_is_closed e) then
+					  if (is_id e1) then snd (simplify_exp e2)
+	          else if (is_const e1) then snd (simplify_exp e1)
+	          else EApp (simplify_exp e1, simplify_exp e2)
+	        else EApp (simplify_exp e1, simplify_exp e2)
+				| _ -> EApp (simplify_exp e1, simplify_exp e2)
+				end
       | EFun (arg, e) -> EFun (arg, simplify_exp e)
       | ELet (f, is_rec, args, typ , e1, e2) -> ELet (f, is_rec, args, typ, simplify_exp e1, simplify_exp e2)
       | EBlock (is_rec, bindings, e2) ->
