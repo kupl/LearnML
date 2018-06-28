@@ -94,10 +94,22 @@ module Sem : S = struct
 		| _ -> Set.singleton (p1,p2)
 		end
 
-	let closure : equivSet -> equivSet
-	= fun set -> set
-
 	let empty_set = Set.empty
+
+	let one_step_closure : equivSet -> equivSet
+	= fun set ->
+		Set.fold (fun (a, b) set ->
+			let set' = Set.remove (a, b) set in
+			let set' = Set.fold (fun (c, d) set' ->
+				if (b = c) then Set.add (a, d) set' else set'
+			) set' empty_set in
+			Set.union set set'
+		) set set
+
+	let rec closure : equivSet -> equivSet
+	= fun set -> 
+		let set' = one_step_closure set in
+		if Set.equal set set' then set' else closure set'
 
 	let kill : equivSet -> id -> equivSet
 	= fun set var -> Set.fold ( fun (p1,p2) acc ->
