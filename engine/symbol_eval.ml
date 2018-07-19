@@ -207,8 +207,9 @@ and normalize_aop : operator -> symbolic_value -> symbolic_value -> symbolic_val
     | Int n1, Int n2 -> Int (n1 - n2)
     | Int 0, _ -> Minus sv2
     | _, Int 0 -> sv1
-    | Int n1, Aop (Sub, Int n2, sv') | Int n1, Aop (Sub, sv', Int n2) -> Aop (Sub, Int (n1 - n2), sv')
-    | Aop (Sub, Int n1, sv'), Int n2 | Aop (Sub, sv', Int n1), Int n2 -> Aop (Sub, Int (n1 - n2), sv')
+    | Int n1, Aop (Sub, Int n2, sv') | Aop (Sub, Int n1, sv'), Int n2 -> Aop (Sub, Int (n1 - n2), sv')
+    | Aop (Sub, sv', Int n1), Int n2 -> Aop (Sub, sv', Int (n1 + n2))
+    | Int n1, Aop (Sub, sv', Int n2) -> Aop (Sub, Int (n1 + n2), sv')
     | Symbol _, _ | _, Symbol _ -> fresh_symbol ()
     | _ -> Aop (op, sv1, sv2)
     end
