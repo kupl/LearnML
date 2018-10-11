@@ -82,7 +82,7 @@ module Converter = struct
   = fun env decl ->
     match decl with  
     | DExcept(x, ts) -> (env, DExcept (x, List.map (convert_typ env) ts))
-    | DEqn (x, typ) -> (extend (x, typ) env, DEqn (x, typ))
+    | DEqn (x, typ) -> (extend (x, convert_typ env typ) env, DEqn (x, convert_typ env typ))
     | DData (x, ctors) -> (env, DData (x, List.map (convert_ctor env) ctors))
     | DLet (f, is_rec, args, typ, exp) -> (env, DLet (f, is_rec, convert_args env args, convert_typ env typ, convert_exp env exp))
     | DBlock (is_rec, bindings) ->
