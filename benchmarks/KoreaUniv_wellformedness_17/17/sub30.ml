@@ -1,6 +1,12 @@
 (**********************)
 (*   Problem 2        *)
 (**********************)
+let empty_env2 = []
+let extend_env2 x e = x::e
+let rec apply_env2 e x =
+   match e with
+    | [] -> false
+    | y::tl -> if x = y then true else apply_env2 tl x
 
 type lambda = V of var
             | P of var * lambda

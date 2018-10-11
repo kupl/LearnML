@@ -27,17 +27,18 @@ let rec remove lst
 | [] -> []
 | hd::tl -> 
 (match hd with
-| ("p",x) -> let lst1 = (find ("v",x) tl) in (remove lst1)
-| ("v",x) -> hd::(remove tl)
-| _ -> raise (Failure "a"))
+| (p,x) -> 
+	if p = "p" then
+	let lst1 = (find ("v",x) tl) in (remove lst1)
+	else if p = "v" then hd::(remove tl)
+	else raise (Failure "a"))
 
 let rec order lst
 = match lst with
 | [] -> []
 | hd::tl ->
 (match hd with
-  |("p",x) -> (order tl)
-  |_ -> hd::(order tl))
+	| (p, x) -> if p = "p" then (order tl) else hd::(order tl))
 
 let rec check : lambda -> bool
 = fun lam -> 

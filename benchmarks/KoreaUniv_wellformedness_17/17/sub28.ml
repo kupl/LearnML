@@ -6,6 +6,14 @@ type lambda = V of var
             | P of var * lambda
             | C of lambda * lambda
 and var = string
+and env1 = (var * bool) list
+
+let empty_env = []
+let extender_env (x,v) e = (x,v)::e
+let rec applyer_env e x = 
+  match e with
+  | [] -> false
+  | (y,v)::tl -> if x = y then v else applyer_env tl x
 
 let rec custom_check : lambda -> env1 -> bool
 = fun lam env -> match lam with

@@ -90,13 +90,14 @@ module Converter = struct
       (env, DBlock (is_rec, bindings))
     | TBlock decls -> 
       let env = List.fold_left extend_type_decls env decls in
+      let env = fix (fun env -> List.fold_left extend_type_decls env decls) env in
       let decls = List.map (fun decl -> snd (convert_decl env decl)) decls in
       (env, TBlock decls)
 
   and extend_type_decls : t -> decl -> t
   = fun env decl ->
     match decl with
-    | DEqn (x, typ) -> extend (x,typ) env
+    | DEqn (x, typ) -> extend (x, convert_typ env typ) env
     | DData (x, ctors) -> env
     | _ -> raise (Failure "Invalid Type declaration")
 

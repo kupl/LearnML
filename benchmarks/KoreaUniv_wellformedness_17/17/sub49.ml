@@ -5,7 +5,7 @@
 type lambda = V of var
             | P of var * lambda
             | C of lambda * lambda
-
+and var = string
 
 let rec remove n ls 
 = match ls with

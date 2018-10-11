@@ -5,7 +5,9 @@
 type lambda = V of var
             | P of var * lambda
             | C of lambda * lambda
+and var = string
 type env = var list
+
 
 let rec check_2 : env -> lambda -> bool
 = fun env lamb ->

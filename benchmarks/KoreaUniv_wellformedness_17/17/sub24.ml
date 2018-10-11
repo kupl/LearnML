@@ -1,8 +1,3 @@
-(* You can define datatypes and helper functions as necessary *)
-  let rec expand : exp -> exp 
-  = fun exp ->hexpand exp []
-
-
   (**********************)
   (*   Problem 2        *)
   (**********************)

@@ -5,7 +5,7 @@
 type lambda = V of var
             | P of var * lambda
             | C of lambda * lambda
-
+and var = string
 (*added function. returns true if given variable is bound, false otherwise*)
 let rec apply = fun var env -> match env with
                                | h::t -> if var=h then true else apply var t

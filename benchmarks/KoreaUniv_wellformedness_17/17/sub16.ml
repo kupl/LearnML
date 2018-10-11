@@ -7,8 +7,8 @@ type lambda = V of var
             | C of lambda * lambda
 and var = string
 
-let rec find list var =
-match list with
+let rec find lst var =
+match lst with
 | [] -> false
 | hd::tl -> if hd = var then true else find tl var
 
