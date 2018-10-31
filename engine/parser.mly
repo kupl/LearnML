@@ -225,7 +225,7 @@ letrec_and_list:
 
 exp_bind:
   | e=exp (* e *)
-    { DLet (BindOne "-", false, [], fresh_tvar(), e)}
+    { DLet (BindUnder, false, [], fresh_tvar(), e)}
 
 (***** }}} *****)
 

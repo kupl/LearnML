@@ -117,7 +117,7 @@ let rec exp_to_string : lexp -> string
   |EVar x -> x
   |EList lst -> pp_list exp_to_string lst
   |ETuple lst -> pp_tuple exp_to_string lst
-  |ECtor (x,lst) -> x ^ (if lst=[] then "" else " " ^ exp_to_string (List.hd lst))
+  |ECtor (x,lst) -> x ^ (if lst=[] then "" else " (" ^ exp_to_string (List.hd lst) ^ ")") 
   |ADD (e1,e2) -> "(" ^ exp_to_string e1 ^ " + " ^ exp_to_string e2 ^")"  
   |SUB (e1,e2) -> "(" ^ exp_to_string e1 ^ " - " ^ exp_to_string e2 ^")"  
   |MUL (e1,e2) -> "(" ^ exp_to_string e1 ^ " * " ^ exp_to_string e2 ^")"  
@@ -140,7 +140,7 @@ let rec exp_to_string : lexp -> string
     exp_to_string e1 ^ " " ^
     begin match snd e2 with
     |EApp _ -> "(" ^ exp_to_string e2 ^ ")"
-    |_ -> exp_to_string e2
+    |_ -> "(" ^ exp_to_string e2 ^ ")"
     end
   |IF (e1,e2,e3) -> 
     "if " ^ exp_to_string e1 ^ 
@@ -150,9 +150,9 @@ let rec exp_to_string : lexp -> string
     "\n" ^ "let " ^ (if is_rec then "rec " else "") ^
     binding_to_string (f, is_rec, xs, t, e1) ^ " in \n" ^ (exp_to_string e2)
   |EBlock (is_rec, es, e2) ->
-    "\n" ^ "{let " ^
+    "\n" ^ "let " ^
     (if is_rec then "rec " else "") ^
-    pp_block (binding_to_string) es ^ "}" ^ " in \n" ^ exp_to_string e2 
+    pp_block (binding_to_string) es ^ "" ^ " in \n" ^ exp_to_string e2 
   |EFun (arg,e1) -> 
     let rec multi_args (e : lexp) r =
       begin match snd e with
@@ -163,8 +163,8 @@ let rec exp_to_string : lexp -> string
     end in
     multi_args e1 (arg_to_string arg)
   |EMatch (e,lst) ->  
-    "\nmatch " ^ exp_to_string e ^ " with " ^ 
-    (list_fold (fun (p,e) r -> r ^ "\n|" ^ pat_to_string p ^ " -> " ^ exp_to_string e) lst "")
+    "\n (match " ^ exp_to_string e ^ " with " ^ 
+    (list_fold (fun (p,e) r -> r ^ "\n|" ^ pat_to_string p ^ " -> " ^ exp_to_string e) lst "") ^ ")"
   |Hole n -> "?"
   |Raise e -> "raise "^exp_to_string e
 
@@ -188,11 +188,11 @@ let rec decl_to_string : decl -> string -> string
     str ^ "\n" ^ "let " ^ (if is_rec then "rec " else "") ^
     binding_to_string (f, is_rec, args, typ, exp)
   | DBlock (is_rec, ds) ->
-    str ^ "\n" ^ "{\n" ^ "let " ^ (if is_rec then "rec " else "") ^
-    pp_block (binding_to_string) ds ^ "}"
+    str ^ "\n" ^ "" ^ "let " ^ (if is_rec then "rec " else "") ^
+    pp_block (binding_to_string) ds ^ ""
   | TBlock decls ->
-    str ^ "\n" ^ "{\n" ^ "type " ^
-    pp_block (type_decl_to_string) decls ^ "}"
+    str ^ "\n" ^ "" ^ "type " ^
+    pp_block (type_decl_to_string) decls ^ ""
 
 and type_decl_to_string : decl -> string
 = fun decl ->
@@ -219,7 +219,7 @@ let rec value_to_string : value -> string
   | VFun  (xs, _, _) -> "<fun>"
   | VFunRec (f, _, _, _) -> "<fun>"
   | VHole _ -> "?"
-  | VBlock (f, vs) -> "{" ^ f ^ "|->" ^ pp_block (value_block_to_string) vs ^ "}"
+  | VBlock (f, vs) -> "" ^ f ^ "|->" ^ pp_block (value_block_to_string) vs ^ ""
 
 and value_block_to_string : id * value -> string
 = fun (x, v) -> x ^ " : " ^ value_to_string v
@@ -347,7 +347,7 @@ let rec symbol_to_string : symbolic_value -> string
   | Symbol n -> "#S (" ^ string_of_int n ^ ")"
   | Fun (x, e, closure) -> "Fun (" ^ arg_to_string x ^ ")"
   | FunRec (f, x, e, closure) -> "FunRec (" ^ f ^ ", " ^ arg_to_string x ^ ")"
-  | FunBlock (f, svs) -> "{" ^ f ^ "|->" ^ pp_block symbol_block_to_string svs ^ "}"
+  | FunBlock (f, svs) -> "" ^ f ^ "|->" ^ pp_block symbol_block_to_string svs ^ ""
   | Minus sv -> "-(" ^ symbol_to_string sv ^ ")"
   | Not sv -> "not (" ^ symbol_to_string sv ^ ")"
   (* binary operation *)
