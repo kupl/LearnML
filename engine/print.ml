@@ -122,7 +122,7 @@ let rec exp_to_string : lexp -> string
   |SUB (e1,e2) -> "(" ^ exp_to_string e1 ^ " - " ^ exp_to_string e2 ^")"  
   |MUL (e1,e2) -> "(" ^ exp_to_string e1 ^ " * " ^ exp_to_string e2 ^")"  
   |DIV (e1,e2) -> "(" ^ exp_to_string e1 ^ " / " ^ exp_to_string e2 ^")"  
-  |MOD (e1,e2) -> "(" ^ exp_to_string e1 ^ " % " ^ exp_to_string e2 ^")"  
+  |MOD (e1,e2) -> "(" ^ exp_to_string e1 ^ " mod " ^ exp_to_string e2 ^")"  
   |MINUS (e) -> "-(" ^ exp_to_string e ^ ")"
   |OR (e1,e2) -> "(" ^ exp_to_string e1 ^ " || " ^ exp_to_string e2 ^")"
   |AND (e1,e2) -> "(" ^ exp_to_string e1 ^ " && " ^ exp_to_string e2 ^")"
