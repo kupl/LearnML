@@ -578,7 +578,7 @@ let hole_synthesize : prog -> Workset.work BatSet.t -> components -> examples ->
   let result = work workset components examples in
   let result_prog_string = 
   match result with
-  |None -> print_endline("None");"None"
+  |None -> "FixML fails to generate patch"
   |Some prog -> print_endline("Total time :" ^ string_of_float (Sys.time() -. !start_time));Print.program_to_string (prog) in
   Print.print_header "original" ;
   Print.print_pgm pgm;
