@@ -1,0 +1,12 @@
+{
+  And (Var "P", Neg (Var "Q")) => true;
+  And (Var "P", Neg (Var "P")) => false;
+  Neg (And (Var "P", Or (Var "Q", Neg (Var "Q")))) => true;
+  Or (And (Var "Y", Neg (Var "Y")), Neg (Iff (False, Neg (Or (Var "X", True))))) => false;
+  Iff (And (Neg (Var "P"), Imply (Var "Q", Var "R")) , Or (Var "P", Neg (Var "Q"))) => true;
+  Imply (Or (Var "X", Neg (Var "X")), And (False, Var "Y")) => false;
+  And (Neg (Var "x1") , And (Or (Var "x1", Var "x2"), Or (Var "x3", Or (Neg (Var "x1"), Var "x2")))) => true;
+  Iff (Or (Var "P", Imply (False, And (Neg (Var "Q"), Var "P"))), And (Var "R", And (Var "R", Neg (Var "Q")))) => true;
+  Imply (Or (Neg (Var "Q"), Neg False), And (Var "X", Neg (Var "X"))) => false;
+  And (Or (Var "X", Var "Y") , And (Or (Var "X", Neg (Var "Y")), And (Or (Neg (Var "X"), Var "Y"), Or (Neg (Var "X"), Neg (Var "Y"))))) => false;
+}
