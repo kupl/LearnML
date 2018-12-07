@@ -65,6 +65,7 @@ module Converter = struct
       | DOUBLECOLON (e1, e2) -> DOUBLECOLON (convert_exp env e1, convert_exp env e2)
       | IF (e1, e2, e3) -> IF (convert_exp env e1, convert_exp env e2, convert_exp env e3)
       | ELet (f, is_rec, args, typ, e1, e2) -> ELet (f, is_rec, convert_args env args, convert_typ env typ, convert_exp env e1, convert_exp env e2)
+      | EBlock (is_rec, bindings, e2) -> EBlock (is_rec, List.map (fun (f, is_rec, args, typ, e) -> f, is_rec, convert_args env args, convert_typ env typ, convert_exp env e) bindings, convert_exp env e2)
       | EFun (arg, e) -> EFun (convert_arg env arg, convert_exp env e)
       | EApp (e1, e2) -> EApp (convert_exp env e1, convert_exp env e2)
       | EMatch (e, bs) ->
