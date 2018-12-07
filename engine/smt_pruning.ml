@@ -155,7 +155,7 @@ module Aez_Encoder = struct
   = fun t ->
     match t with
     | A t -> encode_aterm t
-    (*| S t -> encode_sterm t*)
+    | S t -> raise (Failure "Not Implemented")
 
   let rec encode_formula : formula -> F.t
   = fun f ->

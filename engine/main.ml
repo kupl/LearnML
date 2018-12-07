@@ -35,6 +35,14 @@ let except_handling : exn -> value -> unit
                   "Expected: " ^ Print.value_to_string output);
   end
  
+let is_same_type : prog -> prog -> unit
+= fun pgm cpgm ->
+  let (tenv1, _, _) = Type.run pgm in
+  let (tenv2, _, _) = Type.run cpgm in
+  let (t1, t2) = (Type.TEnv.find tenv1 !opt_entry_func, Type.TEnv.find tenv2 !opt_entry_func) in
+  let _ = Type.unify Type.Subst.empty (t1, t2) in
+  ()
+
 let run_testcases : prog -> examples -> unit
 =fun prog examples ->
   let score = List.fold_left (fun score (inputs, output) ->
@@ -106,43 +114,82 @@ let fix_with_solution : prog -> prog -> examples -> unit
   ()
 
 let generate_testcases : prog -> prog -> examples
-= fun submission solution -> []
+= fun submission solution -> 
+  (* type checking *)
+  let _ = is_same_type submission solution in
+  let test_gen_result = TestGenerator.gen_counter_example submission solution in
+  let test_time = Unix.gettimeofday() -. !(TestGenerator.start_time) in 
+  match test_gen_result with
+  | None -> 
+    (* Test-case generation fail *)
+    let _ = 
+      print_endline ("Correct Code");
+      print_endline ("Num of Inputs : " ^ string_of_int (!TestGenerator.count));
+      print_endline ("Num of Crashes : " ^ string_of_int (!TestGenerator.num_of_crash))
+    in
+    [] 
+  | Some ex ->
+    let examples = ex::[] in
+    let _ =
+      Print.print_header "original"; Print.print_pgm submission;
+      Print.print_header "Generated examples"; Print.print_examples examples;
+      print_endline ("Counter-example Time : " ^ string_of_float test_time);
+      print_endline ("Num of Inputs : " ^ string_of_int (!TestGenerator.count));
+      print_endline ("Num of Crashes : " ^ string_of_int (!TestGenerator.num_of_crash))
+    in
+    [ex]
 
 let fix_without_testcases : prog -> prog -> unit
 = fun submission solution ->
-  let _ = Type.run submission in
+  (* type checking *)
+  let _ = is_same_type submission solution in
+  (* main procedure *)
   let task_time = ref 0.0 in
   let components = Comp.extract_component solution in 
-  let rec iter : prog -> prog -> prog -> examples -> (prog * examples) option
+  (* iteration *)
+  let rec iter : prog -> prog -> prog -> examples -> (prog option * examples)
   = fun pgm cpgm candidate examples ->
     let _ = 
       Print.print_header "Generated examples"; Print.print_examples examples;
       Print.print_header "Repair candidate"; Print.print_pgm candidate;
     in
-    let temp_time = Unix.gettimeofday() in 
     let test_gen_result = TestGenerator.gen_counter_example candidate cpgm in
+    let test_time = Unix.gettimeofday() -. !(TestGenerator.start_time) in 
     match test_gen_result with
-    | None -> Some (candidate, examples)
+    | None -> (Some candidate, examples) (* Test-case generation fail *)
     | Some ex ->
+      let _ = print_endline ("Counter-example Time : " ^ string_of_float test_time) in
       let examples = ex::examples in
       let ranked_pgm_set = Localize.localization pgm examples in
-      let initial_set = BatSet.map
-      (
-      fun (rank, pgm)->   
-        let (_, h_t, v_t) = Type.run pgm in
-        (rank, pgm, h_t, v_t)
+      let initial_set = BatSet.map(
+        fun (rank, pgm)->   
+          let (_, h_t, v_t) = Type.run pgm in
+          (rank, pgm, h_t, v_t)
       ) ranked_pgm_set in
       let correction_result = Synthesize.hole_synthesize pgm initial_set components examples in
-      task_time := Unix.gettimeofday() -. temp_time;
+      let correction_time = Unix.gettimeofday() -. !(Synthesize.start_time) in 
+      task_time := correction_time +. test_time +. !task_time;
       match correction_result with
-      | None -> None
-      | Some pgm' -> iter pgm cpgm pgm' examples
+      | None -> (None, examples) (* Repair fail *)
+      | Some pgm' -> 
+        (*
+        let _ = 
+          Print.print_header "Generated examples"; Print.print_examples examples;
+          Print.print_header "Repair candidate"; Print.print_pgm candidate;
+        in
+        *)
+        iter pgm cpgm pgm' examples
   in
   match iter submission solution submission [] with
-  | None -> print_endline ("None")
-  | Some (pgm, examples) -> 
-    if (examples = []) then ()
+  | (None, examples) -> 
+      Print.print_header "original"; Print.print_pgm submission;
+      Print.print_header "Generated examples"; Print.print_examples examples;
+      Print.print_header "Fail to repair";
+      print_endline ("Total Time : " ^ string_of_float !task_time)
+  | (Some pgm, examples) -> 
+    if (examples = []) then print_endline ("Correct Code")
     else (
+      Print.print_header "original"; Print.print_pgm submission;
       Print.print_header "Generated examples"; Print.print_examples examples;
       Print.print_header "Correction"; Print.print_pgm pgm;
       print_endline ("Total Time : " ^ string_of_float !task_time)
@@ -201,7 +248,7 @@ let main () =
       begin
         match submission, solution with
         | Some sub, Some sol -> ignore (generate_testcases sub sol)
-        | _ -> raise (Failure "Submission or solution not provided")
+        | _ -> raise (Failure "Submission or solution is not provided")
       end
     | false, false, false, true -> (* execution mode *)
       begin 

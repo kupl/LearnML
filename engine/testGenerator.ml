@@ -1,89 +1,197 @@
 open Lang
 open Util
-open Printf
-
-let start_time = ref 0.0
-let iter = ref 0
-let count = ref 0
-
-let tvar_num = ref 0
-let var_num = ref 0
+open Symbol_lang2
 
 (*
  ******************************************************
  	Code for Synthesizing a Test-case
  ******************************************************
 *)
-(* helper functions *)
-let fresh_tvar () = (tvar_num := !tvar_num + 1; (TVar ("s" ^ string_of_int !tvar_num)))
 
-let fresh_var () = (var_num := !var_num +1; "x_" ^ string_of_int !var_num)
+module Comp = struct
+  (* generate a fresh const component *)
+  let const_num = ref 0
+  let dummy_const () = 0
+  let fresh_const () = (const_num := !const_num +1; !const_num)
 
-let cost_input : input -> int
-= fun input ->
-	List.fold_left (fun cost e -> cost + exp_cost e) 0 input
+	(* Syntax Components *)
+  let all_components : unit -> components
+	= fun () ->
+		(*
+      A DSL having below syntax components  
+      except ctor, var (variable comp), tuple, list append, condition let binding, match, exception, hole 
+    *)
+		BatSet.empty 
+		|> BatSet.add (0, SInt (dummy_const ()))
+		|> BatSet.add (0, TRUE)
+		|> BatSet.add (0, FALSE)
+		|> BatSet.add (0, EList [])
+		|> BatSet.add (0, DOUBLECOLON (dummy_hole (), dummy_hole ()))
+		|> BatSet.add (0, ETuple [])
+		|> BatSet.add (0, String "x")
+		|> BatSet.add (0, STRCON (dummy_hole (), dummy_hole ()))
+		|> BatSet.add (0, EFun (ArgUnder (fresh_tvar ()), dummy_hole ()))
+		|> BatSet.add (0, ADD (dummy_hole (), dummy_hole ()))
+		|> BatSet.add (0, SUB (dummy_hole (), dummy_hole ()))
+		|> BatSet.add (0, MUL (dummy_hole (), dummy_hole ()))
+		|> BatSet.add (0, DIV (dummy_hole (), dummy_hole ()))
+		|> BatSet.add (0, MOD (dummy_hole (), dummy_hole ()))
+		|> BatSet.add (0, MINUS (dummy_hole ()))
+		|> BatSet.add (0, NOT (dummy_hole ()))
+		|> BatSet.add (0, OR (dummy_hole (), dummy_hole ()))
+		|> BatSet.add (0, AND (dummy_hole (), dummy_hole ()))
+		|> BatSet.add (0, LESS (dummy_hole (), dummy_hole ()))
+		|> BatSet.add (0, LESSEQ (dummy_hole (), dummy_hole ()))
+		|> BatSet.add (0, EQUAL (dummy_hole (), dummy_hole ()))
+		|> BatSet.add (0, NOTEQ (dummy_hole (), dummy_hole ()))
 
-(* Components *)
-let all_components : unit -> components
-= fun () ->
-	(* 
-		except ctor, var (variable comp),
-		condition let binding, match, exception, hole 
-	*)
-	BatSet.empty 
-	|> BatSet.add (gen_label (), Const 1)
-	|> BatSet.add (gen_label (), TRUE)
-	|> BatSet.add (gen_label (), FALSE)
-	|> BatSet.add (gen_label (), EList [])
-	|> BatSet.add (gen_label (), ETuple [])
-	|> BatSet.add (gen_label (), String "")
-	|> BatSet.add (gen_label (), String "x")
-	|> BatSet.add (gen_label (), ADD (gen_labeled_hole (), gen_labeled_hole ()))
-	|> BatSet.add (gen_label (), SUB (gen_labeled_hole (), gen_labeled_hole ()))
-	|> BatSet.add (gen_label (), MUL (gen_labeled_hole (), gen_labeled_hole ()))
-	|> BatSet.add (gen_label (), DIV (gen_labeled_hole (), gen_labeled_hole ()))
-	|> BatSet.add (gen_label (), MOD (gen_labeled_hole (), gen_labeled_hole ()))
-	|> BatSet.add (gen_label (), MINUS (gen_labeled_hole ()))
-	|> BatSet.add (gen_label (), NOT (gen_labeled_hole ()))
-	|> BatSet.add (gen_label (), OR (gen_labeled_hole (), gen_labeled_hole ()))
-	|> BatSet.add (gen_label (), AND (gen_labeled_hole (), gen_labeled_hole ()))
-	|> BatSet.add (gen_label (), LESS (gen_labeled_hole (), gen_labeled_hole ()))
-	|> BatSet.add (gen_label (), EQUAL (gen_labeled_hole (), gen_labeled_hole ()))
-	|> BatSet.add (gen_label (), NOTEQ (gen_labeled_hole (), gen_labeled_hole ()))
-	|> BatSet.add (gen_label (), LESSEQ (gen_labeled_hole (), gen_labeled_hole ()))
-	|> BatSet.add (gen_label (), AT (gen_labeled_hole (), gen_labeled_hole ()))
-	|> BatSet.add (gen_label (), DOUBLECOLON (gen_labeled_hole (), gen_labeled_hole ()))
-	|> BatSet.add (gen_label (), STRCON (gen_labeled_hole (), gen_labeled_hole ()))
-	|> BatSet.add (gen_label (), EFun (ArgUnder (fresh_tvar ()), gen_labeled_hole ()))
+	(* Reduce comp set by removing operators if the type of given input is not function *)
+	let reduce_comp : components -> components
+	= fun comp -> 
+		let remove_op_comp : components -> components
+		= fun comp ->
+			comp
+			|> BatSet.remove (0, ADD (dummy_hole (), dummy_hole ()))
+			|> BatSet.remove (0, SUB (dummy_hole (), dummy_hole ()))
+			|> BatSet.remove (0, MUL (dummy_hole (), dummy_hole ()))
+			|> BatSet.remove (0, DIV (dummy_hole (), dummy_hole ()))
+			|> BatSet.remove (0, MOD (dummy_hole (), dummy_hole ()))
+			|> BatSet.remove (0, MINUS (dummy_hole ()))
+			|> BatSet.remove (0, NOT (dummy_hole ()))
+			|> BatSet.remove (0, OR (dummy_hole (), dummy_hole ()))
+			|> BatSet.remove (0, AND (dummy_hole (), dummy_hole ()))
+			|> BatSet.remove (0, EQUAL (dummy_hole (), dummy_hole ()))
+			|> BatSet.remove (0, NOTEQ (dummy_hole (), dummy_hole ()))
+			|> BatSet.remove (0, LESS (dummy_hole (), dummy_hole ()))
+			|> BatSet.remove (0, LESSEQ (dummy_hole (), dummy_hole ()))
+		in
+		let is_fun : components -> bool
+		= fun comp -> 	
+			(* If a variable x is in components set, it is function *)
+			BatSet.exists (fun (l, e) ->
+				match e with
+				| EVar _ -> true
+				| _ -> false
+			) comp
+		in
+		if is_fun comp then comp else remove_op_comp comp
 
-let get_var_components : Type.TEnv.t -> components
-= fun tenv ->
-	BatMap.foldi (fun var t set ->
-		match t with
-		| TCtor (name, ts) ->
-			begin match ts with
-			| [] -> BatSet.add (gen_label (), ECtor (var, [])) set
-			| hd::tl -> BatSet.add (gen_label (), ECtor (var, [gen_labeled_hole ()])) set
-			end
-		| _ -> BatSet.add (gen_label (), EVar var) set
-	) tenv BatSet.empty
+	(* Update Components with fresh hole *)
+	let rec update_components : lexp -> lexp
+	= fun (l, exp)->
+	  match exp with
+    | ADD (e1, e2) -> (gen_label (), ADD (update_components e1, update_components e2))
+    | SUB (e1, e2) -> (gen_label (), SUB (update_components e1, update_components e2))
+    | MUL (e1, e2) -> (gen_label (), MUL (update_components e1, update_components e2))
+    | DIV (e1, e2) -> (gen_label (), DIV (update_components e1, update_components e2))
+    | MOD (e1, e2) -> (gen_label (), MOD (update_components e1, update_components e2))
+	  | OR (e1, e2) -> (gen_label (), OR (update_components e1, update_components e2))
+	  | AND (e1, e2) -> (gen_label (), AND (update_components e1, update_components e2))
+	  | LESS (e1, e2) -> (gen_label (), LESS (update_components e1, update_components e2))
+	  | LARGER (e1, e2) -> (gen_label (), LARGER (update_components e1, update_components e2))
+	  | EQUAL (e1, e2) -> (gen_label (), EQUAL (update_components e1, update_components e2))
+	  | NOTEQ (e1, e2) -> (gen_label (), NOTEQ (update_components e1, update_components e2))
+	  | LESSEQ (e1, e2) -> (gen_label (), LESSEQ (update_components e1, update_components e2))
+	  | LARGEREQ (e1, e2) -> (gen_label (), LARGEREQ (update_components e1, update_components e2))
+	  | AT (e1, e2) -> (gen_label (), AT (update_components e1, update_components e2))
+	  | DOUBLECOLON (e1, e2) -> (gen_label (), DOUBLECOLON (update_components e1, update_components e2))
+	  | STRCON (e1, e2) -> (gen_label (), STRCON (update_components e1, update_components e2))
+	  | EApp (e1, e2) -> (gen_label (), EApp (update_components e1, update_components e2))
+    | EList es -> (gen_label (), EList (List.map update_components es))
+    | ECtor (x, es) -> (gen_label (), ECtor (x, List.map update_components es))
+    | ETuple es -> (gen_label (), ETuple (List.map update_components es))
+	  | MINUS e -> (gen_label (), MINUS (update_components e))
+	  | NOT e -> (gen_label (), NOT (update_components e))
+	  | EFun (arg, e) -> (gen_label (), EFun (arg, update_components e))
+	  | Raise e -> (gen_label (), Raise (update_components e))
+	  | ELet (f, is_rec, args, typ, e1, e2) -> (gen_label (), ELet (f, is_rec, args, typ, update_components e1, update_components e2))
+		| EBlock (is_rec, ds, e2) -> 
+			let ds = List.map (fun (f, is_rec, args, typ, e) -> (f, is_rec, args, typ, update_components e)) ds in
+			(gen_label (), EBlock (is_rec, ds, update_components e2))
+		| EMatch (e, bs) ->
+			let bs = List.map (fun (p, e) -> (p, update_components e)) bs in
+			(gen_label (), EMatch (update_components e, bs))
+		| IF (e1, e2, e3) -> (gen_label (), IF (update_components e1, update_components e2, update_components e3))
+		| Hole _ -> gen_labeled_hole ()
+    | SInt _ -> (gen_label (), SInt (fresh_const ()))
+	  | _ -> (gen_label (), exp)
 
-let rec fresh_arg : typ -> arg
-= fun typ ->
-	match typ with
-	| TTuple ts -> ArgTuple (List.map (fun t -> fresh_arg t) ts)
-	| _ -> ArgOne (fresh_var (), typ)
+	(* Extract Constant Components in submissions *)
+	let rec get_const_comp_exp : components -> lexp -> components
+	= fun comp (l, exp) ->
+		match exp with 
+		| EList es | ECtor (_, es) | ETuple es -> List.fold_left get_const_comp_exp comp es
+	  | MINUS e | NOT e | EFun (_, e) -> get_const_comp_exp comp e
+	  | ADD (e1, e2) | SUB (e1, e2) | MUL (e1, e2) | DIV (e1, e2) | MOD (e1, e2)
+	  | OR (e1, e2) | AND (e1, e2) | LESS (e1, e2) | LARGER (e1, e2) | EQUAL (e1, e2) | NOTEQ (e1, e2)
+	  | LESSEQ (e1, e2) | LARGEREQ (e1, e2) | AT (e1, e2) | DOUBLECOLON (e1, e2) | STRCON (e1, e2)
+	  | EApp (e1, e2) | ELet (_, _, _, _, e1, e2) -> List.fold_left get_const_comp_exp comp [e1; e2]
+		| EBlock (_, ds, e2) -> 
+			let es = e2::(List.map (fun (f, is_rec, args, typ, e) -> e) ds) in
+			List.fold_left get_const_comp_exp comp es
+		| EMatch (e, bs) ->
+			let es = e::(List.map (fun (p, e) -> e) bs) in
+			List.fold_left get_const_comp_exp comp es
+		| IF (e1, e2, e3) -> List.fold_left get_const_comp_exp comp [e1; e2; e3]
+		| Const n -> BatSet.add (l, exp) comp
+		| String str -> BatSet.add (l, exp) comp
+		| Raise e -> comp
+	  | _ -> comp
 
-(* type *)
-type state = lexp * Type.HoleType.t * Type.VariableType.t
+	let rec get_const_comp_decl : components -> decl -> components
+	= fun comp decl ->
+		match decl with
+	  | DLet (f, is_rec, args, typ, exp) -> get_const_comp_exp comp exp
+	  | DBlock (is_rec, bindings) -> List.fold_left (fun comp (f, is_rec, args, typ, exp) -> get_const_comp_exp comp exp) comp bindings
+	  | _ -> comp
+
+	let rec get_const_comp : prog -> components
+	= fun pgm -> List.fold_left get_const_comp_decl BatSet.empty pgm
+
+	(* Get Bounded Variable, User-defined Constructor *)
+	let get_var_components : Type.TEnv.t -> components
+	= fun tenv ->
+		BatMap.foldi (fun var t set ->
+			match t with
+			| TCtor (name, ts) ->
+				begin match ts with
+				| [] -> BatSet.add (gen_label (), ECtor (var, [])) set
+				| hd::tl -> BatSet.add (gen_label (), ECtor (var, [gen_labeled_hole ()])) set
+				end
+			| _ -> BatSet.add (gen_label (), EVar var) set
+		) tenv BatSet.empty
+end
+
+module Cost = struct
+	(* size of exp *)
+  let rec size_cost : lexp -> int
+  = fun (_, exp) ->
+  	match exp with
+	  | EList es -> List.fold_left (fun acc e -> size_cost e + acc) 10 es
+	  | ECtor (_, es) -> List.fold_left (fun acc e -> size_cost e + acc) 20 es
+	  | ETuple es -> List.fold_left (fun acc e -> size_cost e + acc) 5 es
+	  | MINUS e | NOT e -> 15 + size_cost e
+	  | EFun (_, e) -> 30 + size_cost e
+	  | ADD (e1, e2) | SUB (e1, e2) | MUL (e1, e2) | DIV (e1, e2) | MOD (e1, e2)
+	  | OR (e1, e2) | AND (e1, e2) | LESS (e1, e2) | LARGER (e1, e2) | EQUAL (e1, e2) | NOTEQ (e1, e2)
+	  | LESSEQ (e1, e2) | LARGEREQ (e1, e2) | AT (e1, e2) | DOUBLECOLON (e1, e2)| STRCON (e1, e2) -> 15 + size_cost e1 + size_cost e2
+	  | Hole _ -> 23
+    | EVar _  -> 10
+    | SInt _ | Const _ | TRUE | FALSE | String _  -> 15
+    | _ -> raise (Failure "Invalid Input Syntax")
+
+	(* cost function for generating a test case *)
+	let cost_input : input -> int
+	= fun input -> List.fold_left (fun cost e -> cost + size_cost e) 0 input
+end
 
 module Workset = struct
-  type work = input * Type.HoleType.t * Type.VariableType.t 
+  type work = input * Type.HoleType.t * Type.VariableType.t
 
   module OrderedType = struct
     type t = work
     let compare (input1, _, _) (input2, _, _) =
-    let (c1, c2) = (cost_input input1, cost_input input2) in
+	    let (c1, c2) = (Cost.cost_input input1, Cost.cost_input input2) in
       if c1=c2 then 0 else
       if c1>c2 then 1
       else -1
@@ -93,33 +201,56 @@ module Workset = struct
 
   (* type of workset : heap * (string set) *)
   type t = Heap.t * string BatSet.t
+
   let empty = (Heap.empty, BatSet.empty)
- 
+
   let explored : input -> t -> bool
   = fun input (_, sset) -> BatSet.mem (Print.input_to_string input) sset
 
   let add : work -> t -> t
   = fun (input, h_t, v_t) (heap, sset) ->
 		try
-    	if explored (List.map Normalize.normalize_exp input) (heap, sset) then (heap, sset)
+  		let input = List.map Normalize.normalize_exp input in
+    	if explored input (heap, sset) then (heap, sset)
     	else
-      	(Heap.add (input, h_t, v_t) heap, BatSet.add (Print.input_to_string (List.map Normalize.normalize_exp input)) sset)
-		with
-			|_ -> (heap, sset)
+      	(Heap.add (input, h_t, v_t) heap, BatSet.add (Print.input_to_string (input)) sset)
+		with _ -> (heap, sset)
   
   let choose : t -> (work * t) option
   = fun (heap, sset) ->
     try
       let elem = Heap.find_min heap in
       Some (elem, (Heap.del_min heap, sset))
-    with
-      | _ -> None
+    with _ -> None
 
   let workset_info : t -> string
   = fun (heap, sset) ->
     "To explore : " ^ (string_of_int (Heap.size heap)) ^
-    " Explored : " ^ (string_of_int (BatSet.cardinal sset))
+    " Explored : " ^ (string_of_int (BatSet.cardinal sset)) 
 end
+
+(************ 
+	Generetor 
+*************)
+let start_time = ref 0.0
+let iter = ref 0
+
+let count = ref 0
+let num_of_crash = ref 0
+
+let var_num = ref 0
+
+(* type *)
+type state = lexp * Type.HoleType.t * Type.VariableType.t
+
+(* helper functions *)
+let fresh_var () = (var_num := !var_num +1; "x_" ^ string_of_int !var_num)
+
+let rec fresh_arg : typ -> arg
+= fun typ ->
+	match typ with
+	| TTuple ts -> ArgTuple (List.map (fun t -> fresh_arg t) ts)
+	| _ -> ArgOne (fresh_var (), typ)
 
 (* Search a hole that appears at first *)
 let extract_holenum : lexp -> int
@@ -178,35 +309,12 @@ let rec update_type : (typ * typ) -> typ -> typ
 	| TArr (typ1, typ2) -> TArr (update_type (t1, t2) typ1, update_type (t1, t2) typ2)
 	| _ -> typ
 
-let rec update_polymorphic : (typ * typ) -> (Type.HoleType.t * Type.TEnv.t) -> (Type.HoleType.t * Type.TEnv.t)
-= fun (t1, t2) (h_t, tenv) ->
+let rec update_polymorphic : (typ * typ) -> (Type.HoleType.t * Type.VariableType.t * Type.TEnv.t) -> (Type.HoleType.t * Type.VariableType.t * Type.TEnv.t)
+= fun (t1, t2) (h_t, v_t, tenv) ->
 	let h_t = BatMap.map (fun typ -> update_type (t1, t2) typ) h_t in
+	let v_t = BatMap.map (fun tenv -> BatMap.map (fun typ -> update_type (t1, t2) typ) tenv) v_t in
 	let tenv = BatMap.map (fun typ -> update_type (t1, t2) typ) tenv in
-	(h_t, tenv)
-
-let rec check_typ : typ -> typ -> bool
-= fun t1 t2 ->
-	match (t1, t2) with
-	| TList t1, TList t2 -> check_typ t1 t2
-	| TTuple ts1, TTuple ts2 -> check_typ_list ts1 ts2
-	| TCtor (x1, ts1), TCtor (x2, ts2) -> if x1 <> x2 then false else check_typ_list ts1 ts2
-	| TArr (t1, t2), TArr (t1', t2') -> (check_typ t1 t1') && (check_typ t2 t2')
-	| TVar x, _ ->
-    (*if x occurs in t recursively, ill typed*)
-    begin match t2 with
-    | TList t -> not (Type.extract_tvar x t)
-    | TTuple ts | TCtor (_, ts) -> not (Type.extract_tvar2 x ts)
-    | TArr (t1, t2) -> not ((Type.extract_tvar x t1) || (Type.extract_tvar x t2))
-    | _ -> true
-    end
-	| _, TVar x -> check_typ t2 t1
-	| _ -> t1 = t2
-
-and check_typ_list : typ list -> typ list -> bool
-= fun ts1 ts2 ->
-	try 
-		List.for_all2 (fun t1 t2 -> check_typ t1 t2) ts1 ts2
-	with _ -> false
+	(h_t, v_t, tenv)
 
 (* One-step Transition *)
 let rec update_state : (int * typ) list -> Type.TEnv.t -> state -> state
@@ -217,16 +325,25 @@ let rec update_state : (int * typ) list -> Type.TEnv.t -> state -> state
 		(e, h_t, v_t)
 	) (e, h_t, v_t) ts
 
+(* Type-directed Search *)
 let type_directed : (int * typ * Type.TEnv.t) -> state -> state option
 = fun (hole, typ, tenv) (lexp, h_t, v_t) ->
 	(* Transition from hole to exp *)
 	match snd lexp with
 	(* Const *)
+  | SInt _ ->
+    begin match typ with
+    | TInt -> Some (lexp, h_t, v_t) 
+    | TVar _ -> 
+      let (h_t, v_t, tenv) = update_polymorphic (typ, TInt) (h_t, v_t, tenv) in
+      Some (lexp, h_t, v_t)
+    | _ -> None
+    end
 	| Const _ ->
 		begin match typ with
 		| TInt -> Some (lexp, h_t, v_t) 
 		| TVar _ ->	
-			let (h_t, tenv) = update_polymorphic (typ, TInt) (h_t, tenv) in
+			let (h_t, v_t, tenv) = update_polymorphic (typ, TInt) (h_t, v_t, tenv) in
 			Some (lexp, h_t, v_t)
 		| _ -> None
 		end
@@ -234,7 +351,7 @@ let type_directed : (int * typ * Type.TEnv.t) -> state -> state option
 		begin match typ with
 		| TBool -> Some (lexp, h_t, v_t)
 		| TVar _ ->
-			let (h_t, tenv) = update_polymorphic (typ, TBool) (h_t, tenv) in
+			let (h_t, v_t, tenv) = update_polymorphic (typ, TBool) (h_t, v_t, tenv) in
 			Some (lexp, h_t, v_t)
 		| _ -> None
 		end
@@ -242,7 +359,7 @@ let type_directed : (int * typ * Type.TEnv.t) -> state -> state option
 		begin match typ with
 		| TString -> Some (lexp, h_t, v_t)
 		| TVar _ ->
-			let (h_t, tenv) = update_polymorphic (typ, TString) (h_t, tenv) in
+			let (h_t, v_t, tenv) = update_polymorphic (typ, TString) (h_t, v_t, tenv) in
 			Some (lexp, h_t, v_t)
 		| _ -> None
 		end
@@ -250,7 +367,7 @@ let type_directed : (int * typ * Type.TEnv.t) -> state -> state option
 		begin match typ with
 		| TList t -> Some (lexp, h_t, v_t)
 		| TVar _ ->
-			let (h_t, tenv) = update_polymorphic (typ, TList (fresh_tvar ())) (h_t, tenv) in
+			let (h_t, v_t, tenv) = update_polymorphic (typ, TList (fresh_tvar ())) (h_t, v_t, tenv) in
 			Some (lexp, h_t, v_t)
 		| _ -> None
 		end
@@ -268,7 +385,7 @@ let type_directed : (int * typ * Type.TEnv.t) -> state -> state option
 		begin match typ with
 		| TInt -> Some (update_state [n1, TInt] tenv (lexp, h_t, v_t))
 		| TVar _ ->
-			let (h_t, tenv) = update_polymorphic (typ, TInt) (h_t, tenv) in
+			let (h_t, v_t, tenv) = update_polymorphic (typ, TInt) (h_t, v_t, tenv) in
 			Some (update_state [n1, TInt] tenv (lexp, h_t, v_t))
 		| _ -> None
 		end
@@ -277,7 +394,7 @@ let type_directed : (int * typ * Type.TEnv.t) -> state -> state option
 		begin match typ with
 		| TInt -> Some (update_state [(n1, TInt); (n2, TInt)] tenv (lexp, h_t, v_t))
 		| TVar _ ->
-			let (h_t, tenv) = update_polymorphic (typ, TInt) (h_t, tenv) in
+			let (h_t, v_t, tenv) = update_polymorphic (typ, TInt) (h_t, v_t, tenv) in
 			Some (update_state [(n1, TInt); (n2, TInt)] tenv (lexp, h_t, v_t))
 		| _ -> None
 		end
@@ -287,7 +404,7 @@ let type_directed : (int * typ * Type.TEnv.t) -> state -> state option
 		begin match typ with
 		| TBool -> Some (update_state [n1, TBool] tenv (lexp, h_t, v_t))
 		| TVar _ ->
-			let (h_t, tenv) = update_polymorphic (typ, TBool) (h_t, tenv) in
+			let (h_t, v_t, tenv) = update_polymorphic (typ, TBool) (h_t, v_t, tenv) in
 			Some (update_state [n1, TBool] tenv (lexp, h_t, v_t))
 		| _ -> None
 		end
@@ -296,7 +413,7 @@ let type_directed : (int * typ * Type.TEnv.t) -> state -> state option
 		begin match typ with
 		| TBool -> Some (update_state [(n1, TBool); (n2, TBool)] tenv (lexp, h_t, v_t))
 		| TVar _ ->
-			let (h_t, tenv) = update_polymorphic (typ, TBool) (h_t, tenv) in
+			let (h_t, v_t, tenv) = update_polymorphic (typ, TBool) (h_t, v_t, tenv) in
 			Some (update_state [(n1, TBool); (n2, TBool)] tenv (lexp, h_t, v_t))
 		| _ -> None
 		end
@@ -305,7 +422,7 @@ let type_directed : (int * typ * Type.TEnv.t) -> state -> state option
 		begin match typ with
 		| TBool -> Some (update_state [(n1, TInt); (n2, TInt)] tenv (lexp, h_t, v_t))
 		| TVar _ ->
-			let (h_t, tenv) = update_polymorphic (typ, TBool) (h_t, tenv) in
+			let (h_t, v_t, tenv) = update_polymorphic (typ, TBool) (h_t, v_t, tenv) in
 			Some (update_state [(n1, TInt); (n2, TInt)] tenv (lexp, h_t, v_t))
 		| _ -> None
 		end
@@ -315,7 +432,7 @@ let type_directed : (int * typ * Type.TEnv.t) -> state -> state option
 		begin match typ with
 		| TBool -> Some (update_state [(n1, tv); (n2, tv)] tenv (lexp, h_t, v_t))
 		| TVar _ ->
-			let (h_t, tenv) = update_polymorphic (typ, TBool) (h_t, tenv) in
+			let (h_t, v_t, tenv) = update_polymorphic (typ, TBool) (h_t, v_t, tenv) in
 			Some (update_state [(n1, tv); (n2, tv)] tenv (lexp, h_t, v_t))
 		| _ -> None
 		end
@@ -326,7 +443,7 @@ let type_directed : (int * typ * Type.TEnv.t) -> state -> state option
 		| TList t -> Some (update_state [(n1, TList t); (n2, TList t)] tenv (lexp, h_t, v_t))
 		| TVar _ ->
 			let tv = fresh_tvar () in
-			let (h_t, tenv) = update_polymorphic (typ, TList tv) (h_t, tenv) in
+			let (h_t, v_t, tenv) = update_polymorphic (typ, TList tv) (h_t, v_t, tenv) in
 			Some (update_state [(n1, TList tv); (n2, TList tv)] tenv (lexp, h_t, v_t))
 		| _ -> None
 		end
@@ -336,7 +453,7 @@ let type_directed : (int * typ * Type.TEnv.t) -> state -> state option
 		| TList t -> Some (update_state [(n1, t); (n2, TList t)] tenv (lexp, h_t, v_t))
 		| TVar _ ->
 			let tv = fresh_tvar () in
-			let (h_t, tenv) = update_polymorphic (typ, TList tv) (h_t, tenv) in
+			let (h_t, v_t, tenv) = update_polymorphic (typ, TList tv) (h_t, v_t, tenv) in
 			Some (update_state [(n1, tv); (n2, TList tv)] tenv (lexp, h_t, v_t))
 		| _ -> None
 		end
@@ -346,7 +463,7 @@ let type_directed : (int * typ * Type.TEnv.t) -> state -> state option
 		begin match typ with
 		| TString -> Some (update_state [(n1, TString); (n2, TString)] tenv (lexp, h_t, v_t))
 		| TVar _ ->
-			let (h_t, tenv) = update_polymorphic (typ, TString) (h_t, tenv) in
+			let (h_t, v_t, tenv) = update_polymorphic (typ, TString) (h_t, v_t, tenv) in
 			Some (update_state [(n1, TString); (n2, TString)] tenv (lexp, h_t, v_t))
 		| _ -> None
 		end
@@ -363,15 +480,16 @@ let type_directed : (int * typ * Type.TEnv.t) -> state -> state option
 	(* Var Comp *)
 	| EVar x ->
 		let var_typ = BatMap.find x tenv in
-		if check_typ typ var_typ then
-			begin match (typ, var_typ) with
-			| TVar x, t | t, TVar x ->
-				let (h_t, tenv) = update_polymorphic (TVar x, t) (h_t, tenv) in
-				Some (lexp, h_t, v_t)
-			| _ -> Some (lexp, h_t, v_t)
-			end
-		else
-			None
+		begin try
+			let subst = Type.unify Type.Subst.empty (typ, var_typ) in
+			let (h_t, v_t, tenv) = List.fold_left (fun (h_t, v_t, tenv) (id, typ) ->
+				let var_typ = TVar id in
+				update_polymorphic (var_typ, typ) (h_t, v_t, tenv)
+			) (h_t, v_t, tenv) subst 
+			in
+			Some (lexp, h_t, v_t)
+		with  _ -> None
+		end
 	(* Ctor *)
 	| ECtor (x, es) ->
 		let ctor_typ = BatMap.find x tenv in
@@ -380,7 +498,7 @@ let type_directed : (int * typ * Type.TEnv.t) -> state -> state option
 		begin match typ with
 		| TBase _ when typ = tname -> Some (update_state holes_typ tenv (lexp, h_t, v_t))
 		| TVar _ ->
-			let (h_t, tenv) = update_polymorphic (typ, tname) (h_t, tenv) in
+			let (h_t, v_t, tenv) = update_polymorphic (typ, tname) (h_t, v_t, tenv) in
 			Some (update_state holes_typ tenv (lexp, h_t, v_t))
 		| _ -> None
 		end
@@ -428,12 +546,16 @@ let rec replace_exp : int -> lexp -> lexp -> lexp
 let replace_input : int -> lexp -> input -> input
 = fun hole e' input -> List.map (fun e -> replace_exp hole e' e) input
 
-let get_nextstates : Workset.work -> lexp -> Workset.work BatSet.t
-= fun (input, h_t, v_t) hole ->
+let get_nextstates : components -> Workset.work -> lexp -> Workset.work BatSet.t
+= fun comp (input, h_t, v_t) hole ->
 	let hole = extract_holenum hole in
 	let hole_typ = BatMap.find hole h_t in
 	let tenv = BatMap.find hole v_t in
-	let components = BatSet.union (all_components ()) (get_var_components tenv) in
+	let components = 
+		BatSet.union comp (Comp.get_var_components tenv)
+		|> Comp.reduce_comp
+		|> BatSet.map Comp.update_components
+	in
 	(* transition *)
 	let next_states = BatSet.fold (fun comp set ->
 		let new_state = 
@@ -451,11 +573,11 @@ let get_nextstates : Workset.work -> lexp -> Workset.work BatSet.t
 		(replace_input hole e' input, BatMap.remove hole h_t, BatMap.remove hole v_t)
 	) next_states
 
-let next : Workset.work -> Workset.work BatSet.t
-= fun (input, h_t, v_t) ->
+let next : components -> Workset.work -> Workset.work BatSet.t
+= fun comp (input, h_t, v_t) ->
 	let exp_holes = find_exp_holes input in
 	let next_states = BatSet.fold (fun hole set -> 
-		BatSet.union (get_nextstates (input, h_t, v_t) hole) set
+		BatSet.union (get_nextstates comp (input, h_t, v_t) hole) set
 	) exp_holes BatSet.empty in
 	next_states
 
@@ -497,62 +619,202 @@ let rec get_sketch : prog -> Workset.work
 	let v_t = BatMap.foldi (fun n typ v_t ->
 		BatMap.add n ctor_table v_t
 	) h_t BatMap.empty in
-	(*
-	let _ = print_endline (Print.type_to_string func_typ) in
-	Print.print_header "Sketch";
-	let _ = print_endline (Print.input_to_string input) in
-	Print.print_header "Hole_type";
-	let _ = Type.HoleType.print h_t in
-	Print.print_header "Hole_env";
-	let _ = Type.VariableType.print v_t in
-	*)
 	(input, h_t, v_t)
 
+(* Const symbol *)
+let rec get_const_symbols : lexp -> int BatSet.t
+= fun (l, e) ->
+	match e with
+  | EList es | ECtor (_, es) | ETuple es -> get_const_symbols_list es
+  | MINUS e | NOT e | EFun (_, e) | Raise e -> get_const_symbols e
+  | ADD (e1, e2) | SUB (e1, e2) | MUL (e1, e2) | DIV (e1, e2) | MOD (e1, e2)
+  | OR (e1, e2) | AND (e1, e2) | LESS (e1, e2) | LARGER (e1, e2) | EQUAL (e1, e2) | NOTEQ (e1, e2)
+  | LESSEQ (e1, e2) | LARGEREQ (e1, e2) | AT (e1, e2) | DOUBLECOLON (e1, e2) | STRCON (e1, e2)
+  | EApp (e1, e2) | ELet (_, _, _, _, e1, e2) -> get_const_symbols_list [e1; e2]
+	| EBlock (_, ds, e2) -> 
+		let es = List.map (fun (f, is_rec, args, typ, e) -> e) ds in
+		get_const_symbols_list (es@[e2])
+	| EMatch (e, bs) ->
+		let es = e :: (List.map (fun (p, e) -> e) bs) in
+		get_const_symbols_list es
+	| IF (e1, e2, e3) -> get_const_symbols_list [e1; e2; e3]
+  | SInt n -> BatSet.singleton n
+  | _ -> BatSet.empty
+
+and get_const_symbols_list : lexp list -> int BatSet.t
+= fun es ->
+	match es with
+	| [] -> BatSet.empty
+	| hd::tl ->
+		let symbols = get_const_symbols hd in
+		BatSet.union symbols (get_const_symbols_list tl)
+
+let rec find_const_symbols : input -> int BatSet.t
+= fun input -> get_const_symbols_list input
+
+let rec get_const_symbols : Z3.Model.model -> int BatSet.t -> (int * int) list
+= fun model symbols ->
+	let decls = Z3.Model.get_const_decls model in
+  (* Parse Interpreted Model to get mapping of constant symbol *)
+  let symbol_map = List.fold_left (fun acc decl -> 
+  	let name = Z3.FuncDecl.get_name decl in
+  	begin match Z3.Model.get_const_interp model decl with
+    | Some value -> 
+    	(*
+    	print_endline ("DECL : " ^ Z3.FuncDecl.to_string decl);
+    	print_endline ("NAME : " ^ Z3.Symbol.to_string name);
+    	print_endline ("VALUE : " ^ Z3.Expr.to_string value);
+    	*)
+  		if String.contains (Z3.Symbol.to_string name) 'A' then
+  			let value_string = Z3.Expr.to_string value in
+  			let value_string =
+  				if Str.string_match (Str.regexp "(- ") value_string 0 
+	        then Str.replace_first (Str.regexp "(- ") "-" (Str.replace_first (Str.regexp ")") "" value_string) (* Remove parenthesis *)
+	        else value_string 
+	      in
+	      let id = int_of_string (Str.replace_first (Str.regexp "A") "" (Z3.Symbol.to_string name)) in
+  			let value = int_of_string value_string in
+  			(id, value)::acc
+  		else acc
+    | None -> acc
+    end
+  ) [] decls
+  in
+  (* If some symbols don't have value => Randomly instantiating (Const 0) *)
+  let symbol_map = BatSet.fold (fun symbol map -> 
+  	if List.exists (fun (n, v) -> n = symbol) map then map else (symbol, 1)::map
+  ) symbols symbol_map
+	in
+	symbol_map
+
+let rec replace_const_symbol : (int * int) -> lexp -> lexp
+= fun (hole, value) (l, e) ->
+	match e with 
+	| EList es -> (l, EList (List.map (replace_const_symbol (hole, value)) es))
+	| ECtor (x, es) -> (l, ECtor (x, List.map (replace_const_symbol (hole, value)) es))
+	| ETuple es -> (l, ETuple (List.map (replace_const_symbol (hole, value)) es))
+  | MINUS e -> (l, MINUS (replace_const_symbol (hole, value) e))
+  | NOT e -> (l, NOT (replace_const_symbol (hole, value) e))
+  | EFun (arg, e) -> (l, EFun (arg, (replace_const_symbol (hole, value) e)))
+  | Raise e -> (l, Raise (replace_const_symbol (hole, value) e))
+  | ADD (e1, e2) -> (l, ADD (replace_const_symbol (hole, value) e1, replace_const_symbol (hole, value) e2))
+  | SUB (e1, e2) -> (l, SUB (replace_const_symbol (hole, value) e1, replace_const_symbol (hole, value) e2))
+  | MUL (e1, e2) -> (l, MUL (replace_const_symbol (hole, value) e1, replace_const_symbol (hole, value) e2))
+  | DIV (e1, e2) -> (l, DIV (replace_const_symbol (hole, value) e1, replace_const_symbol (hole, value) e2))
+  | MOD (e1, e2) -> (l, MOD (replace_const_symbol (hole, value) e1, replace_const_symbol (hole, value) e2))
+  | OR (e1, e2) -> (l, OR (replace_const_symbol (hole, value) e1, replace_const_symbol (hole, value) e2))
+  | AND (e1, e2) -> (l, AND (replace_const_symbol (hole, value) e1, replace_const_symbol (hole, value) e2))
+  | LESS (e1, e2) -> (l, LESS (replace_const_symbol (hole, value) e1, replace_const_symbol (hole, value) e2))
+  | LARGER (e1, e2) -> (l, LARGER (replace_const_symbol (hole, value) e1, replace_const_symbol (hole, value) e2))
+  | EQUAL (e1, e2) -> (l, EQUAL (replace_const_symbol (hole, value) e1, replace_const_symbol (hole, value) e2))
+  | NOTEQ (e1, e2) -> (l, NOTEQ (replace_const_symbol (hole, value) e1, replace_const_symbol (hole, value) e2))
+  | LESSEQ (e1, e2) -> (l, LESSEQ (replace_const_symbol (hole, value) e1, replace_const_symbol (hole, value) e2))
+  | LARGEREQ (e1, e2) -> (l, LARGEREQ (replace_const_symbol (hole, value) e1, replace_const_symbol (hole, value) e2))
+  | AT (e1, e2) -> (l, AT (replace_const_symbol (hole, value) e1, replace_const_symbol (hole, value) e2))
+  | DOUBLECOLON (e1, e2) -> (l, DOUBLECOLON (replace_const_symbol (hole, value) e1, replace_const_symbol (hole, value) e2))
+  | STRCON (e1, e2) -> (l, STRCON (replace_const_symbol (hole, value) e1, replace_const_symbol (hole, value) e2))
+  | EApp (e1, e2) -> (l, EApp (replace_const_symbol (hole, value) e1, replace_const_symbol (hole, value) e2))
+  | ELet (f, is_rec, args, typ, e1, e2) -> (l, ELet (f, is_rec, args, typ, replace_const_symbol (hole, value) e1, replace_const_symbol (hole, value) e2))
+	| EBlock (is_rec, ds, e2) -> 
+		let ds = List.map (fun (f, is_rec, args, typ, e) -> (f, is_rec, args, typ, replace_const_symbol (hole, value) e)) ds in
+		(l, EBlock (is_rec, ds, replace_const_symbol (hole, value) e2))
+	| EMatch (e, bs) ->
+		let (ps, es) = List.split bs in
+		(l, EMatch (replace_const_symbol (hole, value) e, List.combine ps (List.map (replace_const_symbol (hole, value)) es)))
+	| IF (e1, e2, e3) -> (l, IF (replace_const_symbol (hole, value) e1, replace_const_symbol (hole, value) e2, replace_const_symbol (hole, value) e3))
+  | SInt n -> if (n = hole) then (l, Const value) else (l, e)
+  | _ -> (l, e)
 
 (* Main Synthesis Algorithm *)
+let rec is_valid : prog -> input -> bool
+= fun pgm input ->
+	let start_time = Unix.gettimeofday () in
+	let t = 
+	  try
+	    let res_var = "__res__" in
+	    let pgm = pgm@(External.grading_prog) in
+	    let pgm' = pgm @ [(DLet (BindOne res_var,false,[],fresh_tvar(),(appify (gen_label(), EVar !Options.opt_entry_func) input)))] in
+	    let _ = Eval.run pgm' in
+	    true
+	  with e -> false
+	in
+	t
+
 let rec get_output : prog -> input -> value
 = fun pgm input ->
-	let res_var = "__res__" in
-	let pgm = pgm@(External.grading_prog) in
-	let pgm' = pgm @ [(DLet (BindOne res_var,false,[],fresh_tvar(),(appify (gen_label(), EVar !Options.opt_entry_func) input)))] in
-	let env = Eval.run pgm' in
-	lookup_env res_var env
-	
-let rec work : Workset.t -> prog -> prog -> example option
-= fun workset pgm cpgm ->
+	try
+		let res_var = "__res__" in
+		let pgm = pgm@(External.grading_prog) in
+		let pgm' = pgm @ [(DLet (BindOne res_var,false,[],fresh_tvar(),(appify (gen_label(), EVar !Options.opt_entry_func) input)))] in
+		let env = Eval.run pgm' in
+		lookup_env res_var env
+	with e -> failwith (Printexc.to_string e)
+
+let rec return_counter_example : prog -> prog -> input -> example option
+= fun pgm cpgm input ->
+	try
+		let v1 = get_output cpgm input in
+		try
+			let v2 = get_output pgm input in
+			if not (Eval.value_equality v1 v2) then Some (input, v1) else None
+		with e -> print_endline (Printexc.to_string e); Some (input, v1)
+	with _ -> (num_of_crash := !num_of_crash + 1); None
+
+let rec work : Workset.t -> components -> prog -> prog -> example option
+= fun workset comp pgm cpgm ->
 	iter := !iter +1;
-  if (Sys.time()) -. (!start_time) > 60.0 then None
+	if (Unix.gettimeofday()) -. (!start_time) > 180.0 then None
   (*
   else if (!iter mod 10000 = 0)
 	  then
 		  begin
-			  print_string("Test Generation Iter : " ^ (string_of_int !iter) ^ " ");
-			  print_endline((Workset.workset_info workset) ^ (" Total elapsed : " ^ (string_of_float (Sys.time() -. !start_time))));
-			  work workset pgm cpgm
+			  print_endline ((Workset.workset_info workset) ^ (" Total elapsed : " ^ (string_of_float (Unix.gettimeofday() -. !start_time))));
+			  work workset comp pgm cpgm
 		  end
 	*)
 	else
 	match Workset.choose workset with
 	| None -> None
 	| Some ((input, h_t, v_t), remain) ->
+		let input = List.map (Normalize.normalize_exp) input in
+		(*let _ = print_endline (Print.input_to_string input) in*)
 		if is_closed input then
-	  	let _ = count := !count +1 in
-	  	try 
-	  		let v2 = get_output cpgm input in
-	  		try
-	  			let v1 = get_output pgm input in
-	  			if not (Eval.value_equality v1 v2) then Some (input, v2) else work remain pgm cpgm 
-	  		with _ -> Some (input, v2)
-	  	with _ -> work remain pgm cpgm
-		else
-			let nextstates = next (input, h_t, v_t) in
+			let _ = count := !count + 1 in
+	  	let symbols = find_const_symbols input in
+	  	if BatSet.is_empty symbols then
+	  		(* If input has no symbolic value => checking *)
+		  	let ex = return_counter_example pgm cpgm input in
+				if ex = None then work remain comp pgm cpgm else ex
+			else 
+				(* If input has symbolic value => solving *)
+				if is_valid cpgm input then
+				 	begin match Sym_exec.run pgm cpgm input with
+				 	| Some model -> 
+				 		(*
+				 		let _ = print_endline ("COunter") in
+				 		let _ = Unix.sleep 2 in
+				 		*)
+				 		let symbol_map = get_const_symbols model symbols in
+				 		let input = List.fold_left (fun input (n, v) -> List.map (fun e -> replace_const_symbol (n, v) e) input) input symbol_map in
+				  	let ex = return_counter_example pgm cpgm input in
+						if ex = None then work remain comp pgm cpgm else ex
+				 	| None -> work remain comp pgm cpgm
+					end
+				else work remain comp pgm cpgm
+		else if true then
+			let nextstates = next comp (input, h_t, v_t) in
 			let new_workset = BatSet.fold Workset.add nextstates remain in
-			work new_workset pgm cpgm
+			work new_workset comp pgm cpgm
+    else 
+      work remain comp pgm cpgm
 
 let gen_counter_example : prog -> prog -> example option
 = fun pgm cpgm ->
-	let _ = start_time := 0.0 in
+	print_endline ("here");
+	start_time := Unix.gettimeofday();
 	let sketch = get_sketch cpgm in
 	let initial_workset = Workset.add sketch Workset.empty in
-	let result = work initial_workset pgm cpgm in
+	(*let comp = BatSet.union (Comp.all_components ()) (Comp.get_const_comp pgm) in *)
+  let comp = Comp.all_components () in
+	let result = work initial_workset comp pgm cpgm in
 	result

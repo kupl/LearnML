@@ -166,7 +166,7 @@ module Sem : S = struct
 	= fun s (_, exp) ->
 		match exp with
 		| Hole n -> update_alias empty_alias (n,s)
-		| EUnit | Const _ | TRUE | FALSE | String _ | EVar _ -> empty_alias
+		| SInt _ | EUnit | Const _ | TRUE | FALSE | String _ | EVar _ -> empty_alias
 		| NOT e | MINUS e | Raise e -> analysis_exp s e
 		| ADD (e1, e2) | SUB (e1, e2) | MUL (e1, e2) | DIV (e1, e2) | MOD (e1, e2) | OR (e1, e2) | AND (e1, e2)
 		| LESS (e1, e2) | LARGER (e1, e2) | EQUAL (e1, e2) | NOTEQ (e1, e2) | LESSEQ (e1, e2) | LARGEREQ (e1, e2)

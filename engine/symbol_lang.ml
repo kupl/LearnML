@@ -54,6 +54,10 @@ type symbolic_value =
 (* variable to symbolic variable ex. x -> e1 *)
 and symbolic_env = (id, symbolic_value) BatMap.t
 
+let empty_env = BatMap.empty
+let extend_env (x,t) env = BatMap.add x t env
+let find_env x env = BatMap.find x env
+
 (* new symbol *)
 let symbol_num = ref 0
 let init_symbol () = symbol_num := 0

@@ -1,26 +1,35 @@
 open Lang
 open Util
 
-
 (* Control variables *)
 let count = ref 0
 let infinite_count = ref 0
 let start_time = ref 0.0
 
 let trace_set = ref []
-
 let trace_option = ref false
 
+let vhole_num = ref 0
+let fresh_vhole () = (vhole_num := !vhole_num - 1; VHole (!vhole_num))
+
+let rec is_hole : value -> bool
+= fun v ->
+  match v with
+  | VHole _ -> true
+  | _ -> false
+
+let rec gen_hole_list : int -> value list
+= fun n ->
+  if n = 0 then []
+  else
+    (fresh_vhole ())::(gen_hole_list (n-1)) 
+    
 (* Block task *)
 let rec is_fun : value -> bool
 = fun v ->
   match v with
-  | VList vs -> List.exists is_fun vs 
-  | VTuple vs -> List.exists is_fun vs
-  | VCtor (x, vs) -> List.exists is_fun vs
-  | VFun (x, e, closure) -> true
-  | VFunRec (f, x, e, closure) -> true
-  | VBlock (f, vs) -> true
+  | VList vs | VTuple vs | VCtor (_, vs) -> List.exists is_fun vs
+  | VFun _ | VFunRec _ | VBlock _ -> true
   | _ -> false
 
 let rec update_closure : env -> value -> value
@@ -89,15 +98,13 @@ and pattern_match : value -> pat -> bool
   match (v, p) with
   | VInt n1, PInt n2 -> n1 = n2
   | VBool b1, PBool b2 -> b1 = b2
-  | VList l1, PList l2 -> pattern_match_list l1 l2
-  | VTuple l1, PTuple l2 -> pattern_match_list l1 l2
+  | VList l1, PList l2 | VTuple l1, PTuple l2 -> pattern_match_list l1 l2
   | VCtor (x1, l1), PCtor (x2, l2) -> (x1 = x2) && pattern_match_list l1 l2
   | VList [], PCons (phd::ptl) -> if ptl = [] then (pattern_match v phd) else false
   | VList (vhd::vtl), PCons (phd::ptl) -> if ptl = [] then (pattern_match v phd) else (pattern_match vhd phd) && (pattern_match (VList vtl) (PCons ptl))
   (*| VList (vhd::vtl), PCons (phd, ptl) -> (pattern_match v phd) && (pattern_match (VList vtl) ptl) *)
-  | _, PVar x -> true
-  | _, PUnder -> true
   | _, Pats pl -> (try List.exists (pattern_match v) pl with _ -> false)
+  | _, PVar _ | _, PUnder | VHole _, _ -> true
   | _ -> false
 
 and pattern_match_list : value list -> pat list -> bool
@@ -119,18 +126,15 @@ and gather_vars : id BatSet.t -> pat -> id BatSet.t
 let rec bind_pat : env -> value -> pat -> env
 = fun env v p ->
   match (v, p) with
-  | _, PInt n2 -> env
-  | _, PBool b2 -> env
-  | _, PUnder -> env
-  | _, PVar x -> update_env x v env
-  | _, Pats ps -> if check_patterns ps then bind_pat env v (List.find (pattern_match v) ps) else raise (Failure "Invalid pattern list")
-  | VList l1, PList l2 -> bind_pat_list env l1 l2 
-  | VTuple l1, PTuple l2 -> bind_pat_list env l1 l2
-  | VCtor (x1, l1), PCtor (x2, l2) -> bind_pat_list env l1 l2
+  | _, PInt _ | _, PBool _ | _, PUnder -> env
+  | VList l1, PList l2 | VTuple l1, PTuple l2 | VCtor (_, l1), PCtor (_, l2) -> bind_pat_list env l1 l2
+  | VHole _, PList l2 | VHole _, PTuple l2 | VHole _, PCtor (_, l2) -> bind_pat_list env (gen_hole_list (List.length l2)) l2
   | VList [], PCons (phd::ptl) ->  if ptl = [] then (bind_pat env v phd) else raise (Failure "Pattern binding failure")
   | VList (vhd::vtl), PCons (phd::ptl) -> if ptl = [] then bind_pat env v phd else bind_pat (bind_pat env vhd phd) (VList vtl) (PCons ptl)
+  | _, PVar x -> update_env x v env
+  | _, Pats ps -> if check_patterns ps then bind_pat env v (List.find (pattern_match v) ps) else raise (Failure "Invalid pattern list")
   (*| VList (vhd::vtl), PCons (phd::ptl) -> bind_pat (bind_pat env vhd phd) (VList vtl) ptl*)
-  | _ -> raise (Failure "Pattern binding failure")
+  | _ -> raise (Failure ("Pattern binding failure : " ^ Print.pat_to_string p ^ ", " ^ Print.value_to_string v))
 
 and bind_pat_list : env -> value list -> pat list -> env
 = fun env vs ps -> List.fold_left2 bind_pat env vs ps
@@ -156,6 +160,7 @@ let rec eval : env -> lexp -> value
   else
   match e with   
   (* base *)
+  | SInt n -> VHole n
   | EUnit -> VUnit
   | Const n -> VInt n
   | TRUE -> VBool true
@@ -174,12 +179,14 @@ let rec eval : env -> lexp -> value
   | MINUS e ->
     begin match (eval env e) with
     | VInt n -> VInt (-n)
+    | VHole _ -> fresh_vhole ()
     | _ -> raise (Failure "arithmetic_operation error")
     end
   (*bexp*)
   | NOT e -> 
     begin match (eval env e) with
     | VBool b -> VBool (not b)
+    | VHole _ -> fresh_vhole ()
     | _ -> raise (Failure "boolean_operation error")
     end
   | OR (e1, e2) -> (eval_bbop env e1 e2 (||))
@@ -188,24 +195,33 @@ let rec eval : env -> lexp -> value
   | LARGER (e1, e2) -> (eval_abbop env e1 e2 (>))
   | LESSEQ (e1, e2) -> (eval_abbop env e1 e2 (<=))
   | LARGEREQ (e1, e2) -> (eval_abbop env e1 e2 (>=))
-  | EQUAL (e1, e2) -> VBool (eval_equality env e1 e2)
-  | NOTEQ (e1, e2) -> VBool (not (eval_equality env e1 e2))
+  | EQUAL (e1, e2) -> 
+    begin match (eval env e1, eval env e2) with
+    | VHole n, _ | _, VHole n -> fresh_vhole ()
+    | v1, v2 -> VBool (try value_equality v1 v2 with _ -> false)
+    end
+  | NOTEQ (e1, e2) -> 
+    begin match (eval env e1, eval env e2) with
+    | VHole n, _ | _, VHole n -> fresh_vhole ()
+    | v1, v2 -> VBool (not (try value_equality v1 v2 with _ -> false))
+    end
   (* lop *)
   | AT (e1, e2) ->
     begin match (eval env e1, eval env e2) with
     | VList vs1, VList vs2 -> VList (vs1 @ vs2)
+    | VHole n, _ | _, VHole n -> fresh_vhole ()
     | _ -> raise (Failure "list_operation error")
     end
   | DOUBLECOLON (e1, e2) ->
-    let (v1,v2) = (eval env e1,eval env e2) in
-    begin match v1,v2 with
-    |  _,VList vs -> VList (v1::vs)
+    begin match (eval env e1, eval env e2) with
+    | v1, VList vs -> VList (v1::vs)
+    | VHole n, _ | _, VHole n -> fresh_vhole ()
     | _ -> raise (Failure "list_operation error")
     end
   | STRCON (e1,e2) ->
-    let (v1,v2) = (eval env e1,eval env e2) in
-    begin match v1,v2 with
-    | VString str1,VString str2 -> VString (str1^str2)
+    begin match (eval env e1, eval env e2) with
+    | VString str1, VString str2 -> VString (str1^str2)
+    | VHole n, _ | _, VHole n -> fresh_vhole ()
     | _ -> raise (Failure "str_equation error")
     end
   (* else *)
@@ -213,6 +229,7 @@ let rec eval : env -> lexp -> value
     begin match (eval env e1) with
     | VBool true -> eval env e2
     | VBool false -> eval env e3
+    | VHole _ -> fresh_vhole ()
     | _ -> raise (Failure "if_type error")
     end
   | ELet (f, is_rec, args, typ, e1, e2) -> 
@@ -278,8 +295,10 @@ let rec eval : env -> lexp -> value
     in eval env e2
   | EMatch (e, bs) ->
     let v = eval env e in
-    let (p, ex) = find_first_branch v bs in
-    eval (bind_pat env v p) ex
+    if is_hole v then fresh_vhole ()
+    else 
+      let (p, ex) = find_first_branch v bs in
+      eval (bind_pat env v p) ex
   | EFun (arg, e) -> VFun (arg, e, env)
   | EApp (e1, e2) ->
     let (v1, v2) = (eval env e1, eval env e2) in
@@ -294,6 +313,7 @@ let rec eval : env -> lexp -> value
         eval (arg_binding block_env x v2) e
       | _ -> raise (Failure "mutually recursive function call error")
       end
+    | VHole _ -> fresh_vhole ()
     | _ -> raise (Failure "function_call error")
     end
   | Hole n -> VHole n
@@ -305,26 +325,22 @@ and eval_abop : env -> lexp -> lexp -> (int -> int -> int) -> value
 = fun env e1 e2 op ->
   match (eval env e1, eval env e2) with
   | VInt n1, VInt n2 -> VInt (op n1 n2)
+  | VHole n, _ | _, VHole n -> fresh_vhole ()
   | _ -> raise (Failure "arithmetic_operation error")
 
 and eval_abbop : env -> lexp -> lexp -> (int -> int -> bool) -> value
 = fun env e1 e2 op ->
   match (eval env e1, eval env e2) with
   | VInt n1, VInt n2 -> VBool (op n1 n2)
+  | VHole n, _ | _, VHole n -> fresh_vhole ()
   | _ -> raise (Failure "int_relation error")
 
 and eval_bbop : env -> lexp -> lexp -> (bool -> bool -> bool) -> value
 = fun env e1 e2 op ->
   match (eval env e1, eval env e2) with
   | VBool b1, VBool b2 -> VBool (op b1 b2)
+  | VHole n, _ | _, VHole n -> fresh_vhole ()
   | _ -> raise (Failure "boolean_operation error")
-
-and eval_equality : env -> lexp -> lexp -> bool
-= fun env e1 e2->
-  let (x,y) = (eval env e1, eval env e2) in
-  try
-		(value_equality x y)
-	with _ -> false
   
 let rec eval_decl : env -> decl -> env
 = fun env decl ->

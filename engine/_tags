@@ -3,3 +3,4 @@ true: package(core)
 true: package(str)
 true: thread
 true: package(aez)
+true: package(Z3)

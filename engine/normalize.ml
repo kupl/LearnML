@@ -135,6 +135,7 @@ module Simplification = struct
         begin match snd e with
         | Const n -> Const (-n)
         | MINUS e2 -> snd e2
+        | SInt n -> SInt n 
         | _ -> MINUS e
         end
       | ADD (e1, e2) ->
@@ -143,6 +144,7 @@ module Simplification = struct
         | Const n1, Const n2 -> Const (n1 + n2)
         | Const 0, e | e, Const 0 -> e
 				| x1, MINUS x2 | MINUS x2, x1 -> if(x1 = snd x2) then Const 0 else ADD (e1,e2)
+        | SInt n1, SInt n2 -> SInt n1
         | _ -> ADD (e1, e2)
         end
       | SUB (e1, e2) ->
@@ -151,6 +153,7 @@ module Simplification = struct
         | Const n1, Const n2 -> Const (n1 - n2)
         | Const 0, e -> MINUS e2
         | e, Const 0 -> e
+        | SInt n1, SInt n2 -> SInt n1
         | _ -> if (snd e1 = snd e2) then Const 0 else SUB (e1, e2)
         end
       | MUL (e1, e2) ->
@@ -160,6 +163,7 @@ module Simplification = struct
         | Const 0, _ | _, Const 0 -> Const 0
         | Const 1, e -> e
         | e, Const 1 -> e
+        | SInt n1, SInt n2 -> SInt n1
         | _ -> MUL (e1, e2)
         end
       | DIV (e1, e2) ->
@@ -169,6 +173,7 @@ module Simplification = struct
         | Const n1, Const n2 -> Const (n1 / n2)
         | Const 0, _ -> Const 0
         | e, Const 1 -> e
+        | SInt n1, SInt n2 -> SInt n1
         | _ -> if (snd e1 = snd e2) then Const 1 else DIV (e1, e2)
         end
       | MOD (e1, e2) ->
@@ -178,6 +183,7 @@ module Simplification = struct
         | Const n1, Const n2 -> Const (n1 mod n2)
         | Const 0, _ -> Const 0
         | _, Const 1 -> Const 0
+        | SInt n1, SInt n2 -> SInt n1
         | _ -> if (snd e1 = snd e2) then Const 0 else MOD (e1, e2)
         end
       (* bop *)
@@ -328,6 +334,8 @@ let compare_exp : lexp -> lexp -> bool
   | (_,EVar _) -> false
   | (Hole _,_) -> true
   | (_,Hole _) -> false
+  | (SInt _,_) -> true
+  | (_,SInt _) -> false
   | _ -> ((arg_num (l1, e1)) >= (arg_num (l2, e2)))
 
 let rec reorder_exp : lexp -> lexp

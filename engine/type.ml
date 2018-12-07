@@ -279,7 +279,7 @@ let rec gen_equations : HoleType.t -> VariableType.t -> TEnv.t -> lexp -> typ ->
 = fun hole_typ var_typ tenv (l,exp) ty ->
   match exp with
   | EUnit -> ([ty, TUnit], hole_typ, var_typ)
-  | Const n -> ([(ty, TInt)],hole_typ,var_typ)
+  | SInt n | Const n -> ([(ty, TInt)],hole_typ,var_typ)
   | TRUE | FALSE -> ([(ty, TBool)],hole_typ,var_typ)
   | String str -> ([(ty, TString)],hole_typ,var_typ)
   | EVar x -> ([(ty, TEnv.find tenv x)],hole_typ,var_typ)

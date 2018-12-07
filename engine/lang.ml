@@ -58,6 +58,7 @@ type decl =
 and lexp = label * exp											 
 and exp =
   (* Const *)
+  | SInt of int 
   | EUnit
   | Const of int
   | TRUE
@@ -164,6 +165,7 @@ let rec let_to_exp : let_bind -> lexp
 let rec exp_cost : lexp -> int 
 = fun (_,exp) ->
   match exp with
+  | SInt _ -> 15
   | EUnit -> 50
   | Const n -> 15
   | TRUE -> 15

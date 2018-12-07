@@ -2,10 +2,6 @@ open Lang
 open Util
 open Symbol_lang
 
-let empty_env = BatMap.empty
-let extend_env (x,t) env = BatMap.add x t env
-let find_env x env = BatMap.find x env
-
 let infinite_count = ref 0
 let start_time = ref 0.0
 
@@ -310,6 +306,7 @@ let rec partial_eval_exp : symbolic_env -> lexp -> symbolic_value
   let sv = 
     match exp with 
     (* Const *)
+    | SInt _ -> fresh_symbol ()
     | EUnit -> Unit
     | Const n -> Int n
     | TRUE -> Bool true
