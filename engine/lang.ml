@@ -59,6 +59,7 @@ and lexp = label * exp
 and exp =
   (* Const *)
   | SInt of int 
+  | SStr of int
   | EUnit
   | Const of int
   | TRUE
@@ -130,6 +131,10 @@ let hole_count = ref 0
 let gen_hole : unit -> exp
 = fun () -> hole_count:=!hole_count+1; Hole(!hole_count)
 
+let const_count = ref 0
+let gen_const : unit -> int
+= fun () -> const_count:=!const_count+1; !const_count
+
 let label_count = ref 0
 let gen_label : unit -> label
 = fun () -> label_count:=!label_count+1; (!label_count)
@@ -166,6 +171,7 @@ let rec exp_cost : lexp -> int
 = fun (_,exp) ->
   match exp with
   | SInt _ -> 15
+  | SStr _ -> 15
   | EUnit -> 50
   | Const n -> 15
   | TRUE -> 15

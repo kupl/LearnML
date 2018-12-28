@@ -28,6 +28,9 @@ type operator =
 
 (* Symbolic Execution *)
 type symbolic_value = 
+  (* Symbol *)
+  | ASymbol of int (* Integer *)
+  | SSymbol of int (* String *)
   (* Const *)
   | Unit
   | Exn
@@ -37,7 +40,6 @@ type symbolic_value =
   | List of symbolic_value list 
   | Tuple of symbolic_value list
   | Ctor of id * symbolic_value list
-  | Symbol of int
   | Fun of arg * lexp * symbolic_env
   | FunRec of id * arg * lexp * symbolic_env * depth
   | FunBlock of id * (id * sym_formula) list
@@ -109,6 +111,8 @@ let eq_to_string : eq_operator -> string
 let rec symbol_to_string : symbolic_value -> string
 = fun sv ->
   match sv with
+  | ASymbol n -> "#A (" ^ string_of_int n ^ ")"
+  | SSymbol n -> "#S (" ^ string_of_int n ^ ")"
   | Unit -> "()"
   | Int n -> string_of_int n
   | Bool b -> string_of_bool b
@@ -117,7 +121,6 @@ let rec symbol_to_string : symbolic_value -> string
   | Tuple svs -> Print.pp_tuple symbol_to_string svs
   | Ctor (x, svs) -> if svs = [] then x else x ^ " " ^ Print.pp_tuple symbol_to_string svs
   | Exn -> "Exception"
-  | Symbol n -> "#A (" ^ string_of_int n ^ ")"
   | Fun (x, e, closure) -> "Fun (" ^ Print.arg_to_string x ^ ")"
   | FunRec (f, x, e, closure, k) -> "FunRec (" ^ f ^ ", " ^ Print.arg_to_string x ^ ") : " ^ string_of_int k 
   | FunBlock (f, svs) -> "{" ^ f ^ "|->" ^ Print.pp_block symbol_block_to_string svs ^ "}"

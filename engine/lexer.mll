@@ -52,7 +52,7 @@ let reserved_words : (string * Parser.token) list =
   ; ("List.find",LISTFIND)
   ; ("List.assoc", LISTASSOC)
   ; ("String.concat", STRINGCONCAT)
-  ;
+  ; 
   ]
 
 let symbols : (string * Parser.token) list =
@@ -88,6 +88,8 @@ let symbols : (string * Parser.token) list =
   ; ("::",DOUBLECOLON)
   ; ("^",STRCON)
   ; ("'",IDENT)
+  ; ("#S", SHOLE)
+  ; ("#A", AHOLE)
   ]
 
 let create_token lexbuf =

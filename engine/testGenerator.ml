@@ -11,7 +11,6 @@ open Symbol_lang2
 module Comp = struct
   (* generate a fresh const component *)
   let const_num = ref 0
-  let dummy_const () = 0
   let fresh_const () = (const_num := !const_num +1; !const_num)
 
 	(* Syntax Components *)
@@ -22,13 +21,15 @@ module Comp = struct
       except ctor, var (variable comp), tuple, list append, condition let binding, match, exception, hole 
     *)
 		BatSet.empty 
-		|> BatSet.add (0, SInt (dummy_const ()))
+		(*|> BatSet.add (0, Const 1)*)
+		(*|> BatSet.add (0, String "x")*)
+		|> BatSet.add (0, SStr 0)
+		|> BatSet.add (0, SInt 0)
 		|> BatSet.add (0, TRUE)
 		|> BatSet.add (0, FALSE)
 		|> BatSet.add (0, EList [])
 		|> BatSet.add (0, DOUBLECOLON (dummy_hole (), dummy_hole ()))
 		|> BatSet.add (0, ETuple [])
-		|> BatSet.add (0, String "x")
 		|> BatSet.add (0, STRCON (dummy_hole (), dummy_hole ()))
 		|> BatSet.add (0, EFun (ArgUnder (fresh_tvar ()), dummy_hole ()))
 		|> BatSet.add (0, ADD (dummy_hole (), dummy_hole ()))
@@ -51,12 +52,12 @@ module Comp = struct
 		let remove_op_comp : components -> components
 		= fun comp ->
 			comp
+			|> BatSet.remove (0, MINUS (dummy_hole ()))
 			|> BatSet.remove (0, ADD (dummy_hole (), dummy_hole ()))
-			|> BatSet.remove (0, SUB (dummy_hole (), dummy_hole ()))
 			|> BatSet.remove (0, MUL (dummy_hole (), dummy_hole ()))
+			|> BatSet.remove (0, SUB (dummy_hole (), dummy_hole ()))
 			|> BatSet.remove (0, DIV (dummy_hole (), dummy_hole ()))
 			|> BatSet.remove (0, MOD (dummy_hole (), dummy_hole ()))
-			|> BatSet.remove (0, MINUS (dummy_hole ()))
 			|> BatSet.remove (0, NOT (dummy_hole ()))
 			|> BatSet.remove (0, OR (dummy_hole (), dummy_hole ()))
 			|> BatSet.remove (0, AND (dummy_hole (), dummy_hole ()))
@@ -64,6 +65,7 @@ module Comp = struct
 			|> BatSet.remove (0, NOTEQ (dummy_hole (), dummy_hole ()))
 			|> BatSet.remove (0, LESS (dummy_hole (), dummy_hole ()))
 			|> BatSet.remove (0, LESSEQ (dummy_hole (), dummy_hole ()))
+			|> BatSet.remove (0, STRCON (dummy_hole (), dummy_hole ()))
 		in
 		let is_fun : components -> bool
 		= fun comp -> 	
@@ -114,6 +116,7 @@ module Comp = struct
 		| IF (e1, e2, e3) -> (gen_label (), IF (update_components e1, update_components e2, update_components e3))
 		| Hole _ -> gen_labeled_hole ()
     | SInt _ -> (gen_label (), SInt (fresh_const ()))
+    | SStr _ -> (gen_label (), SStr (fresh_const ()))
 	  | _ -> (gen_label (), exp)
 
 	(* Extract Constant Components in submissions *)
@@ -174,10 +177,10 @@ module Cost = struct
 	  | EFun (_, e) -> 30 + size_cost e
 	  | ADD (e1, e2) | SUB (e1, e2) | MUL (e1, e2) | DIV (e1, e2) | MOD (e1, e2)
 	  | OR (e1, e2) | AND (e1, e2) | LESS (e1, e2) | LARGER (e1, e2) | EQUAL (e1, e2) | NOTEQ (e1, e2)
-	  | LESSEQ (e1, e2) | LARGEREQ (e1, e2) | AT (e1, e2) | DOUBLECOLON (e1, e2)| STRCON (e1, e2) -> 15 + size_cost e1 + size_cost e2
+	  | LESSEQ (e1, e2) | LARGEREQ (e1, e2) | STRCON (e1, e2) | AT (e1, e2) | DOUBLECOLON (e1, e2) -> 15 + size_cost e1 + size_cost e2
 	  | Hole _ -> 23
     | EVar _  -> 10
-    | SInt _ | Const _ | TRUE | FALSE | String _  -> 15
+    | SStr _ | SInt _ | Const _ | TRUE | FALSE | String _  -> 15
     | _ -> raise (Failure "Invalid Input Syntax")
 
 	(* cost function for generating a test case *)
@@ -331,6 +334,14 @@ let type_directed : (int * typ * Type.TEnv.t) -> state -> state option
 	(* Transition from hole to exp *)
 	match snd lexp with
 	(* Const *)
+	| SStr _ -> 		
+		begin match typ with
+		| TString -> Some (lexp, h_t, v_t)
+		| TVar _ ->
+			let (h_t, v_t, tenv) = update_polymorphic (typ, TString) (h_t, v_t, tenv) in
+			Some (lexp, h_t, v_t)
+		| _ -> None
+		end
   | SInt _ ->
     begin match typ with
     | TInt -> Some (lexp, h_t, v_t) 
@@ -622,7 +633,7 @@ let rec get_sketch : prog -> Workset.work
 	(input, h_t, v_t)
 
 (* Const symbol *)
-let rec get_const_symbols : lexp -> int BatSet.t
+let rec get_const_symbols : lexp -> (string * int) BatSet.t
 = fun (l, e) ->
 	match e with
   | EList es | ECtor (_, es) | ETuple es -> get_const_symbols_list es
@@ -638,10 +649,11 @@ let rec get_const_symbols : lexp -> int BatSet.t
 		let es = e :: (List.map (fun (p, e) -> e) bs) in
 		get_const_symbols_list es
 	| IF (e1, e2, e3) -> get_const_symbols_list [e1; e2; e3]
-  | SInt n -> BatSet.singleton n
+  | SStr n -> BatSet.singleton ("S", n)
+  | SInt n -> BatSet.singleton ("A", n)
   | _ -> BatSet.empty
 
-and get_const_symbols_list : lexp list -> int BatSet.t
+and get_const_symbols_list : lexp list -> (string * int) BatSet.t
 = fun es ->
 	match es with
 	| [] -> BatSet.empty
@@ -649,10 +661,10 @@ and get_const_symbols_list : lexp list -> int BatSet.t
 		let symbols = get_const_symbols hd in
 		BatSet.union symbols (get_const_symbols_list tl)
 
-let rec find_const_symbols : input -> int BatSet.t
+let rec find_const_symbols : input -> (string * int) BatSet.t
 = fun input -> get_const_symbols_list input
 
-let rec get_const_symbols : Z3.Model.model -> int BatSet.t -> (int * int) list
+let rec get_const_symbols : Z3.Model.model -> (string * int) BatSet.t -> (int * exp) list
 = fun model symbols ->
 	let decls = Z3.Model.get_const_decls model in
   (* Parse Interpreted Model to get mapping of constant symbol *)
@@ -665,7 +677,7 @@ let rec get_const_symbols : Z3.Model.model -> int BatSet.t -> (int * int) list
     	print_endline ("NAME : " ^ Z3.Symbol.to_string name);
     	print_endline ("VALUE : " ^ Z3.Expr.to_string value);
     	*)
-  		if String.contains (Z3.Symbol.to_string name) 'A' then
+    	if String.contains (Z3.Symbol.to_string name) 'A' then
   			let value_string = Z3.Expr.to_string value in
   			let value_string =
   				if Str.string_match (Str.regexp "(- ") value_string 0 
@@ -673,21 +685,33 @@ let rec get_const_symbols : Z3.Model.model -> int BatSet.t -> (int * int) list
 	        else value_string 
 	      in
 	      let id = int_of_string (Str.replace_first (Str.regexp "A") "" (Z3.Symbol.to_string name)) in
-  			let value = int_of_string value_string in
+  			let value = Const (int_of_string value_string) in
+  			(id, value)::acc
+  		else if String.contains (Z3.Symbol.to_string name) 'S' then
+  			let value_string = Z3.Expr.to_string value in
+  			let value_string = 
+  				if Str.string_match (Str.regexp "!") value_string 0
+  				then Str.replace_first (Str.regexp "\"!") "" (Str.replace_first (Str.regexp "!\"") "" value_string) (* Remove double quotation *)
+  				else ""
+  			in
+	      let id = int_of_string (Str.replace_first (Str.regexp "S") "" (Z3.Symbol.to_string name)) in
+  			let value = String ("x_" ^ value_string) in
   			(id, value)::acc
   		else acc
     | None -> acc
     end
   ) [] decls
   in
-  (* If some symbols don't have value => Randomly instantiating (Const 0) *)
-  let symbol_map = BatSet.fold (fun symbol map -> 
-  	if List.exists (fun (n, v) -> n = symbol) map then map else (symbol, 1)::map
+  (* If some symbols don't have value => Randomly instantiating (Const 1, Str "x") *)
+  let symbol_map = BatSet.fold (fun (typ, symbol) map -> 
+  	if List.exists (fun (n, v) -> n = symbol) map then map 
+  	else if typ = "A" then (symbol, Const 1)::map
+  	else (symbol, String "x")::map
   ) symbols symbol_map
 	in
 	symbol_map
 
-let rec replace_const_symbol : (int * int) -> lexp -> lexp
+let rec replace_const_symbol : (int * exp) -> lexp -> lexp
 = fun (hole, value) (l, e) ->
 	match e with 
 	| EList es -> (l, EList (List.map (replace_const_symbol (hole, value)) es))
@@ -722,7 +746,7 @@ let rec replace_const_symbol : (int * int) -> lexp -> lexp
 		let (ps, es) = List.split bs in
 		(l, EMatch (replace_const_symbol (hole, value) e, List.combine ps (List.map (replace_const_symbol (hole, value)) es)))
 	| IF (e1, e2, e3) -> (l, IF (replace_const_symbol (hole, value) e1, replace_const_symbol (hole, value) e2, replace_const_symbol (hole, value) e3))
-  | SInt n -> if (n = hole) then (l, Const value) else (l, e)
+  | SStr n | SInt n -> if (n = hole) then (l, value) else (l, e)
   | _ -> (l, e)
 
 (* Main Synthesis Algorithm *)
@@ -763,7 +787,7 @@ let rec return_counter_example : prog -> prog -> input -> example option
 let rec work : Workset.t -> components -> prog -> prog -> example option
 = fun workset comp pgm cpgm ->
 	iter := !iter +1;
-	if (Unix.gettimeofday()) -. (!start_time) > 180.0 then None
+	if (Unix.gettimeofday()) -. (!start_time) > 120.0 then None
   (*
   else if (!iter mod 10000 = 0)
 	  then
@@ -777,8 +801,8 @@ let rec work : Workset.t -> components -> prog -> prog -> example option
 	| None -> None
 	| Some ((input, h_t, v_t), remain) ->
 		let input = List.map (Normalize.normalize_exp) input in
-		(*let _ = print_endline (Print.input_to_string input) in*)
 		if is_closed input then
+			let _ = print_endline (Print.input_to_string input) in
 			let _ = count := !count + 1 in
 	  	let symbols = find_const_symbols input in
 	  	if BatSet.is_empty symbols then
@@ -788,7 +812,7 @@ let rec work : Workset.t -> components -> prog -> prog -> example option
 			else 
 				(* If input has symbolic value => solving *)
 				if is_valid cpgm input then
-				 	begin match Sym_exec.run pgm cpgm input with
+				 	begin match Sym_exec.run2 pgm cpgm input with
 				 	| Some model -> 
 				 		(*
 				 		let _ = print_endline ("COunter") in
@@ -801,7 +825,7 @@ let rec work : Workset.t -> components -> prog -> prog -> example option
 				 	| None -> work remain comp pgm cpgm
 					end
 				else work remain comp pgm cpgm
-		else if true then
+		else if is_valid cpgm input then
 			let nextstates = next comp (input, h_t, v_t) in
 			let new_workset = BatSet.fold Workset.add nextstates remain in
 			work new_workset comp pgm cpgm
@@ -810,7 +834,6 @@ let rec work : Workset.t -> components -> prog -> prog -> example option
 
 let gen_counter_example : prog -> prog -> example option
 = fun pgm cpgm ->
-	print_endline ("here");
 	start_time := Unix.gettimeofday();
 	let sketch = get_sketch cpgm in
 	let initial_workset = Workset.add sketch Workset.empty in

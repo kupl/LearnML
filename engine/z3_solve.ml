@@ -26,6 +26,7 @@ module CtorTable = struct
       | TBlock decls -> List.fold_left generation2 t decls
       | _ -> t
     in
+    let decls = Type.Converter.convert Type.Converter.empty decls in
     List.fold_left generation2 t decls
     
   let print : t -> unit
@@ -47,7 +48,7 @@ module Z3_Translator = struct
   let counter = ref 0
   let new_counter () = (counter := !counter + 1); !counter
   (* context => if the formula is too hard to solve in 2 sec, fail to find a counter example *)
-  let new_ctx () = mk_context []
+  let new_ctx () = mk_context [("timeout", "10")]
 
   (* sort *)
   let int_sort ctx = Z3.Arithmetic.Integer.mk_sort ctx
@@ -105,7 +106,7 @@ module Z3_Translator = struct
   
   (* Generate a symbolic variable whose type is sort in current context *)
   let symbol_num = ref 0
-  let fresh_id () = (symbol_num := !symbol_num + 1); ("S" ^ (string_of_int !symbol_num))
+  let fresh_id () = (symbol_num := !symbol_num + 1); ("#" ^ (string_of_int !symbol_num))
   let int_symbol ctx = mk_symbol ctx (fresh_id ()) (int_sort ctx)
   let bool_symbol ctx = mk_symbol ctx (fresh_id ()) (bool_sort ctx)
   let string_symbol ctx = mk_symbol ctx (fresh_id ()) (string_sort ctx)
@@ -233,7 +234,11 @@ module Z3_Translator = struct
   = fun ctor_map ctx sv ->
     match sv with
     (* Symbol *)
-    | Symbol n ->
+    | SSymbol n ->
+      let id = string_symbol ctx in 
+      let expr = mk_symbol ctx ("S" ^ string_of_int n) (string_sort ctx) in
+      (id, [mk_eq ctx id expr])
+    | ASymbol n ->
       let id = int_symbol ctx in 
       let expr = mk_symbol ctx ("A" ^ string_of_int n) (int_sort ctx) in
       (id, [mk_eq ctx id expr])

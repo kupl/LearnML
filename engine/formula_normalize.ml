@@ -78,6 +78,7 @@ and normalize_aop : operator -> symbolic_value -> symbolic_value -> symbolic_val
     | Int 0, sv | sv, Int 0 -> sv
     | Int n1, Aop (Add, Int n2, sv') | Int n1, Aop (Add, sv', Int n2) -> normalize_sym_val (Aop (Add, Int (n1 + n2), sv'))
     | Aop (Add, Int n1, sv'), Int n2 | Aop (Add, sv', Int n1), Int n2 -> normalize_sym_val (Aop (Add, Int (n1 + n2), sv'))
+    | Aop (Sub, sv', Int n1), Int n2 -> normalize_sym_val (Aop (Add, Int (n2 - n1), sv'))
     | _ -> Aop (op, sv1, sv2)
     end
 	| Sub -> 
@@ -202,30 +203,11 @@ and normalize_eqop : eq_operator -> symbolic_value -> symbolic_value -> symbolic
       | Ctor (x, svs1), Ctor (y, svs2) -> 
         if x = y then  
           let sv = List.fold_left2 (fun sv sv1 sv2 -> Bop (Or, sv, EQop (NEq, sv1, sv2))) (Bool false) svs1 svs2 in
-          (*
-          let sv' = normalize_sym_val sv in
-          let _ =
-            if sv' = Bool true || sv' = Bool false || sv' = EQop (op, sv1, sv2) then ()
-            else 
-              (print_endline ("**************");
-              print_endline ("Before : " ^ symbol_to_string (EQop (op, sv1, sv2)));
-              print_endline ("After : " ^ symbol_to_string sv'))
-          in
-          *)
           normalize_sym_val sv
         else Bool true
       | sv1, sv2 -> if sv1 = sv2 then Bool false else EQop (op, sv1, sv2)
       end
     in
-    (*
-    let _ =
-      if sv' = Bool true || sv' = Bool false || sv' = EQop (op, sv1, sv2) then ()
-      else 
-        (print_endline ("**************");
-        print_endline ("Before : " ^ symbol_to_string (EQop (op, sv1, sv2)));
-        print_endline ("After : " ^ symbol_to_string sv'))
-    in
-    *)
     sv'
 
 let rec has_eq : path_cond -> symbolic_value -> symbolic_value -> bool
@@ -253,7 +235,102 @@ let rec normalize_pc : path_cond -> path_cond -> path_cond
 		in
 		normalize_pc pc pc'
 
+(*********************)
 (* remove unsat path *)
+(*********************)
+
+(* Check given sv is integer *)
+let is_pos : symbolic_value -> bool
+= function
+  | Int n -> n >= 0
+  | _ -> false
+
+let is_neg : symbolic_value -> bool
+= function 
+  | Int n -> n < 0
+  | _ -> false
+
+let is_int : symbolic_value -> bool
+= function
+  | Int _ -> true
+  | _ -> false
+
+(* Check sv1 is arithmetic operation with sv2 and other constant *)
+let is_add : symbolic_value -> symbolic_value -> bool
+= fun sv1 sv2 ->
+  match sv1 with
+  | Aop (Add, sv1', sv2') -> (sv1' = sv2 && is_int sv2') || (sv2' = sv2 && is_int sv1')
+  | _ -> false  
+
+let is_sub : symbolic_value -> symbolic_value -> bool
+= fun sv1 sv2 ->
+  match sv1 with
+  | Aop (Sub, sv1', sv2') -> (sv1' = sv2 && is_int sv2') || (sv2' = sv2 && is_int sv1')
+  | _ -> false  
+
+let is_sub2 : symbolic_value -> symbolic_value -> bool
+= fun sv1 sv2 ->
+  match sv1 with
+  | Aop (Sub, sv1', sv2') -> (sv1' = sv2 && is_pos sv2') || (sv2' = sv2 && is_pos sv1')
+  | _ -> false 
+
+let is_mul : symbolic_value -> symbolic_value -> bool
+= fun sv1 sv2 ->
+  match sv1 with
+  | Aop (Mul, sv1', sv2') -> (sv1' = sv2 && is_int sv2') || (sv2' = sv2 && is_int sv1')
+  | _ -> false  
+
+let is_div : symbolic_value -> symbolic_value -> bool
+= fun sv1 sv2 ->
+  match sv1 with
+  | Aop (Div, sv1', sv2') -> (sv1' = sv2 && is_int sv2') || (sv2' = sv2 && is_int sv1')
+  | _ -> false  
+
+let is_aop : symbolic_value -> symbolic_value -> bool
+= fun sv1 sv2 -> (is_add sv1 sv2) || (is_sub sv1 sv2) || (is_mul sv1 sv2) || (is_div sv1 sv2)
+
+(* An eq_relation sv is unsat if there exist sv1 = sv2 and sv is sv2 = (sv1 aop const) *)
+(* Need Refactoring this parts with above predicates *)
+let rec is_unsat_eq : symbolic_value -> symbolic_value -> symbolic_value -> bool
+= fun sv sv1 sv2 ->
+  match sv with
+  | EQop (Eq, Aop (op, sv1', sv2'), sv) | EQop (Eq, sv, Aop (op, sv1', sv2')) ->
+    if op <> Mod then
+      if sv = sv1 then 
+        if sv1' = sv2 && is_int sv2' then true
+        else if sv2' = sv2 && is_int sv1' then true
+        else false
+      else if sv = sv2 then
+        if sv1' = sv1 && is_int sv2' then true
+        else if sv2' = sv1 && is_int sv1' then true
+        else false
+      else false  
+    else false
+  | _ -> false
+
+(* An eq_relation sv is unsat if there exist sv1 >= sv2 and sv is sv2 = (sv1 - pos) *)
+let comp_sat_checker : comparator -> path_cond -> symbolic_value -> symbolic_value -> bool
+= fun op pc sv1 sv2 ->
+  match op with
+  | Lt | Le -> 
+    BatSet.exists (fun sv -> 
+      match sv with
+      | EQop (Eq, sv1', sv2') -> 
+        if sv1' = sv1 && is_sub2 sv2' sv2 then true
+        else if sv2' = sv1 && is_sub2 sv1' sv2 then true
+        else false
+      | _ -> false 
+    ) pc
+  | Gt | Ge ->
+    BatSet.exists (fun sv -> 
+      match sv with
+      | EQop (Eq, sv1', sv2') -> 
+        if sv1' = sv2 && is_sub2 sv2' sv1 then true
+        else if sv2' = sv2 && is_sub2 sv1' sv1 then true
+        else false
+      | _ -> false 
+    ) pc
+
 let rec is_sat_pc : path_cond -> path_cond -> bool
 = fun pc pc' ->
 	if BatSet.is_empty pc then true
@@ -261,17 +338,21 @@ let rec is_sat_pc : path_cond -> path_cond -> bool
 		let (sv, pc) = BatSet.pop pc in
 		match sv with
     | Bool false -> false
-		| EQop (op, sv1, sv2) -> if (BatSet.mem (EQop (negate_eq op, sv1, sv2)) pc' || BatSet.mem (EQop (negate_eq op, sv2, sv1)) pc') then false else is_sat_pc pc pc' 
+		| EQop (op, sv1, sv2) -> 
+      if (BatSet.mem (EQop (negate_eq op, sv1, sv2)) pc' || BatSet.mem (EQop (negate_eq op, sv2, sv1)) pc') then false 
+      else
+        begin match op with
+        | Eq -> if BatSet.exists (fun sv -> is_unsat_eq sv sv1 sv2) pc' then false else is_sat_pc pc pc'
+        | NEq -> is_sat_pc pc pc' 
+        end
 		| ABop (op, sv1, sv2) -> 
-			begin match op with
-			| Lt | Gt -> if BatSet.mem (ABop (op, sv2, sv1)) pc' then false else is_sat_pc pc pc'
-			| _ -> if BatSet.mem (ABop (negate_comp op, sv1, sv2)) pc' then false else is_sat_pc pc pc'
-			end
-		| Bop (Or, sv1, sv2) ->
-			begin match sv1, sv2 with
-			| EQop (op1, lsv1, rsv1), EQop (op2, lsv2, rsv2) -> if (BatSet.mem (EQop (negate_eq op1, lsv1, rsv1)) pc' && BatSet.mem (EQop (negate_eq op2, lsv2, rsv2)) pc') then false else is_sat_pc pc pc'
-			| _ -> is_sat_pc pc pc'
-			end
+      if BatSet.mem (ABop (negate_comp op, sv1, sv2)) pc' then false 
+      else if comp_sat_checker op pc' sv1 sv2 then false
+      else
+        begin match op with
+        | Lt | Gt -> if (BatSet.mem (ABop (op, sv2, sv1)) pc') || (BatSet.mem (EQop (Eq, sv2, sv1)) pc') || (BatSet.mem (EQop (Eq, sv1, sv2)) pc') then false else is_sat_pc pc pc'
+        | _ -> is_sat_pc pc pc'
+        end
 		| _ -> is_sat_pc pc pc' 
 
 (* Main procedures *)
@@ -292,4 +373,5 @@ let rec run : sym_formula -> sym_formula
 		let x = filter_formula x in
 		x
 	in
-	one_step psi
+	let psi = one_step psi in
+  psi

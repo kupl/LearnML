@@ -84,32 +84,14 @@ let fix_with_solution : prog -> prog -> examples -> unit
     with |_ -> score
   ) examples 0 in
   let _ = if(score=List.length examples) then raise (Failure "The submission is correct code") in
-  (*print_header "Score"; print_endline(string_of_int score);
-  print_header "Solution"; Print.print_pgm solution;
-  print_header "Submission"; Print.print_pgm submission;
-  print_header "Test-cases"; print_examples examples;*)
   let ranked_prog_set = Localize.localization submission examples in
   let initial_set = BatSet.map
    (
       fun (n,prog)->
         let (_,hole_type,variable_type) = Type.run prog in
-				(*Print.print_pgm prog;
-				print_endline(string_of_int n);*)
-				(*Type.HoleType.print hole_type;
-				Type.VariableType.print variable_type;*)
         (n,prog,hole_type,variable_type)
     ) ranked_prog_set in
-  (*print_header "initial-set"; print_endline(string_of_int (BatSet.cardinal initial_set));*)
   let components = Comp.extract_component solution in
-  
-	(*let components = BatSet.filter (fun x ->
-    match x with
-    | Const _ -> false
-    | EList _ -> false
-    | _ -> true
-  ) components
-  in
-  let components = BatSet.union components (Comp.all_component ()) in*)
   let _ = Synthesize.hole_synthesize submission initial_set components examples in
   ()
 
@@ -218,44 +200,47 @@ let read_prog : string -> prog option
   with _ -> raise (Failure ("parsing error: " ^ filename)) 
 
 let main () = 
+  (* Arg Parse *)
 	let _ = print_endline("file: "^Sys.argv.(0)) in
   let _ = Arg.parse options (fun s->()) usage_msg in
   let testcases = 
     if !opt_testcases_filename = "" then [] 
-    else try fst (parse_file !opt_testcases_filename) 
-         with _ -> raise (Failure ("error during parsing testcases: " ^ !opt_testcases_filename)) in 
-  let submission = read_prog !opt_submission_filename in
+    else 
+      try fst (parse_file !opt_testcases_filename) 
+      with _ -> raise (Failure ("error during parsing testcases: " ^ !opt_testcases_filename)) 
+  in 
   let solution = read_prog !opt_solution_filename in
-    match !opt_run, !opt_fix, !opt_gentest, !opt_execute with
-    | true, false, false, false -> (* execution mode *)
-      begin
-        match submission with
-        | Some sub -> run_prog sub testcases
-        | _ -> raise (Failure (!opt_submission_filename ^ " does not exist"))
-      end
-    | false, true, false, false -> (* fix mode *)
-      begin
-        match submission, solution with
-        | Some sub, Some sol -> 
-          begin match testcases with
-          | [] -> fix_without_testcases sub sol
-          | _ -> fix_with_solution sub sol testcases
-          end
-        | Some sub, None -> fix_without_solution sub testcases 
-        | _ -> raise (Failure (!opt_submission_filename ^ " does not exist"))
-      end
-    | false, false, true, false -> (* testcase-generation mode *)
-      begin
-        match submission, solution with
-        | Some sub, Some sol -> ignore (generate_testcases sub sol)
-        | _ -> raise (Failure "Submission or solution is not provided")
-      end
-    | false, false, false, true -> (* execution mode *)
-      begin 
-        match submission with
-        | Some sub -> execute sub
-        | _ -> raise (Failure "Submission file is not provided")
-      end
-    | _ -> Arg.usage options usage_msg
+  let submission = read_prog !opt_submission_filename in
+  (* Main Procedure *)
+  if !opt_run then (* Run testcase *)
+    begin
+      match submission with
+      | Some sub -> run_prog sub testcases
+      | _ -> raise (Failure (!opt_submission_filename ^ " does not exist"))
+    end
+  else if !opt_fix then (* FixML *)
+    begin
+      match submission, solution with
+      | Some sub, Some sol ->
+        begin match testcases with
+        | [] -> fix_without_testcases sub sol
+        | _ -> fix_with_solution sub sol testcases
+        end
+      | Some sub, None -> fix_without_solution sub testcases 
+      | _ -> raise (Failure (!opt_submission_filename ^ " does not exist"))
+    end
+  else if !opt_execute then (* Execute Program *)
+    begin 
+      match submission with
+      | Some sub -> execute sub
+      | _ -> raise (Failure "Submission file is not provided")
+    end
+  else if !opt_gentest then (* Counter Example Generation *)
+    begin
+      match submission, solution with
+      | Some sub, Some sol -> ignore (generate_testcases sub sol)
+      | _ -> raise (Failure "Submission or solution is not provided")
+    end
+  else Arg.usage options usage_msg
 
 let _ = main ()

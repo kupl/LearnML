@@ -260,6 +260,7 @@ module Simplification = struct
         let (e1, e2) = (simplify_exp e1, simplify_exp e2) in
         begin match (snd e1, snd e2) with
         | String s1, String s2 -> String (s1 ^ s2)
+        | SStr n, _ | _, SStr n -> SStr n
         | _ -> STRCON (e1, e2)
         end
       (* else *)

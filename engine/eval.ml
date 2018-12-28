@@ -15,6 +15,7 @@ let fresh_vhole () = (vhole_num := !vhole_num - 1; VHole (!vhole_num))
 let rec is_hole : value -> bool
 = fun v ->
   match v with
+  | VList vs | VTuple vs | VCtor (_, vs) -> List.exists is_hole vs
   | VHole _ -> true
   | _ -> false
 
@@ -70,6 +71,7 @@ let rec arg_binding : env -> arg -> value -> env
       | Invalid_argument _ -> raise (Failure "argument binding failure - tuples are not compatible")
       | _ -> raise (StackOverflow "Stack overflow during evaluation (looping recursion?)")
     )
+  | ArgTuple xs, VHole _ -> arg_binding env arg (VTuple (gen_hole_list (List.length xs)))
   | _ -> raise (Failure "argument binding failure")
 
 let rec let_binding : env -> let_bind -> value -> env
@@ -84,6 +86,7 @@ let rec let_binding : env -> let_bind -> value -> env
       | Invalid_argument _ -> raise (Failure "argument binding failure - tuples are not compatible")
       | _ -> raise (StackOverflow "Stack overflow during evaluation (looping recursion?)")
     )
+  | BindTuple xs, VHole _ -> let_binding env x (VTuple (gen_hole_list (List.length xs)))
 	| _ -> raise (Failure "let binding failure")
 
 (* Pattern Matching *)
@@ -161,6 +164,7 @@ let rec eval : env -> lexp -> value
   match e with   
   (* base *)
   | SInt n -> VHole n
+  | SStr n -> VHole n
   | EUnit -> VUnit
   | Const n -> VInt n
   | TRUE -> VBool true

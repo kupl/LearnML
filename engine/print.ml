@@ -109,7 +109,8 @@ let rec let_to_string : let_bind -> string
 let rec exp_to_string : lexp -> string
 = fun (_, exp) ->
   match exp with
-  |SInt n -> "#S"
+  |SInt n -> "#A"
+  |SStr n -> "#S"
   |EUnit -> "()"
   |Const n -> string_of_int n
   |String id -> "\"" ^ id ^"\""

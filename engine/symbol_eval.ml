@@ -306,7 +306,7 @@ let rec partial_eval_exp : symbolic_env -> lexp -> symbolic_value
   let sv = 
     match exp with 
     (* Const *)
-    | SInt _ -> fresh_symbol ()
+    | SStr _ | SInt _ -> fresh_symbol ()
     | EUnit -> Unit
     | Const n -> Int n
     | TRUE -> Bool true

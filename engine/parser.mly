@@ -47,6 +47,8 @@ let rec binding_args : arg list -> lexp -> lexp
 %token FUNCTION
 
 %token HOLE       (* ? *)
+%token AHOLE      (* #A *)
+%token SHOLE      (* #S *)
 (* %token IMPLIES    (* |> *) *)
 %token EQ         (* = *)
 %token ARR        (* -> *)
@@ -458,6 +460,10 @@ exp_base:
     { e }
   | HOLE
     { (gen_label(), Lang.gen_hole()) }
+  | AHOLE  
+    { (gen_label(), SInt (Lang.gen_const ())) }
+  | SHOLE
+    { (gen_label(), SStr (Lang.gen_const ())) }
   | LISTHD
     { (gen_label(), (EVar "__list_hd__")) }
   | LISTTL
