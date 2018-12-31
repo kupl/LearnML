@@ -4,7 +4,7 @@ open Symbol_lang2
 
 module Executor = struct
 	(* Symbolic execution module *)
-	let k_bound = ref 6	(* Loop bound *)
+	let k_bound = ref 6 (* Loop bound *)
 	let start_time = ref 0.0 (* Time Out *)
 
 	let empty_env = BatMap.empty
@@ -230,14 +230,16 @@ module Executor = struct
 	= fun env pc mode (l, exp) ->
 		(*
 		let _ =
+			print_endline (string_of_pc pc);
 			print_endline ("Exp : " ^ Print.exp_to_string (l, exp));
 			print_endline (if mode then "Dynamic" else "Static");
+			print_endline ("Time : " ^ string_of_float (Unix.gettimeofday () -. !start_time))
 		in
 		*)
 		let psi =
 			try 
-				if Unix.gettimeofday () -. !start_time > 0.15 then
-					let _ = start_time := Unix.gettimeofday () in 
+				if Unix.gettimeofday () -. !start_time > 0.2 then
+					(*let _ = start_time := Unix.gettimeofday () in*)
 					BatSet.singleton (pc, Exn) 
 				else match exp with 
 			  (* Const *)
@@ -683,38 +685,40 @@ let rec run : prog -> prog -> lexp list -> Z3.Model.model option
 	print_endline ("Symbolic Execution.. C");
 	
 	let psi_c = Executor.run cpgm input in
-	
-	Print.print_header "Solution"; print psi_c;
-	print_endline ("=======================\nSize : " ^ string_of_int (BatSet.cardinal psi_c));
-	print_endline ("Symbolic Execution.. B");
-	
-	let psi_b = Executor.run pgm input in
-	
-	Print.print_header "Buggy"; print psi_b;
-	print_endline ("=======================\nSize : " ^ string_of_int (BatSet.cardinal psi_b));
-	
-	let vc = (VC_generator.run psi_b psi_c) in
-	
-	print_endline ("VC Size : " ^ string_of_int (List.length vc));
-  Print.print_header "VC"; VC_generator.print_vc vc;
-	
-	(*
-	print_endline ("Input : " ^ Print.input_to_string input);
-	print_endline ("Symbolic Execution.. C");
-	Print.print_header "Solution"; print psi_c;
-	print_endline ("=======================\nSize : " ^ string_of_int (BatSet.cardinal psi_c));
-	print_endline ("Symbolic Execution.. B");
-	Print.print_header "Buggy"; print psi_b;
-	print_endline ("=======================\nSize : " ^ string_of_int (BatSet.cardinal psi_b));
-	print_endline ("VC generation..");
-	*)
-	(*
-	print_endline ("VC Size : " ^ string_of_int (List.length vc));
-  Print.print_header "VC"; VC_generator.print_vc vc;
-	*)
-  let models = List.map (fun formula -> Z3_solve.check ctor_table formula) vc in
-  try List.find (fun model -> not (model = None)) models with _ -> None
-
+	if BatSet.is_empty psi_c then
+		None
+	else
+		(Print.print_header "Solution"; print psi_c;
+		print_endline ("=======================\nSize : " ^ string_of_int (BatSet.cardinal psi_c));
+		print_endline ("Symbolic Execution.. B");
+		
+		let psi_b = Executor.run pgm input in
+		
+		Print.print_header "Buggy"; print psi_b;
+		print_endline ("=======================\nSize : " ^ string_of_int (BatSet.cardinal psi_b));
+		
+		let vc = (VC_generator.run psi_b psi_c) in
+		
+		print_endline ("VC Size : " ^ string_of_int (List.length vc));
+	  Print.print_header "VC"; VC_generator.print_vc vc;
+		
+		(*
+		print_endline ("Input : " ^ Print.input_to_string input);
+		print_endline ("Symbolic Execution.. C");
+		Print.print_header "Solution"; print psi_c;
+		print_endline ("=======================\nSize : " ^ string_of_int (BatSet.cardinal psi_c));
+		print_endline ("Symbolic Execution.. B");
+		Print.print_header "Buggy"; print psi_b;
+		print_endline ("=======================\nSize : " ^ string_of_int (BatSet.cardinal psi_b));
+		print_endline ("VC generation..");
+		*)
+		(*
+		print_endline ("VC Size : " ^ string_of_int (List.length vc));
+	  Print.print_header "VC"; VC_generator.print_vc vc;
+		*)
+	  let models = List.map (fun formula -> Z3_solve.check ctor_table formula) vc in
+	  try List.find (fun model -> not (model = None)) models with _ -> None
+		)
 let rec run2 : prog -> prog -> lexp list -> Z3.Model.model option
 = fun pgm cpgm input -> 
 	let ctor_table = Z3_solve.CtorTable.generation BatMap.empty pgm in
@@ -722,24 +726,26 @@ let rec run2 : prog -> prog -> lexp list -> Z3.Model.model option
 	(* Symbolic Formula Generation *)
 	
 	let psi_c = Executor.run cpgm input in
-	
-	let psi_b = Executor.run pgm input in
-	
-	let vc = (VC_generator.run psi_b psi_c) in
-	
-	(*
-	print_endline ("Input : " ^ Print.input_to_string input);
-	print_endline ("Symbolic Execution.. C");
-	Print.print_header "Solution"; print psi_c;
-	print_endline ("=======================\nSize : " ^ string_of_int (BatSet.cardinal psi_c));
-	print_endline ("Symbolic Execution.. B");
-	Print.print_header "Buggy"; print psi_b;
-	print_endline ("=======================\nSize : " ^ string_of_int (BatSet.cardinal psi_b));
-	print_endline ("VC generation..");
-	*)
-	(*
-	print_endline ("VC Size : " ^ string_of_int (List.length vc));
-  Print.print_header "VC"; VC_generator.print_vc vc;
-	*)
-  let models = List.map (fun formula -> Z3_solve.check ctor_table formula) vc in
-  try List.find (fun model -> not (model = None)) models with _ -> None
+	if BatSet.is_empty psi_c then
+		None
+	else
+		let psi_b = Executor.run pgm input in
+		
+		let vc = (VC_generator.run psi_b psi_c) in
+		
+		(*
+		print_endline ("Input : " ^ Print.input_to_string input);
+		print_endline ("Symbolic Execution.. C");
+		Print.print_header "Solution"; print psi_c;
+		print_endline ("=======================\nSize : " ^ string_of_int (BatSet.cardinal psi_c));
+		print_endline ("Symbolic Execution.. B");
+		Print.print_header "Buggy"; print psi_b;
+		print_endline ("=======================\nSize : " ^ string_of_int (BatSet.cardinal psi_b));
+		print_endline ("VC generation..");
+		*)
+		(*
+		print_endline ("VC Size : " ^ string_of_int (List.length vc));
+	  Print.print_header "VC"; VC_generator.print_vc vc;
+		*)
+	  let models = List.map (fun formula -> Z3_solve.check ctor_table formula) vc in
+	  try List.find (fun model -> not (model = None)) models with _ -> None

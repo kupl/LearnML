@@ -129,7 +129,8 @@ rule token = parse
   | uppercase (digit | character | ''' | '_')*    { UID (lexeme lexbuf) }
   | uppercase (digit | character | ''' | '_')*('.')(digit | character | ''' | '_')* {create_external lexbuf}
   | '?' | "|>" | '=' | "->" | "=>" | '*' | ',' | ':' | ';' | '|' | '(' | ')' | '{' | '}' | '[' | ']' 
-  | '_' | '+' | '-' | '/'| '%' | "||" | "&&" | "<" | ">" | "<=" | ">=" | "!=" | "<>" | "@"| "::" | "'" |"^" | "&" 
+  | '_' | '+' | '-' | '/'| '%' | "||" | "&&" | "<" | ">" | "<=" | ">=" | "!=" | "<>" | "@"| "::" | "'" | "^" | "&" 
+  | "#S" | "#A"
     { create_symbol lexbuf }
   | _ as c { raise @@ Lexer_error ("Unexpected character: " ^ Char.escaped c) }
 

@@ -241,6 +241,12 @@ let main () =
       | Some sub, Some sol -> ignore (generate_testcases sub sol)
       | _ -> raise (Failure "Submission or solution is not provided")
     end
+  else if !opt_test then (* Symbolic testing *)
+    begin
+      match submission, solution with
+      | Some sub, Some sol -> List.fold_left (fun acc (input, output) -> if (Sym_exec.run sub sol input) = None then print_endline ("SAT") else print_endline ("UNSAT")) () testcases
+      | _ -> raise (Failure "Submission or solution is not provided")
+    end
   else Arg.usage options usage_msg
 
 let _ = main ()

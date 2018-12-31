@@ -672,7 +672,7 @@ let rec get_const_symbols : Z3.Model.model -> (string * int) BatSet.t -> (int * 
   	let name = Z3.FuncDecl.get_name decl in
   	begin match Z3.Model.get_const_interp model decl with
     | Some value -> 
-    	(*
+ 			(*
     	print_endline ("DECL : " ^ Z3.FuncDecl.to_string decl);
     	print_endline ("NAME : " ^ Z3.Symbol.to_string name);
     	print_endline ("VALUE : " ^ Z3.Expr.to_string value);
@@ -689,13 +689,13 @@ let rec get_const_symbols : Z3.Model.model -> (string * int) BatSet.t -> (int * 
   			(id, value)::acc
   		else if String.contains (Z3.Symbol.to_string name) 'S' then
   			let value_string = Z3.Expr.to_string value in
-  			let value_string = 
-  				if Str.string_match (Str.regexp "!") value_string 0
-  				then Str.replace_first (Str.regexp "\"!") "" (Str.replace_first (Str.regexp "!\"") "" value_string) (* Remove double quotation *)
-  				else ""
+  			let value_string = (* Remove double quotation *)
+  				if Str.string_match (Str.regexp "\"!") value_string 0
+  				then "x_" ^ (Str.replace_first (Str.regexp "\"!") "" (Str.replace_first (Str.regexp "!\"") "" value_string)) (* n'th string *)
+  				else Str.replace_first (Str.regexp "\"") "" (Str.replace_first (Str.regexp "\"") "" value_string) (* Use constant string *)
   			in
 	      let id = int_of_string (Str.replace_first (Str.regexp "S") "" (Z3.Symbol.to_string name)) in
-  			let value = String ("x_" ^ value_string) in
+  			let value = String (value_string) in
   			(id, value)::acc
   		else acc
     | None -> acc
@@ -760,7 +760,7 @@ let rec is_valid : prog -> input -> bool
 	    let pgm' = pgm @ [(DLet (BindOne res_var,false,[],fresh_tvar(),(appify (gen_label(), EVar !Options.opt_entry_func) input)))] in
 	    let _ = Eval.run pgm' in
 	    true
-	  with e -> false
+	  with e -> print_endline (Printexc.to_string e); false
 	in
 	t
 
@@ -787,7 +787,7 @@ let rec return_counter_example : prog -> prog -> input -> example option
 let rec work : Workset.t -> components -> prog -> prog -> example option
 = fun workset comp pgm cpgm ->
 	iter := !iter +1;
-	if (Unix.gettimeofday()) -. (!start_time) > 120.0 then None
+	if (Unix.gettimeofday()) -. (!start_time) > 60.0 then None
   (*
   else if (!iter mod 10000 = 0)
 	  then
@@ -802,7 +802,7 @@ let rec work : Workset.t -> components -> prog -> prog -> example option
 	| Some ((input, h_t, v_t), remain) ->
 		let input = List.map (Normalize.normalize_exp) input in
 		if is_closed input then
-			let _ = print_endline (Print.input_to_string input) in
+			(*let _ = print_endline (Print.input_to_string input) in*)
 			let _ = count := !count + 1 in
 	  	let symbols = find_const_symbols input in
 	  	if BatSet.is_empty symbols then

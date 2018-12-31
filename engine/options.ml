@@ -26,7 +26,7 @@ let opt_fix = ref false
 let opt_gentest = ref false
 let opt_execute = ref false
 let opt_localize = ref false
-
+let opt_test = ref false
 
 let options =
   [
@@ -40,7 +40,8 @@ let options =
     ("-fix", Arg.Set opt_fix, " Fix submission");
     ("-execute",Arg.Set opt_execute, " Execute submission");
     ("-gentest", Arg.Set opt_gentest, " Generate testcases");
-    ("-localize", Arg.Set opt_localize, " Localize")
+    ("-localize", Arg.Set opt_localize, " Localize");
+    ("-test", Arg.Set opt_test, " Symbolic testing");
   ]
   |> Arg.align
 

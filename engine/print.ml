@@ -110,7 +110,7 @@ let rec exp_to_string : lexp -> string
 = fun (_, exp) ->
   match exp with
   |SInt n -> "#A"
-  |SStr n -> "#S"
+  |SStr n -> "#S" (*^ "(" ^string_of_int n^")"*)
   |EUnit -> "()"
   |Const n -> string_of_int n
   |String id -> "\"" ^ id ^"\""
