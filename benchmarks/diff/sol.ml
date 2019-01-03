@@ -18,11 +18,19 @@ let rec diff : ae * string -> ae
 	match e with
 	| CONST n -> CONST 0
 	| VAR a -> if (a <> x) then CONST 0 else CONST 1
-	| POWER (a, n) -> if (a <> x) then CONST 0 else TIMES [CONST n; POWER (a, n-1)]
+	| POWER (a, n) -> 
+		if n < 0 then raise (Failure "Invalid") 
+		else if (n = 0) || (a <> x) then CONST 0
+		else TIMES [CONST n; POWER (a, n-1)]
 	| TIMES l ->
 		begin 
 			match l with
-			| [] -> CONST 0
+			| [] -> raise (Failure "Invalid")
+			| [hd] -> diff (hd, x)
 			| hd::tl -> SUM [TIMES ((diff (hd, x))::tl); TIMES [hd; diff (TIMES tl, x)]]
 		end
-	| SUM l -> SUM (map diff (l, x))
+	| SUM l -> 
+		begin match l with
+		| [] -> raise (Failure "Invalid")
+		| _ -> SUM (map diff (l, x))
+		end

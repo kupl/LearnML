@@ -32,4 +32,4 @@ let rec calculator : exp -> int
     if (i > j) then raise (Failure "SIGMA Error") 
     else if (i = j) then (calculator (apply e3 i))
     else (calculator (apply e3 i)) + (calculator (SIGMA (ADD (e1, INT 1), e2, e3))) 
-  | X -> raise (Failure "X is must in SIGMA")
+  | X -> raise (Failure "X is not bounded")

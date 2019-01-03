@@ -16,13 +16,19 @@ let rec diff : aexp * string -> aexp
 	match e with
 	| Const n -> Const 0
 	| Var a -> if (a <> x) then Const 0 else Const 1
-	| Power (a, n) -> if (a <> x) then Const 0 else Times [Const n; Power (a, n-1)]
+	| Power (a, n) -> 
+		if n <0 then raise (Failure "Invalid") 
+		else if	(n = 0) || (a <> x) then Const 0
+		else Times [Const n; Power (a, n-1)]
 	| Times l ->
 		begin 
 			match l with
-			| [] -> Const 0
+			| [] -> raise (Failure "Invalid")
+			| [hd] -> diff (hd, x)
 			| hd::tl -> Sum [Times ((diff (hd, x))::tl); Times [hd; diff (Times tl, x)]]
 		end
-	| Sum l -> Sum (map diff (l, x))
-
-
+	| Sum l -> 
+		begin match l with
+		| [] -> raise (Failure "Invalid")
+		| _ -> Sum (map diff (l, x))
+		end
