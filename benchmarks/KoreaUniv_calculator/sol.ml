@@ -25,7 +25,10 @@ let rec calculator : exp -> int
   | ADD (e1, e2) -> (calculator e1) + (calculator e2)
   | SUB (e1, e2) -> (calculator e1) - (calculator e2)
   | MUL (e1, e2) -> (calculator e1) * (calculator e2)
-  | DIV (e1, e2) -> (calculator e1) / (calculator e2)
+  | DIV (e1, e2) -> 
+    let v1 = (calculator e1) in
+    let v2 =  (calculator e2) in
+    if v2 = 0 then raise (Failure "Div by zero") else v1 / v2
   | SIGMA (e1, e2, e3) -> 
     let i = calculator e1 in
     let j = calculator e2 in 
