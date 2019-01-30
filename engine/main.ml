@@ -29,7 +29,9 @@ let except_handling : exn -> value -> unit
   |Failure s ->
     print_endline("Result : Error "^ s ^ " " ^
                   "Expected: " ^ Print.value_to_string output);
-	|EqualError -> raise except
+	|EqualError -> 
+    print_endline("Result : Equal Error" ^
+                  "Expected: " ^ Print.value_to_string output);
   |_ ->
      print_endline("Result : Evaluation Error "^
                   "Expected: " ^ Print.value_to_string output);
@@ -48,14 +50,13 @@ let run_testcases : prog -> examples -> unit
   let score = List.fold_left (fun score (inputs, output) ->
     let prog = program_with_grading prog in
     let prog' = program_with_input prog inputs in
-    let _ = Type.run prog' in
 	  try
       let env = Eval.run prog' in
 		  let result_value = Lang.lookup_env "__res__" env in
         print_endline ("Result: " ^ Print.value_to_string result_value ^ " " ^  
                      "Expected: " ^ Print.value_to_string output);
-        if(Eval.value_equality result_value output) then score+1 else score
-    with except -> except_handling except output; score
+        if try (Eval.value_equality result_value output) with _ -> false then score+1 else score
+    with except when except <> EqualError -> except_handling except output; score
   ) 0 examples in
   print_endline("score : "^(string_of_int score))
 
@@ -244,7 +245,15 @@ let main () =
   else if !opt_test then (* Symbolic testing *)
     begin
       match submission, solution with
-      | Some sub, Some sol -> List.fold_left (fun acc (input, output) -> if (Sym_exec.run sub sol input) = None then print_endline ("SAT") else print_endline ("UNSAT")) () testcases
+      | Some sub, Some sol -> List.fold_left (fun acc (input, output) -> 
+        let temp_time = Unix.gettimeofday () in
+        if (Sym_exec.run sub sol input) = None then 
+          print_endline ("SAT") 
+        else 
+          print_endline ("UNSAT")
+        ;
+        print_endline ("Time : " ^ string_of_float (Unix.gettimeofday () -. temp_time))
+      ) () testcases
       | _ -> raise (Failure "Submission or solution is not provided")
     end
   else Arg.usage options usage_msg
