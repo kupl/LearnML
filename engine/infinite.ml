@@ -202,8 +202,10 @@ module Static = struct
       else
         false
     | _ -> false
+
 	let run : prog -> bool
 	= fun pgm -> 
-		(List.exists (check_decl) pgm) || (List.exists (check_decl2) pgm)
+    let t = (List.exists (check_decl) pgm) || (List.exists (check_decl2) pgm) in
+    t
 
 end

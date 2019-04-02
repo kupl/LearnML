@@ -4,3 +4,7 @@ true: package(str)
 true: thread
 true: package(aez)
 true: package(Z3)
+true: package(qcheck)
+
+<generators/**>: include
+<*.ml>: include

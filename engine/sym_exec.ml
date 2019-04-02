@@ -1,6 +1,8 @@
 open Lang
 open Util
 open Symbol_lang2
+open Thread
+open Event
 
 module Executor = struct
 	(* Symbolic execution module *)
@@ -218,13 +220,6 @@ module Executor = struct
 	  let (xs, _) = List.split mappings in
 	  List.fold_left (fun env x -> extend_env (x, gen_sym_state (pc, FunBlock (x, mappings))) env) env xs
 
-	(* Find invalid path syntatically *)
-	let rec is_valid_pc : path_cond -> bool
-	= fun pc ->
-		let pc = Formula_normalize.normalize_pc pc BatSet.empty in 
-		let t = Formula_normalize.is_sat_pc pc pc in
-		t
-
 	(* Execution rules *)
 	let rec sym_eval_exp : symbolic_env -> path_cond -> bool -> lexp -> sym_formula
 	= fun env pc mode (l, exp) ->
@@ -238,10 +233,10 @@ module Executor = struct
 		*)
 		let psi =
 			try 
-				if Unix.gettimeofday () -. !start_time > 0.2 then
-					(*let _ = start_time := Unix.gettimeofday () in*)
+				if Unix.gettimeofday () -. !start_time > 0.25 then
 					BatSet.singleton (pc, Exn) 
-				else match exp with 
+				else 
+				match exp with 
 			  (* Const *)
 			  | SStr n -> BatSet.singleton (pc, SSymbol n)
 			 	| SInt n -> BatSet.singleton (pc, ASymbol n)
@@ -281,10 +276,10 @@ module Executor = struct
 			  	sym_eval_aop pc psi1 psi2 Mul
 			  | DIV (e1, e2) -> 
 			  	let (psi1, psi2) = (sym_eval_exp env pc mode e1, sym_eval_exp env pc mode e2) in
-			  	sym_eval_aop pc psi1 psi2 Div
+			  	sym_eval_nonzero_aop pc psi1 psi2 Div
 			  | MOD (e1, e2) -> 
 			  	let (psi1, psi2) = (sym_eval_exp env pc mode e1, sym_eval_exp env pc mode e2) in
-			  	sym_eval_aop pc psi1 psi2 Mod
+			  	sym_eval_nonzero_aop pc psi1 psi2 Mod
 			  | OR (e1, e2) -> 
 			  	let (psi1, psi2) = (sym_eval_exp env pc mode e1, sym_eval_exp env pc mode e2) in
 			  	sym_eval_bop pc psi1 psi2 Or
@@ -406,7 +401,9 @@ module Executor = struct
 		          	sym_eval_exp (extend_env (f, psi1) env) pc mode e2
 		          | _ -> raise (Failure "Only variables are allowed as left-hand side of `let rec'")
 		          end
-		        else sym_eval_exp (let_binding env f psi1) pc mode e2
+		        else 
+		        	let pc = if BatSet.cardinal psi1 = 1 then BatSet.fold (fun (pc1, sv1) pc -> extend_pc pc1 pc) psi1 pc else pc in
+		        	sym_eval_exp (let_binding env f psi1) pc mode e2
 			  	| _ ->
 				  	let x = List.hd args in
 				  	let vfunc = 
@@ -446,38 +443,15 @@ module Executor = struct
 			    in sym_eval_exp env pc mode e2
 			  | EApp (e1, e2) ->
 			  	let (psi1, psi2) = (sym_eval_exp env pc mode e1, sym_eval_exp env pc mode e2) in
-			  	(* If func or arguments are static then change execution mode *)
+			  	(* If e1 or e2 are evaluated statically then change execution mode *)
 			  	let mode = if (BatSet.cardinal psi1) > 1 || (BatSet.cardinal psi2) > 1 then false else mode in
-			  	(*
-			  	let _ = 
-			  		print_endline ("Call : " ^ Print.exp_to_string (l, exp));
-			  		print psi1;
-			  		print_endline ("******");
-			  		print psi2;
-			  	in
-			  	*)
 			    BatSet.fold (fun (pc1, sv1) psis ->
 			    	begin match sv1 with
 			    	| Fun (x, e, env') ->
-			    		(*
-	    				let _ =
-	    					print_endline ("Call value : " ^ symbol_to_string sv1);
-	    					print_endline ("Arg_Exp : " ^ Print.exp_to_string e2);
-	    					print_endline (if mode then "Dynamic" else "Static");
-	    				in
-	    				*)
 			    		let psi = sym_eval_exp (arg_binding env' x psi2) (extend_pc pc pc1) mode e in
 							BatSet.union psi psis
 			    	| FunRec (f, x, e, env', k) ->
 	    				(* Stop if it over the loop-bound *)
-	    				(*
-	    				let _ =
-	    					print_endline ("Call value : " ^ symbol_to_string sv1);
-	    					print_endline ("Arg_Exp : " ^ Print.exp_to_string e2);
-	    					print_endline ("Call depth : " ^ string_of_int k);
-	    					print_endline (if mode then "Dynamic" else "Static");
-	    				in
-	    				*)
 			    		let psi =
 			    			(* Stop if it over the loop-bound *)
 				    		if k <= 0 then BatSet.singleton (extend_pc pc pc1, Exn)
@@ -488,45 +462,16 @@ module Executor = struct
 							BatSet.union psi psis
 			    	| FunBlock (f, mappings) -> 
 			    		let psi1 = snd (List.find (fun (f', psi) -> f = f') mappings) in
-			    		(*
-							let _ = 
-								print_endline ("*****Call function : " ^ f);
-								print_endline ("Arg_Exp : " ^ Print.exp_to_string e2);
-			    		in
-			    	*)
 			    		BatSet.fold (fun (pc1, sv1) psis ->
-			    			(*
-			    			print_endline ("Call value : " ^ symbol_to_string sv1);
-			    			print_endline ("Arg_Exp : " ^ Print.exp_to_string e2);
-			    			print psi2;
-			    			*)
 			    			let psi = 
 				    			begin match sv1 with
 				    			| FunRec (f, x, e, env', k) ->
 				    				(* Stop if it over the loop-bound *)
-				    				(*
-				    				let _ =
-				    					print_endline ("Call value : " ^ symbol_to_string sv1);
-				    					print_endline ("Arg_Exp : " ^ Print.exp_to_string e2);
-				    					print_endline ("Call depth : " ^ string_of_int k);
-				    					print_endline (if mode then "Dynamic" else "Static");
-				    					print_endline ("Function sequnce");
-				    					List.iter (fun (f', psi) -> print_endline (f')) mappings;
-				    				in
-				    				*)
 						    		if k <= 0 then BatSet.singleton (extend_pc pc pc1, Exn)
 						    		else 
 						    		(* If the mode is static execution, decrease the loop depth *)
 						    			let mappings = if mode then mappings else List.map (fun (f', psi) -> if f = f' then (f', decrease_func_depth psi) else (f', psi)) mappings in
-						    			(*
-						    			print_endline ("Env Before : ");
-											BatMap.iter (fun x psi -> print_endline (x ^ "|->"); print psi; print_endline ("")) env;
-											*)
 						    			let env' = bind_block env' pc mappings in
-						    			(*
-						    			print_endline ("Env AFter. : ");
-											BatMap.iter (fun x psi -> print_endline (x ^ "|->"); print psi; print_endline ("")) env';
-											*)
 						    			sym_eval_exp (arg_binding env' x psi2) (extend_pc pc pc1) mode e 
 				    			| _ -> raise (Failure "mutually recursive function call error")
 				    			end
@@ -539,10 +484,21 @@ module Executor = struct
 					) psi1 BatSet.empty
 				| _ -> raise (Failure "Unexpected Exp while sym_exec")
 			with 
-			| Invalid_Arg ->  BatSet.singleton (pc, Exn)
-			| e -> raise (Failure (Printexc.to_string e))
+			| Invalid_Arg -> BatSet.singleton (pc, Exn)
+			| e -> (*print_endline (Printexc.to_string e);*) BatSet.singleton (pc, Exn) (* Stack Overflow or TimeOut *)
 		in 
-		Formula_normalize.run psi
+		let psi = Formula_normalize.run psi in
+		(*
+		let _ = 
+			print_endline ("*************");
+			print_endline (string_of_pc pc);
+			print_endline ("Exp : " ^ Print.exp_to_string (l, exp));
+			print_endline ("Output : ");
+			print psi;
+		in
+		*)
+		(*print_endline ("Size : " ^ string_of_int (BatSet.cardinal psi));*)
+		psi
 
 	and sym_eval_exp_list : symbolic_env -> path_cond -> bool -> lexp list -> (path_cond * symbolic_value list) BatSet.t
 	= fun env pc mode es ->
@@ -563,6 +519,17 @@ module Executor = struct
 	= fun pc psi1 psi2 op ->
 		BatSet.fold (fun (pc1, sv1) acc ->
 			let psi = BatSet.fold (fun (pc2, sv2) acc2 ->
+				BatSet.add (extend_pc pc (extend_pc pc1 pc2), Aop (op, sv1, sv2)) acc2
+			) psi2 BatSet.empty
+			in
+			BatSet.union psi acc
+		) psi1 BatSet.empty
+	
+	and sym_eval_nonzero_aop : path_cond -> sym_formula -> sym_formula -> operator -> sym_formula
+	= fun pc psi1 psi2 op ->
+		BatSet.fold (fun (pc1, sv1) acc ->
+			let psi = BatSet.fold (fun (pc2, sv2) acc2 ->
+				let pc2 = extend_pc (gen_pc (EQop (NEq, sv2, Int 0))) pc2 in
 				BatSet.add (extend_pc pc (extend_pc pc1 pc2), Aop (op, sv1, sv2)) acc2
 			) psi2 BatSet.empty
 			in
@@ -639,33 +606,78 @@ module Executor = struct
 	let run : prog -> lexp list -> sym_formula
 	= fun pgm input ->
   	let pgm = pgm@(External.grading_prog) in
+  	let _ = start_time := Unix.gettimeofday () in
   	let init_env = List.fold_left (fun env decl -> sym_eval_decl env decl) empty_env (External.init_prog) in
+  	let _ = start_time := Unix.gettimeofday () in
   	let env = List.fold_left (fun (env) decl -> sym_eval_decl env decl) init_env pgm in
   	let exp = appify (gen_label(), (EVar !Options.opt_entry_func)) input in
   	let _ = start_time := Unix.gettimeofday () in
-  	sym_eval_exp env init_pc true exp
+  	Formula_normalize.run2 (sym_eval_exp env init_pc true exp)
 end
 
 module VC_generator = struct
+
+	let rec is_valid_pc : path_cond -> bool
+	= fun pc ->
+		(Formula_normalize.is_sat_pc pc pc) && (Formula_normalize.is_sat_pc2 pc pc) && (Formula_normalize.filter_unsat_class pc) && (Formula_normalize.manual_filter pc)
+
 	(* VC generation *)
-	let run : sym_formula -> sym_formula -> vc
-	= fun psi_b psi_c -> 
-		BatSet.fold (fun (pc1, sv1) vc ->
-			let pre = Formula_normalize.normalize_sym_val (flatten_pc pc1) in
-			let formula = BatSet.fold (fun (pc2, sv2) formula ->
-				(* If two pathes are not compitable => that formula is invalid (true => false) *)
-				if not (Executor.is_valid_pc (extend_pc pc1 pc2)) then
-					formula
-				(* else check satisfiablity *)
-				else 
-					let pc = Formula_normalize.normalize_sym_val (flatten_pc pc2) in
-					let eq = Formula_normalize.normalize_sym_val (EQop (Eq, sv1, sv2)) in
-					let post = Bop (And, pc, eq) in
-					(pre, post)::formula
-			) psi_b []
-			in
-			formula::vc
-		) psi_c []
+	let run : Z3_solve.CtorTable.t -> sym_formula -> sym_formula -> vc
+	= fun ctor_table psi_b psi_c -> 
+		if BatSet.is_empty psi_b then
+			[[(Bool true, Bool false)]]
+		else
+			BatSet.fold (fun (pc1, sv1) vc ->
+				let pre = Formula_normalize.normalize_sym_val (flatten_pc pc1) in
+				let formula = BatSet.fold (fun (pc2, sv2) formula ->
+					(* If two pathes are not compitable => that formula is invalid (true => false) *)
+					if not (is_valid_pc (extend_pc pc1 pc2)) then
+						if (List.length formula > 0) then formula else (pre, Bool false)::formula
+					(* else check satisfiablity *)
+					else 
+						let pc = Formula_normalize.normalize_sym_val (flatten_pc pc2) in
+						let eq = Formula_normalize.normalize_sym_val (EQop (Eq, sv1, sv2)) in
+						if eq = Bool false then
+							if (List.length formula > 0) then formula else (pre, Bool false)::formula
+						else 
+							let post = Bop (And, pc, eq) in
+							(pre, post)::formula
+				) psi_b []
+				in
+				let formula' = List.filter (fun (pre, post) -> post <> Bool false) formula in
+				if List.length formula' > 0 then formula'::vc else formula::vc
+			) psi_c []
+
+	let run2 : Z3_solve.CtorTable.t -> sym_formula -> sym_formula -> vc
+	= fun ctor_table psi_b psi_c -> 
+		if BatSet.is_empty psi_b then
+			[[(Bool true, Bool false)]]
+		else
+			BatSet.fold (fun (pc1, sv1) vc ->
+				let pre = Formula_normalize.normalize_sym_val (flatten_pc pc1) in
+				let formula = BatSet.fold (fun (pc2, sv2) formula ->
+					(* If two pathes are not compitable => that formula is invalid (true => false) *)
+					let pc_formula = [(Bool true ,flatten_pc (extend_pc pc1 pc2))] in
+					let t = (match Z3_solve.is_valid ctor_table pc_formula with
+					| Some _ -> true
+					| None -> false)
+					in
+					if not t then
+						if (List.length formula > 0) then formula else (pre, Bool false)::formula
+					(* else check satisfiablity *)
+					else 
+						let pc = Formula_normalize.normalize_sym_val (flatten_pc pc2) in
+						let eq = Formula_normalize.normalize_sym_val (EQop (Eq, sv1, sv2)) in
+						if eq = Bool false then
+							if (List.length formula > 0) then formula else (pre, Bool false)::formula
+						else 
+							let post = Bop (And, pc, eq) in
+							(pre, post)::formula
+				) psi_b []
+				in
+				let formula' = List.filter (fun (pre, post) -> post <> Bool false) formula in
+				if List.length formula' > 0 then formula'::vc else formula::vc
+			) psi_c []
 
 	let string_of_formula : vc_formula -> string
 	= fun f -> List.fold_left (fun str (pc, sv) -> symbol_to_string pc ^ " => " ^ symbol_to_string sv ^ "\\/\n" ^ str) "" f
@@ -680,72 +692,10 @@ let rec run : prog -> prog -> lexp list -> Z3.Model.model option
 	let ctor_table = Z3_solve.CtorTable.generation BatMap.empty pgm in
 	let ctor_table = Z3_solve.CtorTable.generation ctor_table cpgm in
 	(* Symbolic Formula Generation *)
-	
-	print_endline ("Input : " ^ Print.input_to_string input);
-	print_endline ("Symbolic Execution.. C");
-	
-	let psi_c = Executor.run cpgm input in
-	if BatSet.is_empty psi_c then
-		None
-	else
-		(Print.print_header "Solution"; print psi_c;
-		print_endline ("=======================\nSize : " ^ string_of_int (BatSet.cardinal psi_c));
-		print_endline ("Symbolic Execution.. B");
-		
-		let psi_b = Executor.run pgm input in
-		
-		Print.print_header "Buggy"; print psi_b;
-		print_endline ("=======================\nSize : " ^ string_of_int (BatSet.cardinal psi_b));
-		
-		let vc = (VC_generator.run psi_b psi_c) in
-		
-		print_endline ("VC Size : " ^ string_of_int (List.length vc));
-	  Print.print_header "VC"; VC_generator.print_vc vc;
-		
-		(*
-		print_endline ("Input : " ^ Print.input_to_string input);
-		print_endline ("Symbolic Execution.. C");
-		Print.print_header "Solution"; print psi_c;
-		print_endline ("=======================\nSize : " ^ string_of_int (BatSet.cardinal psi_c));
-		print_endline ("Symbolic Execution.. B");
-		Print.print_header "Buggy"; print psi_b;
-		print_endline ("=======================\nSize : " ^ string_of_int (BatSet.cardinal psi_b));
-		print_endline ("VC generation..");
-		*)
-		(*
-		print_endline ("VC Size : " ^ string_of_int (List.length vc));
-	  Print.print_header "VC"; VC_generator.print_vc vc;
-		*)
-	  let models = List.map (fun formula -> Z3_solve.check ctor_table formula) vc in
-	  try List.find (fun model -> not (model = None)) models with _ -> None
-		)
-let rec run2 : prog -> prog -> lexp list -> Z3.Model.model option
-= fun pgm cpgm input -> 
-	let ctor_table = Z3_solve.CtorTable.generation BatMap.empty pgm in
-	let ctor_table = Z3_solve.CtorTable.generation ctor_table cpgm in
-	(* Symbolic Formula Generation *)
-	
 	let psi_c = Executor.run cpgm input in
 	if BatSet.is_empty psi_c then
 		None
 	else
 		let psi_b = Executor.run pgm input in
-		
-		let vc = (VC_generator.run psi_b psi_c) in
-		
-		(*
-		print_endline ("Input : " ^ Print.input_to_string input);
-		print_endline ("Symbolic Execution.. C");
-		Print.print_header "Solution"; print psi_c;
-		print_endline ("=======================\nSize : " ^ string_of_int (BatSet.cardinal psi_c));
-		print_endline ("Symbolic Execution.. B");
-		Print.print_header "Buggy"; print psi_b;
-		print_endline ("=======================\nSize : " ^ string_of_int (BatSet.cardinal psi_b));
-		print_endline ("VC generation..");
-		*)
-		(*
-		print_endline ("VC Size : " ^ string_of_int (List.length vc));
-	  Print.print_header "VC"; VC_generator.print_vc vc;
-		*)
-	  let models = List.map (fun formula -> Z3_solve.check ctor_table formula) vc in
-	  try List.find (fun model -> not (model = None)) models with _ -> None
+		let vc = (VC_generator.run ctor_table psi_b psi_c) in
+		Z3_solve.check2 ctor_table vc

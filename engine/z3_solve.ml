@@ -47,8 +47,8 @@ module Z3_Translator = struct
   let sort_to_symbol sort = Z3.Sort.get_name sort
   let counter = ref 0
   let new_counter () = (counter := !counter + 1); !counter
-  (* context => if the formula is too hard to solve in 2 sec, fail to find a counter example *)
-  let new_ctx () = mk_context [("timeout", "10")]
+  (* context => if the formula is too hard to solve in 0.05 sec, fail to find a counter example *)
+  let new_ctx () = mk_context [("timeout", "50")]
 
   (* sort *)
   let int_sort ctx = Z3.Arithmetic.Integer.mk_sort ctx
@@ -431,6 +431,30 @@ module Z3_Translator = struct
     (id, (mk_eq ctx id expr)::eqns)
 end
 
+let is_valid : CtorTable.t -> vc_formula -> Z3.Model.model option
+= fun ctor_table vc ->
+  let ctx = Z3_Translator.new_ctx () in
+  let ctor_map = Z3_Translator.init_ctor_map ctx ctor_table BatMap.empty in
+  let ctor_map = Z3_Translator.apply_recursive_datatype ctx ctor_table ctor_map in
+  let solver = Z3.Solver.mk_solver ctx None in
+  let (id, eqns) = Z3_Translator.translate_formula ctor_map ctx vc in
+  let eqns = (Z3_Translator.mk_eq ctx id (Z3_Translator.bool_const ctx true))::eqns in
+  let _ = Z3.Solver.add solver eqns in
+  (*
+  print_endline ("*************");
+  print_endline (List.fold_left (fun str (pc, sv) -> symbol_to_string pc ^ " => " ^ symbol_to_string sv ^ "\\/\n" ^ str) "" vc);
+  *)
+  (*print_endline (Z3.Solver.to_string solver);*)
+  match (Z3.Solver.check solver []) with
+  | UNSATISFIABLE -> None
+  | UNKNOWN -> None
+  | SATISFIABLE -> 
+    (* There exists an counter example *)
+    begin match Z3.Solver.get_model solver with
+    | Some model -> Some model
+    | None -> None
+    end
+
 let check : CtorTable.t -> vc_formula -> Z3.Model.model option
 = fun ctor_table vc ->
   let ctx = Z3_Translator.new_ctx () in
@@ -442,11 +466,31 @@ let check : CtorTable.t -> vc_formula -> Z3.Model.model option
   let _ = Z3.Solver.add solver eqns in
   (*print_endline (Z3.Solver.to_string solver);*)
   match (Z3.Solver.check solver []) with
-  | UNSATISFIABLE -> None
-  | UNKNOWN -> None
+  | UNSATISFIABLE -> (*print_endline ("SAT");*) None
+  | UNKNOWN -> (*print_endline ("UNKNOWN");*) None
   | SATISFIABLE -> 
     (* There exists an counter example *)
     begin match Z3.Solver.get_model solver with
-    | Some model -> Some model
-    | None -> None
+    | Some model -> (*print_endline (Z3.Model.to_string model);*) Some model
+    | None -> (*print_endline ("SAT");*) None
+    end
+
+let check2 : CtorTable.t -> vc -> Z3.Model.model option
+= fun ctor_table vc ->
+  let ctx = Z3_Translator.new_ctx () in
+  let ctor_map = Z3_Translator.init_ctor_map ctx ctor_table BatMap.empty in
+  let ctor_map = Z3_Translator.apply_recursive_datatype ctx ctor_table ctor_map in
+  let solver = Z3.Solver.mk_solver ctx None in
+  let (id, eqns) = Z3_Translator.translate_vc ctor_map ctx vc in
+  let eqns = (Z3_Translator.mk_not ctx id)::eqns in
+  let _ = Z3.Solver.add solver eqns in
+  (*print_endline (Z3.Solver.to_string solver);*)
+  match (Z3.Solver.check solver []) with
+  | UNSATISFIABLE -> (*print_endline ("SAT");*) None
+  | UNKNOWN -> (*print_endline ("UNKNOWN");*) None
+  | SATISFIABLE -> 
+    (* There exists an counter example *)
+    begin match Z3.Solver.get_model solver with
+    | Some model -> (*print_endline (Z3.Model.to_string model);*) Some model
+    | None -> (*print_endline ("SAT");*) None
     end

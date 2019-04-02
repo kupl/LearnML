@@ -13,6 +13,17 @@ module Comp = struct
   let const_num = ref 0
   let fresh_const () = (const_num := !const_num +1; !const_num)
 
+  (* Constant Components *)
+  let const_comp : components -> components
+  = fun comp ->
+  	let rec range a b =
+  		if a > b then []
+  		else a::(range (a+1) b)
+  	in
+  	let int_comp = List.fold_left (fun comp n -> BatSet.add (0, Const n) comp) comp (range 0 3) in
+  	let str_comp = List.fold_left (fun comp n -> BatSet.add (0, String (Char.escaped (Char.chr n))) comp) int_comp (range 97 99) in
+  	str_comp
+
 	(* Syntax Components *)
   let all_components : unit -> components
 	= fun () ->
@@ -21,8 +32,6 @@ module Comp = struct
       except ctor, var (variable comp), tuple, list append, condition let binding, match, exception, hole 
     *)
 		BatSet.empty 
-		(*|> BatSet.add (0, Const 1)*)
-		(*|> BatSet.add (0, String "x")*)
 		|> BatSet.add (0, SStr 0)
 		|> BatSet.add (0, SInt 0)
 		|> BatSet.add (0, TRUE)
@@ -30,14 +39,14 @@ module Comp = struct
 		|> BatSet.add (0, EList [])
 		|> BatSet.add (0, DOUBLECOLON (dummy_hole (), dummy_hole ()))
 		|> BatSet.add (0, ETuple [])
-		|> BatSet.add (0, STRCON (dummy_hole (), dummy_hole ()))
 		|> BatSet.add (0, EFun (ArgUnder (fresh_tvar ()), dummy_hole ()))
+		|> BatSet.add (0, STRCON (dummy_hole (), dummy_hole ()))
+		|> BatSet.add (0, MINUS (dummy_hole ()))
 		|> BatSet.add (0, ADD (dummy_hole (), dummy_hole ()))
 		|> BatSet.add (0, SUB (dummy_hole (), dummy_hole ()))
 		|> BatSet.add (0, MUL (dummy_hole (), dummy_hole ()))
 		|> BatSet.add (0, DIV (dummy_hole (), dummy_hole ()))
 		|> BatSet.add (0, MOD (dummy_hole (), dummy_hole ()))
-		|> BatSet.add (0, MINUS (dummy_hole ()))
 		|> BatSet.add (0, NOT (dummy_hole ()))
 		|> BatSet.add (0, OR (dummy_hole (), dummy_hole ()))
 		|> BatSet.add (0, AND (dummy_hole (), dummy_hole ()))
@@ -52,6 +61,7 @@ module Comp = struct
 		let remove_op_comp : components -> components
 		= fun comp ->
 			comp
+			|> BatSet.remove (0, STRCON (dummy_hole (), dummy_hole ()))
 			|> BatSet.remove (0, MINUS (dummy_hole ()))
 			|> BatSet.remove (0, ADD (dummy_hole (), dummy_hole ()))
 			|> BatSet.remove (0, MUL (dummy_hole (), dummy_hole ()))
@@ -61,11 +71,10 @@ module Comp = struct
 			|> BatSet.remove (0, NOT (dummy_hole ()))
 			|> BatSet.remove (0, OR (dummy_hole (), dummy_hole ()))
 			|> BatSet.remove (0, AND (dummy_hole (), dummy_hole ()))
-			|> BatSet.remove (0, EQUAL (dummy_hole (), dummy_hole ()))
-			|> BatSet.remove (0, NOTEQ (dummy_hole (), dummy_hole ()))
 			|> BatSet.remove (0, LESS (dummy_hole (), dummy_hole ()))
 			|> BatSet.remove (0, LESSEQ (dummy_hole (), dummy_hole ()))
-			|> BatSet.remove (0, STRCON (dummy_hole (), dummy_hole ()))
+			|> BatSet.remove (0, EQUAL (dummy_hole (), dummy_hole ()))
+			|> BatSet.remove (0, NOTEQ (dummy_hole (), dummy_hole ()))
 		in
 		let is_fun : components -> bool
 		= fun comp -> 	
@@ -237,6 +246,8 @@ end
 *************)
 let start_time = ref 0.0
 let iter = ref 0
+
+let solving_time = ref 0.0
 
 let count = ref 0
 let num_of_crash = ref 0
@@ -630,6 +641,11 @@ let rec get_sketch : prog -> Workset.work
 	let v_t = BatMap.foldi (fun n typ v_t ->
 		BatMap.add n ctor_table v_t
 	) h_t BatMap.empty in
+	(*
+	print_endline ("Input : " ^ Print.input_to_string input);
+	Type.HoleType.print h_t;
+	Type.VariableType.print v_t;
+	*)
 	(input, h_t, v_t)
 
 (* Const symbol *)
@@ -672,7 +688,7 @@ let rec get_const_symbols : Z3.Model.model -> (string * int) BatSet.t -> (int * 
   	let name = Z3.FuncDecl.get_name decl in
   	begin match Z3.Model.get_const_interp model decl with
     | Some value -> 
- 			(*
+    	(*
     	print_endline ("DECL : " ^ Z3.FuncDecl.to_string decl);
     	print_endline ("NAME : " ^ Z3.Symbol.to_string name);
     	print_endline ("VALUE : " ^ Z3.Expr.to_string value);
@@ -750,20 +766,6 @@ let rec replace_const_symbol : (int * exp) -> lexp -> lexp
   | _ -> (l, e)
 
 (* Main Synthesis Algorithm *)
-let rec is_valid : prog -> input -> bool
-= fun pgm input ->
-	let start_time = Unix.gettimeofday () in
-	let t = 
-	  try
-	    let res_var = "__res__" in
-	    let pgm = pgm@(External.grading_prog) in
-	    let pgm' = pgm @ [(DLet (BindOne res_var,false,[],fresh_tvar(),(appify (gen_label(), EVar !Options.opt_entry_func) input)))] in
-	    let _ = Eval.run pgm' in
-	    true
-	  with e -> print_endline (Printexc.to_string e); false
-	in
-	t
-
 let rec get_output : prog -> input -> value
 = fun pgm input ->
 	try
@@ -780,16 +782,19 @@ let rec return_counter_example : prog -> prog -> input -> example option
 		let v1 = get_output cpgm input in
 		try
 			let v2 = get_output pgm input in
+			(*print_endline ("V 1,2 : " ^ Print.value_to_string v1 ^ ", " ^ Print.value_to_string v2);*)
 			if not (Eval.value_equality v1 v2) then Some (input, v1) else None
-		with e -> print_endline (Printexc.to_string e); Some (input, v1)
+		with e -> (*print_endline (Printexc.to_string e);*) Some (input, v1)
 	with _ -> (num_of_crash := !num_of_crash + 1); None
+
+(*let log = ref (open_out "overhead.txt")*)
 
 let rec work : Workset.t -> components -> prog -> prog -> example option
 = fun workset comp pgm cpgm ->
 	iter := !iter +1;
 	if (Unix.gettimeofday()) -. (!start_time) > 60.0 then None
-  (*
-  else if (!iter mod 10000 = 0)
+	(*
+  else if (!iter mod 1000 = 0)
 	  then
 		  begin
 			  print_endline ((Workset.workset_info workset) ^ (" Total elapsed : " ^ (string_of_float (Unix.gettimeofday() -. !start_time))));
@@ -800,9 +805,10 @@ let rec work : Workset.t -> components -> prog -> prog -> example option
 	match Workset.choose workset with
 	| None -> None
 	| Some ((input, h_t, v_t), remain) ->
-		let input = List.map (Normalize.normalize_exp) input in
+		(*let input = List.map (Normalize.normalize_exp) input in*)
 		if is_closed input then
 			(*let _ = print_endline (Print.input_to_string input) in*)
+			(*let _ = Printf.fprintf (!log) "%s\n" (Print.input_to_string input) in*)
 			let _ = count := !count + 1 in
 	  	let symbols = find_const_symbols input in
 	  	if BatSet.is_empty symbols then
@@ -811,33 +817,36 @@ let rec work : Workset.t -> components -> prog -> prog -> example option
 				if ex = None then work remain comp pgm cpgm else ex
 			else 
 				(* If input has symbolic value => solving *)
-				if is_valid cpgm input then
-				 	begin match Sym_exec.run2 pgm cpgm input with
-				 	| Some model -> 
-				 		(*
-				 		let _ = print_endline ("COunter") in
-				 		let _ = Unix.sleep 2 in
-				 		*)
-				 		let symbol_map = get_const_symbols model symbols in
-				 		let input = List.fold_left (fun input (n, v) -> List.map (fun e -> replace_const_symbol (n, v) e) input) input symbol_map in
-				  	let ex = return_counter_example pgm cpgm input in
-						if ex = None then work remain comp pgm cpgm else ex
-				 	| None -> work remain comp pgm cpgm
-					end
-				else work remain comp pgm cpgm
-		else if is_valid cpgm input then
+				(* let temp_time = Unix.gettimeofday () in *)
+				begin match Sym_exec.run pgm cpgm input with
+			 	| Some model -> 
+			 		(*
+			 		let _ = solving_time := (!solving_time) +. ((Unix.gettimeofday ()) -. temp_time) in
+			 		let _ = if (Unix.gettimeofday ()) -. temp_time > 0.2 then (Printf.fprintf (!log) "Model : %s Time : %f \n" (Print.input_to_string input)) ((Unix.gettimeofday ()) -. temp_time) else () in
+			 		*)
+			 		let symbol_map = get_const_symbols model symbols in
+			 		let input = List.fold_left (fun input (n, v) -> List.map (fun e -> replace_const_symbol (n, v) e) input) input symbol_map in
+			 		(*let _ = print_endline ("Gen Input : " ^ Print.input_to_string input) in*)
+			  	let ex = return_counter_example pgm cpgm input in
+			  	if ex = None then work remain comp pgm cpgm else ex
+			 	| None -> 
+			 		(*
+			 		let _ = solving_time := (!solving_time) +. ((Unix.gettimeofday ()) -. temp_time) in
+			 		let _ = if (Unix.gettimeofday ()) -. temp_time > 0.2 then (Printf.fprintf (!log) "Model : %s Time : %f \n" (Print.input_to_string input)) ((Unix.gettimeofday ()) -. temp_time) else () in
+			 		*)
+			 		work remain comp pgm cpgm
+				end
+		else 
 			let nextstates = next comp (input, h_t, v_t) in
 			let new_workset = BatSet.fold Workset.add nextstates remain in
 			work new_workset comp pgm cpgm
-    else 
-      work remain comp pgm cpgm
 
 let gen_counter_example : prog -> prog -> example option
 = fun pgm cpgm ->
 	start_time := Unix.gettimeofday();
 	let sketch = get_sketch cpgm in
 	let initial_workset = Workset.add sketch Workset.empty in
-	(*let comp = BatSet.union (Comp.all_components ()) (Comp.get_const_comp pgm) in *)
-  let comp = Comp.all_components () in
+ let comp = Comp.all_components () in
+ (*let comp = Comp.const_comp comp in*)
 	let result = work initial_workset comp pgm cpgm in
 	result
