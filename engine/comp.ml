@@ -39,9 +39,7 @@ let all_component () =
 (******************************************************)
 (* 	 Code for extract components from correct code    *)
 (******************************************************)
-
-
-let rec find_component : lexp-> components -> components
+let rec find_component : lexp -> components -> components
 = fun (_, e) comps->
 	match e with
 	| Const _ | TRUE | FALSE | String _ -> BatSet.add (0, e) comps

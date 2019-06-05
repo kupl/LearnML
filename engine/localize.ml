@@ -45,7 +45,7 @@ let rec is_counter_example : prog -> example -> bool
     let env = run_pgm pgm (input,output) in
     let result = Lang.lookup_env "__res__" env in
     not (Eval.value_equality result output)
-  with e -> print_endline(Printexc.to_string e);true
+  with e -> true
 
 let rec find_counter_examples : prog -> examples -> examples * examples
 = fun pgm examples -> List.partition (is_counter_example pgm) examples
@@ -97,7 +97,11 @@ let rec gen_partial_exp : label -> lexp -> lexp
 let gen_partial_decl : label -> decl -> decl
 = fun label decl ->
   match decl with
-  | DLet (f, is_rec, args, t, e) -> DLet (f, is_rec, args, t, gen_partial_exp label e)
+  | DLet (f, is_rec, args, t, e) -> 
+    begin match f with
+    | BindUnder -> decl
+    | _ -> DLet (f, is_rec, args, t, gen_partial_exp label e)
+    end
   | DBlock (is_rec, bindings) ->
     let bindings = list_map (fun (f, is_rec, args, t, e) -> (f, is_rec, args, t, gen_partial_exp label e)) bindings in
     DBlock (is_rec, bindings) 

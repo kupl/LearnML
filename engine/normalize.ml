@@ -269,7 +269,7 @@ module Simplification = struct
 				| EFun (arg, e) -> 
 	        if (exp_is_closed e) then
 					  if (is_id e1) then snd (simplify_exp e2)
-	          else if (is_const e1) then snd (simplify_exp e1)
+	          else if (is_const e1) then snd (simplify_exp e)
 	          else EApp (simplify_exp e1, simplify_exp e2)
 	        else EApp (simplify_exp e1, simplify_exp e2)
 				| _ -> EApp (simplify_exp e1, simplify_exp e2)
