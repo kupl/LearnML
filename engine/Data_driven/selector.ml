@@ -29,15 +29,27 @@ module A = struct
 			"Structure : \n" ^ string_of_summary summary ^ "\n)"
 		) "" t
 
-	(* Summarize a given program *)
+    (* Infer function type *)
+    let get_type : id -> prog -> typ
+    = fun func_id pgm ->
+      let (tenv, _, _) = Type.run pgm in
+      Type.TEnv.find tenv func_id
+	
+    (* Summarize a given program *)
 	let run : prog -> t
-	= fun pgm -> []
+	= fun pgm -> 
+      let typ = TUnit
+
+      in [("_", typ, F [])]
 end
 
 let get_summary : prog -> A.t
 = fun pgm -> 
 	let summary = A.run pgm in
 	summary
+
+let match_summary : A.t -> A.t -> bool
+= fun s1 s2 -> true
 
 (*
 	Input : An incorrect program pgm and a set of correct programs cpgms
