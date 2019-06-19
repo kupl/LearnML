@@ -21,20 +21,20 @@ let except_handling : exn -> value -> unit
 = fun except output ->
   begin match except with
   |EExcept v ->
-    print_endline("Result : " ^ Print.value_to_string v ^ " " ^
-                  "Expected: " ^ Print.value_to_string output);
+    print_endline("Result : " ^ value_to_string v ^ " " ^
+                  "Expected: " ^ value_to_string output);
   |TimeoutError ->
     print_endline("Result : Timeout" ^ " " ^
-                  "Expected: " ^ Print.value_to_string output);
+                  "Expected: " ^ value_to_string output);
   |Failure s ->
     print_endline("Result : Error "^ s ^ " " ^
-                  "Expected: " ^ Print.value_to_string output);
-	|EqualError -> 
+                  "Expected: " ^ value_to_string output);
+  |EqualError -> 
     print_endline("Result : Equal Error" ^
-                  "Expected: " ^ Print.value_to_string output);
+                  "Expected: " ^ value_to_string output);
   |_ ->
      print_endline("Result : Evaluation Error "^
-                  "Expected: " ^ Print.value_to_string output);
+                  "Expected: " ^ value_to_string output);
   end
  
 let is_same_type : prog -> prog -> unit
@@ -50,11 +50,11 @@ let run_testcases : prog -> examples -> unit
   let score = List.fold_left (fun score (inputs, output) ->
     let prog = program_with_grading prog in
     let prog' = program_with_input prog inputs in
-	  try
+    try
       let env = Eval.run prog' in
-		  let result_value = Lang.lookup_env "__res__" env in
-        print_endline ("Result: " ^ Print.value_to_string result_value ^ " " ^  
-                     "Expected: " ^ Print.value_to_string output);
+      let result_value = Lang.lookup_env "__res__" env in
+        print_endline ("Result: " ^ value_to_string result_value ^ " " ^  
+                     "Expected: " ^ value_to_string output);
         if try (Eval.value_equality result_value output) with _ -> false then score+1 else score
     with except when except <> EqualError -> except_handling except output; score
   ) 0 examples in
@@ -63,7 +63,7 @@ let run_testcases : prog -> examples -> unit
 let run_prog : prog -> examples -> unit
 =fun prog examples ->
   let _ = Type.run prog in
-  print_header "Program"; Print.print_pgm prog;
+  print_header "Program"; print_pgm prog;
   print_header "Test-cases"; print_examples examples;
   print_header "Run test-cases"; run_testcases prog examples 
 
@@ -114,8 +114,8 @@ let generate_testcases : prog -> prog -> examples
   | Some ex ->
     let examples = ex::[] in
     let _ =
-      Print.print_header "original"; Print.print_pgm submission;
-      Print.print_header "Generated examples"; Print.print_examples examples;
+      print_header "original"; print_pgm submission;
+      print_header "Generated examples"; print_examples examples;
       print_endline ("Counter-example Time : " ^ string_of_float test_time);
       print_endline ("Num of Inputs : " ^ string_of_int (!TestGenerator.count));
       print_endline ("Num of Crashes : " ^ string_of_int (!TestGenerator.num_of_crash))
@@ -133,8 +133,8 @@ let fix_without_testcases : prog -> prog -> unit
   let rec iter : prog -> prog -> prog -> examples -> (prog option * examples)
   = fun pgm cpgm candidate examples ->
     let _ = 
-      Print.print_header "Generated examples"; Print.print_examples examples;
-      Print.print_header "Repair candidate"; Print.print_pgm candidate;
+      print_header "Generated examples"; print_examples examples;
+      print_header "Repair candidate"; print_pgm candidate;
     in
     let test_gen_result = TestGenerator.gen_counter_example candidate cpgm in
     let test_time = Unix.gettimeofday() -. !(TestGenerator.start_time) in 
@@ -157,24 +157,24 @@ let fix_without_testcases : prog -> prog -> unit
       | Some pgm' -> 
         (*
         let _ = 
-          Print.print_header "Generated examples"; Print.print_examples examples;
-          Print.print_header "Repair candidate"; Print.print_pgm candidate;
+          print_header "Generated examples"; print_examples examples;
+          print_header "Repair candidate"; print_pgm candidate;
         in
         *)
         iter pgm cpgm pgm' examples
   in
   match iter submission solution submission [] with
   | (None, examples) -> 
-      Print.print_header "original"; Print.print_pgm submission;
-      Print.print_header "Generated examples"; Print.print_examples examples;
-      Print.print_header "Fail to repair";
+      print_header "original"; print_pgm submission;
+      print_header "Generated examples"; print_examples examples;
+      print_header "Fail to repair";
       print_endline ("Total Time : " ^ string_of_float !task_time)
   | (Some pgm, examples) -> 
     if (examples = []) then print_endline ("Correct Code")
     else (
-      Print.print_header "original"; Print.print_pgm submission;
-      Print.print_header "Generated examples"; Print.print_examples examples;
-      Print.print_header "Correction"; Print.print_pgm pgm;
+      print_header "original"; print_pgm submission;
+      print_header "Generated examples"; print_examples examples;
+      print_header "Correction"; print_pgm pgm;
       print_endline ("Total Time : " ^ string_of_float !task_time)
     )
 
@@ -182,7 +182,7 @@ let execute : prog -> unit
 =fun prog ->
   let (tenv,_,_) = Type.run prog in
   let env = Eval.run prog in
-  (Print.print_REPL prog tenv env)
+  (print_REPL prog tenv env)
 
 let fix_without_solution : prog -> examples -> unit
 =fun submission examples -> () (* TODO *)
@@ -202,7 +202,7 @@ let read_prog : string -> prog option
 
 let main () = 
   (* Arg Parse *)
-	let _ = print_endline("file: "^Sys.argv.(0)) in
+  let _ = print_endline("file: "^Sys.argv.(0)) in
   let _ = Arg.parse options (fun s->()) usage_msg in
   let testcases = 
     if !opt_testcases_filename = "" then [] 
@@ -212,6 +212,18 @@ let main () =
   in 
   let solution = read_prog !opt_solution_filename in
   let submission = read_prog !opt_submission_filename in
+  (* Temp procedure *)
+  let _ = 
+    begin 
+      match submission, solution with
+      | Some sub, Some sol -> 
+        print_header "Submission"; print_pgm sub;
+        print_header "Summary"; print_endline (Selector.A.string_of_t (Selector.get_summary sub));
+        print_header "Submission"; print_pgm sol;
+        print_header "Summary"; print_endline (Selector.A.string_of_t (Selector.get_summary sol)); 
+      | _ -> raise (Failure "Submission or solution is not provided")
+    end
+  in
   (* Main Procedure *)
   if !opt_run then (* Run testcase *)
     begin
