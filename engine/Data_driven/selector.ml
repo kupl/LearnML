@@ -42,8 +42,6 @@ module A = struct
     let explore_prog : prog -> binding list
     = fun decls -> List.fold_left explore_decl [] decls
 
-    let 
-	
     (* Summarize a given program *)
 	let run : prog -> t
 	= fun pgm -> 
