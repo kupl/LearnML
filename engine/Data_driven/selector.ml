@@ -29,18 +29,20 @@ module A = struct
 			"Structure : \n" ^ string_of_summary summary ^ "\n)"
 		) "" t
 
-    (* Infer function type *)
-    let get_type : id -> prog -> typ
-    = fun func_id pgm ->
-      let (tenv, _, _) = Type.run pgm in
-      Type.TEnv.find tenv func_id
+    let lookup_type : id -> Type.TEnv.t -> typ
+    = fun func_id tenv -> Type.TEnv.find tenv func_id
+
+    let extract : prog -> prog
+    = fun prog -> List.filter (fun x -> match x with | DLet sum -> true | DBlock _ -> true | _-> false) prog 
 	
     (* Summarize a given program *)
 	let run : prog -> t
 	= fun pgm -> 
-      let typ = TUnit
-
-      in [("_", typ, F [])]
+      let (typ_env,_,_) = Type.run pgm in
+      let func_list = extract pgm in
+      let depth = 0 in
+      let typ = TUnit in 
+      [(test, typ, F [])]
 end
 
 let get_summary : prog -> A.t

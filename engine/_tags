@@ -2,7 +2,7 @@ true: package(batteries), package(str)
 true: package(str)
 true: thread
 true: package(aez)
-true: package(z3)
+true: package(Z3)
 true: package(qcheck)
 
 <generators/**>: include
