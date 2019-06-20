@@ -42,7 +42,7 @@ module A = struct
       let func_list = extract pgm in
       let depth = 0 in
       let typ = TUnit in 
-      [(test, typ, F [])]
+      [('_', typ, F [])]
 end
 
 let get_summary : prog -> A.t
