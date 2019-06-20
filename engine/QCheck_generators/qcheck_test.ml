@@ -58,10 +58,11 @@ module Make (G: Generator) = struct
 		let cell = QCheck.Test.make_cell ~count:2000000000 (QCheck.make G.gen (*~shrink:G.shrink*) )
 		(fun generated_input -> 
 			test_count := !test_count + 1;
-			if Unix.gettimeofday() -. (!start_time) > 1800.0 then false (* Timeout *)
+			if Unix.gettimeofday() -. (!start_time) > 60.0 then false (* Timeout *)
 			else 
 				let input = transform_input generated_input in
 				(* let _ = Printf.fprintf (!log) "%s\n" ("Input : " ^ Print.input_to_string input) in *)
+				
 				try
 					let v1 = get_output cpgm input in
 					try

@@ -5,7 +5,7 @@ true: package(aez)
 true: package(Z3)
 true: package(qcheck)
 
-<generators/**>: include
+<QCheck_generators/**>: include
 <Data_driven/**>: include
 <FixML/**>: include
 <*.ml>: include

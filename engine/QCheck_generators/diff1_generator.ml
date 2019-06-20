@@ -64,8 +64,8 @@ let gen : t QCheck.Gen.t
 				 1, map (fun n -> CONST n) small_int; 
 				 1, map (fun x -> VAR n) nat;
 				 1, map2 (fun x n -> POWER (x, n)) nat small_int;
-				 1, map (fun aes -> TIMES aes) (list_repeat 5 (recgen (n/4)));
-				 1, map (fun aes -> SUM aes) (list_repeat 5 (recgen (n/4)));
+				 1, map (fun aes -> TIMES aes) (list_size (int_range 0 5) (recgen (n/4)));
+				 1, map (fun aes -> SUM aes) (list_size (int_range 0 5) (recgen (n/4)));
 				])
 		)
 	in
