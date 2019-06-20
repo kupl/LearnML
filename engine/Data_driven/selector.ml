@@ -32,17 +32,24 @@ module A = struct
     let lookup_type : id -> Type.TEnv.t -> typ
     = fun func_id tenv -> Type.TEnv.find tenv func_id
 
-    let extract : prog -> prog
-    = fun prog -> List.filter (fun x -> match x with | DLet sum -> true | DBlock _ -> true | _-> false) prog 
+    let explore_decl : binding list -> decl -> binding list 
+    = fun acc decl->
+      match decl with
+      | DLet binding -> binding :: acc
+      | DBlock (_, bindlst) -> bindlst @ acc
+      | _ -> acc
+
+    let explore_prog : prog -> binding list
+    = fun decls -> List.fold_left explore_decl [] decls
+
+    let 
 	
     (* Summarize a given program *)
 	let run : prog -> t
 	= fun pgm -> 
       let (typ_env,_,_) = Type.run pgm in
-      let func_list = extract pgm in
-      let depth = 0 in
-      let typ = TUnit in 
-      [('_', typ, F [])]
+      let func_list = explore_prog pgm in
+      [("_", TUnit, F [])]
 end
 
 let get_summary : prog -> A.t
