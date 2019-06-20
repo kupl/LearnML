@@ -1,52 +1,30 @@
-(* NOTE: no Core used here... how do you do file IO in core!? *)
+open Lang 
 
-let include_directories : string list ref = ref ["."]
+(* Read program from file *)
 
-let open_file_with_include_dirs (filename:string) : in_channel =
-  let rec try_open is =
-    match is with
-    | [] -> raise @@ Sys_error (Printf.sprintf "File not found: %s" filename)
-    | i :: is ->
-      let full_path = Filename.concat i filename in
-      if Sys.file_exists full_path then
-        open_in full_path
-      else
-        try_open is
-  in
-    try_open !include_directories
-
-let preproc_re = Str.regexp "^#use \"\\([-a-zA-Z0-9_\\./]+\\)\""
-
-let read_to_string (filename:string) : string =
-  let ic   = open_file_with_include_dirs filename in
-  let data = ref [] in
+let preprocess_file : string -> string
+= fun filename -> 
+  let ic = open_in filename in
+  let lines = ref [] in
   begin try
     while true do
-      data := input_line ic :: !data
+      lines := (input_line ic)::!lines
     done
-  with End_of_file ->
+  with End_of_file -> 
     close_in ic
   end;
-  List.rev !data |> String.concat "\n"
+  List.rev !lines |> String.concat "\n"
 
-let add_base_dir_to_includes (path:string) =
-  let basedir = Filename.dirname path in
-  include_directories := basedir :: !include_directories
+let parse_file (f:string) : (examples * prog) =
+  preprocess_file f
+    |> Lexing.from_string
+    |> Parser.prog Lexer.token
 
-let preprocess_file (filename:string) : string =
-  add_base_dir_to_includes filename;
-  let ic   = open_file_with_include_dirs filename in
-  let data = ref [] in
-  begin try
-    while true do
-      let line = input_line ic in
-      if Str.string_match preproc_re line 0 then
-        let path = Str.matched_group 1 line in
-        data := read_to_string path :: !data
-      else
-        data := line :: !data
-    done
-  with End_of_file ->
-    close_in ic
-  end;
-  List.rev !data |> String.concat "\n"
+let read_prog : string -> prog option
+= fun filename ->
+  try 
+    if Sys.file_exists filename then Some (snd (parse_file filename)) 
+    else None 
+  with _ -> raise (Failure ("parsing error: " ^ filename)) 
+
+

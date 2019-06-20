@@ -1,15 +1,10 @@
 open Lang
 open Print
 open Options
+open Preproc
 
-exception Arg_exception
-
+(* Framework for learning functional programming *)
 let usage_msg = "main.native -run (or -fix) -submission <filename> -solution <filename>"
-
-let parse_file (f:string) : (examples * prog) =
-  Preproc.preprocess_file f
-    |> Lexing.from_string
-    |> Parser.prog Lexer.token
 
 let program_with_grading prog = prog@(External.grading_prog)
 
@@ -68,7 +63,7 @@ let run_prog : prog -> examples -> unit
   print_header "Run test-cases"; run_testcases prog examples 
 
 let fix_with_solution : prog -> prog -> examples -> unit
-=fun submission solution examples ->  (* TODO *)
+= fun submission solution examples ->  (* TODO *)
   let _ = Type.run submission in
   let score = Util.list_fold (fun (inputs, output) score->
     let submission = program_with_grading submission in
@@ -179,26 +174,10 @@ let fix_without_testcases : prog -> prog -> unit
     )
 
 let execute : prog -> unit
-=fun prog ->
+= fun prog ->
   let (tenv,_,_) = Type.run prog in
   let env = Eval.run prog in
   (print_REPL prog tenv env)
-
-let fix_without_solution : prog -> examples -> unit
-=fun submission examples -> () (* TODO *)
-
-let synthesize : prog -> examples -> prog
-=fun sketch examples -> [] (* TODO *)
-
-let clonecheck : prog list -> prog list list
-=fun submissions -> [] (* TOOD *)
-
-let read_prog : string -> prog option
-=fun filename ->
-  try 
-    if Sys.file_exists filename then Some (snd (parse_file filename)) 
-    else None 
-  with _ -> raise (Failure ("parsing error: " ^ filename)) 
 
 let main () = 
   (* Arg Parse *)
@@ -238,8 +217,7 @@ let main () =
         begin match testcases with
         | [] -> fix_without_testcases sub sol
         | _ -> fix_with_solution sub sol testcases
-        end
-      | Some sub, None -> fix_without_solution sub testcases 
+        end      
       | _ -> raise (Failure (!opt_submission_filename ^ " does not exist"))
     end
   else if !opt_execute then (* Execute Program *)
