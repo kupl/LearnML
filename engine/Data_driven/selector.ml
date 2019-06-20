@@ -1,6 +1,8 @@
 open Lang
 open Util
 
+exception NotImplemented
+
 module A = struct
 	
 	(* summary of function body *)
@@ -32,6 +34,22 @@ module A = struct
     let lookup_type : id -> Type.TEnv.t -> typ
     = fun func_id tenv -> Type.TEnv.find tenv func_id
 
+    let extract_summary : binding -> (string * summary)
+    = fun (f,_,_,_,exp) -> 
+      let rec get_pattern: lexp -> summary 
+      = fun (_,exp) -> 
+        match exp with
+        | EApp (e1,e2) -> raise NotImplemented
+        | EFun (_,e) -> raise NotImplemented 
+        | ELet _ -> raise NotImplemented 
+        | EBlock _ -> raise NotImplemented
+        | EMatch (_,br) -> let pat = List.map (fun (x,y) -> x) br in F (pat)
+        | _ -> raise NotImplemented 
+      in 
+      let name = Print.let_to_string f in
+      let summary = get_pattern exp in
+      (name, summary)
+
     let explore_decl : binding list -> decl -> binding list 
     = fun acc decl->
       match decl with
@@ -47,7 +65,9 @@ module A = struct
 	= fun pgm -> 
       let (typ_env,_,_) = Type.run pgm in
       let func_list = explore_prog pgm in
-      [("_", TUnit, F [])]
+      let processing = List.map extract_summary func_list in
+      let summaries = List.map (fun (x,z) -> (x, (lookup_type x typ_env), z)) processing in
+      summaries 
 end
 
 let get_summary : prog -> A.t
