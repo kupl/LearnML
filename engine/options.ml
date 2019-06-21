@@ -15,6 +15,7 @@ let path =
 
 
 let opt_solution_filename = ref ""
+let opt_solution_dirname = ref ""
 let opt_submission_filename = ref ""
 let opt_testcases_filename = ref ""
 let opt_grading_filename = ref ""
@@ -37,6 +38,7 @@ let opt_tree = ref false
 let options =
   [
     ("-solution", Arg.String (fun fname -> opt_solution_filename := fname), " Solution filename");
+    ("-solutions", Arg.String (fun fname -> opt_solution_dirname := fname), " Solution dirname");
     ("-submission", Arg.String (fun fname -> opt_submission_filename := fname), " Submission filename");
     ("-testcases", Arg.String (fun fname -> opt_testcases_filename := fname), " Test-cases filename");
     ("-grading", Arg.String (fun fname -> opt_grading_filename := fname), " Grading filename");
