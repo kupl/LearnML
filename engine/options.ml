@@ -31,6 +31,9 @@ let opt_test = ref false
 let opt_qcheck = ref false
 let opt_exp_cover = ref false
 
+(*For debugging*)
+let opt_tree = ref false
+
 let options =
   [
     ("-solution", Arg.String (fun fname -> opt_solution_filename := fname), " Solution filename");
@@ -48,6 +51,7 @@ let options =
     ("-test", Arg.Set opt_test, " Symbolic testing");
     ("-qcheck", Arg.Set opt_qcheck, " Qcheck testing");
     ("-exp_cover", Arg.Set opt_exp_cover, " Check expression coverage");
+    ("-tree", Arg.Set opt_tree, "print tree");
   ]
   |> Arg.align
 

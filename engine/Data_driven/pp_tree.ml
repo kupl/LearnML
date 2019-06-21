@@ -112,10 +112,10 @@ let rec exp_to_tree : int -> lexp -> string
     depth d^"THEN "^exp_to_tree (d+2) e2 ^
     depth d^"ELSE "^exp_to_tree (d+2) e3
   |ELet (f, is_rec, xs, t, e1, e2) -> 
-    "let " ^ (if is_rec then "rec " else "") ^
+    "ELet " ^ (if is_rec then "rec " else "") ^
     binding_to_tree (d+2) (f, is_rec, xs, t, e1) ^ " in" ^ (exp_to_tree (d+2) e2)
   |EBlock (is_rec, es, e2) ->
-    "let " ^
+    "EBlock let " ^
     (if is_rec then "rec " else "") ^
     Print.pp_block (binding_to_tree (d+2)) es ^ "" ^ " in"^ exp_to_tree (d+2) e2 
   |EFun (arg,e1) -> 

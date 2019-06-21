@@ -200,7 +200,7 @@ let main () =
         print_header "Summary"; print_endline (Selector.A.string_of_t (Selector.get_summary sub));
         print_header "Submission"; print_pgm sol;
         print_header "Summary"; print_endline (Selector.A.string_of_t (Selector.get_summary sol)); 
-      | _ -> raise (Failure "Submission or solution is not provided")
+      | _  -> ()
     end
   in
   (* Main Procedure *)
@@ -245,6 +245,12 @@ let main () =
         print_endline ("Time : " ^ string_of_float (Unix.gettimeofday () -. temp_time))
       ) () testcases
       | _ -> raise (Failure "Submission or solution is not provided")
+    end
+  else if !opt_tree then (* For debugging *)
+    begin 
+      match submission with
+      | Some sub -> Print.print_header (Print.program_to_string sub); Print.print_header (Pp_tree.program_to_tree 0 sub)
+      | _ -> raise (Failure(!opt_submission_filename ^ " does not exist"))
     end
   else Arg.usage options usage_msg
 
