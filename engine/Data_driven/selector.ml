@@ -7,6 +7,7 @@ module A = struct
 	
 	(* summary of function body *)
 	type summary = 
+        | E
 		| F of pat list	(* Flat match *)
 		| N of (pat * summary) list (* Nested match *)
 
@@ -18,6 +19,7 @@ module A = struct
 	= fun summary ->
 		"match {" ^
 		match summary with 
+        | E -> "Empty"
 		| F ps -> List.fold_left (fun acc p -> acc ^ Print.pat_to_string p ^ " | ") "" ps
 		| N summaries -> List.fold_left (fun acc (p, s) -> acc ^ Print.pat_to_string p ^ ":" ^ string_of_summary s ^ " | ") "" summaries
 		^ " }"
@@ -33,32 +35,45 @@ module A = struct
 
     let lookup_type : id -> Type.TEnv.t -> typ
     = fun func_id tenv -> Type.TEnv.find tenv func_id
-
-    let extract_summary : binding -> (string * summary)
-    = fun (f,_,_,_,exp) -> 
-      let rec get_pattern: lexp -> summary 
-      = fun (_,exp) -> 
-        match exp with
-        | EApp (e1,e2) -> raise NotImplemented
-        | EFun (_,e) -> raise NotImplemented 
-        | ELet _ -> raise NotImplemented 
-        | EBlock _ -> raise NotImplemented
-        | EMatch (_,br) -> let pat = List.map (fun (x,y) -> x) br in F (pat)
-        | _ -> raise NotImplemented 
-      in 
-      let name = Print.let_to_string f in
-      let summary = get_pattern exp in
-      (name, summary)
+      
+    let rec explore_bind : binding list -> binding -> binding list
+    = fun acc b ->
+      let (_,_,_,_,e) = b in 
+      explore_exp (b::acc) e
+    
+    and explore_exp : binding list -> lexp -> binding list
+    = fun acc (_,exp) ->
+      match exp with 
+      | EApp (e1,e2) -> explore_exp [] e1 @ explore_exp [] e2 @ acc
+      | ELet (bind,b,arg,typ,e1,e2) -> explore_bind acc (bind,b,arg,typ,e1)
+      | EBlock (_,bs,_) -> List.fold_left explore_bind [] bs 
+      | IF (_,e1,e2) -> explore_exp [] e1 @ explore_exp [] e2 @ acc
+      | _ -> acc
 
     let explore_decl : binding list -> decl -> binding list 
     = fun acc decl->
       match decl with
-      | DLet binding -> binding :: acc
-      | DBlock (_, bindlst) -> bindlst @ acc
+      | DLet b -> (explore_bind [] b) @ acc
+      | DBlock (_, bs) -> (List.fold_left explore_bind [] bs) @ acc
       | _ -> acc
 
     let explore_prog : prog -> binding list
     = fun decls -> List.fold_left explore_decl [] decls
+    
+    let extract_summary : binding -> (string * summary)
+    = fun (f,_,_,_,e) -> 
+      let rec get_pattern: lexp -> summary 
+      = fun (_,exp) -> 
+        match exp with
+        | EApp (e1,e2) -> ignore (get_pattern e1); get_pattern e2
+        | EFun (_,e) -> get_pattern e
+        | EMatch (_,br) -> let pat = List.map (fun (x,y) -> x) br in F (pat)
+        | IF(_,e1,e2) -> ignore (get_pattern e1); get_pattern e2;
+        | _ -> E
+      in 
+      let name = Print.let_to_string f in
+      let summary = get_pattern e in
+      (name, summary)
 
     (* Summarize a given program *)
 	let run : prog -> t
