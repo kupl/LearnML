@@ -31,11 +31,10 @@ let preprocess : prog -> label BatSet.t
 
 
 (* Find counter exampels *)
-
 let run_pgm : prog -> example -> env
 = fun pgm (input, output) ->
   let res_var = "__res__" in
-  let pgm = pgm@(External.grading_prog) in
+  let pgm = pgm@(!grading_pgm) in
   let pgm' = pgm @ [(DLet (BindOne res_var,false,[],fresh_tvar(),(Lang.appify (gen_label(),EVar !Options.opt_entry_func) input)))] in
   Eval.run pgm'
 

@@ -345,7 +345,7 @@ let type_directed : (int * typ * Type.TEnv.t) -> state -> state option
 	(* Transition from hole to exp *)
 	match snd lexp with
 	(* Const *)
-	| SStr _ -> 		
+	| SStr _ | String _ -> 		
 		begin match typ with
 		| TString -> Some (lexp, h_t, v_t)
 		| TVar _ ->
@@ -353,35 +353,19 @@ let type_directed : (int * typ * Type.TEnv.t) -> state -> state option
 			Some (lexp, h_t, v_t)
 		| _ -> None
 		end
-  | SInt _ ->
+  | SInt _ | Const _ ->
     begin match typ with
-    | TInt -> Some (lexp, h_t, v_t) 
-    | TVar _ -> 
-      let (h_t, v_t, tenv) = update_polymorphic (typ, TInt) (h_t, v_t, tenv) in
-      Some (lexp, h_t, v_t)
-    | _ -> None
-    end
-	| Const _ ->
-		begin match typ with
 		| TInt -> Some (lexp, h_t, v_t) 
-		| TVar _ ->	
+		| TVar _ ->
 			let (h_t, v_t, tenv) = update_polymorphic (typ, TInt) (h_t, v_t, tenv) in
 			Some (lexp, h_t, v_t)
-		| _ -> None
-		end
+    | _ -> None
+    end
 	| TRUE | FALSE ->
 		begin match typ with
 		| TBool -> Some (lexp, h_t, v_t)
 		| TVar _ ->
 			let (h_t, v_t, tenv) = update_polymorphic (typ, TBool) (h_t, v_t, tenv) in
-			Some (lexp, h_t, v_t)
-		| _ -> None
-		end
-	| String _ ->
-		begin match typ with
-		| TString -> Some (lexp, h_t, v_t)
-		| TVar _ ->
-			let (h_t, v_t, tenv) = update_polymorphic (typ, TString) (h_t, v_t, tenv) in
 			Some (lexp, h_t, v_t)
 		| _ -> None
 		end
@@ -766,22 +750,12 @@ let rec replace_const_symbol : (int * exp) -> lexp -> lexp
   | _ -> (l, e)
 
 (* Main Synthesis Algorithm *)
-let rec get_output : prog -> input -> value
-= fun pgm input ->
-	try
-		let res_var = "__res__" in
-		let pgm = pgm@(External.grading_prog) in
-		let pgm' = pgm @ [(DLet (BindOne res_var,false,[],fresh_tvar(),(appify (gen_label(), EVar !Options.opt_entry_func) input)))] in
-		let env = Eval.run pgm' in
-		lookup_env res_var env
-	with e -> failwith (Printexc.to_string e)
-
 let rec return_counter_example : prog -> prog -> input -> example option
 = fun pgm cpgm input ->
 	try
-		let v1 = get_output cpgm input in
+		let v1 = Eval.get_output cpgm input in
 		try
-			let v2 = get_output pgm input in
+			let v2 = Eval.get_output pgm input in
 			(*print_endline ("V 1,2 : " ^ Print.value_to_string v1 ^ ", " ^ Print.value_to_string v2);*)
 			if not (Eval.value_equality v1 v2) then Some (input, v1) else None
 		with e -> (*print_endline (Printexc.to_string e);*) Some (input, v1)
@@ -846,7 +820,7 @@ let gen_counter_example : prog -> prog -> example option
 	start_time := Unix.gettimeofday();
 	let sketch = get_sketch cpgm in
 	let initial_workset = Workset.add sketch Workset.empty in
- let comp = Comp.all_components () in
- (*let comp = Comp.const_comp comp in*)
+	let comp = Comp.all_components () in
+	(*let comp = Comp.const_comp comp in*)
 	let result = work initial_workset comp pgm cpgm in
 	result

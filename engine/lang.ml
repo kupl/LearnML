@@ -9,6 +9,7 @@ type id = string
 
 type label = int
 
+(* Type *)
 type typ = 
   | TUnit
   | TInt
@@ -24,6 +25,7 @@ type typ =
 
 type ctor = id * typ list
 
+(* Pattern *)
 type pat = 
   | PUnit
   | PInt of int
@@ -37,6 +39,7 @@ type pat =
   | PUnder 
   | Pats of pat list
 
+(* Program *)
 type let_bind =
   | BindUnder (* let _ = ... in x *)
   | BindOne of id (* let x = ... in x *)
@@ -147,6 +150,10 @@ let dummy_hole () = (0,Hole (0))
 let empty_env = BatMap.empty
 let lookup_env = BatMap.find
 let update_env = BatMap.add
+
+(* External functions *)
+let init_pgm : prog ref = ref []
+let grading_pgm : prog ref = ref []
 
 (* generate a fresh type variable *)
 let tvar_num = ref 0

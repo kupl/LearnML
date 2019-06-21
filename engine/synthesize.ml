@@ -36,7 +36,7 @@ module Workset = struct
   let add : work -> t -> t
   = fun (n,pgm,h_t,h_e) (heap,sset) ->
     try
-			let normalized_pgm = Normalize.normalize pgm in
+      let normalized_pgm = Normalize.normalize pgm in
       if explored normalized_pgm (heap,sset) then (heap,sset)
       else
         (Heap.add (n,pgm,h_t,h_e) heap, BatSet.add (Print.program_to_string normalized_pgm) sset)
@@ -312,8 +312,8 @@ let rec type_directed : lexp -> typ -> Type.TEnv.t -> type_env -> state option
     begin try
       let subst = Type.unify Type.Subst.empty (hole_typ,x_t) in
       let (h_t,h_e) = list_fold (fun (id,typ) (h_t,h_e) -> 
-      	let tyvar = TVar id in
-      	(update_hole_type tyvar typ h_t, update_type_env tyvar typ h_e)
+        let tyvar = TVar id in
+        (update_hole_type tyvar typ h_t, update_type_env tyvar typ h_e)
       ) subst (h_t,h_e) in
       Some (exp,h_t,h_e)
     with
@@ -469,9 +469,9 @@ let bound_var_to_comp : Type.TEnv.t -> components -> components
 let except_alias_vars : MustAlias.Sem.equivSet -> components -> components
 = fun alias_info candidates ->
   BatSet.fold (fun (p1,p2) cand_set ->
-  	match p2 with
-  	|PVar x -> BatSet.filter (fun (_,exp) -> exp <> EVar x) cand_set  
-  	|_ -> cand_set
+    match p2 with
+    |PVar x -> BatSet.filter (fun (_,exp) -> exp <> EVar x) cand_set  
+    |_ -> cand_set
   ) alias_info candidates
 
 
@@ -479,11 +479,11 @@ let gen_exp_nextstates : components -> (Workset.work * lexp) -> Workset.work Bat
 = fun candidates ((rank,prog,h_t,h_e),hole) ->
   let n = extract_holenum hole in
   let hole_type = BatMap.find n h_t in
-	let candidates =
-		begin match hole_type with
-		|TTuple lst -> BatSet.add (gen_label(),ETuple (List.map (fun _ -> gen_labeled_hole()) lst)) candidates
-		|_ -> candidates
-		end in
+  let candidates =
+    begin match hole_type with
+    |TTuple lst -> BatSet.add (gen_label(),ETuple (List.map (fun _ -> gen_labeled_hole()) lst)) candidates
+    |_ -> candidates
+    end in
   let env = BatMap.find n h_e in
   let candidates = bound_var_to_comp env candidates in
   let alias_info = MustAlias.Sem.run prog in
@@ -517,7 +517,7 @@ let rec is_solution : prog -> examples -> bool
 (
   List.for_all (fun (inputs,output) ->
     let res_var = "__res__" in
-    let prog = prog@(External.grading_prog) in
+    let prog = prog@(!grading_pgm) in
     let prog' = prog @ [(DLet (BindOne res_var,false,[],fresh_tvar(),(appify (gen_label(), EVar !Options.opt_entry_func) inputs)))] in
     try
       let env = Eval.run prog' in
@@ -543,7 +543,7 @@ let rec work : Workset.t -> components -> examples -> prog option
 = fun workset exp_set examples->
   iter := !iter +1;
   if (Sys.time()) -. (!start_time) > 60.0 then None
-  else if (!iter mod 10000 = 0)
+  else if (!iter mod 100 = 0)
     then
       begin
         print_string("Iter : " ^ (string_of_int !iter) ^ " ");
@@ -559,39 +559,21 @@ let rec work : Workset.t -> components -> examples -> prog option
     else
       let _ = fprintf (!debug) "%s\n" (Print.program_to_string prog) in
       if is_closed prog then
-      	let _ = count := !count +1 in
-      	if is_solution prog examples then Some prog
-      	else work remaining_workset exp_set examples
-    	else if Smt_pruning.smt_pruning prog examples then
-      	let exp_set = BatSet.map update_components exp_set in
-      	let nextstates = next (rank,prog,h_t,h_e) exp_set in
-      	let new_workset = BatSet.fold Workset.add nextstates remaining_workset in
-      	work new_workset exp_set examples
-    	else work remaining_workset exp_set examples
+        let _ = count := !count +1 in
+        if is_solution prog examples then Some prog
+        else work remaining_workset exp_set examples
+      else if Smt_pruning.smt_pruning prog examples then
+        let exp_set = BatSet.map update_components exp_set in
+        let nextstates = next (rank,prog,h_t,h_e) exp_set in
+        let new_workset = BatSet.fold Workset.add nextstates remaining_workset in
+        work new_workset exp_set examples
+      else work remaining_workset exp_set examples
 
-let hole_synthesize : prog -> Workset.work BatSet.t -> components -> examples ->prog option
+let hole_synthesize : prog -> Workset.work BatSet.t -> components -> examples -> prog option
 = fun pgm pgm_set components examples -> 
   (*Print.print_header "expression component set is below";
   Print.print_exp_set components;*)
   let workset = BatSet.fold (fun t set-> Workset.add t set) pgm_set Workset.empty in
-    let _ = start_time := 0.0 in
+  let _ = start_time := 0.0 in
   let result = work workset components examples in
-  let result_prog_string = 
-  match result with
-  |None -> "FixML fails to generate patch"
-  |Some prog -> print_endline("Total time :" ^ string_of_float (Sys.time() -. !start_time));Print.program_to_string (prog) in
-  Print.print_header "original" ;
-  Print.print_pgm pgm;
-  Print.print_header "result";
-  print_endline(result_prog_string);
-  (*print_endline("Total time :" ^ string_of_float (Sys.time() -. !start_time));*)
-  (*Print.print_header "eval count";
-  print_endline(string_of_int (!Eval.count));
-  Print.print_header "infinite count";
-  print_endline(string_of_int (!Eval.infinite_count + !Symbol_eval.infinite_count));
-  Print.print_header "SMT time";
-  print_endline(string_of_float (!Smt_pruning.smt_time));
-  Print.print_header "UNSAT count";
-  print_endline(string_of_int (!Smt_pruning.unsat_count));*)
   result
-
