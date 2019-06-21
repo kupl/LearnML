@@ -6,12 +6,15 @@ open Preproc
 (* Framework for learning functional programming *)
 let usage_msg = "main.native -run (or -fix) -submission <filename> -solution <filename>"
 
-let program_with_grading prog = prog@(External.grading_prog)
+let is_same_type : prog -> prog -> unit
+= fun pgm cpgm ->
+  let (tenv1, _, _) = Type.run pgm in
+  let (tenv2, _, _) = Type.run cpgm in
+  let (t1, t2) = (Type.TEnv.find tenv1 !opt_entry_func, Type.TEnv.find tenv2 !opt_entry_func) in
+  let _ = Type.unify Type.Subst.empty (t1, t2) in
+  ()
 
-let program_with_input prog inputs =
-  let res_var = "__res__" in
-  prog @ [(DLet (BindOne res_var,false,[],fresh_tvar(),(Lang.appify (gen_label(),EVar !opt_entry_func) inputs)))] 
-
+(* Run testcases *)
 let except_handling : exn -> value -> unit
 = fun except output ->
   begin match except with
@@ -31,27 +34,16 @@ let except_handling : exn -> value -> unit
      print_endline("Result : Evaluation Error "^
                   "Expected: " ^ value_to_string output);
   end
- 
-let is_same_type : prog -> prog -> unit
-= fun pgm cpgm ->
-  let (tenv1, _, _) = Type.run pgm in
-  let (tenv2, _, _) = Type.run cpgm in
-  let (t1, t2) = (Type.TEnv.find tenv1 !opt_entry_func, Type.TEnv.find tenv2 !opt_entry_func) in
-  let _ = Type.unify Type.Subst.empty (t1, t2) in
-  ()
 
 let run_testcases : prog -> examples -> unit
-=fun prog examples ->
+= fun prog examples ->
   let score = List.fold_left (fun score (inputs, output) ->
-    let prog = program_with_grading prog in
-    let prog' = program_with_input prog inputs in
     try
-      let env = Eval.run prog' in
-      let result_value = Lang.lookup_env "__res__" env in
+      let result_value = Eval.get_output prog inputs in
         print_endline ("Result: " ^ value_to_string result_value ^ " " ^  
                      "Expected: " ^ value_to_string output);
-        if try (Eval.value_equality result_value output) with _ -> false then score+1 else score
-    with except when except <> EqualError -> except_handling except output; score
+      if try (Eval.value_equality result_value output) with _ -> false then score+1 else score
+    with except -> except_handling except output; score
   ) 0 examples in
   print_endline("score : "^(string_of_int score))
 
@@ -63,33 +55,26 @@ let run_prog : prog -> examples -> unit
   print_header "Run test-cases"; run_testcases prog examples 
 
 let fix_with_solution : prog -> prog -> examples -> unit
-= fun submission solution examples ->  (* TODO *)
-  let _ = Type.run submission in
-  let score = Util.list_fold (fun (inputs, output) score->
-    let submission = program_with_grading submission in
-    let prog = program_with_input submission inputs in
-    let _ = 
-      try
-        (Type.run prog)
-      with |_ -> raise (Failure "The submission and type are mismatched")
-    in
-    try
-      let env = Eval.run prog in
-      let result_value = Lang.lookup_env "__res__" env in
-      if(result_value=output) then score+1 else score
-    with |_ -> score
-  ) examples 0 in
-  let _ = if(score=List.length examples) then raise (Failure "The submission is correct code") in
-  let ranked_prog_set = Localize.localization submission examples in
-  let initial_set = BatSet.map
-   (
-      fun (n,prog)->
-        let (_,hole_type,variable_type) = Type.run prog in
-        (n,prog,hole_type,variable_type)
-    ) ranked_prog_set in
-  let components = Comp.extract_component solution in
-  let _ = Synthesize.hole_synthesize submission initial_set components examples in
-  ()
+= fun pgm cpgm examples ->
+  let _ = is_same_type pgm cpgm in
+  let _ = if Eval.is_solution pgm examples then raise (Failure "The submission is correct code") in
+  let _ = Print.print_header "original" ; Print.print_pgm pgm in
+  (* Localize *)
+  let initial_set =
+    Localize.localization pgm examples |> 
+    BatSet.map (fun (n, prog) ->
+      let (_,hole_type,variable_type) = Type.run prog in
+      (n,prog,hole_type,variable_type)
+    ) 
+  in
+  (* Component Extraction *)
+  let components = Comp.extract_component cpgm in
+  (* Patch Generation *)
+  match Synthesize.hole_synthesize pgm initial_set components examples with
+  | None -> print_endline ("FixML fails to generate a patch")
+  | Some pgm' ->
+    Print.print_header "result"; Print.print_pgm pgm';
+    print_endline ("Total time :" ^ string_of_float (Sys.time() -. !Synthesize.start_time))
 
 let generate_testcases : prog -> prog -> examples
 = fun submission solution -> 
@@ -183,14 +168,14 @@ let main () =
   (* Arg Parse *)
   let _ = print_endline("file: "^Sys.argv.(0)) in
   let _ = Arg.parse options (fun s->()) usage_msg in
-  let testcases = 
-    if !opt_testcases_filename = "" then [] 
-    else 
-      try fst (parse_file !opt_testcases_filename) 
-      with _ -> raise (Failure ("error during parsing testcases: " ^ !opt_testcases_filename)) 
-  in 
+  let testcases = read_testcases !opt_testcases_filename in
   let solution = read_prog !opt_solution_filename in
+  let solutions = read_pgms !opt_solution_dirname in
   let submission = read_prog !opt_submission_filename in
+  let _ = 
+    init_pgm := read_external !opt_external_filename;
+    grading_pgm := read_external !opt_grading_filename
+  in
   (* Temp procedure *)
   let _ = 
     begin 
@@ -218,6 +203,7 @@ let main () =
         | [] -> fix_without_testcases sub sol
         | _ -> fix_with_solution sub sol testcases
         end      
+      | Some sub, None -> let _ = Data_driven.run sub solutions testcases in ()
       | _ -> raise (Failure (!opt_submission_filename ^ " does not exist"))
     end
   else if !opt_execute then (* Execute Program *)

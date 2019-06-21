@@ -16,15 +16,14 @@ let preprocess_file : string -> string
 
 let parse_file : string -> examples * prog
 = fun f -> 
-  preprocess_file f
-  |> Lexing.from_string
-  |> Parser.prog Lexer.token
+  try 
+    preprocess_file f
+    |> Lexing.from_string
+    |> Parser.prog Lexer.token
+  with _ -> raise (Failure ("Parsing error : " ^ f))
 
 let read_prog : string -> prog option
-= fun filename ->
-  try 
-    if Sys.file_exists filename then Some (snd (parse_file filename)) else None 
-  with _ -> raise (Failure ("parsing error: " ^ filename)) 
+= fun filename -> if Sys.file_exists filename then Some (snd (parse_file filename)) else None 
 
 (* Read set of programs from directory *)
 let dir_contents : string -> string list
@@ -51,9 +50,14 @@ let read_pgms : string -> prog list
     pgms
   else []
 
+(* Read testcases *)
 let read_testcases : string -> examples
 = fun file_name ->
   if file_name = "" then [] 
   else 
     try fst (parse_file file_name) 
-    with e -> raise (e) 
+    with e -> raise e
+
+(* Read external library *)
+let read_external : string -> prog 
+= fun filename -> if Sys.file_exists filename then snd (parse_file filename) else []

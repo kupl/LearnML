@@ -477,7 +477,7 @@ let rec partial_eval_decl : symbolic_env -> decl -> symbolic_env
 let partial_run : prog -> symbolic_env
 = fun decls -> 
   start_time:=Unix.gettimeofday();
-  let init_env = List.fold_left partial_eval_decl empty_env (External.init_prog) in
+  let init_env = List.fold_left partial_eval_decl empty_env (!init_pgm) in
   start_time:=Unix.gettimeofday();
   let env = List.fold_left partial_eval_decl init_env decls in
   BatMap.diff env init_env
@@ -501,7 +501,7 @@ let rec value_to_symbol : value -> symbolic_value
 let rec symbolic_execution : prog -> lexp list -> symbolic_value
 = fun pgm input ->
   let res_var = "__res__" in
-  let pgm = pgm@(External.grading_prog) in
+  let pgm = pgm@(!grading_pgm) in
   let pgm' = pgm @ [(DLet (BindOne res_var,false,[],fresh_tvar(),(appify (gen_label(), (EVar !Options.opt_entry_func)) input)))] in
   let env = partial_run pgm' in
   find_env res_var env
