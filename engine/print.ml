@@ -166,7 +166,8 @@ let rec exp_to_string : lexp -> string
     multi_args e1 (arg_to_string arg)
   |EMatch (e,lst) ->  
     "\n (match " ^ exp_to_string e ^ " with " ^ 
-    (list_fold (fun (p,e) r -> r ^ "\n|" ^ pat_to_string p ^ " -> " ^ exp_to_string e) lst "") ^ ")"
+    (list_fold (fun (p,e) r -> r ^ "\n|" ^ pat_to_string p ^ " -> " ^ 
+    exp_to_string e) lst "") ^ ")"
   |Hole n -> "?"
   |Raise e -> "raise "^exp_to_string e
 
@@ -185,7 +186,8 @@ let rec decl_to_string : decl -> string -> string
     str ^ "type " ^ x ^ " = " ^ type_to_string typ ^ "\n"
   | DData (id,lst) -> 
     str ^ "type " ^ id ^ " =" ^ 
-    (list_fold (fun t r -> r ^ "\n|" ^ user_defined_type_to_string t) lst "") ^ "\n"
+    (list_fold (fun t r -> r ^ "\n|" ^ user_defined_type_to_string t) lst "") 
+    ^ "\n"
   | DLet (f, is_rec, args, typ, exp) -> 
     str ^ "\n" ^ "let " ^ (if is_rec then "rec " else "") ^
     binding_to_string (f, is_rec, args, typ, exp)

@@ -235,7 +235,8 @@ let main () =
   else if !opt_tree then (* For debugging *)
     begin 
       match submission with
-      | Some sub -> Print.print_header (Print.program_to_string sub); Print.print_header (Pp_tree.program_to_tree 0 sub)
+      | Some sub -> Print.print_header (Print.program_to_string sub); Print.print_header (Pp_tree.program_to_tree 0 sub);
+                    print_header "Summary"; print_endline (Selector.A.string_of_t (Selector.get_summary sub));                   
       | _ -> raise (Failure(!opt_submission_filename ^ " does not exist"))
     end
   else Arg.usage options usage_msg
