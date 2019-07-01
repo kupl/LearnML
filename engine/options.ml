@@ -53,7 +53,7 @@ let options =
     ("-test", Arg.Set opt_test, " Symbolic testing");
     ("-qcheck", Arg.Set opt_qcheck, " Qcheck testing");
     ("-exp_cover", Arg.Set opt_exp_cover, " Check expression coverage");
-    ("-tree", Arg.Set opt_tree, "print tree");
+    ("-tree", Arg.Set opt_tree, " Print code ast");
   ]
   |> Arg.align
 

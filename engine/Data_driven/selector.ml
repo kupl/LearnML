@@ -27,7 +27,7 @@ module A = struct
 	let string_of_t : t -> string
 	= fun t ->
 		List.fold_left (fun acc (name, typ, summary) -> 
-			acc ^ "(" ^
+			acc ^ "(\n" ^
 			"Name : " ^ name ^ "\n" ^
 			"Type : " ^ Print.type_to_string typ ^ "\n" ^
 			"Structure : \n" ^ string_of_summary summary ^ "\n)"
@@ -90,8 +90,41 @@ let get_summary : prog -> A.t
 	let summary = A.run pgm in
 	summary
 
-let match_summary : A.t -> A.t -> bool
-= fun s1 s2 -> true
+let match_type
+= fun x y ->
+  try
+      let pass = true in
+      let _ = Type.unify Type.Subst.empty (x,y) in pass
+  with Type.TypeError -> false
+
+let match_pat 
+= fun x y -> true
+
+let match_summary 
+= fun (_,t,s) (_,t',s') ->
+  let typ_match = match_type t t' in
+  let pat_match = match_pat s s' in
+  typ_match && pat_match
+
+let rec remove_elem 
+= fun e l -> 
+  match l with 
+  |[] -> []
+  |x::xs -> if (match_summary e x) then xs else x :: remove_elem e xs
+
+let rec match_program : A.t -> A.t -> bool
+= fun s1 s2 -> 
+  match s1,s2 with 
+  | [],[] -> true 
+  | [],_  
+  |  _,[] -> false
+  | x::xs, y::ys -> 
+    let y'= (remove_elem x (y::ys)) in
+    match_program xs y'
+    
+  (*use is_same_type in main.ml*)
+  (*list equality check*)
+  (*string * type * summary list*)
 
 (*
 	Input : An incorrect program pgm and a set of correct programs cpgms
