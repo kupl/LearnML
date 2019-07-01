@@ -166,27 +166,29 @@ let match_type : (typ list * typ) -> (typ list * typ) -> bool
     ) comp_candidate 
   else false
 
-let match_pat 
+let rec match_pattern
 = fun x y -> 
+  let rec is_match : pat -> pat -> bool
+  = fun p1 p2 -> true
+  in
   match x,y with
   | A.E, A.E -> true
-  | A.F l1, A.F l2 -> true
+  | A.F l1, A.F l2 -> 
+    let sorted_l1 = List.sort compare l1 in
+    let sorted_l2 = List.sort compare l2 in
+    list_equivalence is_match sorted_l1 sorted_l2  
   | A.N _ , A.N _ -> raise NotImplemented
   | _,_ -> false 
 
 let match_summary 
 = fun (f,ts,t,s) (f',ts',t',s') ->
-  let pat_match = match_pat s s' in
+  let pat_match = match_pattern s s' in
   let typ_match = match_type (ts,t) (ts',t') in
   typ_match && pat_match
 
 let match_program : A.t -> A.t -> bool
 = fun x y -> 
   list_equivalence match_summary x y
-
-  (*use is_same_type in main.ml*)
-  (*list equality check*)
-  (*string * type * summary list*)
 
 (*
 	Input : An incorrect program pgm and a set of correct programs cpgms
