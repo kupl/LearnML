@@ -7,29 +7,30 @@ module A = struct
 	
 	(* summary of function body *)
 	type summary = 
-        | E
+    | E
 		| F of pat list	(* Flat match *)
 		| N of (pat * summary) list (* Nested match *)
 
-	(* Function = (function name, type, summary) *)
-	type t = (string * typ * summary) list
+	(* Function = (function name, input types, output type, summary) *)
+	type t = (string * typ list * typ * summary) list
 
 	(* To string *)
 	let rec string_of_summary : summary -> string
 	= fun summary ->
 		"match {" ^
 		match summary with 
-        | E -> "Empty"
+    | E -> "Empty"
 		| F ps -> List.fold_left (fun acc p -> acc ^ Print.pat_to_string p ^ " | ") "" ps
 		| N summaries -> List.fold_left (fun acc (p, s) -> acc ^ Print.pat_to_string p ^ ":" ^ string_of_summary s ^ " | ") "" summaries
 		^ " }"
 
 	let string_of_t : t -> string
 	= fun t ->
-		List.fold_left (fun acc (name, typ, summary) -> 
+		List.fold_left (fun acc (name, inputs, output, summary) -> 
 			acc ^ "(\n" ^
 			"Name : " ^ name ^ "\n" ^
-			"Type : " ^ Print.type_to_string typ ^ "\n" ^
+      "Input types : " ^ List.fold_left (fun acc typ -> acc ^ Print.type_to_string typ ^ ", ") "{" inputs ^ "}\n" ^
+			"Output type : " ^ Print.type_to_string output ^ "\n" ^
 			"Structure : \n" ^ string_of_summary summary ^ "\n)"
 		) "" t
 
@@ -75,13 +76,36 @@ module A = struct
       let summary = get_pattern e in
       (name, summary)
 
-    (* Summarize a given program *)
+  (* 
+    Extract input and ouput types 
+    ex) (t1 * t2) -> (t3 -> t4) => [t1; t2; t3] * t4
+  *)
+  let rec extract_type : typ -> (typ list * typ)
+  = fun typ ->
+    match typ with
+    | TArr (t1, t2) ->
+      let ts1 = type_of_input t1 in
+      let (ts2, t) = extract_type t2 in
+      (ts1@ts2, t)
+    | t -> ([], t)
+
+  and type_of_input : typ -> typ list
+  = fun typ ->
+    match typ with
+    | TTuple ts -> List.fold_left (fun ts t -> (type_of_input t)@ts) [] ts
+    | t -> [t]
+
+  (* Summarize a given program *)
 	let run : prog -> t
 	= fun pgm -> 
       let (typ_env,_,_) = Type.run pgm in
       let func_list = explore_prog pgm in
       let processing = List.map extract_summary func_list in
-      let summaries = List.map (fun (x,z) -> (x, (lookup_type x typ_env), z)) processing in
+      let summaries = List.map (fun (x,z) -> 
+        let (inputs, output) = extract_type (lookup_type x typ_env) in
+        (x, inputs, output, z)
+      ) processing 
+      in
       summaries 
 end
 
@@ -95,13 +119,15 @@ let match_type
   try
       let pass = true in
       let _ = Type.unify Type.Subst.empty (x,y) in pass
-  with Type.TypeError -> false
+  with Type.TypeError -> 
+    print_endline ("T1 : " ^ Print.type_to_string x ^ ", " ^ "T1 : " ^ Print.type_to_string y);
+    false
 
 let match_pat 
 = fun x y -> true
 
 let match_summary 
-= fun (_,t,s) (_,t',s') ->
+= fun (_,ts,t,s) (_,ts',t',s') ->
   let typ_match = match_type t t' in
   let pat_match = match_pat s s' in
   typ_match && pat_match
