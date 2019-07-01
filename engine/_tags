@@ -8,4 +8,5 @@ true: package(qcheck)
 <QCheck_generators/**>: include
 <Data_driven/**>: include
 <FixML/**>: include
+<TestML/**>: include
 <*.ml>: include
