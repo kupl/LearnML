@@ -1,5 +1,6 @@
 open Lang
 open Util
+open Type
 
 exception NotImplemented
 
@@ -34,8 +35,8 @@ module A = struct
 			"Structure : \n" ^ string_of_summary summary ^ "\n)"
 		) "" t
 
-    let lookup_type : id -> Type.TEnv.t -> typ
-    = fun func_id tenv -> Type.TEnv.find tenv func_id
+    let lookup_type : id -> TEnv.t -> typ
+    = fun func_id tenv -> TEnv.find tenv func_id
       
     let rec explore_bind : binding list -> binding -> binding list
     = fun acc b ->
@@ -98,7 +99,7 @@ module A = struct
   (* Summarize a given program *)
 	let run : prog -> t
 	= fun pgm -> 
-      let (typ_env,_,_) = Type.run pgm in
+      let (typ_env,_,_) = run pgm in
       let func_list = explore_prog pgm in
       let processing = List.map extract_summary func_list in
       let summaries = List.map (fun (x,z) -> 
@@ -126,19 +127,44 @@ let rec list_equivalence : ('a -> 'a -> bool) -> 'a list -> 'a list -> bool
     let y'= (remove_elem f x (y::ys)) in
     list_equivalence f xs y'
 
-let match_type
-= fun (ts,t) (ts',t') ->
-  let aux = fun x y ->
-    try
-      let pass = true in
-      let _ = Type.unify Type.Subst.empty (x,y) in 
-      print_endline ("T1 : " ^ Print.type_to_string x ^ ", " ^ "T1 : " ^ Print.type_to_string y); pass
-    with Type.TypeError -> 
-      false
-  in 
-  let ts = List.sort compare ts in
-  let ts'= List.sort compare ts' in
-  if (aux t t') then list_equivalence (aux) ts ts' else false 
+let match_type : (typ list * typ) -> (typ list * typ) -> bool
+= fun (ts, t) (ts', t') ->
+  let rec range : int -> int -> int list
+  = fun s e ->
+    if s = e then [e]
+    else if s < e then s::(range (s+1) e)
+    else raise (Failure "Invalid range")
+  in
+  let rec insert_nth : 'a list -> 'a -> int -> 'a list
+  = fun lst e n ->
+    match lst with
+    | [] -> if n = 0 then [e] else raise (Failure "Insert in invalid index")
+    | hd::tl -> if n = 0 then e::lst else hd::(insert_nth tl e (n-1))
+  in
+  let rec permutation : 'a list -> ('a list) list
+  = fun lst ->
+    match lst with
+    | [] -> []
+    | [hd] -> [[hd]]
+    | hd::tl -> List.fold_left (fun acc lst -> 
+      let indices = range 0 (List.length lst) in
+      let results = List.fold_left (fun acc n -> (insert_nth lst hd n)::acc) [] indices in
+      List.fold_left (fun acc lst -> lst::acc) acc results  
+    ) [] (permutation tl)
+  in
+  if List.length ts = List.length ts' then
+    let ts = t::ts in
+    let comp_candidate = List.map (fun ts' -> t'::ts') (permutation ts') in
+    List.exists (fun ts' -> 
+      let eqns = List.fold_left2 (fun eqns t t' -> (t, t')::eqns) [] ts ts' in
+      try
+        let _ = List.fold_left (fun subst (t1, t2) -> unify subst ((Subst.apply t1 subst), Subst.apply t2 subst)) Subst.empty eqns in
+        print_endline ("Type Eqns : ");
+        List.iter (fun (t1, t2) -> print_endline (Print.type_to_string t1 ^ " = " ^ Print.type_to_string t2)) eqns;
+        true
+      with TypeError -> false
+    ) comp_candidate 
+  else false
 
 let match_pat 
 = fun x y -> 
