@@ -136,6 +136,8 @@ let match_type
     with Type.TypeError -> 
       false
   in 
+  let ts = List.sort compare ts in
+  let ts'= List.sort compare ts' in
   if (aux t t') then list_equivalence (aux) ts ts' else false 
 
 let match_pat 

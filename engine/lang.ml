@@ -22,6 +22,7 @@ type typ =
   | TArr of typ * typ (*fun t1->t2->t3...*)
   | TVar of id (* type variable *)
   | TExn
+  [@@deriving compare]
 
 type ctor = id * typ list
 
@@ -38,6 +39,7 @@ type pat =
   (*| PCons of pat * pat*)
   | PUnder 
   | Pats of pat list
+  [@@deriving compare]
 
 (* Program *)
 type let_bind =
