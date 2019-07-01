@@ -227,7 +227,7 @@ let rec let_binding : TEnv.t -> let_bind -> typ -> TEnv.t
     ) tenv xs
   | _ -> raise TypeError
 
-(* construct type eqn of patterns then bind type variablese *)
+(* construct type eqn of patterns then bind type variables *)
 let rec gen_pat_equations : (TEnv.t * typ_eqn) -> pat -> typ -> (TEnv.t * typ_eqn)
 = fun (tenv, eqn) pat ty ->
   match pat with

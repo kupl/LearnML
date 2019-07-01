@@ -7,7 +7,7 @@ module A = struct
 	
 	(* summary of function body *)
 	type summary = 
-    | E
+        | E
 		| F of pat list	(* Flat match *)
 		| N of (pat * summary) list (* Nested match *)
 
@@ -19,7 +19,7 @@ module A = struct
 	= fun summary ->
 		"match {" ^
 		match summary with 
-    | E -> "Empty"
+        | E -> "Empty"
 		| F ps -> List.fold_left (fun acc p -> acc ^ Print.pat_to_string p ^ " | ") "" ps
 		| N summaries -> List.fold_left (fun acc (p, s) -> acc ^ Print.pat_to_string p ^ ":" ^ string_of_summary s ^ " | ") "" summaries
 		^ " }"
@@ -29,7 +29,7 @@ module A = struct
 		List.fold_left (fun acc (name, inputs, output, summary) -> 
 			acc ^ "(\n" ^
 			"Name : " ^ name ^ "\n" ^
-      "Input types : " ^ List.fold_left (fun acc typ -> acc ^ Print.type_to_string typ ^ ", ") "{" inputs ^ "}\n" ^
+            "Input types : " ^ List.fold_left (fun acc typ -> acc ^ Print.type_to_string typ ^ ", ") "{" inputs ^ "}\n" ^
 			"Output type : " ^ Print.type_to_string output ^ "\n" ^
 			"Structure : \n" ^ string_of_summary summary ^ "\n)"
 		) "" t
@@ -77,7 +77,7 @@ module A = struct
       (name, summary)
 
   (* 
-    Extract input and ouput types 
+    Extract input and output types 
     ex) (t1 * t2) -> (t3 -> t4) => [t1; t2; t3] * t4
   *)
   let rec extract_type : typ -> (typ list * typ)
@@ -109,45 +109,53 @@ module A = struct
       summaries 
 end
 
-let get_summary : prog -> A.t
-= fun pgm -> 
-	let summary = A.run pgm in
-	summary
-
-let match_type
-= fun x y ->
-  try
-      let pass = true in
-      let _ = Type.unify Type.Subst.empty (x,y) in pass
-  with Type.TypeError -> 
-    print_endline ("T1 : " ^ Print.type_to_string x ^ ", " ^ "T1 : " ^ Print.type_to_string y);
-    false
-
-let match_pat 
-= fun x y -> true
-
-let match_summary 
-= fun (_,ts,t,s) (_,ts',t',s') ->
-  let typ_match = match_type t t' in
-  let pat_match = match_pat s s' in
-  typ_match && pat_match
-
-let rec remove_elem 
-= fun e l -> 
+let rec remove_elem : ('a -> 'a -> bool) -> 'a -> 'a list -> 'a list
+= fun f e l -> 
   match l with 
   |[] -> []
-  |x::xs -> if (match_summary e x) then xs else x :: remove_elem e xs
+  |x::xs -> if (f e x) then xs else x :: remove_elem f e xs
 
-let rec match_program : A.t -> A.t -> bool
-= fun s1 s2 -> 
+(*naive equivalence checking*)
+let rec list_equivalence : ('a -> 'a -> bool) -> 'a list -> 'a list -> bool
+= fun f s1 s2 -> 
   match s1,s2 with 
   | [],[] -> true 
   | [],_  
   |  _,[] -> false
   | x::xs, y::ys -> 
-    let y'= (remove_elem x (y::ys)) in
-    match_program xs y'
-    
+    let y'= (remove_elem f x (y::ys)) in
+    list_equivalence f xs y'
+
+let match_type
+= fun (ts,t) (ts',t') ->
+  let aux = fun x y ->
+    try
+      let pass = true in
+      let _ = Type.unify Type.Subst.empty (x,y) in 
+      print_endline ("T1 : " ^ Print.type_to_string x ^ ", " ^ "T1 : " ^ Print.type_to_string y); pass
+    with Type.TypeError -> 
+      false
+  in 
+  if (aux t t') then list_equivalence (aux) ts ts' else false 
+
+let match_pat 
+= fun x y -> 
+  match x,y with
+  | A.E, A.E -> true
+  | A.F l1, A.F l2 -> true
+  | A.N _ , A.N _ -> raise NotImplemented
+  | _,_ -> false 
+
+let match_summary 
+= fun (f,ts,t,s) (f',ts',t',s') ->
+  let pat_match = match_pat s s' in
+  let typ_match = match_type (ts,t) (ts',t') in
+  typ_match && pat_match
+
+let match_program : A.t -> A.t -> bool
+= fun x y -> 
+  list_equivalence match_summary x y
+
   (*use is_same_type in main.ml*)
   (*list equality check*)
   (*string * type * summary list*)
@@ -160,3 +168,8 @@ let run : prog -> prog list -> prog
 = fun pgm cpgms -> 
 	let cpgm = List.hd cpgms in
 	cpgm
+
+let get_summary : prog -> A.t
+= fun pgm -> 
+	let summary = A.run pgm in
+	summary

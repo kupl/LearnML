@@ -184,8 +184,8 @@ let main () =
         let s1 = Selector.get_summary sub in
         let s2 = Selector.get_summary sol in
         print_header "Submission"; print_pgm sub;
-        print_header "Summary"; print_endline (Selector.A.string_of_t s1);
         print_header "Submission"; print_pgm sol;
+        print_header "Summary"; print_endline (Selector.A.string_of_t s1);
         print_header "Summary"; print_endline (Selector.A.string_of_t s2);
         print_header "Matching result"; print_endline(string_of_bool (Selector.match_program s1 s2));
       | _  -> ()

@@ -15,21 +15,21 @@ let depth d'=
 let rec pat_to_tree : int -> pat -> string
   = fun d pat ->
     match pat with
-    | PUnit -> "()"
-    | PCtor (x,lst) -> x ^ (if lst=[] then "" else " " ^ Print.pat_to_string (List.hd lst))
+    | PUnit -> "PUnit ()"
+    | PCtor (x,lst) -> "PCtor " ^ x ^ (if lst=[] then "" else " " ^ pat_to_tree d (List.hd lst))
     | Pats lst ->
-      list_fold (fun p r -> r ^ "|"^(Print.pat_to_string p)^" ") lst ""
-    | PInt n -> string_of_int n
-    | PVar x -> x
-    | PBool b -> if (b) then "true" else "false"
-    | PList lst -> Print.pp_list Print.pat_to_string lst
-    | PTuple lst -> Print.pp_tuple Print.pat_to_string lst
-    | PUnder -> "_"
+      "Pats " ^ list_fold (fun p r -> r ^ "|"^(Print.pat_to_string p)^" ") lst ""
+    | PInt n -> "PInt "^string_of_int n
+    | PVar x -> "PVar "^ x
+    | PBool b -> "PBool " ^ if (b) then "true" else "false"
+    | PList lst -> "PList "^ Print.pp_list Print.pat_to_string lst
+    | PTuple lst -> "PTuple "^Print.pp_tuple Print.pat_to_string lst
+    | PUnder -> "PUnder _"
     | PCons (lst) ->
       begin match lst with
         |[] -> raise (Failure "Pattern Cons does not have arguments")
         |hd::tl ->
-          (Print.pat_to_string hd)^(list_fold (fun p r -> r^"::"^(Print.pat_to_string p)) tl "")
+          "PCons "^ (pat_to_tree d hd)^(list_fold (fun p r -> r^"::"^(Print.pat_to_string p)) tl "")
       end
 
 let rec type_to_tree : int -> typ -> string =
