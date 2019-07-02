@@ -29,16 +29,15 @@ type ctor = id * typ list
 (* Pattern *)
 type pat = 
   | PUnit
+  | PUnder 
   | PInt of int
   | PBool of bool
   | PVar of id
   | PList of pat list
-  | PTuple of pat list
-  | PCtor of id * pat list
   | PCons of pat list
-  (*| PCons of pat * pat*)
-  | PUnder 
+  | PTuple of pat list
   | Pats of pat list
+  | PCtor of id * pat list
   [@@deriving compare]
 
 (* Program *)

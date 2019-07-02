@@ -18,12 +18,12 @@ let rec pat_to_tree : int -> pat -> string
     | PUnit -> "PUnit ()"
     | PCtor (x,lst) -> "PCtor " ^ x ^ (if lst=[] then "" else " " ^ pat_to_tree d (List.hd lst))
     | Pats lst ->
-      "Pats " ^ list_fold (fun p r -> r ^ "|"^(Print.pat_to_string p)^" ") lst ""
+      "Pats " ^ list_fold (fun p r -> r ^ "|"^((pat_to_tree 0) p)^" ") lst ""
     | PInt n -> "PInt "^string_of_int n
     | PVar x -> "PVar "^ x
     | PBool b -> "PBool " ^ if (b) then "true" else "false"
-    | PList lst -> "PList "^ Print.pp_list Print.pat_to_string lst
-    | PTuple lst -> "PTuple "^Print.pp_tuple Print.pat_to_string lst
+    | PList lst -> "PList "^ Print.pp_list (pat_to_tree 0) lst
+    | PTuple lst -> "PTuple "^Print.pp_tuple (pat_to_tree 0) lst
     | PUnder -> "PUnder _"
     | PCons (lst) ->
       begin match lst with

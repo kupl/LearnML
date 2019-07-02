@@ -169,7 +169,19 @@ let match_type : (typ list * typ) -> (typ list * typ) -> bool
 let rec match_pattern
 = fun x y -> 
   let rec is_match : pat -> pat -> bool
-  = fun p1 p2 -> true
+  = fun p1 p2 ->
+    match p1,p2 with
+    | PUnit,PUnit -> true
+    | PUnder, PUnder -> true
+    | PInt _, PInt _ -> true
+    | PBool b1, PBool b2 -> b1=b2
+    | PVar _ , PVar _ -> true
+    | PList l1, PList l2  
+    | PCons l1, PCons l2 
+    | PTuple l1, PTuple l2
+    | Pats l1, Pats l2 -> list_equivalence is_match l1 l2
+    | PCtor (id1,l1), PCtor (id2,l2) -> if id1=id2 then list_equivalence is_match l1 l2 else false 
+    | _,_ -> false
   in
   match x,y with
   | A.E, A.E -> true
