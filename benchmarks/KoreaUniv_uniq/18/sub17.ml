@@ -1,0 +1,220 @@
+let rec uniq : 'a list -> 'a list
+= fun lst -> 
+  let rec iselemin e li =
+    match li with
+    | [] -> false
+    | hd::tl -> 
+      if hd = e then true
+      else iselemin e tl
+  in
+  
+  let rec repeat l1 l2 =
+    match l1 with
+    | [] -> l2
+    | hd::tl -> 
+      if (iselemin hd l2) = true then repeat tl l2
+      else repeat tl (l2 @ [hd])
+  in
+  
+  match lst with
+    | [] -> []
+    | hd::tl -> repeat lst [];;
+    
+
+uniq [5;6;5;4];;
+uniq [1;1;2;2;3;3;4;4;5;5;];;
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+
