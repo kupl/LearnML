@@ -8,8 +8,8 @@ let usage_msg = "main.native -run (or -fix) -submission <filename> -solution <fi
 
 let is_same_type : prog -> prog -> unit
 = fun pgm cpgm ->
-  let (tenv1, _, _) = Type.run pgm in
-  let (tenv2, _, _) = Type.run cpgm in
+  let (tenv1, _, _, _) = Type.run pgm in
+  let (tenv2, _, _, _) = Type.run cpgm in
   let (t1, t2) = (Type.TEnv.find tenv1 !opt_entry_func, Type.TEnv.find tenv2 !opt_entry_func) in
   let _ = Type.unify Type.Subst.empty (t1, t2) in
   ()
@@ -63,7 +63,7 @@ let fix_with_solution : prog -> prog -> examples -> unit
   let initial_set =
     Localize.localization pgm examples |> 
     BatSet.map (fun (n, prog) ->
-      let (_,hole_type,variable_type) = Type.run prog in
+      let (_,hole_type,variable_type, _) = Type.run prog in
       (n,prog,hole_type,variable_type)
     ) 
   in
@@ -126,7 +126,7 @@ let fix_without_testcases : prog -> prog -> unit
       let ranked_pgm_set = Localize.localization pgm examples in
       let initial_set = BatSet.map(
         fun (rank, pgm)->   
-          let (_, h_t, v_t) = Type.run pgm in
+          let (_, h_t, v_t, _) = Type.run pgm in
           (rank, pgm, h_t, v_t)
       ) ranked_pgm_set in
       let correction_result = Synthesize.hole_synthesize pgm initial_set components examples in
@@ -160,7 +160,7 @@ let fix_without_testcases : prog -> prog -> unit
 
 let execute : prog -> unit
 = fun prog ->
-  let (tenv,_,_) = Type.run prog in
+  let (tenv,_,_,_) = Type.run prog in
   let env = Eval.run prog in
   (print_REPL prog tenv env)
 
@@ -175,21 +175,6 @@ let main () =
   let _ = 
     init_pgm := read_external !opt_external_filename;
     grading_pgm := read_external !opt_grading_filename
-  in
-  (* Temp procedure *)
-  let _ = 
-    begin 
-      match submission, solution with
-      | Some sub, Some sol -> 
-        let s1 = Selector.get_summary sub in
-        let s2 = Selector.get_summary sol in
-        print_header "Submission"; print_pgm sub;
-        print_header "Submission"; print_pgm sol;
-        print_header "Summary"; print_endline (Selector.A.string_of_t s1);
-        print_header "Summary"; print_endline (Selector.A.string_of_t s2);
-        print_header "Matching result"; print_endline(string_of_bool (Selector.match_program s1 s2));
-      | _  -> ()
-    end
   in
   (* Main Procedure *)
   if !opt_run then (* Run testcase *)
@@ -206,7 +191,6 @@ let main () =
         | [] -> fix_without_testcases sub sol
         | _ -> fix_with_solution sub sol testcases
         end      
-      | Some sub, None -> let _ = Data_driven.run sub solutions testcases in ()
       | _ -> raise (Failure (!opt_submission_filename ^ " does not exist"))
     end
   else if !opt_execute then (* Execute Program *)
@@ -242,6 +226,13 @@ let main () =
                     print_header "Summary"; print_endline (Selector.A.string_of_t (Selector.get_summary sub));                   
       | _ -> raise (Failure(!opt_submission_filename ^ " does not exist"))
     end
-  else Arg.usage options usage_msg
+  else 
+    print_endline ("Here");
+    begin 
+      match submission with
+      | Some sub -> print_endline (Cfg.S.string_of_t (Cfg.S.run sub))
+      | _ -> raise (Failure(!opt_submission_filename ^ " does not exist"))
+    end
+    (*Arg.usage options usage_msg*)
 
 let _ = main ()

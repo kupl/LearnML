@@ -99,7 +99,7 @@ module A = struct
   (* Summarize a given program *)
 	let run : prog -> t
 	= fun pgm -> 
-      let (typ_env,_,_) = run pgm in
+      let (typ_env,_,_,_) = run pgm in
       let func_list = explore_prog pgm in
       let processing = List.map extract_summary func_list in
       let summaries = List.map (fun (x,z) -> 

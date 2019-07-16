@@ -614,7 +614,7 @@ and type_to_hole : typ -> (lexp * Type.HoleType.t)
 
 let rec get_sketch : prog -> Workset.work
 = fun pgm ->
-	let (tenv, _, _) = Type.run pgm in
+	let (tenv, _, _, _) = Type.run pgm in
 	let func_typ = Type.TEnv.find tenv (!Options.opt_entry_func) in
 	let (input, h_t) = type_to_sketch func_typ in
 	let ctor_table = BatMap.filter (fun var typ ->
@@ -625,11 +625,6 @@ let rec get_sketch : prog -> Workset.work
 	let v_t = BatMap.foldi (fun n typ v_t ->
 		BatMap.add n ctor_table v_t
 	) h_t BatMap.empty in
-	(*
-	print_endline ("Input : " ^ Print.input_to_string input);
-	Type.HoleType.print h_t;
-	Type.VariableType.print v_t;
-	*)
 	(input, h_t, v_t)
 
 (* Const symbol *)
@@ -756,17 +751,16 @@ let rec return_counter_example : prog -> prog -> input -> example option
 		let v1 = Eval.get_output cpgm input in
 		try
 			let v2 = Eval.get_output pgm input in
-			(*print_endline ("V 1,2 : " ^ Print.value_to_string v1 ^ ", " ^ Print.value_to_string v2);*)
 			if not (Eval.value_equality v1 v2) then Some (input, v1) else None
-		with e -> (*print_endline (Printexc.to_string e);*) Some (input, v1)
-	with _ -> (num_of_crash := !num_of_crash + 1); None
+		with e -> Some (input, v1)
+	with _ -> None
 
 (*let log = ref (open_out "overhead.txt")*)
 
 let rec work : Workset.t -> components -> prog -> prog -> example option
 = fun workset comp pgm cpgm ->
 	iter := !iter +1;
-	if (Unix.gettimeofday()) -. (!start_time) > 60.0 then None
+	if (Unix.gettimeofday()) -. (!start_time) > 120.0 then None
 	(*
   else if (!iter mod 1000 = 0)
 	  then
@@ -791,23 +785,13 @@ let rec work : Workset.t -> components -> prog -> prog -> example option
 				if ex = None then work remain comp pgm cpgm else ex
 			else 
 				(* If input has symbolic value => solving *)
-				(* let temp_time = Unix.gettimeofday () in *)
 				begin match Sym_exec.run pgm cpgm input with
 			 	| Some model -> 
-			 		(*
-			 		let _ = solving_time := (!solving_time) +. ((Unix.gettimeofday ()) -. temp_time) in
-			 		let _ = if (Unix.gettimeofday ()) -. temp_time > 0.2 then (Printf.fprintf (!log) "Model : %s Time : %f \n" (Print.input_to_string input)) ((Unix.gettimeofday ()) -. temp_time) else () in
-			 		*)
 			 		let symbol_map = get_const_symbols model symbols in
 			 		let input = List.fold_left (fun input (n, v) -> List.map (fun e -> replace_const_symbol (n, v) e) input) input symbol_map in
-			 		(*let _ = print_endline ("Gen Input : " ^ Print.input_to_string input) in*)
 			  	let ex = return_counter_example pgm cpgm input in
 			  	if ex = None then work remain comp pgm cpgm else ex
 			 	| None -> 
-			 		(*
-			 		let _ = solving_time := (!solving_time) +. ((Unix.gettimeofday ()) -. temp_time) in
-			 		let _ = if (Unix.gettimeofday ()) -. temp_time > 0.2 then (Printf.fprintf (!log) "Model : %s Time : %f \n" (Print.input_to_string input)) ((Unix.gettimeofday ()) -. temp_time) else () in
-			 		*)
 			 		work remain comp pgm cpgm
 				end
 		else 

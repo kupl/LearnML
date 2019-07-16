@@ -467,12 +467,12 @@ let solve : (typ_eqn * HoleType.t * VariableType.t) -> (Subst.t * HoleType.t * V
   let var_typ = VariableType.update subst var_typ in
   (subst, hole_typ, var_typ)
 
-let rec type_decl : (TEnv.t * HoleType.t * VariableType.t) -> decl -> (TEnv.t * HoleType.t * VariableType.t)
-= fun (tenv, hole_typ, var_typ) decl ->
+let rec type_decl : (TEnv.t * HoleType.t * VariableType.t * Subst.t) -> decl -> (TEnv.t * HoleType.t * VariableType.t * Subst.t)
+= fun (tenv, hole_typ, var_typ, subst) decl ->
   match decl with
-  | DExcept(id, typ) ->  (TEnv.extend (id, TCtor (TExn, typ)) tenv, hole_typ, var_typ)
-  | DEqn (x, typ) -> (tenv, hole_typ, var_typ)
-  | DData (id, ctors) -> let tbase = TBase id in (ctors_to_env tenv tbase ctors, hole_typ, var_typ)
+  | DExcept(id, typ) ->  (TEnv.extend (id, TCtor (TExn, typ)) tenv, hole_typ, var_typ, subst)
+  | DEqn (x, typ) -> (tenv, hole_typ, var_typ, subst)
+  | DData (id, ctors) -> let tbase = TBase id in (ctors_to_env tenv tbase ctors, hole_typ, var_typ, subst)
   | DLet (f, is_rec, args, typ, exp) ->
     let exp =
       begin match f with
@@ -484,7 +484,7 @@ let rec type_decl : (TEnv.t * HoleType.t * VariableType.t) -> decl -> (TEnv.t * 
     let (eqns, hole_typ, var_typ) = gen_equations hole_typ var_typ tenv exp ty in
     let (subst, hole_typ, var_typ) = solve (eqns, hole_typ, var_typ) in
     let ty = Subst.apply ty subst in
-    (let_binding tenv f ty, hole_typ, var_typ)
+    (let_binding tenv f ty, hole_typ, var_typ, subst)
   | DBlock (is_rec, bindings) ->
     (* initialize tenv *)
     let tenv = 
@@ -511,17 +511,17 @@ let rec type_decl : (TEnv.t * HoleType.t * VariableType.t) -> decl -> (TEnv.t * 
       let ty = type_of_fun args typ in
       let_binding tenv f (Subst.apply ty subst)
     ) tenv bindings in
-    (tenv, hole_typ, var_typ)
-  | TBlock decls -> List.fold_left (type_decl) (tenv, hole_typ, var_typ) decls
+    (tenv, hole_typ, var_typ, subst)
+  | TBlock decls -> List.fold_left (type_decl) (tenv, hole_typ, var_typ, subst) decls
 
 and ctors_to_env : TEnv.t -> typ -> ctor list -> TEnv.t
 = fun tenv tbase ctors -> List.fold_left (fun env (x, typs) -> TEnv.extend (x, TCtor (tbase, typs)) env) tenv ctors
 
-let run : prog -> (TEnv.t * HoleType.t * VariableType.t)
+let run : prog -> (TEnv.t * HoleType.t * VariableType.t * Subst.t)
 = fun decls -> 
   let _ = start_time:=Sys.time() in
   let decls = decls@(!grading_pgm) in
   let decls = Converter.convert Converter.empty decls in
-  let (init_env, _, _) = List.fold_left type_decl (TEnv.empty, HoleType.empty, VariableType.empty) (!init_pgm) in
-  let (tenv, hole_typ, var_typ) = List.fold_left type_decl (init_env, HoleType.empty, VariableType.empty) decls in
-  (BatMap.diff tenv init_env, hole_typ, BatMap.map (fun tenv -> BatMap.diff tenv init_env) var_typ)
+  let (init_env, _, _, subst) = List.fold_left type_decl (TEnv.empty, HoleType.empty, VariableType.empty, Subst.empty) (!init_pgm) in
+  let (tenv, hole_typ, var_typ, subst) = List.fold_left type_decl (init_env, HoleType.empty, VariableType.empty, subst) decls in
+  (BatMap.diff tenv init_env, hole_typ, BatMap.map (fun tenv -> BatMap.diff tenv init_env) var_typ, subst)
