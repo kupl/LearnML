@@ -50,6 +50,22 @@ let read_pgms : string -> prog list
     pgms
   else []
 
+let read_pgms_debug : string -> (string*prog) list
+ = fun problem ->
+   if Sys.file_exists problem then
+     let dirs = dir_contents problem in
+     let pgms = List.fold_left
+       (fun pgms dir -> if Sys.is_directory dir then
+         let files = dir_contents dir in
+         List.fold_left (fun pgms f ->
+           match read_prog f with
+           | Some pgm -> (f,pgm)::pgms
+           | None -> pgms) pgms files
+         else pgms
+       ) [] dirs
+     in pgms else []
+
+
 (* Read testcases *)
 let read_testcases : string -> examples
 = fun file_name ->

@@ -34,6 +34,7 @@ let opt_exp_cover = ref false
 
 (*For debugging*)
 let opt_tree = ref false
+let opt_vector = ref false
 
 let options =
   [
@@ -54,6 +55,7 @@ let options =
     ("-qcheck", Arg.Set opt_qcheck, " Qcheck testing");
     ("-exp_cover", Arg.Set opt_exp_cover, " Check expression coverage");
     ("-tree", Arg.Set opt_tree, " Print code ast");
+    ("-vector", Arg.Set opt_vector, " Print vectorzation result");
   ]
   |> Arg.align
 

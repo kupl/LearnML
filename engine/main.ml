@@ -171,6 +171,7 @@ let main () =
   let testcases = read_testcases !opt_testcases_filename in
   let solution = read_prog !opt_solution_filename in
   let solutions = read_pgms !opt_solution_dirname in
+  let solutions_debug = read_pgms_debug !opt_solution_dirname in
   let submission = read_prog !opt_submission_filename in
   let _ = 
     init_pgm := read_external !opt_external_filename;
@@ -226,6 +227,12 @@ let main () =
                     print_header "Summary"; print_endline (Selector.A.string_of_t (Selector.get_summary sub));                   
       | _ -> raise (Failure(!opt_submission_filename ^ " does not exist"))
     end
+  else if !opt_vector then 
+    begin 
+      match submission with 
+      | Some sub -> Print.print_header (Print.program_to_string sub); Print.print_header ""; Vector.print_list (Vector.vectorize sub);
+      | _ -> raise (Failure(!opt_submission_filename ^ " does not exist"))
+    end 
   else 
     print_endline ("Here");
     begin 
