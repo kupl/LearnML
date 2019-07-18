@@ -5,10 +5,32 @@ open Type
 exception NotImplemented
 exception Invalid_Expression_Construct
 
+
+
+module NN = struct
+    type node = 
+    | Node of string * (node list)
+
+
+    let binding_to_node : binding -> node
+    = fun (f,is_rec,args,typ,exp) ->
+      Node ("Binding", [])
+
+    let decl_to_node : decl -> node
+    = fun decl -> 
+      match decl with
+      | DExcept _ -> Node ("Empty", [])
+      | DEqn _ -> Node ("Empty", [])
+      | DData _ -> Node ("Empty", [])
+      | DLet bind_tuple -> Node ("DLet", [(binding_to_node bind_tuple)])
+      | DBlock (is_rec,bind_tuples) -> Node ("DBlock", [bool_to_node is_rec, (List.map binding_to_node bind_tuples)])
+      | TBlock _ -> Node ("Empty", [])
+
+end
+
 module N = struct
     (*ast flattening*)
-    type lnode = label * node
-    and node = 
+    type node = 
     | Empty | Id of id  | TUnit | TInt | TBool | TString
     | TBase of node  (* user defined*)
     | TList of node 
@@ -24,7 +46,7 @@ module N = struct
     | BindUnder | BindOne of node | BindTuple of node list
     | ArgUnder of node | ArgOne of node * node 
     | ArgTuple of node list
-    | Binding of (node * bool * node list * node * lnode) (*binding*)
+    | Binding of (node * bool * node list * node * node) (*binding*)
     | DExcept of node (*node = ctor*)
     | DEqn of node * node
     | DData of node * node list (*node = ctor*)
@@ -33,39 +55,39 @@ module N = struct
     | TBlock of node list
     (* Const *)
     | EUnit | Const of int | TRUE | FALSE  
-    | EList of lnode list | String of node
-    | EVar of node | ECtor of node * lnode list
-    | ETuple of lnode list                             
+    | EList of node list | String of node
+    | EVar of node | ECtor of node * node list
+    | ETuple of node list                             
     (* aop *)
-    | ADD of lnode * lnode                                (*a1 + a2*)
-    | SUB of lnode * lnode                                (*a1 - a2*)
-    | MUL of lnode * lnode                                (*a1 * a2*)
-    | DIV of lnode * lnode                                (*a1 / a2*)
-    | MOD of lnode * lnode                                (*a1 % a2*)
-    | MINUS of lnode
+    | ADD of node * node                                (*a1 + a2*)
+    | SUB of node * node                                (*a1 - a2*)
+    | MUL of node * node                                (*a1 * a2*)
+    | DIV of node * node                                (*a1 / a2*)
+    | MOD of node * node                                (*a1 % a2*)
+    | MINUS of node
     (* bop *)
-    | NOT of lnode                                        (*not b1*)
-    | OR of lnode * lnode                                 (*b1 || b2*)
-    | AND of lnode * lnode                                (*b1 && b2*)
-    | LESS of lnode * lnode                               (*a1 < a2*)
-    | LARGER of lnode * lnode                             (*a1 > a2*)
-    | EQUAL of lnode * lnode                              (*a1 == a2*)
-    | NOTEQ of lnode * lnode                              (*a1 <> a2 or a1 != a2*)
-    | LESSEQ of lnode * lnode                             (*a1 <= a2*)
-    | LARGEREQ of lnode * lnode                           (*a1 >= a2*)
+    | NOT of node                                        (*not b1*)
+    | OR of node * node                                 (*b1 || b2*)
+    | AND of node * node                                (*b1 && b2*)
+    | LESS of node * node                               (*a1 < a2*)
+    | LARGER of node * node                             (*a1 > a2*)
+    | EQUAL of node * node                              (*a1 == a2*)
+    | NOTEQ of node * node                              (*a1 <> a2 or a1 != a2*)
+    | LESSEQ of node * node                             (*a1 <= a2*)
+    | LARGEREQ of node * node                           (*a1 >= a2*)
     (* lop *)
-    | AT of lnode * lnode
-    | DOUBLECOLON of lnode * lnode
-    | STRCON of lnode * lnode
+    | AT of node * node
+    | DOUBLECOLON of node * node
+    | STRCON of node * node
     (* else *)
-    | EApp of lnode * lnode                               (* e1 e2 *)
-    | EFun of node * lnode                               (* fun (x:t1) -> e *)
-    | ELet of node * lnode  (* let [rec] (x1:t1) .. (xn:tn) : t = e1 in e2 *)
-    | EBlock of bool * node list * lnode (* let x1 = e1 and x2 = e2 and ... xn = en in e' | let rec f1 x1 = e1 and f2 x2 = e2 ... fn xn = en in e' *)
-    | EMatch of lnode * (node*lnode) list (*node = branch*)                   (* match e with bs *)
-    | IF of lnode * lnode * lnode
+    | EApp of node * node                               (* e1 e2 *)
+    | EFun of node * node                               (* fun (x:t1) -> e *)
+    | ELet of node * node  (* let [rec] (x1:t1) .. (xn:tn) : t = e1 in e2 *)
+    | EBlock of bool * node list * node (* let x1 = e1 and x2 = e2 and ... xn = en in e' | let rec f1 x1 = e1 and f2 x2 = e2 ... fn xn = en in e' *)
+    | EMatch of node * (node*node) list (*node = branch*)                   (* match e with bs *)
+    | IF of node * node * node
     (*List operation*)
-    | Raise of lnode 
+    | Raise of node 
     | Prog of node list 
 
     let rec type_to_node : typ -> node
@@ -110,9 +132,8 @@ module N = struct
       | Pats lst -> Pats (List.map pat_to_node lst)
       | PCtor (x,lst) -> PCtor (Id (x), (List.map pat_to_node lst))
     
-    let rec exp_to_node : lexp -> lnode
+    let rec exp_to_node : lexp -> node
     = fun (l, exp) ->
-      let node = 
       match exp with
       | EUnit -> EUnit
       | Const n -> Const(n)
@@ -150,7 +171,6 @@ module N = struct
       | EMatch (e,lst) -> EMatch (exp_to_node e, List.map (fun (pat,exp) -> (pat_to_node pat,exp_to_node exp)) lst)
       | Raise e -> Raise (exp_to_node e)
       | _ -> raise Invalid_Expression_Construct
-    in (l, node)
 
     and binding_to_node : binding -> node 
     = fun (f,is_rec,args,typ,exp) ->
@@ -176,13 +196,24 @@ module N = struct
       | DLet bind_tuple -> DLet (binding_to_node bind_tuple)
       | DBlock (is_rec,bind_tuples) -> DBlock (is_rec, (List.map binding_to_node bind_tuples)) 
       | TBlock _ -> Empty
+
+    let rec traverse : 'a -> (node -> 'a) -> node -> 'b
+    = fun tbl f node ->
+      match node with
+      | Empty | TUnit | TInt | TBool | TString | TExn -> f node
+      | Id id -> f tbl node 
+      | TBase n | TList n | TVar n -> f tbl node; traverse tbl f n 
+      | TTuple nlst -> f tbl node; List.map (traverse tbl f) nlst;
+      | TCtor (x,tl) -> f node; List.map tbl traverse tl
+      | TArr (n1,n2) -> raise NotImplemented
+
 end
 
-
 module R = struct
+    open N
     type root_node = 
     | Empty | Id | TUnit | TInt | TBool | TString | TBase | TList | TTuple | TCtor | TArr | TVar | TExn
-    | Ctor | PUnit | PInt | PBool | PVar | PList | PCons | PTuple | Pats | PCtor | BindUnder | BindOne | BindTuple
+    | Ctor | PUnit | PUnder | PInt | PBool | PVar | PList | PCons | PTuple | Pats | PCtor | BindUnder | BindOne | BindTuple
     | ArgUnder | ArgOne | ArgTuple | Binding | DExcept | DEqn | DData | DLet | DBlock | TBlock 
     | EUnit | Const | TRUE | FALSE | EList | String | EVar | ECtor | ETuple | ADD | SUB | MUL | DIV | MOD | MINUS
     | NOT | OR | AND | LESS | LARGER | EQUAL | NOTEQ | LESSEQ | LARGEREQ | AT | DOUBLECOLON | STRCON | EApp | EFun
@@ -192,32 +223,107 @@ module R = struct
     let init_vector =
         [(Empty ,0); (Id ,0); (TUnit ,0); (TInt ,0); (TBool ,0); (TString ,0); 
         (TBase ,0); (TList ,0); (TTuple ,0); (TCtor ,0); (TArr ,0); (TVar ,0);
-        (TExn ,0); (Ctor ,0); (PUnit ,0); (PInt ,0); (PBool ,0); (PVar ,0);
-        (PList ,0); (PCons ,0); (PTuple ,0); (Pats ,0); (PCtor ,0); (BindUnder ,0);
-        (BindOne ,0); (BindTuple ,0); (ArgUnder ,0); (ArgOne ,0); (ArgTuple ,0);
-        (Binding ,0); (DExcept ,0); (DEqn ,0); (DData ,0); (DLet ,0); (DBlock ,0);
-        (TBlock ,0); (EUnit ,0); (Const ,0); (TRUE ,0); (FALSE ,0); (EList ,0);
-        (String ,0); (EVar ,0); (ECtor ,0); (ETuple ,0); (ADD ,0); (SUB ,0);
-        (MUL ,0); (DIV ,0); (MOD ,0); (MINUS ,0); (NOT ,0); (OR ,0); (AND ,0);
-        (LESS ,0); (LARGER ,0); (EQUAL ,0); (NOTEQ ,0); (LESSEQ ,0); (LARGEREQ ,0);
-        (AT ,0); (DOUBLECOLON ,0); (STRCON ,0); (EApp ,0); (EFun ,0); (ELet ,0); (EBlock ,0);
-        (EMatch ,0); (IF ,0); (Raise ,0); (Prog, 0);]
-(*
-    let lookup_root : N.lnode -> 
-    
-    let unlabel_node : N.lnode -> N.node
-    = fun (l,n) -> 
-      match n with
-      | Binding (f,b,lst,n,ln) -> unlabel_node ln
-      | EList lst -> EList List.map 
-      | _ -> na
-*)
+        (TExn ,0); (Ctor ,0); (PUnit ,0); (PUnder ,0) ;(PInt ,0); (PBool ,0); 
+        (PVar ,0); (PList ,0); (PCons ,0); (PTuple ,0); (Pats ,0); (PCtor ,0); 
+        (BindUnder ,0); (BindOne ,0); (BindTuple ,0); (ArgUnder ,0); (ArgOne ,0); 
+        (ArgTuple ,0); (Binding ,0); (DExcept ,0); (DEqn ,0); (DData ,0); 
+        (DLet ,0); (DBlock ,0); (TBlock ,0); (EUnit ,0); (Const ,0); (TRUE ,0); 
+        (FALSE ,0); (EList ,0); (String ,0); (EVar ,0); (ECtor ,0); (ETuple ,0); 
+        (ADD ,0); (SUB ,0); (MUL ,0); (DIV ,0); (MOD ,0); (MINUS ,0); (NOT ,0); 
+        (OR ,0); (AND ,0); (LESS ,0); (LARGER ,0); (EQUAL ,0); (NOTEQ ,0); 
+        (LESSEQ ,0); (LARGEREQ ,0); (AT ,0); (DOUBLECOLON ,0); (STRCON ,0); 
+        (EApp ,0); (EFun ,0); (ELet ,0); (EBlock ,0); (EMatch ,0); (IF ,0); 
+        (Raise ,0); (Prog, 0);]
 
+    let extract_root : N.node -> root_node
+    = fun node ->
+      match node with
+      | Empty -> Empty
+      | Id x -> Id
+      | TUnit -> TUnit
+      | TInt -> TInt 
+      | TBool -> TBool
+      | TString -> TString
+      | TBase _ -> TBase
+      | TList _ -> TList
+      | TTuple _ -> TTuple
+      | TCtor (_,_) -> TCtor
+      | TArr (_,_) -> TArr
+      | TVar _ -> TVar
+      | TExn -> TExn
+      | Ctor (_,_) -> Ctor
+      | PUnit -> PUnit
+      | PUnder -> PUnder
+      | PInt _ -> PInt
+      | PBool _ -> PBool
+      | PVar _ -> PVar
+      | PList _ -> PList
+      | PCons _ -> PCons
+      | PTuple _ -> PTuple
+      | Pats _ -> Pats
+      | PCtor (_,_) -> PCtor
+      | BindUnder -> BindUnder
+      | BindOne _ -> BindOne
+      | BindTuple _ -> BindTuple
+      | ArgUnder _ -> ArgUnder
+      | ArgOne (_,_) -> ArgOne
+      | ArgTuple _ -> ArgTuple
+      | Binding (_,_,_,_,_) -> Binding
+      | DExcept _ -> DExcept
+      | DEqn (_,_) -> DEqn
+      | DData (_,_) -> DData
+      | DLet _ -> DLet
+      | DBlock (_,_) -> DBlock
+      | TBlock _ -> TBlock
+      | EUnit -> EUnit 
+      | Const _ -> Const 
+      | TRUE -> TRUE
+      | FALSE -> FALSE
+      | EList _ -> EList
+      | String _ -> String
+      | EVar _ -> EVar
+      | ECtor (_,_) -> ECtor
+      | ETuple _ -> ETuple
+      | ADD (_,_) -> ADD
+      | SUB (_,_) -> SUB
+      | MUL (_,_) -> MUL
+      | DIV (_,_) -> DIV
+      | MOD (_,_) -> MOD
+      | MINUS _ -> MINUS
+      | NOT _ -> NOT
+      | OR (_,_) -> OR
+      | AND (_,_) -> AND
+      | LESS (_,_) -> LESS
+      | LARGER (_,_) -> LARGER
+      | EQUAL (_,_) -> EQUAL
+      | NOTEQ (_,_) -> NOTEQ
+      | LESSEQ (_,_) -> LESSEQ
+      | LARGEREQ (_,_) -> LARGEREQ
+      | AT (_,_) -> AT
+      | DOUBLECOLON (_,_) -> DOUBLECOLON
+      | STRCON (_,_) -> STRCON
+      | EApp (_,_) -> EApp
+      | EFun (_,_) -> EFun
+      | ELet (_,_) -> ELet
+      | EBlock (_,_,_) -> EBlock
+      | EMatch (_,_) -> EMatch
+      | IF (_,_,_) -> IF
+      | Raise _ -> Raise
+      | Prog _ -> Prog
 
+    type table = (root_node,int) BatHashtbl.t
+
+    let init_tbl : unit -> table
+    = fun x -> 
+      let tbl = BatHashtbl.create 100 in
+      let rec iter : table -> (root_node * int) list -> table 
+      = fun tbl lst ->
+        match lst with
+        | [] -> tbl
+        | (hd,count)::tl -> BatHashtbl.replace tbl hd count; iter tbl tl
+      in iter tbl init_vector 
 end
 
-    module AstMap = BatMap.Make(struct type t = R.root_node let compare = compare end)
-    
     (*vector*)
     type t = (R.root_node*int) list
     
@@ -229,9 +335,10 @@ end
     let rec vectorize: prog -> t
     = fun prog -> 
       let ast = ast_flatten prog in
-      [(Id,0);
-       (Id,0);
-       (Id,0);]
+      let table = R.init_tbl () in
+      (*List.fold_left (N.traverse) table ast *)
+      let fold h = BatHashtbl.fold (fun k v acc -> (k,v) :: acc) h [] in
+      fold table
 
     let print_list : t -> unit
     = fun lst ->

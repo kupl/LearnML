@@ -15,3 +15,7 @@ let run : prog -> prog list -> examples -> prog
 	let cpgm = Selector.run pgm cpgms in
 	let pgm' = Repairer.run pgm cpgm testcases in
 	pgm'
+
+let debug : prog -> (string * prog) list -> unit
+= fun pgm cpgms -> 
+	Selector.debug pgm cpgms
