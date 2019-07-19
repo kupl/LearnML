@@ -11,6 +11,11 @@ module NN = struct
     type node = 
     | Node of string * (node list)
 
+    let bool_to_node : bool -> node
+    = fun x ->
+      match x with
+      | true -> Node ("true", [])
+      | false -> Node ("false", [])
 
     let binding_to_node : binding -> node
     = fun (f,is_rec,args,typ,exp) ->
@@ -23,7 +28,7 @@ module NN = struct
       | DEqn _ -> Node ("Empty", [])
       | DData _ -> Node ("Empty", [])
       | DLet bind_tuple -> Node ("DLet", [(binding_to_node bind_tuple)])
-      | DBlock (is_rec,bind_tuples) -> Node ("DBlock", [bool_to_node is_rec, (List.map binding_to_node bind_tuples)])
+      | DBlock (is_rec,bind_tuples) -> Node ("DBlock", bool_to_node is_rec :: (List.map binding_to_node bind_tuples))
       | TBlock _ -> Node ("Empty", [])
 
 end
@@ -196,7 +201,7 @@ module N = struct
       | DLet bind_tuple -> DLet (binding_to_node bind_tuple)
       | DBlock (is_rec,bind_tuples) -> DBlock (is_rec, (List.map binding_to_node bind_tuples)) 
       | TBlock _ -> Empty
-
+    (*
     let rec traverse : 'a -> (node -> 'a) -> node -> 'b
     = fun tbl f node ->
       match node with
@@ -206,7 +211,7 @@ module N = struct
       | TTuple nlst -> f tbl node; List.map (traverse tbl f) nlst;
       | TCtor (x,tl) -> f node; List.map tbl traverse tl
       | TArr (n1,n2) -> raise NotImplemented
-
+    *)
 end
 
 module R = struct
