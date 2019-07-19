@@ -31,6 +31,7 @@ let dir_contents : string -> string list
   Sys.readdir dir
   |> Array.to_list 
   |> List.map (Filename.concat dir)
+  |> List.sort compare 
 
 let read_pgms : string -> prog list
 = fun problem ->
@@ -47,7 +48,7 @@ let read_pgms : string -> prog list
       else pgms
     ) [] dirs 
     in
-    pgms
+    List.rev pgms
   else []
 
 let read_pgms_debug : string -> (string*prog) list

@@ -1,4 +1,4 @@
-open Lang
+ open Lang
 open Util
 open Type
 
@@ -64,11 +64,10 @@ module S = struct
     | Match of (pat * cfg) list 
 
   (* Analysis result = (function name, cfg) mapping *)
-  type t = (id, cfg) BatMap.t
+  type t = (id * cfg) list
 
-  let empty_env = BatMap.empty
-  let extend_env x t env = BatMap.add x t env
-  let find_env x env = BatMap.find x env
+  let empty_env = []
+  let extend_env x t env = (x, t)::env
 
   (* To string *)
   let rec string_of_cfg : cfg -> string
@@ -83,11 +82,11 @@ module S = struct
     
   let string_of_t : t -> string
   = fun t ->
-    BatMap.foldi (fun name cfg acc -> 
+    List.fold_left (fun acc (name, cfg) -> 
       acc ^ "(\n" ^
       "Name : " ^ name ^ "\n" ^            
       "CFG : \n" ^ string_of_cfg cfg ^ "\n)"
-    ) t ""
+    ) "" t
 
   (* CFG extraction *)
   let rec is_fun : typ -> bool
@@ -132,13 +131,27 @@ module S = struct
       let (g3, t) = extract_exp t e3 in
       (If (g1, g2, g3), t)
     | EMatch (e, bs) -> 
-      let (g, t) = extract_exp t e in
-      let (bs, t) = List.fold_left (fun (bs, t) (p, e) -> 
-        let (g, t) = extract_exp t e in
-        ((p, g)::bs, t)
-      ) ([], t) bs
+      let rec flatten_branch : branch list -> branch list
+      = fun bs ->
+        match bs with
+        | [] -> []
+        | (p, e)::bs -> 
+          begin match p with
+          | Pats ps -> 
+            let flat_bs = (List.map (fun p -> (p, e)) ps) in
+            (flatten_branch flat_bs)@(flatten_branch bs)
+          | _ -> (p, e)::(flatten_branch bs)
+          end
       in
-      (Seq (g, Match bs), t)
+      let bs = flatten_branch bs in
+      let (g, t) = extract_exp t e in
+      let (bs, t) = 
+        List.fold_left (fun (bs, t) (p, e) -> 
+          let (g, t) = extract_exp t e in
+          ((p, g)::bs, t)
+        ) ([], t) bs
+      in
+      (Seq (g, Match (List.rev bs)), t)
     (* Binding *)
     | ELet (f, is_rec, args, typ, e1, e2) -> 
       begin match args with
@@ -172,7 +185,6 @@ module S = struct
   = fun t decl ->
     match decl with
     | DLet (f, is_rec, args, typ, e) -> 
-      print_endline ("Type of " ^ Print.let_to_string f ^ " : " ^ Print.type_to_string typ);
       if args <> [] || is_fun typ then
         begin match f with
         | BindOne f ->
@@ -189,24 +201,69 @@ module S = struct
 	= fun pgm -> 
     T.run pgm 
     |> List.fold_left (fun t decl -> (extract_decl t decl)) empty_env 
-
 end
+
+let rec match_pair_list : ('b -> 'b -> bool) -> ('a * 'b) list -> ('a * 'b) list -> bool
+= fun compare lst1 lst2 ->
+  match lst1, lst2 with
+  | [], [] -> true
+  | (a1, b1)::tl1, (a2, b2)::tl2 ->
+    begin
+      try
+        let (a2, b2) = List.find (fun (a2, b2) -> compare b1 b2) lst2 in
+        match_pair_list compare tl1 (List.remove_assoc a2 lst2)
+      with Not_found -> false
+    end
+  | _ -> false
+
+let rec match_pat : pat -> pat -> bool
+= fun p1 p2 ->
+  (* TODO *)
+  (* print_endline ("P1 : " ^ Print.pat_to_string p1 ^ ", " ^ "P2 : " ^ Print.pat_to_string p2); *)
+  match (p1, p2) with
+  | PUnit, PUnit | PUnder, PUnder | PVar _, PVar _ -> true
+  | PInt n1, PInt n2 -> n1 = n2
+  | PBool b1, PBool b2 -> b1 = b2
+  | PList ps1, PList ps2 | PTuple ps1, PTuple ps2 | PCons ps1, PCons ps2 -> (try List.for_all2 match_pat ps1 ps2 with _ -> false)
+  | PCtor (x, ps1), PCtor (y, ps2) -> (x = y) && (try List.for_all2 match_pat ps1 ps2 with _ -> false)
+  | Pats ps1, Pats ps2 -> raise (Failure "Invalid pattern mathcing of two cfgs")
+  | _ -> false
 
 let rec match_cfg : S.cfg -> S.cfg -> bool
 = fun g1 g2 ->
   match (g1, g2) with
-  | Empty, Empty -> true
-  | Seq (g1, g2), Seq (g1', g2') -> ((match_cfg g1 g1') && (match_cfg g2 g2')) || ((match_cfg g1 g2') && (match_cfg g2 g1'))
-  | If (g1, g2, g3), If (g1', g2', g3') -> 
+  | S.Empty, S.Empty -> true
+  | S.Seq (g1, g2), S.Seq (g1', g2') -> ((match_cfg g1 g1') && (match_cfg g2 g2')) || ((match_cfg g1 g2') && (match_cfg g2 g1'))
+  | S.If (g1, g2, g3), S.If (g1', g2', g3') -> 
     if (match_cfg g1 g1') then ((match_cfg g2 g2') && (match_cfg g3 g3')) || ((match_cfg g2 g3') && (match_cfg g3 g2')) else false
-  | Match bs1, Match bs2 ->
-    
+  | S.Match bs1, S.Match bs2 ->
+    (* Check *)
+    (try List.for_all2 (fun (p1, g1) (p2, g2) -> (match_pat p1 p2) && (match_cfg g1 g2)) (List.sort compare bs1) (List.sort compare bs2) with _ -> false)
+  | _ -> false
 
+let rec match_t : S.t -> S.t -> bool
+= fun t1 t2 -> match_pair_list match_cfg t1 t2
+
+let log = ref (open_out "cfg.txt")
 (*
 	Input : An incorrect program pgm and a set of correct programs cpgms
 	Output : A correct program cpgm which is most similar to pgm
 *)
-let run : prog -> prog list -> prog
+let run : prog -> prog list -> prog option
 = fun pgm cpgms -> 
-	let cpgm = List.hd cpgms in
-	cpgm
+  Print.print_header "CFG of submission"; print_endline (S.string_of_t (S.run pgm));
+  Print.print_header "CFG of solutions";
+  let t = S.run pgm in
+  let results = List.map (fun cpgm -> (cpgm, S.run cpgm)) cpgms in
+  List.iter (fun (cpgm, t') ->
+    Printf.fprintf (!log) "------------Program-------------\n%s\n" (Print.program_to_string cpgm);
+    Printf.fprintf (!log) "----------Analysis_Result-------\n%s\n" (S.string_of_t t')
+  ) results;
+  try 
+  	let (cpgm, t') = List.find (fun (cpgm, t') -> 
+      Print.print_header "Analysis1"; print_endline (S.string_of_t t);
+      Print.print_header "Analysis2"; print_endline (S.string_of_t t');
+      match_t t t'
+    ) results in
+	 Some cpgm
+  with Not_found -> None

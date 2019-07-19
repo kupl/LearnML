@@ -233,13 +233,22 @@ let main () =
       | Some sub -> Print.print_header (Print.program_to_string sub); Print.print_header ""; Vector.print_list (Vector.vectorize sub);
       | _ -> raise (Failure(!opt_submission_filename ^ " does not exist"))
     end 
-  else 
-    print_endline ("Here");
+   else 
     begin 
-      match submission with
-      | Some sub -> print_endline (Cfg.S.string_of_t (Cfg.S.run sub))
+      match submission, solutions with
+      | Some sub, [] -> print_endline (string_of_int (List.length solutions)); print_endline (Cfg.S.string_of_t (Cfg.S.run sub)); 
+      | Some sub, hd::tl -> 
+        begin match Cfg.run sub solutions with
+        | Some sol -> 
+          Print.print_header "Submission"; Print.print_pgm sub;
+          Print.print_header "Matched solution"; Print.print_pgm sol
+        | None ->
+          Print.print_header "Submission"; Print.print_pgm sub;
+          Print.print_header "Matched solution"; print_endline ("Not found.")
+        end
       | _ -> raise (Failure(!opt_submission_filename ^ " does not exist"))
     end
     (*Arg.usage options usage_msg*)
+
 
 let _ = main ()
