@@ -199,7 +199,7 @@ let rec match_cfg : S.cfg -> S.cfg -> bool
   | Seq (g1, g2), Seq (g1', g2') -> ((match_cfg g1 g1') && (match_cfg g2 g2')) || ((match_cfg g1 g2') && (match_cfg g2 g1'))
   | If (g1, g2, g3), If (g1', g2', g3') -> 
     if (match_cfg g1 g1') then ((match_cfg g2 g2') && (match_cfg g3 g3')) || ((match_cfg g2 g3') && (match_cfg g3 g2')) else false
-  | Match bs1, Match bs2 -> raise NotImplemented
+  | Match bs1, Match bs2 ->
     
 
 (*
