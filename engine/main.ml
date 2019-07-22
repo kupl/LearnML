@@ -241,7 +241,8 @@ let main () =
         begin match Cfg.run sub solutions with
         | Some sol -> 
           Print.print_header "Submission"; Print.print_pgm sub;
-          Print.print_header "Matched solution"; Print.print_pgm sol
+          Print.print_header "Matched solution"; Print.print_pgm sol;
+          ignore (Repairer.run sub sol testcases)
         | None ->
           Print.print_header "Submission"; Print.print_pgm sub;
           Print.print_header "Matched solution"; print_endline ("Not found.")
