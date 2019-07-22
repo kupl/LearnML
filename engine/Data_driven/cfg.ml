@@ -154,28 +154,24 @@ module S = struct
       (Seq (g, Match (List.rev bs)), t)
     (* Binding *)
     | ELet (f, is_rec, args, typ, e1, e2) -> 
-      begin match args with
-      | [] -> extract_exp t e2
-      | _ ->
+      if args <> [] || is_fun typ then
         begin match f with
         | BindOne f ->
           let (g1, t) = extract_exp t e1 in
           extract_exp (extend_env f g1 t) e2
-        | _ -> extract_exp t e2
+        | _ -> raise (Failure "Invalid function format")
         end
-      end
+      else extract_exp t e2
     | EBlock (is_rec, bindings, e2) -> 
       let t = List.fold_left (fun t (f, is_rec, args, typ, e) -> 
-        begin match args with
-        | [] -> t
-        | _ ->
+        if args <> [] || is_fun typ then
           begin match f with
           | BindOne f ->
             let (g1, t) = extract_exp t e in
             extend_env f g1 t
           | _ -> raise (Failure "Invalid function format")
           end
-        end
+        else t
       ) t bindings in
       extract_exp t e2
     (* Const *)
@@ -251,8 +247,6 @@ let log = ref (open_out "cfg.txt")
 *)
 let run : prog -> prog list -> prog option
 = fun pgm cpgms -> 
-  Print.print_header "CFG of submission"; print_endline (S.string_of_t (S.run pgm));
-  Print.print_header "CFG of solutions";
   let t = S.run pgm in
   let results = List.map (fun cpgm -> (cpgm, S.run cpgm)) cpgms in
   List.iter (fun (cpgm, t') ->
@@ -261,8 +255,10 @@ let run : prog -> prog list -> prog option
   ) results;
   try 
   	let (cpgm, t') = List.find (fun (cpgm, t') -> 
+      (*
       Print.print_header "Analysis1"; print_endline (S.string_of_t t);
       Print.print_header "Analysis2"; print_endline (S.string_of_t t');
+      *)
       match_t t t'
     ) results in
 	 Some cpgm
