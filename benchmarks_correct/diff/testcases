@@ -1,0 +1,53 @@
+{
+  (CONST 1,"x");[("x",1)] => 0;
+  (VAR "x","y");[("x",1)] => 0;
+  (VAR "y","x");[("y",1)] => 0;
+  (POWER ("x",2),"y");[("x",5)] => 0;
+  (SUM [CONST 0; VAR "x"],"x");[("x",10)] => 1;
+  (SUM [POWER ("x", 2); TIMES [CONST 2; VAR "x"]; CONST 1], "x");[("x", 2)] => 6;
+  (SUM [POWER ("x", 2); POWER ("x", 2); CONST 1], "x");[("x",3)] => 12;
+  (SUM [POWER ("x", 2); POWER ("x", 2); CONST 1], "y");[("x",1)] => 0;
+  (SUM [CONST 2; POWER ("x",2); POWER ("x",3)], "x");["x",2] => 16;
+  (TIMES [POWER ("x", 3); POWER ("y", 2)], "x");[("x", 10); ("y", 5)] => 7500;
+  (SUM [TIMES [SUM [VAR "x"; VAR "y"]; TIMES [VAR "x"; VAR "y"]]; POWER ("x", 2)], "x");[("x", 3); ("y", 4)] => 46;
+  (TIMES [TIMES [SUM [VAR "x"; VAR "y"]; VAR "x"]; VAR "x"], "x");[("x", 2); ("y", 5)] =>  32;
+  (TIMES [POWER ("x",2); VAR "y"], "x");[("x", 3); ("y", 4)] => 24;
+  (TIMES [CONST 2; SUM [VAR "x"; VAR "y"]; POWER ("x", 3)], "x");[("x", 2); ("y", 1)] => 88;
+  (TIMES [SUM [VAR "x"; VAR "y"; VAR "z"]; POWER ("x", 2); SUM[TIMES [CONST 3; VAR "x"]; VAR "z"]], "x");[("x", 2); ("y", 1); ("z", 1)] => 188;
+  (TIMES [SUM [VAR "x"; VAR "y"; VAR "z"]; POWER ("x", 2); SUM[TIMES [CONST 3; VAR "x"]; VAR "z"]], "y");[("x", 1); ("y", 1); ("z", 1)] => 4;
+  (TIMES [SUM [VAR "x";CONST 1];SUM [CONST 2;CONST (-2)];SUM [CONST 1]],"x");[("x",1)] =>0;
+}
+(*
+  (CONST 1,"x");[("x",1)] => 0;
+  (VAR "x","y");[("x",1)] => 0;
+  (VAR "y","x");[("y",1)] => 0;
+  (POWER ("x",2),"y");[("x",5)] => 0;
+  (SUM [CONST 0; VAR "x"],"x");[("x",10)] => 1;
+  (SUM [POWER ("x", 2); TIMES [CONST 2; VAR "x"]; CONST 1], "x");[("x", 2)] => 6;
+  (SUM [POWER ("x", 2); POWER ("x", 2); CONST 1], "x");[("x",3)] => 12;
+  (SUM [POWER ("x", 2); POWER ("x", 2); CONST 1], "y");[("x",1)] => 0;
+  (SUM [CONST 2; POWER ("x",2); POWER ("x",3)], "x");["x",2] => 16;
+  (TIMES [POWER ("x", 3); POWER ("y", 2)], "x");[("x", 10); ("y", 5)] => 7500;
+  (SUM [TIMES [SUM [VAR "x"; VAR "y"]; TIMES [VAR "x"; VAR "y"]]; POWER ("x", 2)], "x");[("x", 3); ("y", 4)] => 46;
+  (TIMES [TIMES [SUM [VAR "x"; VAR "y"]; VAR "x"]; VAR "x"], "x");[("x", 2); ("y", 5)] =>  32;
+  (TIMES [POWER ("x",2); VAR "y"], "x");[("x", 3); ("y", 4)] => 24;
+  (TIMES [CONST 2; SUM [VAR "x"; VAR "y"]; POWER ("x", 3)], "x");[("x", 2); ("y", 1)] => 88;
+  (TIMES [SUM [VAR "x"; VAR "y"; VAR "z"]; POWER ("x", 2); SUM[TIMES [CONST 3; VAR "x"]; VAR "z"]], "x");[("x", 2); ("y", 1); ("z", 1)] => 188;
+  (TIMES [SUM [VAR "x"; VAR "y"; VAR "z"]; POWER ("x", 2); SUM[TIMES [CONST 3; VAR "x"]; VAR "z"]], "y");[("x", 1); ("y", 1); ("z", 1)] => 4;
+  (TIMES [SUM [VAR "x";CONST 1];SUM [CONST 2;CONST (-2)];SUM [CONST 1]],"x");[("x",1)] =>0;
+}
+
+
+{
+  (SUM [POWER ("x", 2); TIMES [CONST 2; VAR "x"]; CONST 1], "x");[("x", 2)] => 6;
+  (SUM [POWER ("x", 2); POWER ("x", 2); CONST 1], "x");[("x",3)] => 12;
+  (SUM [POWER ("x", 2); POWER ("x", 2); CONST 1], "y");[("x", 1)] => 0;
+  (TIMES [POWER ("x", 3); POWER ("y", 2)], "x");[("x", 10); ("y", 5)] => 7500;
+  (SUM [TIMES [SUM [VAR "x"; VAR "y"]; TIMES [VAR "x"; VAR "y"]]; POWER ("x", 2)], "x");[("x", 3); ("y", 4)] => 46;
+  (TIMES [TIMES [SUM [VAR "x"; VAR "y"]; VAR "x"]; VAR "x"], "x");[("x", 2); ("y", 5)] =>  32;
+  (TIMES [POWER ("x",2); VAR "y"], "x");[("x", 3); ("y", 4)] => 24;
+  (TIMES [CONST 2; SUM [VAR "x"; VAR "y"]; POWER ("x", 3)], "x");[("x", 2); ("y", 1)] => 88;
+  (TIMES [SUM [VAR "x"; VAR "y"; VAR "z"]; POWER ("x", 2); SUM[TIMES [CONST 3; VAR "x"]; VAR "z"]], "x");[("x", 2); ("y", 1); ("z", 1)] => 188;
+  (TIMES [SUM [VAR "x"; VAR "y"; VAR "z"]; POWER ("x", 2); SUM[TIMES [CONST 3; VAR "x"]; VAR "z"]], "y");[("x", 1); ("y", 1); ("z", 1)] => 4;
+}
+*)
