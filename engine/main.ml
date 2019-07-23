@@ -233,6 +233,21 @@ let main () =
       | Some sub -> Print.print_header (Print.program_to_string sub); Print.print_header ""; Vector.print_list (Vector.vectorize sub);
       | _ -> raise (Failure(!opt_submission_filename ^ " does not exist"))
     end 
+  else if !opt_offline then 
+    begin
+      match solutions_debug with
+      | [] -> raise (Failure (!opt_solution_dirname ^ " not include file")) 
+      | hd::tl -> 
+        let file = "vector.txt" in 
+        let log = ref (open_out file) in
+        let print_test : (string*prog) -> unit =
+        begin
+        fun (fname, prog) -> 
+          let vector = Vector.to_string (Vector.vectorize prog) in
+          Printf.fprintf (!log) "%s : %s\n" fname vector
+        end 
+        in List.iter print_test solutions_debug 
+    end
    else 
     begin 
       match submission, solutions with

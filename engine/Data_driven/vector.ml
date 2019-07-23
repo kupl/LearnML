@@ -5,6 +5,7 @@ open Type
 exception NotImplemented
 exception Invalid_Expression_Construct
 exception Emptyshouldnotbehere
+exception Update_Failure
 
 module N = struct
     (*ast flattening*)
@@ -15,7 +16,7 @@ module N = struct
                 |Bool of bool 
                 |Empty 
 
-    let bool_to_node : bool -> node
+    let rec_to_node : bool -> node
     = fun b ->
       match b with
       | true -> Node ("Rec", [])
@@ -69,10 +70,10 @@ module N = struct
     = fun (_,exp) ->
       match exp with
       | EUnit -> Node ("EUnit", [])
-      | Const n -> Node ("Const", [Const n])
-      | String id-> Node ("String",[String id])
-      | TRUE -> Node ("True",[])
-      | FALSE -> Node ("False",[])
+      | Const n -> Const n
+      | String id-> String id
+      | TRUE -> Bool true
+      | FALSE -> Bool false
       | EList lst -> Node ("EList", List.map exp_to_node lst)
       | EVar x -> Node ("EVar", [Id x]) 
       | ECtor (x,lst) -> Node ("ECtor", Id (x)::(List.map exp_to_node lst))
@@ -101,7 +102,7 @@ module N = struct
       | ELet (f,is_rec,args,typ,exp,exp2) ->
               Node ("ELet", [binding_to_node (f,is_rec,args,typ,exp); exp_to_node exp2])
       | EBlock (is_rec, elst, e) -> 
-              Node ("EBlock", (bool_to_node is_rec)::
+              Node ("EBlock", (rec_to_node is_rec)::
                               (List.map binding_to_node elst)@[exp_to_node e])
       | EMatch (e,lst) -> 
         let rec aux = fun lst -> 
@@ -116,7 +117,7 @@ module N = struct
 
     and binding_to_node : binding -> node
     = fun (f,is_rec,args,typ,exp) ->
-        Node ("Binding", [let_to_node f; bool_to_node is_rec]@(List.map arg_to_node args)@[type_to_node typ; exp_to_node exp])
+        Node ("Binding", [let_to_node f; rec_to_node is_rec]@(List.map arg_to_node args)@[type_to_node typ; exp_to_node exp])
 
     let decl_to_node : decl -> node
     = fun decl -> 
@@ -125,14 +126,16 @@ module N = struct
       | DEqn _ -> Empty
       | DData _ -> Empty
       | DLet bind_tuple -> Node ("DLet", [(binding_to_node bind_tuple)])
-      | DBlock (is_rec,bind_tuples) -> Node ("DBlock", bool_to_node is_rec :: (List.map binding_to_node bind_tuples))
+      | DBlock (is_rec,bind_tuples) -> Node ("DBlock", rec_to_node is_rec :: (List.map binding_to_node bind_tuples))
       | TBlock _ -> Empty
 
     type table = (string,int) BatHashtbl.t
 
     let update : table -> string -> unit
     = fun tbl s ->
-      let cur = BatHashtbl.find tbl s in
+      let cur = 
+        try BatHashtbl.find tbl s 
+        with Not_found -> raise Update_Failure in
       BatHashtbl.replace tbl s (cur+1)
 
     let update2 : table -> string -> unit
@@ -146,9 +149,10 @@ module N = struct
       | Node (s,lst) -> update tbl s;
         List.iter (traverse tbl) lst
       | Id id -> update tbl "Id"
-      | Const n -> update tbl "Const"
-      | String st -> update tbl "String"
-      | Bool b -> update tbl "Bool"
+      | Const n -> update tbl "Const_Int"
+      | String st -> update tbl "Const_String"
+      | Bool b -> if b then update tbl "Const_True"
+                       else update tbl "Const_False"
       (*
       | Id id -> update2 tbl ("Id%"^id)
       | Const n -> update2 tbl ("Const%"^(string_of_int n))
@@ -165,16 +169,15 @@ module N = struct
         ("TBool",0);("TBase",0);("TList",0);("TTuple",0);("TArr",0);
         ("TVar",0);("TCtor",0);("TExn",0);("BindUnder",0);("BindOne",0);
         ("BindTuple",0);("ArgUnder",0);("ArgOne",0);("ArgTuple",0);
-        ("EUnit",0);("Const",0);("String",0);("True",0);("False",0);
-        ("EList",0); ("EVar",0); ("ECtor",0); ("ETuple",0); ("ADD",0);
+        ("EUnit",0); ("EList",0); ("EVar",0); ("ECtor",0); ("ETuple",0); ("ADD",0);
         ("SUB",0); ("MUL",0); ("DIV",0); ("MOD",0); ("MINUS",0);
         ("OR",0); ("AND",0); ("LESS",0); ("LARGER",0); ("EQUAL",0);
         ("NOTEQ",0); ("LESSEQ",0); ("LARGEREQ",0); ("AT",0); ("DOUBLECOLON",0);
         ("STRCON",0); ("NOT",0); ("EApp",0); ("EFun",0); ("IF",0); ("ELet",0);
         ("EBlock",0); ("EMatch",0); ("Raise",0); ("Binding",0); ("DLet",0); 
-        ("DBlock",0); ("Id",0); ("Const",0); ("String",0); ("Bool",0); 
+        ("DBlock",0); ("Id",0); ("Const_Int",0); ("Const_String",0); ("Const_True",0); 
+        ("Const_False",0);
     ]
-
 
     let init_tbl : unit -> table
     = fun x -> 
@@ -187,7 +190,6 @@ module N = struct
       in iter tbl init_vector 
 end
 
-    (*vector:= associate list*)
     type t = (string*int) list
     
     let ast_flatten : prog -> N.node list
@@ -195,13 +197,18 @@ end
       let flat = List.map N.decl_to_node prog in
       List.filter (fun x -> x <> N.Empty) flat 
 
-    let rec vectorize: prog -> t
+    let vectorize: prog -> t
     = fun prog -> 
       let ast = ast_flatten prog in
       let table = N.init_tbl () in
       List.iter (N.traverse table) ast;
       let fold h = BatHashtbl.fold (fun k v acc -> (k,v) :: acc) h [] in
       let sorted = List.sort compare (fold table) in sorted
+
+    let to_string: t -> string
+    = fun t ->
+      let int_vec = List.map (fun (k,v) -> v) t in
+      List.fold_left (fun acc e -> acc^(string_of_int e)^" ") "" int_vec  
 
     let print_list : t -> unit
     = fun lst ->
@@ -211,7 +218,8 @@ end
         | [] -> print_endline "end of list"
         | (s,c)::tl -> print_endline (s^" "^string_of_int c); traverse tl in
       traverse lst
-      
 
+    let offline_parsing : string -> unit
+    = fun s -> ()
 
 

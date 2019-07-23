@@ -35,6 +35,9 @@ let opt_exp_cover = ref false
 (*For debugging*)
 let opt_tree = ref false
 let opt_vector = ref false
+let opt_offline = ref false
+let opt_search = ref false
+let k = ref 5
 
 let options =
   [
@@ -56,6 +59,8 @@ let options =
     ("-exp_cover", Arg.Set opt_exp_cover, " Check expression coverage");
     ("-tree", Arg.Set opt_tree, " Print code ast");
     ("-vector", Arg.Set opt_vector, " Print vectorzation result");
+    ("-offline", Arg.Set opt_offline, " Offline vector embedding");
+    ("-search", Arg.Set opt_search, " Find most k closest vector");
   ]
   |> Arg.align
 

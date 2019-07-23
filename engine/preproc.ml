@@ -62,10 +62,9 @@ let read_pgms_debug : string -> (string*prog) list
            match read_prog f with
            | Some pgm -> (f,pgm)::pgms
            | None -> pgms) pgms files
-         else pgms
-       ) [] dirs
-     in pgms else []
-
+         else pgms) [] dirs 
+    in pgms 
+    else []
 
 (* Read testcases *)
 let read_testcases : string -> examples
