@@ -1,4 +1,4 @@
- open Lang
+open Lang
 open Util
 open Type
 
@@ -249,12 +249,14 @@ let run : prog -> prog list -> prog option
 = fun pgm cpgms -> 
   let t = S.run pgm in
   let results = List.map (fun cpgm -> (cpgm, S.run cpgm)) cpgms in
+  
   List.iter (fun (cpgm, t') ->
     Printf.fprintf (!log) "------------Program-------------\n%s\n" (Print.program_to_string cpgm);
     Printf.fprintf (!log) "----------Analysis_Result-------\n%s\n" (S.string_of_t t')
   ) results;
+  
   try 
-  	let (cpgm, t') = List.find (fun (cpgm, t') -> 
+  	let cpgm,t' = List.find (fun (cpgm, t') -> 
       (*
       Print.print_header "Analysis1"; print_endline (S.string_of_t t);
       Print.print_header "Analysis2"; print_endline (S.string_of_t t');

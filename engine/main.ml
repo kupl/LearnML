@@ -158,6 +158,33 @@ let fix_without_testcases : prog -> prog -> unit
       print_endline ("Total Time : " ^ string_of_float !task_time)
     )
 
+let fix_with_vectors : prog -> (string*prog) list -> examples -> unit
+= fun sub solutions testcases->
+  (*Print.print_header ("Submission List size"^string_of_int (List.length solutions)); 
+  List.iter (fun (filename, _) -> print_endline filename) solutions;*)
+
+  let topk = 5 in 
+  let v = Vector.vectorize sub in 
+  let vs' = List.map (fun (s,prog) -> s,prog,(Vector.vectorize prog)) solutions in
+  let dists' = List.map (fun (s,prog,v') -> s,prog,(Vector.calculate_distance v v')) vs' in
+  let sorted = List.sort (fun (_,_,dist) (_,_,dist') -> compare dist dist') dists' in
+
+  (*inner function pick_cand use free variable 'topk' *)
+  let rec pick_cand acc count cand = match cand with
+    |[] -> acc
+    |h::t -> if (count<=topk) then pick_cand (acc@[h]) (count+1) t else acc in
+
+  let topk_lst = pick_cand [] 1 sorted in
+  Print.print_header "Submission"; Print.print_pgm sub;
+  List.iter (fun (filename, sol, dist) ->
+  Print.print_header ("filename: "^filename); 
+  Print.print_header "solution"; Print.print_pgm sol;
+  Print.print_header ("distance with submission: "^(string_of_float dist));
+  ignore (Repairer.run sub sol testcases)
+  ) topk_lst;
+  
+  Print.print_header "summary"
+
 let execute : prog -> unit
 = fun prog ->
   let (tenv,_,_,_) = Type.run prog in
@@ -229,8 +256,9 @@ let main () =
     end
   else if !opt_vector then 
     begin 
-      match submission with 
-      | Some sub -> Print.print_header (Print.program_to_string sub); Print.print_header ""; Vector.print_list (Vector.vectorize sub);
+      match submission, solutions_debug with 
+      | Some sub, [] -> raise (Failure (!opt_solution_dirname ^" may not exist"))
+      | Some sub, hd::tl -> fix_with_vectors sub solutions_debug testcases
       | _ -> raise (Failure(!opt_submission_filename ^ " does not exist"))
     end 
   else if !opt_offline then 

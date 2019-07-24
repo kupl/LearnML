@@ -210,6 +210,24 @@ end
       let int_vec = List.map (fun (k,v) -> v) t in
       List.fold_left (fun acc e -> acc^(string_of_int e)^" ") "" int_vec  
 
+    let calculate_distance : t -> t -> float
+    = fun t1 t2 ->
+      let v1 = List.map (fun (k,v) -> v) t1 in
+      let v2 = List.map (fun (k,v) -> v) t2 in
+      let rec sum : int list -> int list -> int
+      = fun v1 v2 -> 
+        match v1,v2 with
+        | [],[] -> 0
+        | h::t, h'::t' -> (h-h')*(h-h') + sum t t' 
+        | _ -> raise (Failure "vector should have same dimension") in
+      sqrt (float_of_int(sum v1 v2))
+    (*
+    let topk_close : int -> t -> t list -> t list
+    = fun k sub cand ->
+      let distances = List.map (calculate_distance sub) cand in
+      cand
+    *)    
+
     let print_list : t -> unit
     = fun lst ->
       (*let cnt = List.map (fun (_,x) -> x) lst in*)
