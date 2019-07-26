@@ -281,14 +281,21 @@ let main () =
       match submission, solutions with
       | Some sub, [] -> print_endline (string_of_int (List.length solutions)); print_endline (Cfg.S.string_of_t (Cfg.S.run sub)); 
       | Some sub, hd::tl -> 
-        begin match Cfg.run sub solutions with
-        | Some sol -> 
-          Print.print_header "Submission"; Print.print_pgm sub;
-          Print.print_header "Matched solution"; Print.print_pgm sol;
-          ignore (Repairer.run sub sol testcases)
-        | None ->
+        begin match Cfg.run sub solutions_debug with
+        | [] -> 
           Print.print_header "Submission"; Print.print_pgm sub;
           Print.print_header "Matched solution"; print_endline ("Not found.")
+        | l -> 
+          Print.print_header ("Size of Matched solution: "^(string_of_int (List.length l)));
+          List.iter (fun (f,Some sol) ->
+        (*
+          Print.print_header "Submission"; Print.print_pgm sub; *)
+          Print.print_header ("Matched solution: "^f); (*Print.print_pgm sol;*)
+          ignore (Repairer.run sub sol testcases)) l
+          
+      (*  | (f,None) ->
+          Print.print_header "Submission"; Print.print_pgm sub;
+          Print.print_header "Matched solution"; print_endline ("Not found.")*)
         end
       | _ -> raise (Failure(!opt_submission_filename ^ " does not exist"))
     end
