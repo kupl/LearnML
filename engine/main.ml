@@ -163,7 +163,7 @@ let fix_with_vectors : prog -> (string*prog) list -> examples -> unit
   (*Print.print_header ("Submission List size"^string_of_int (List.length solutions)); 
   List.iter (fun (filename, _) -> print_endline filename) solutions;*)
 
-  let topk = 5 in 
+  let topk = 2 in 
   let v = Vector.vectorize sub in 
   let vs' = List.map (fun (s,prog) -> s,prog,(Vector.vectorize prog)) solutions in
   let dists' = List.map (fun (s,prog,v') -> s,prog,(Vector.calculate_distance v v')) vs' in
@@ -276,6 +276,19 @@ let main () =
         end 
         in List.iter print_test solutions_debug 
     end
+   else if !opt_experiment then
+     begin 
+       match submission, solutions with
+       | Some sub, [] -> raise (Failure (!opt_solution_dirname ^ " not include file"))
+       | Some sub, hd::tl -> 
+         begin match Cfg.run sub solutions_debug with
+         | [] -> Print.print_parsing_header "Matched Solution : 0"
+         | l -> 
+           Print.print_parsing_header ("Matched Solution : "^ string_of_int (List.length l));
+           List.iter (fun (f,Some sol) -> Print.print_parsing_header f;
+                      ignore (Repairer.run sub sol testcases)) l
+         end
+     end
    else 
     begin 
       match submission, solutions with

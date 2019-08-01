@@ -265,6 +265,11 @@ let rec print_examples : examples -> unit
 = fun examples -> List.iter (
     fun (i,o) -> print_endline (example_to_string (i, o))
   ) examples
+
+let print_parsing_header str = 
+  let _ = print_endline "@#$@#$@#$" in
+  let _ = print_endline str in
+  ()
   
 let print_header str = 
  let _ = print_endline "-----------------------------" in
