@@ -166,6 +166,7 @@ let fix_with_vectors : prog -> (string*prog) list -> examples -> unit
   let topk = 2 in 
   let v = Vector.vectorize sub in 
   let vs' = List.map (fun (s,prog) -> s,prog,(Vector.vectorize prog)) solutions in
+  let set = List.fold_left (fun set (_,_,vs) -> BatSet.add vs set) BatSet.empty vs' in
   let dists' = List.map (fun (s,prog,v') -> s,prog,(Vector.calculate_distance v v')) vs' in
   let sorted = List.sort (fun (_,_,dist) (_,_,dist') -> compare dist dist') dists' in
 
@@ -180,6 +181,7 @@ let fix_with_vectors : prog -> (string*prog) list -> examples -> unit
   Print.print_header ("filename: "^filename); 
   Print.print_header "solution"; Print.print_pgm sol;
   Print.print_header ("distance with submission: "^(string_of_float dist));
+  Print.print_header ("size :" ^ (string_of_int (BatSet.cardinal set)));
   ignore (Repairer.run sub sol testcases)
   ) topk_lst;
   
