@@ -7,7 +7,6 @@ exception DeclError
 (* Get repair candidate : set of (label * exp) *)
 let rec match_pat : pat -> pat -> bool
 = fun p1 p2 ->
-  (* TODO *)
   match (p1, p2) with
   | PUnit, PUnit | PUnder, PUnder | PVar _, PVar _ -> true
   | PInt n1, PInt n2 -> n1 = n2
@@ -273,22 +272,26 @@ let run : prog -> prog -> examples -> prog option
   Print.print_header "Analysis2"; print_endline (Cfg.S.string_of_t t2);
 	let repair_cand = get_repair_candidate (pgm, t1) (cpgm, t2) in
 	Print.print_header "Repair candidates";
+	(*
 	List.iter (fun (l, e) -> 
 		print_endline ("label : " ^ string_of_int l);
 		print_endline (Print.exp_to_string (l, e))
 	) repair_cand;
+	*)
 	(* Update Candidate *)
 	let repair_cand = update_var_comp pgm repair_cand in
 	Print.print_header "Updated epair candidates";
-	BatSet.iter (fun (l, e) -> 
+	(*
+	List.iter (fun (l, e) -> 
 		print_endline ("label : " ^ string_of_int l);
 		print_endline (Print.exp_to_string (l, e))
 	) repair_cand;
+	*)
 	(* Replace & Checking *)
 	print_endline ("Size of repair Cand : " ^ string_of_int (BatSet.cardinal repair_cand));
 	let repair = List.find_opt (fun (l, e) -> 
 		let pgm' = List.map (fun decl -> subst_decl decl (l, e)) pgm in
-		Print.print_header "Repair Candidate"; Print.print_pgm pgm';
+		(*Print.print_header "Repair Candidate"; Print.print_pgm pgm';*)
 		Eval.is_solution pgm' testcases
 	) (BatSet.to_list repair_cand) 
 	in
