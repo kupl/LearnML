@@ -164,8 +164,8 @@ let fix_with_vectors : prog -> (string*prog) list -> examples -> unit
   List.iter (fun (filename, _) -> print_endline filename) solutions;*)
 
   let topk = 2 in 
-  let v = Vector.vectorize sub in 
-  let vs' = List.map (fun (s,prog) -> s,prog,(Vector.vectorize prog)) solutions in
+  let v = Vector.prog_vectorize sub in 
+  let vs' = List.map (fun (s,prog) -> s,prog,(Vector.prog_vectorize prog)) solutions in
   let set = List.fold_left (fun set (_,_,vs) -> BatSet.add vs set) BatSet.empty vs' in
   let dists' = List.map (fun (s,prog,v') -> s,prog,(Vector.calculate_distance v v')) vs' in
   let sorted = List.sort (fun (_,_,dist) (_,_,dist') -> compare dist dist') dists' in
@@ -176,16 +176,19 @@ let fix_with_vectors : prog -> (string*prog) list -> examples -> unit
     |h::t -> if (count<=topk) then pick_cand (acc@[h]) (count+1) t else acc in
 
   let topk_lst = pick_cand [] 1 sorted in
+  print_endline "@#$@#$@#$";
   Print.print_header "Submission"; Print.print_pgm sub;
   List.iter (fun (filename, sol, dist) ->
+  print_endline "@#$@#$@#$";
   Print.print_header ("filename: "^filename); 
   Print.print_header "solution"; Print.print_pgm sol;
   Print.print_header ("distance with submission: "^(string_of_float dist));
-  Print.print_header ("size :" ^ (string_of_int (BatSet.cardinal set)));
   ignore (Repairer.run sub sol testcases)
-  ) topk_lst;
-  
-  Print.print_header "summary"
+  (*
+  Print.print_header ("size :" ^ (string_of_int (BatSet.cardinal set)));
+  *)
+  ) topk_lst
+
 
 let execute : prog -> unit
 = fun prog ->
@@ -254,6 +257,9 @@ let main () =
       match submission with
       | Some sub -> Print.print_header (Print.program_to_string sub); Print.print_header (Pp_tree.program_to_tree 0 sub);
                     print_header "Summary"; print_endline (Selector.A.string_of_t (Selector.get_summary sub));                   
+                    Print.print_header "test function extractor"; 
+                    Vrepairer.test sub
+
       | _ -> raise (Failure(!opt_submission_filename ^ " does not exist"))
     end
   else if !opt_vector then 
@@ -273,7 +279,7 @@ let main () =
         let print_test : (string*prog) -> unit =
         begin
         fun (fname, prog) -> 
-          let vector = Vector.to_string (Vector.vectorize prog) in
+          let vector = Vector.to_string (Vector.prog_vectorize prog) in
           Printf.fprintf (!log) "%s : %s\n" fname vector
         end 
         in List.iter print_test solutions_debug 
