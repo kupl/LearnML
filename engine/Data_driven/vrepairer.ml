@@ -40,7 +40,11 @@ let rec extract_body : t -> lexp -> lexp * t
   | ADD (e1,e2) -> 
     let (e1', env') = extract_body env e1 in
     let (e2',env'') = extract_body env' e2 in
-    (l,ADD (e1',e2')), env'' 
+    (l,ADD (e1',e2')), env''
+  | SUB (e1,e2) ->
+    let (e1', env') = extract_body env e1 in
+    let (e2', env'') = extract_body env' e2 in
+    (l,SUB (e1',e2')), env''
   | IF (e1,e2,e3) ->
     let (e1',env1) = extract_body env e1 in
     let (e2',env2) = extract_body env1 e2 in
@@ -50,7 +54,7 @@ let rec extract_body : t -> lexp -> lexp * t
     if is_fun typ then 
       let (e1',env') = extract_body env e1 in
       let (e2',env'') = extract_body env' e2 in
-      e1', ((Print.let_to_string f),e2')::env'' 
+      e2', ((Print.let_to_string f),e1')::env'' 
     else 
       let (body,env') = extract_body env e2 in
       (l,ELet (f, is_rec,args, typ, e1, body)), env'
@@ -66,7 +70,7 @@ let extract_func : t -> decl -> t
     acc@((Print.let_to_string f, body)::inner_func)
   | _ -> acc 
 
-let extract_func_all : prog -> (string*lexp) list 
+let extract_func_all : prog -> t
 = fun pgm ->
   let pgm' = Cfg.T.run pgm in
   List.fold_left (fun acc decl-> extract_func acc decl) [] pgm' 
@@ -74,5 +78,5 @@ let extract_func_all : prog -> (string*lexp) list
 let test : prog -> unit
 = fun pgm ->
   let res = extract_func_all pgm in
-  let str = List.fold_left (fun acc (s, exp) -> acc ^"\n---------------------\n" ^ "Func :" ^ s ^(Print.exp_to_string exp)) "" res in
+  let str = List.fold_left (fun acc (s, exp) -> acc ^"\n---------------------\n" ^ "Func : " ^ s ^"\n"^(Print.exp_to_string exp)) "" res in
   print_endline str 
