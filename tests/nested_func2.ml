@@ -10,3 +10,17 @@ let add16 : int -> int
     in add2 (add2 z)
   in add4 (add4 y)
 in add8 (add8 x)
+
+(*
+ * add16 -> let var1 = 150 in
+ *          add8 (add8 x)
+ * add8 -> add4 (add4 y)
+ * add4 -> add2 (add2 z)
+ * add2 -> a+2
+ *           
+ *
+ *
+ *
+ *
+ *
+ *)

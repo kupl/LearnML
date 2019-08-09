@@ -45,11 +45,71 @@ let rec extract_body : t -> lexp -> lexp * t
     let (e1', env') = extract_body env e1 in
     let (e2', env'') = extract_body env' e2 in
     (l,SUB (e1',e2')), env''
+  | MUL (e1,e2) ->
+    let (e1', env') = extract_body env e1 in
+    let (e2', env'') = extract_body env' e2 in
+    (l,MUL (e1',e2')), env''
+  | DIV (e1,e2) ->
+    let (e1', env') = extract_body env e1 in
+    let (e2', env'') = extract_body env' e2 in
+    (l,DIV (e1',e2')), env''
+  | MOD (e1,e2) ->
+    let (e1', env') = extract_body env e1 in
+    let (e2', env'') = extract_body env' e2 in
+    (l,MOD (e1',e2')), env''
+  | OR (e1,e2) ->
+    let (e1', env') = extract_body env e1 in
+    let (e2', env'') = extract_body env' e2 in
+    (l,OR (e1',e2')), env''
+  | AND (e1,e2) ->
+    let (e1', env') = extract_body env e1 in
+    let (e2', env'') = extract_body env' e2 in
+    (l,AND (e1',e2')), env''
+  | LESS (e1,e2) ->
+    let (e1', env') = extract_body env e1 in
+    let (e2', env'') = extract_body env' e2 in
+    (l,LESS (e1',e2')), env''
+  | LARGER (e1,e2) ->
+    let (e1', env') = extract_body env e1 in
+    let (e2', env'') = extract_body env' e2 in
+    (l,LARGER (e1',e2')), env''
+  | EQUAL (e1,e2) ->
+    let (e1', env') = extract_body env e1 in
+    let (e2', env'') = extract_body env' e2 in
+    (l,EQUAL (e1',e2')), env''
+  | NOTEQ (e1,e2) ->
+    let (e1', env') = extract_body env e1 in
+    let (e2', env'') = extract_body env' e2 in
+    (l,NOTEQ (e1',e2')), env''
+  | LESSEQ (e1,e2) ->
+    let (e1', env') = extract_body env e1 in
+    let (e2', env'') = extract_body env' e2 in
+    (l,LESSEQ (e1',e2')), env''
+  | LARGEREQ (e1,e2) ->
+    let (e1', env') = extract_body env e1 in
+    let (e2', env'') = extract_body env' e2 in
+    (l,LARGEREQ (e1',e2')), env''
+  | AT (e1,e2) ->
+    let (e1', env') = extract_body env e1 in
+    let (e2', env'') = extract_body env' e2 in
+    (l,AT (e1',e2')), env''
+  | DOUBLECOLON (e1,e2) ->
+    let (e1', env') = extract_body env e1 in
+    let (e2', env'') = extract_body env' e2 in
+    (l,DOUBLECOLON (e1',e2')), env''
+  | STRCON (e1,e2) ->
+    let (e1', env') = extract_body env e1 in
+    let (e2', env'') = extract_body env' e2 in
+    (l,STRCON (e1',e2')), env''
   | IF (e1,e2,e3) ->
     let (e1',env1) = extract_body env e1 in
     let (e2',env2) = extract_body env1 e2 in
     let (e3',env3) = extract_body env2 e3 in
     (l,IF (e1',e2',e3')), env3 
+  | EApp (e1,e2) ->
+    let (e1', env') = extract_body env e1 in
+    let (e2', env'') = extract_body env' e2 in
+    (l,EApp (e1',e2')), env''
   | ELet (f, is_rec, args, typ, e1, e2) ->
     if is_fun typ then 
       let (e1',env') = extract_body env e1 in
@@ -59,6 +119,7 @@ let rec extract_body : t -> lexp -> lexp * t
       let (body,env') = extract_body env e2 in
       (l,ELet (f, is_rec,args, typ, e1, body)), env'
   | EFun (a,e) -> extract_body env e 
+  (*EMatch, EBlock, *)
   | _ -> (l,exp), env
     
 let extract_func : t -> decl -> t
