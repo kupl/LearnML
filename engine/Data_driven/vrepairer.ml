@@ -3,7 +3,9 @@ open Vector
 open Lang
 
 let is_fun = Cfg.S.is_fun
+let get_bindvar = Print.let_to_string 
 
+type t = (string * lexp) list
 (*extract function*)
 
 (*
@@ -32,25 +34,36 @@ let run : prog -> prog -> examples -> prog option
 *)
 
 
-let extract_body : lexp -> (string*lexp) list 
-= fun (l,exp) -> 
-  let rec aux : exp -> (string*lexp) list
-  = fun exp ->
-    match exp with 
-    | ELet (f, is_rec, args, typ, e1, e2) ->  
-      if is_fun typ then (Print.let_to_string f,e1)::(aux e2) else aux e2
-    | EFun (a,e) -> 
-      let body, inner_func = aux  e in
-      EFun (a, body)
-  in aux exp
+let rec extract_body : t -> lexp -> lexp * t 
+= fun env (l,exp) -> 
+  match exp with 
+  | ADD (e1,e2) -> 
+    let (e1', env') = extract_body env e1 in
+    let (e2',env'') = extract_body env' e2 in
+    (l,ADD (e1',e2')), env'' 
+  | IF (e1,e2,e3) ->
+    let (e1',env1) = extract_body env e1 in
+    let (e2',env2) = extract_body env1 e2 in
+    let (e3',env3) = extract_body env2 e3 in
+    (l,IF (e1',e2',e3')), env3 
+  | ELet (f, is_rec, args, typ, e1, e2) ->
+    if is_fun typ then 
+      let (e1',env') = extract_body env e1 in
+      let (e2',env'') = extract_body env' e2 in
+      e1', ((Print.let_to_string f),e2')::env'' 
+    else 
+      let (body,env') = extract_body env e2 in
+      (l,ELet (f, is_rec,args, typ, e1, body)), env'
+  | EFun (a,e) -> extract_body env e 
+  | _ -> (l,exp), env
     
-let extract_func : (string*lexp) list -> decl -> (string*lexp) list
+let extract_func : t -> decl -> t
 = fun acc decl -> 
   match decl with
   | DLet (f, is_rec, args, typ, e) -> 
-    let body::inner_func = extract_body e in
-    if (inner_func = []) then ((Print.let_to_string f), body)::acc
-    else body::inner_func::acc
+    let empty = [] in 
+    let body, inner_func= extract_body empty e in
+    acc@((Print.let_to_string f, body)::inner_func)
   | _ -> acc 
 
 let extract_func_all : prog -> (string*lexp) list 
@@ -61,5 +74,5 @@ let extract_func_all : prog -> (string*lexp) list
 let test : prog -> unit
 = fun pgm ->
   let res = extract_func_all pgm in
-  let str = List.fold_left (fun acc bind -> acc ^"\n---------------------\n" ^(Print.binding_to_string bind)) "" res in
+  let str = List.fold_left (fun acc (s, exp) -> acc ^"\n---------------------\n" ^ "Func :" ^ s ^(Print.exp_to_string exp)) "" res in
   print_endline str 
