@@ -1,39 +1,11 @@
 open Repairer
-open Vector
 open Lang
 
 let is_fun = Cfg.S.is_fun
 let get_bindvar = Print.let_to_string 
 
 type t = (string * lexp) list
-(*extract function*)
-
-(*
-let run : prog -> prog -> examples -> prog option
-= fun pgm cpgm testcases ->
-    let start_time = Unix.gettimeofday () in
-
-    let repair_cand = 
-
-    let repair_cand = update_var_comp pgm repair_cand in
-
-    print_endline ("Size of repair Cand : " ^ string_of_int (BatSet.cardinal repair_cand));
-    let repair = List.find_opt (fun (l,e) ->
-        let pgm' = List.map(fun decl -> subst_decl decl (l,e)) pgm in
-        Eval.is_solution pgm' testcases
-    )  (BatSet.to_list repair_cand)
-
-    in
-    match repair with
-    | Some (l,e) ->
-        let pgm' = List.map (fun decl -> subst_decl decl (l,e)) pgm in
-        Print.print_header "Repair result"; Print.print_pgm pgm';
-        print_endline ("Time : " ^ string_of_float (Unix.gettimeofday() -. start_time));
-        Some pgm'
-    | None -> print_endline ("Fail to Repair"); None
-*)
-
-
+    
 let rec extract_body : t -> lexp -> lexp * t 
 = fun env (l,exp) -> 
   match exp with 
@@ -114,12 +86,13 @@ let rec extract_body : t -> lexp -> lexp * t
     if is_fun typ then 
       let (e1',env') = extract_body env e1 in
       let (e2',env'') = extract_body env' e2 in
-      e2', ((Print.let_to_string f),e1')::env'' 
+      e2', ((get_bindvar f),e1')::env'' 
     else 
       let (body,env') = extract_body env e2 in
       (l,ELet (f, is_rec,args, typ, e1, body)), env'
   | EFun (a,e) -> extract_body env e 
   (*EMatch, EBlock, *)
+  | EMatch (e,bs) -> (l,exp), env
   | _ -> (l,exp), env
     
 let extract_func : t -> decl -> t
@@ -128,7 +101,7 @@ let extract_func : t -> decl -> t
   | DLet (f, is_rec, args, typ, e) -> 
     let empty = [] in 
     let body, inner_func= extract_body empty e in
-    acc@((Print.let_to_string f, body)::inner_func)
+    acc@((get_bindvar f, body)::inner_func)
   | _ -> acc 
 
 let extract_func_all : prog -> t
@@ -136,8 +109,35 @@ let extract_func_all : prog -> t
   let pgm' = Cfg.T.run pgm in
   List.fold_left (fun acc decl-> extract_func acc decl) [] pgm' 
 
-let test : prog -> unit
-= fun pgm ->
-  let res = extract_func_all pgm in
+let test : t -> unit
+= fun res ->
   let str = List.fold_left (fun acc (s, exp) -> acc ^"\n---------------------\n" ^ "Func : " ^ s ^"\n"^(Print.exp_to_string exp)) "" res in
   print_endline str 
+
+let get_repair_candidate : prog -> prog -> unit
+= fun pgm cpgm ->
+  let pgm_fmap = extract_func_all pgm in
+  let cpgm_fmap = extract_func_all cpgm in 
+  test pgm_fmap; test cpgm_fmap 
+(*
+let run : prog -> prog -> examples -> prog option
+= fun pgm cpgm testcases ->
+    let start_time = Unix.gettimeofday () in
+    let repair_cand = get_repair_candidate pgm cpgm in
+    let repair_cand = update_var_comp pgm repair_cand in
+
+    print_endline ("Size of repair Cand : " ^ string_of_int (BatSet.cardinal repair_cand));
+    let repair = List.find_opt (fun (l,e) ->
+        let pgm' = List.map(fun decl -> subst_decl decl (l,e)) pgm in
+        Eval.is_solution pgm' testcases
+    )  (BatSet.to_list repair_cand)
+
+    in
+    match repair with
+    | Some (l,e) ->
+        let pgm' = List.map (fun decl -> subst_decl decl (l,e)) pgm in
+        Print.print_header "Repair result"; Print.print_pgm pgm';
+        print_endline ("Time : " ^ string_of_float (Unix.gettimeofday() -. start_time));
+        Some pgm'
+    | None -> print_endline ("Fail to Repair"); None
+*)

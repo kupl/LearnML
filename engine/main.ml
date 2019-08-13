@@ -160,35 +160,22 @@ let fix_without_testcases : prog -> prog -> unit
 
 let fix_with_vectors : prog -> (string*prog) list -> examples -> unit
 = fun sub solutions testcases->
-  (*Print.print_header ("Submission List size"^string_of_int (List.length solutions)); 
-  List.iter (fun (filename, _) -> print_endline filename) solutions;*)
+  let k = 2 in
+  let topk_lst = Vector.search_solutions k sub solutions in
 
-  let topk = 2 in 
-  let v = Vector.prog_vectorize sub in 
-  let vs' = List.map (fun (s,prog) -> s,prog,(Vector.prog_vectorize prog)) solutions in
-  let set = List.fold_left (fun set (_,_,vs) -> BatSet.add vs set) BatSet.empty vs' in
-  let dists' = List.map (fun (s,prog,v') -> s,prog,(Vector.calculate_distance v v')) vs' in
-  let sorted = List.sort (fun (_,_,dist) (_,_,dist') -> compare dist dist') dists' in
-
-  (*inner function pick_cand use free variable 'topk' *)
-  let rec pick_cand acc count cand = match cand with
-    |[] -> acc
-    |h::t -> if (count<=topk) then pick_cand (acc@[h]) (count+1) t else acc in
-
-  let topk_lst = pick_cand [] 1 sorted in
   print_endline "@#$@#$@#$";
   Print.print_header "Submission"; Print.print_pgm sub;
+
   List.iter (fun (filename, sol, dist) ->
   print_endline "@#$@#$@#$";
   Print.print_header ("filename: "^filename); 
   Print.print_header "solution"; Print.print_pgm sol;
   Print.print_header ("distance with submission: "^(string_of_float dist));
-  ignore (Repairer.run sub sol testcases)
-  (*
-  Print.print_header ("size :" ^ (string_of_int (BatSet.cardinal set)));
-  *)
-  ) topk_lst
+  (*ignore (Repairer.run sub sol testcases)*)
 
+  print_endline "@#$@#$@#$";
+  Vrepairer.get_repair_candidate sub sol
+  ) topk_lst
 
 let execute : prog -> unit
 = fun prog ->
@@ -258,7 +245,6 @@ let main () =
       | Some sub -> Print.print_header (Print.program_to_string sub); Print.print_header (Pp_tree.program_to_tree 0 sub);
                     print_header "Summary"; print_endline (Selector.A.string_of_t (Selector.get_summary sub));                   
                     Print.print_header "test function extractor"; 
-                    Vrepairer.test sub
 
       | _ -> raise (Failure(!opt_submission_filename ^ " does not exist"))
     end

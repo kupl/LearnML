@@ -200,7 +200,7 @@ module N = struct
 end
 
     type t = (string*int) list
-    
+
     let ast_flatten : prog -> N.node list
     = fun prog -> 
       let flat = List.map N.decl_to_node prog in
@@ -218,6 +218,8 @@ end
       let table = N.init_tbl () in List.iter (N.traverse table) ast;
       let fold h = BatHashtbl.fold (fun k v acc -> (k,v) :: acc) h [] in
       let sorted = List.sort compare (fold table) in sorted
+
+    let funcs_vectorize: 
 
     let to_string: t -> string
     = fun t ->
@@ -251,28 +253,40 @@ end
         | (s,c)::tl -> print_endline (s^" "^string_of_int c); traverse tl in
       traverse lst
 
-    let offline_parsing : string -> unit
-    = fun s -> ()
+    let search_solutions_by_program_match : int -> prog -> (string * prog) list -> (string * prog * float) list
+    = fun topk sub solutions ->
+      let vectorize = prog_vectorize in
+      let calculate = calculate_distance in
+      let v_sub = vectorize sub in
+      let v_solutions = List.map (fun (f, sol) -> (f, sol, (vectorize sol))) solutions in
+      let dists = List.map (fun (f, sol, v_sol) -> (f, sol, (calculate v_sub v_sol))) v_solutions in
+      let sorted = List.sort (fun (_,_,dist) (_,_,dist') -> compare dist dist') dists in
 
-    (*
-    let _extract_func : N.node -> (string*string) list
-    = fun node ->
-      let rec aux : (string*string) list -> bool -> N.node -> (string*string) list
-        = fun acc is_global node ->
-        match node with
-        (*
-        | N.Node ("DLet", lst) 
-        | N.Node ("DBlock", lst) -> List.fold_left (fun acc elem-> aux acc is_global elem) acc lst
-        *)
-        | N.Node ("Binding", (N.Node ("BindOne", [N.Id f]))::tl) -> 
-                if is_global then ("global",f) :: List.fold_left (fun acc elem -> aux acc is_global elem) acc tl
-                             else ("local",f) :: List.fold_left (fun acc elem -> aux acc is_global elem) acc tl
-        | N.Node ("Binding", _::tl) -> raise (Failure "??")
-        | N.Node (_,lst) -> List.fold_left (fun acc elem -> aux acc is_global elem) acc lst
-        | N.LNode (l, n) -> aux acc false n
-        | _ -> acc
-      in aux [] true node 
+      (*inner function pick_cand use free variable 'topk' *)
+      let rec pick_cand acc count cand = 
+        match cand with
+        | [] -> acc
+        | h::t -> if (count <= topk) then pick_cand (acc@[h]) (count+1) t else acc in
 
-    let extract_func : N.node list -> (string*string) list
-    = fun lst -> List.fold_left (fun acc elem -> acc@(_extract_func elem)) [] lst
-    *)
+      let topk_lst = pick_cand [] 1 sorted in
+      topk_lst
+
+    let search_solutions_by_function_match : int -> prog -> (string * prog) list -> (string * prog * float) list
+    = fun topk sub solutions ->
+      let vectorize = prog_vectorize in
+      let calculate = calculate_distance in
+      let v_sub = vectorize sub in
+      let v_solutions = List.map (fun (f, sol) -> (f, sol, (vectorize sol))) solutions in
+      let dists = List.map (fun (f, sol, v_sol) -> (f, sol, (calculate v_sub v_sol))) v_solutions in
+      let sorted = List.sort (fun (_,_,dist) (_,_,dist') -> compare dist dist') dists in 
+
+      let rec pick_cand acc count cand =
+        match cand with
+        | [] -> acc
+        | h::t -> if (count <= topk) then pick_cand (acc@[h]) (count+1) t else acc in
+
+      let topk_lst = pick_cand [] 1 sorted in
+      topk_lst
+
+    let search_solutions = search_solutions_by_program_match 
+
