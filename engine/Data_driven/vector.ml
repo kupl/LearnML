@@ -199,7 +199,13 @@ module N = struct
       in iter tbl init_vector 
 end
 
+
     type t = (string*int) list
+
+    let to_string: t -> string
+    = fun t ->
+      let int_vec = List.map (fun (k,v) -> v) t in
+      List.fold_left (fun acc e -> acc^(string_of_int e)^" ") "" int_vec  
 
     let ast_flatten : prog -> N.node list
     = fun prog -> 
@@ -219,12 +225,13 @@ end
       let fold h = BatHashtbl.fold (fun k v acc -> (k,v) :: acc) h [] in
       let sorted = List.sort compare (fold table) in sorted
 
-    let funcs_vectorize: 
-
-    let to_string: t -> string
-    = fun t ->
-      let int_vec = List.map (fun (k,v) -> v) t in
-      List.fold_left (fun acc e -> acc^(string_of_int e)^" ") "" int_vec  
+    let rec funcs_vectorize: (string * lexp) list -> (string * t) list
+    = fun lst -> 
+      match lst with
+      | [] -> []
+      | (f,lexp)::tl -> 
+        let vec = lexp |> N.exp_to_node |> node_vectorize in
+        (f, vec) :: (funcs_vectorize tl) 
 
     let calculate_distance : t -> t -> float
     = fun t1 t2 ->
@@ -237,6 +244,33 @@ end
         | h::t, h'::t' -> (h-h')*(h-h') + sum t t' 
         | _ -> raise (Failure "vector should have same dimension") in
       sqrt (float_of_int(sum v1 v2))
+
+    let ins_all_positions x l =
+      let rec aux prev acc = function
+      | [] -> (prev @ [x]) :: acc |> List.rev
+      | hd::tl as l -> aux (prev @ [hd])((prev @ [x] @ l) :: acc) tl
+    in aux [] [] l
+
+    let rec permutations = function
+    | [] -> []
+    | x::[] -> [[x]]
+    | x::xs -> List.fold_left (fun acc p -> acc @ ins_all_positions x p) [] (permutations xs)
+
+    let gen_mapping : (string*t) list -> (string*t) list -> (string * t * string * t) list list
+    = fun ts1 ts2 ->
+        if (List.length ts1) = (List.length ts2) then 
+          let perm = permutations ts2 in 
+            List.fold_left (fun acc y -> 
+                (List.map2 (fun (s,t) (s',t') -> (s,t,s',t')) ts1 y)::acc) [] perm
+        else
+          let perm = permutations ts2 in 
+            List.fold_left (fun acc y -> 
+                (List.map2 (fun (s,t) (s',t') -> (s,t,s',t')) ts1 y)::acc) [] perm
+        (*num of func is different..*)
+
+    let funcs_calculate_distance : (string*t) list -> (string*t) list -> float
+    = fun ts1 ts2 -> 0.0
+          
     (*
     let topk_close : int -> t -> t list -> t list
     = fun k sub cand ->

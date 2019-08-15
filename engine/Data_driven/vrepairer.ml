@@ -111,7 +111,8 @@ let extract_func_all : prog -> t
 
 let test : t -> unit
 = fun res ->
-  let str = List.fold_left (fun acc (s, exp) -> acc ^"\n---------------------\n" ^ "Func : " ^ s ^"\n"^(Print.exp_to_string exp)) "" res in
+  let str = List.fold_left (fun acc (s, exp) -> acc ^"\n---------------------\n"
+            ^ "Func : " ^ s ^"\n"^(Print.exp_to_string exp)) "" res in
   print_endline str 
 
 let get_repair_candidate : prog -> prog -> unit
