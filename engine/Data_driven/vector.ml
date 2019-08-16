@@ -200,12 +200,25 @@ module N = struct
 end
 
 
-    type t = (string*int) list
+    type t = int list
 
+    (*
     let to_string: t -> string
     = fun t ->
       let int_vec = List.map (fun (k,v) -> v) t in
       List.fold_left (fun acc e -> acc^(string_of_int e)^" ") "" int_vec  
+    *)
+
+    (*
+    let print_list : t -> unit
+    = fun lst ->
+      (*let cnt = List.map (fun (_,x) -> x) lst in*)
+      let rec traverse = fun x -> 
+        match x with
+        | [] -> print_endline "end of list"
+        | (s,c)::tl -> print_endline (s^" "^string_of_int c); traverse tl in
+      traverse lst
+    *)
 
     let ast_flatten : prog -> N.node list
     = fun prog -> 
@@ -216,14 +229,16 @@ end
     = fun node -> 
       let table = N.init_tbl () in N.traverse table node;
       let fold h = BatHashtbl.fold (fun k v acc -> (k,v) :: acc) h [] in
-      let sorted = List.sort compare (fold table) in sorted
+      let sorted = List.sort compare (fold table) in 
+      List.map (fun (k,v) -> v ) sorted 
 
     let prog_vectorize: prog -> t
     = fun prog -> 
       let ast = ast_flatten prog in
       let table = N.init_tbl () in List.iter (N.traverse table) ast;
       let fold h = BatHashtbl.fold (fun k v acc -> (k,v) :: acc) h [] in
-      let sorted = List.sort compare (fold table) in sorted
+      let sorted = List.sort compare (fold table) in 
+      List.map (fun (k,v) -> v) sorted 
 
     let rec funcs_vectorize: (string * lexp) list -> (string * t) list
     = fun lst -> 
@@ -235,15 +250,13 @@ end
 
     let calculate_distance : t -> t -> float
     = fun t1 t2 ->
-      let v1 = List.map (fun (k,v) -> v) t1 in
-      let v2 = List.map (fun (k,v) -> v) t2 in
       let rec sum : int list -> int list -> int
       = fun v1 v2 -> 
         match v1,v2 with
         | [],[] -> 0
         | h::t, h'::t' -> (h-h')*(h-h') + sum t t' 
         | _ -> raise (Failure "vector should have same dimension") in
-      sqrt (float_of_int(sum v1 v2))
+      sqrt (float_of_int(sum t1 t2))
 
     let ins_all_positions x l =
       let rec aux prev acc = function
@@ -256,37 +269,41 @@ end
     | x::[] -> [[x]]
     | x::xs -> List.fold_left (fun acc p -> acc @ ins_all_positions x p) [] (permutations xs)
 
+    let rec combinations = function
+    | [] -> [[]]
+    | h::t -> 
+      let cs = combinations t in
+      List.map (fun x -> h::x) cs @ cs 
+
+    let partial_combinations : 'a list -> int -> 'a list list
+    = fun l len ->
+      let combs = combinations l in
+      List.filter (fun x -> List.length x = len) combs
+
     let gen_mapping : (string*t) list -> (string*t) list -> (string * t * string * t) list list
     = fun ts1 ts2 ->
-        if (List.length ts1) = (List.length ts2) then 
-          let perm = permutations ts2 in 
-            List.fold_left (fun acc y -> 
-                (List.map2 (fun (s,t) (s',t') -> (s,t,s',t')) ts1 y)::acc) [] perm
-        else
-          let perm = permutations ts2 in 
-            List.fold_left (fun acc y -> 
-                (List.map2 (fun (s,t) (s',t') -> (s,t,s',t')) ts1 y)::acc) [] perm
-        (*num of func is different..*)
+        let len1 = List.length ts1 in
+        let len2 = List.length ts2 in
 
-    let funcs_calculate_distance : (string*t) list -> (string*t) list -> float
-    = fun ts1 ts2 -> 0.0
-          
+        if len1 = len2 then 
+          let perms = permutations ts2 in 
+          List.fold_left (fun acc y -> 
+            (List.map2 (fun (s,t) (s',t') -> (s,t,s',t')) ts1 y)::acc) [] perms
+        (*num of func is different*)
+        else if len1 < len2 then 
+          let combs = partial_combinations ts2 len1 in
+          let perms = List.map (fun x -> permutations x) combs |> List.flatten in
+          List.fold_left (fun acc y ->
+            (List.map2 (fun (s,t) (s',t') -> (s,t,s',t')) ts1 y)::acc) [] perms
+        (*len1 > len2*)
+        else []
+
+
     (*
-    let topk_close : int -> t -> t list -> t list
-    = fun k sub cand ->
-      let distances = List.map (calculate_distance sub) cand in
-      cand
-    *)    
-
-    let print_list : t -> unit
-    = fun lst ->
-      (*let cnt = List.map (fun (_,x) -> x) lst in*)
-      let rec traverse = fun x -> 
-        match x with
-        | [] -> print_endline "end of list"
-        | (s,c)::tl -> print_endline (s^" "^string_of_int c); traverse tl in
-      traverse lst
-
+    let funcs_calculate_distance : (string*t) list -> (string*t) list -> float
+    = fun ts1 ts2 -> 
+    *)
+          
     let search_solutions_by_program_match : int -> prog -> (string * prog) list -> (string * prog * float) list
     = fun topk sub solutions ->
       let vectorize = prog_vectorize in
