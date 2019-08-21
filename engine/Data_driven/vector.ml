@@ -169,7 +169,6 @@ module N = struct
       | Bool b -> update2 tbl ("Bool%"^(string_of_bool b))
       *)
       | Empty -> raise Emptyshouldnotbehere
-         
 
     let init_vector = [
         ("Rec",0); ("No Rec",0); ("PUnit",0); ("PUnder",0); ("PInt",0);
@@ -220,7 +219,7 @@ end
       traverse lst
     *)
 
-    let ast_flatten : prog -> N.node list
+    let ast_filter : prog -> N.node list
     = fun prog -> 
       let flat = List.map N.decl_to_node prog in
       List.filter (fun x -> x <> N.Empty) flat 
@@ -234,7 +233,7 @@ end
 
     let prog_vectorize: prog -> t
     = fun prog -> 
-      let ast = ast_flatten prog in
+      let ast = ast_filter prog in
       let table = N.init_tbl () in List.iter (N.traverse table) ast;
       let fold h = BatHashtbl.fold (fun k v acc -> (k,v) :: acc) h [] in
       let sorted = List.sort compare (fold table) in 
@@ -296,14 +295,35 @@ end
           List.fold_left (fun acc y ->
             (List.map2 (fun (s,t) (s',t') -> (s,t,s',t')) ts1 y)::acc) [] perms
         (*len1 > len2*)
-        else []
+        else
+          let combs = partial_combinations ts1 len2 in
+          let perms = List.map (fun x -> permutations x) combs |> List.flatten in
+          List.fold_left (fun acc y ->
+            (List.map2 (fun (s,t) (s',t') -> (s,t,s',t')) y ts2)::acc) [] perms
 
+    let rec gen_score_map : (string * t) list -> (string * t) list -> ((string * string) * float) list 
+    = fun ts1 ts2 ->
+     match ts1 with
+     | [] -> []
+     | (s,v)::t ->
+       let with_s = List.map (fun (s',v') -> let dist = calculate_distance v v' in 
+         (s,s'), dist) ts2 in with_s @ gen_score_map t ts2
 
-    (*
-    let funcs_calculate_distance : (string*t) list -> (string*t) list -> float
-    = fun ts1 ts2 -> 
-    *)
-          
+    let calculate_mapping_distance : (string*t) list -> (string*t) list -> (string * string) list * float 
+    = fun ts1 ts2 ->
+      let all_func_mapping = gen_mapping ts1 ts2 in
+      let score_map = gen_score_map ts1 ts2 in
+      let calculate_func_score = List.fold_left (fun acc (s,t,s',t') -> 
+                                   let score = List.assoc (s,s') score_map in 
+                                   acc +. score) 0.0 in
+      let key_filter = (fun (s,t,s',t') -> s,s') in 
+      let min_mapping = List.fold_left (fun (min_map,min) cur_map -> 
+                          let cur_score = calculate_func_score cur_map in
+                          if min > cur_score then ((List.map key_filter cur_map), cur_score)
+                                             else (min_map, min)) 
+                          ([],max_float) all_func_mapping
+      in min_mapping
+    
     let search_solutions_by_program_match : int -> prog -> (string * prog) list -> (string * prog * float) list
     = fun topk sub solutions ->
       let vectorize = prog_vectorize in
@@ -321,16 +341,18 @@ end
 
       let topk_lst = pick_cand [] 1 sorted in
       topk_lst
-
-    let search_solutions_by_function_match : int -> prog -> (string * prog) list -> (string * prog * float) list
+    
+      let search_solutions_by_function_match : int -> prog -> (string * prog) list -> (string * prog * ((string * string) list * float)) list
     = fun topk sub solutions ->
-      let vectorize = prog_vectorize in
-      let calculate = calculate_distance in
-      let v_sub = vectorize sub in
-      let v_solutions = List.map (fun (f, sol) -> (f, sol, (vectorize sol))) solutions in
+      let vectorize = funcs_vectorize in
+      let calculate = calculate_mapping_distance in
+      let preproc = (fun x -> x |>  Extractor.extract_func_all |> vectorize) in
+      let v_sub = preproc sub in
+      let v_solutions = List.map (fun (f, sol) -> (f, sol, (preproc sol))) solutions in
       let dists = List.map (fun (f, sol, v_sol) -> (f, sol, (calculate v_sub v_sol))) v_solutions in
-      let sorted = List.sort (fun (_,_,dist) (_,_,dist') -> compare dist dist') dists in 
-
+      let sorted = List.sort (fun (_,_,(_,dist)) (_,_,(_,dist')) -> compare dist dist') dists in 
+      
+      (*inner function pick_cand use free variable 'topk' *)
       let rec pick_cand acc count cand =
         match cand with
         | [] -> acc
@@ -338,6 +360,7 @@ end
 
       let topk_lst = pick_cand [] 1 sorted in
       topk_lst
-
-    let search_solutions = search_solutions_by_program_match 
+    
+    let search_solutions = search_solutions_by_program_match
+    let search_solutions2 = search_solutions_by_function_match
 

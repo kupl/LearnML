@@ -75,7 +75,7 @@ let fix_with_solution : prog -> prog -> examples -> unit
   | Some pgm' ->
     Print.print_header "result"; Print.print_pgm pgm';
     print_endline ("Total time :" ^ string_of_float (Sys.time() -. !Synthesize.start_time))
-
+(*
 let generate_testcases : prog -> prog -> examples
 = fun submission solution -> 
   (* type checking *)
@@ -157,6 +157,24 @@ let fix_without_testcases : prog -> prog -> unit
       print_header "Correction"; print_pgm pgm;
       print_endline ("Total Time : " ^ string_of_float !task_time)
     )
+*)
+let fix_with_vectors2 : prog -> (string*prog) list -> examples -> unit
+= fun sub solutions testcases->
+  let k = 2 in
+  let topk_lst = Vector.search_solutions2 k sub solutions in
+
+  print_endline "@#$@#$@#$";
+  Print.print_header "Submission"; Print.print_pgm sub;
+
+  List.iter (fun (filename, sol,(map,dist)) ->
+  print_endline "@#$@#$@#$";
+  Print.print_header ("filename: "^filename); 
+  Print.print_header "solution"; Print.print_pgm sol;
+  Print.print_header ("distance with submission: "^(string_of_float dist));
+
+  ignore (Vrepairer.run sub sol map testcases);
+  print_endline "@#$@#$@#$";
+  ) topk_lst
 
 let fix_with_vectors : prog -> (string*prog) list -> examples -> unit
 = fun sub solutions testcases->
@@ -171,10 +189,9 @@ let fix_with_vectors : prog -> (string*prog) list -> examples -> unit
   Print.print_header ("filename: "^filename); 
   Print.print_header "solution"; Print.print_pgm sol;
   Print.print_header ("distance with submission: "^(string_of_float dist));
-  (*ignore (Repairer.run sub sol testcases)*)
+  ignore (Repairer.run sub sol testcases);
 
   print_endline "@#$@#$@#$";
-  Vrepairer.get_repair_candidate sub sol
   ) topk_lst
 
 let execute : prog -> unit
@@ -203,6 +220,7 @@ let main () =
       | Some sub -> run_prog sub testcases
       | _ -> raise (Failure (!opt_submission_filename ^ " does not exist"))
     end
+(*
   else if !opt_fix then (* FixML *)
     begin
       match submission, solution with
@@ -213,18 +231,21 @@ let main () =
         end      
       | _ -> raise (Failure (!opt_submission_filename ^ " does not exist"))
     end
+    *)
   else if !opt_execute then (* Execute Program *)
     begin 
       match submission with
       | Some sub -> execute sub
       | _ -> raise (Failure "Submission file is not provided")
     end
+    (*
   else if !opt_gentest then (* Counter Example Generation *)
     begin
       match submission, solution with
       | Some sub, Some sol -> ignore (generate_testcases sub sol)
       | _ -> raise (Failure "Submission or solution is not provided")
     end
+
   else if !opt_test then (* Symbolic testing *)
     begin
       match submission, solution with
@@ -239,6 +260,7 @@ let main () =
       ) () testcases
       | _ -> raise (Failure "Submission or solution is not provided")
     end
+    *)
   else if !opt_tree then (* For debugging *)
     begin 
       match submission with
@@ -255,6 +277,14 @@ let main () =
       | Some sub, hd::tl -> fix_with_vectors sub solutions_debug testcases
       | _ -> raise (Failure(!opt_submission_filename ^ " does not exist"))
     end 
+  else if !opt_vector2 then 
+    begin 
+      match submission, solutions_debug with 
+      | Some sub, [] -> raise (Failure (!opt_solution_dirname ^" may not exist"))
+      | Some sub, hd::tl -> fix_with_vectors2 sub solutions_debug testcases
+      | _ -> raise (Failure(!opt_submission_filename ^ " does not exist"))
+    end 
+    (*
   else if !opt_offline then 
     begin
       match solutions_debug with
@@ -270,9 +300,10 @@ let main () =
         end 
         in List.iter print_test solutions_debug 
     end
+    *)
    else if !opt_experiment then
      begin 
-       match submission, solutions with
+       match submission, solutions_debug with
        | Some sub, [] -> raise (Failure (!opt_solution_dirname ^ " not include file"))
        | Some sub, hd::tl -> 
          begin match Cfg.run sub solutions_debug with
@@ -285,7 +316,7 @@ let main () =
      end
    else 
     begin 
-      match submission, solutions with
+      match submission, solutions_debug with
       | Some sub, [] -> print_endline (string_of_int (List.length solutions)); print_endline (Cfg.S.string_of_t (Cfg.S.run sub)); 
       | Some sub, hd::tl -> 
         begin match Cfg.run sub solutions_debug with
