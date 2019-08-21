@@ -1,42 +1,42 @@
-type ae = CONST of int
-| VAR of string
-| POWER of string * int
-| TIMES of ae list
-| SUM of ae list
+type aexp = Const of int
+| Var of string
+| Power of string * int
+| Times of aexp list
+| Sum of aexp list
 
 let rec diff(e, v) = 
   match e with
-  |CONST(a) -> CONST(0)
-  |VAR(a) -> 
+  |Const(a) -> Const(0)
+  |Var(a) -> 
       if a = v then
-        CONST(1)
+        Const(1)
       else
-        CONST(0)
-  |POWER(a, n) ->
+        Const(0)
+  |Power(a, n) ->
       if a = v then
         if n = 0 then 
-          CONST(0)
+          Const(0)
         else
-          TIMES[CONST(n);POWER(a, n-1)]
+          Times[Const(n);Power(a, n-1)]
       else
-        CONST(0)
-  |TIMES(l) -> (
+        Const(0)
+  |Times(l) -> (
     match l with 
-    |[] -> CONST(1)
+    |[] -> Const(1)
     |h::t -> 
-        if diff(h,v) = CONST(0) then
-          TIMES([h;diff(TIMES(t),v)])
-        else if diff(h,v) = CONST(1) then
-          SUM([ TIMES(t) ; TIMES([h;diff(TIMES(t),v)]) ])
+        if diff(h,v) = Const(0) then
+          Times([h;diff(Times(t),v)])
+        else if diff(h,v) = Const(1) then
+          Sum([ Times(t) ; Times([h;diff(Times(t),v)]) ])
         else
-          SUM([ TIMES([diff(h,v)]@t) ;TIMES([h;diff(TIMES(t),v)]) ])
+          Sum([ Times([diff(h,v)]@t) ;Times([h;diff(Times(t),v)]) ])
   )
-  |SUM(l) -> (
+  |Sum(l) -> (
     match l with
-    |[] -> CONST(0)
+    |[] -> Const(0)
     |h::t -> 
-        if diff(h,v) = CONST(0) then
-          diff(SUM(t),v)
+        if diff(h,v) = Const(0) then
+          diff(Sum(t),v)
         else
-          SUM([diff(h,v) ; diff(SUM(t),v)])
+          Sum([diff(h,v) ; diff(Sum(t),v)])
   )

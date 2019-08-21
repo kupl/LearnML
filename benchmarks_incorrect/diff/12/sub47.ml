@@ -1,24 +1,24 @@
-type ae = CONST of int
-| VAR of string
-| POWER of string * int
-| TIMES of ae list
-| SUM of ae list
+type aexp = Const of int
+| Var of string
+| Power of string * int
+| Times of aexp list
+| Sum of aexp list
 
 let diff(exp, var) =
     let rec diff2(exp, var) = match exp with
-    | CONST(i) -> CONST(0)
-    | VAR(s) -> if s = var then CONST(1) else CONST(0)
-    | POWER(s, i) ->
+    | Const(i) -> Const(0)
+    | Var(s) -> if s = var then Const(1) else Const(0)
+    | Power(s, i) ->
             if s = var
-            then TIMES[CONST(i); POWER(s, i-1)]
-            else CONST 0
-    | TIMES(h::t) -> (
-        SUM[TIMES[diff2(h, var); TIMES(t)];
-            TIMES[h; diff2(TIMES(t), var)]]
+            then Times[Const(i); Power(s, i-1)]
+            else Const 0
+    | Times(h::t) -> (
+        Sum[Times[diff2(h, var); Times(t)];
+            Times[h; diff2(Times(t), var)]]
     )
-    | TIMES([]) -> CONST 0
-    | SUM(h::t) -> SUM [diff2(h, var); diff2(SUM(t), var)]
-    | SUM([]) -> CONST 0
+    | Times([]) -> Const 0
+    | Sum(h::t) -> Sum [diff2(h, var); diff2(Sum(t), var)]
+    | Sum([]) -> Const 0
     in
     let rec reduce exp = match exp with
     | _ -> exp
@@ -28,11 +28,11 @@ let diff(exp, var) =
     (*
 ;;
 
-diff (SUM[TIMES[VAR "a"; POWER("x", 2)]; TIMES[VAR("b"); VAR("x")]; VAR("c")], "x");;
+diff (Sum[Times[Var "a"; Power("x", 2)]; Times[Var("b"); Var("x")]; Var("c")], "x");;
 
-diff (CONST 2, "x");;
-diff (VAR "y", "y");;
-diff (POWER("y", 2), "y");;
-diff (POWER("y", 0), "y");;
-diff (POWER("y", 1), "y");;
+diff (Const 2, "x");;
+diff (Var "y", "y");;
+diff (Power("y", 2), "y");;
+diff (Power("y", 0), "y");;
+diff (Power("y", 1), "y");;
 *)

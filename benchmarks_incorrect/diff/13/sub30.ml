@@ -1,21 +1,21 @@
-type ae = CONST of int
-	| VAR of string
-	| POWER of string * int
-	| TIMES of ae list
-	| SUM of ae list
+type aexp = Const of int
+	| Var of string
+	| Power of string * int
+	| Times of aexp list
+	| Sum of aexp list
 
 exception InvalidArgument
 
-let rec diff (ae, s) =
-	match (ae, s) with
-	| (SUM[], s) -> raise InvalidArgument
-	| (TIMES[], s) -> raise InvalidArgument
-	| (CONST i, s) -> CONST 0
-	| (VAR s1, s) -> if (s1 = s) then CONST 1
-			 else CONST 0
-	| (POWER (s1, a), s) -> if (s1 = s) then TIMES[CONST a; POWER (s1, a - 1)]
-				else TIMES[CONST a; diff(VAR s1, s); POWER (s1, a - 1)]
-	| (SUM[a; b], s) -> SUM[diff(a, s); diff(b, s)]
-	| (SUM(a::sl), s) -> SUM[diff(a, s); diff(SUM(sl), s)]
-	| (TIMES[a; b], s) -> SUM[TIMES[diff(a, s); b]; TIMES[a; diff(b, s)]]
-	| (TIMES(a::sl), s) -> SUM[TIMES(diff(a, s)::sl);TIMES[a; diff(TIMES(sl), s)]]
+let rec diff (aexp, s) =
+	match (aexp, s) with
+	| (Sum[], s) -> raise InvalidArgument
+	| (Times[], s) -> raise InvalidArgument
+	| (Const i, s) -> Const 0
+	| (Var s1, s) -> if (s1 = s) then Const 1
+			 else Const 0
+	| (Power (s1, a), s) -> if (s1 = s) then Times[Const a; Power (s1, a - 1)]
+				else Times[Const a; diff(Var s1, s); Power (s1, a - 1)]
+	| (Sum[a; b], s) -> Sum[diff(a, s); diff(b, s)]
+	| (Sum(a::sl), s) -> Sum[diff(a, s); diff(Sum(sl), s)]
+	| (Times[a; b], s) -> Sum[Times[diff(a, s); b]; Times[a; diff(b, s)]]
+	| (Times(a::sl), s) -> Sum[Times(diff(a, s)::sl);Times[a; diff(Times(sl), s)]]

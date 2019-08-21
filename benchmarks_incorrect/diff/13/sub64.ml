@@ -1,23 +1,23 @@
-type ae = CONST of int
-	| VAR of string
-	| POWER of string * int
-	| TIMES of ae list
-	| SUM of ae list
+type aexp = Const of int
+	| Var of string
+	| Power of string * int
+	| Times of aexp list
+	| Sum of aexp list
 exception InvalidArgument
-let rec diff(ae,s) =
-	match ae with
-	|CONST n -> CONST(0)
-	|VAR x -> if s=x then CONST(1)
-              else CONST(0)
-	|POWER(x,n) -> if s=x then (
-					   if n == 0 then CONST(0)
-					   else if n == 1 then CONST(1)
-					   else TIMES([CONST(n);POWER(x,n-1)])
+let rec diff(aexp,s) =
+	match aexp with
+	|Const n -> Const(0)
+	|Var x -> if s=x then Const(1)
+              else Const(0)
+	|Power(x,n) -> if s=x then (
+					   if n == 0 then Const(0)
+					   else if n == 1 then Const(1)
+					   else Times([Const(n);Power(x,n-1)])
 				   )
-				else POWER(x,n)
-	|TIMES(ael) ->  if (List.length ael) == 0 then raise InvalidArgument
-					else if (List.length ael) == 1 then diff((List.hd ael),s)
-					else SUM([TIMES(diff((List.hd ael),s)::(List.tl ael));TIMES([(List.hd ael);diff(TIMES(List.tl ael),s)])])
-	|SUM(ael) -> if (List.length ael) == 0 then raise InvalidArgument
-				 else if (List.length ael) == 1 then diff((List.hd ael),s)
-				 else SUM([diff((List.hd ael),s);diff(SUM(List.tl ael),s)])
+				else Power(x,n)
+	|Times(aexpl) ->  if (List.length aexpl) == 0 then raise InvalidArgument
+					else if (List.length aexpl) == 1 then diff((List.hd aexpl),s)
+					else Sum([Times(diff((List.hd aexpl),s)::(List.tl aexpl));Times([(List.hd aexpl);diff(Times(List.tl aexpl),s)])])
+	|Sum(aexpl) -> if (List.length aexpl) == 0 then raise InvalidArgument
+				 else if (List.length aexpl) == 1 then diff((List.hd aexpl),s)
+				 else Sum([diff((List.hd aexpl),s);diff(Sum(List.tl aexpl),s)])

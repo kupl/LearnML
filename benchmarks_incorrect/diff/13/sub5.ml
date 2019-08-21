@@ -1,8 +1,8 @@
-type ae = CONST of int
-  | VAR of string
-  | POWER of string * int
-  | TIMES of ae list
-  | SUM of ae list
+type aexp = Const of int
+  | Var of string
+  | Power of string * int
+  | Times of aexp list
+  | Sum of aexp list
 
 let diff (f, v) =
   let rec deployEnv env o = 
@@ -13,11 +13,11 @@ let diff (f, v) =
        |(x, c, p) -> 
 	   if o = 0 && c = 0 then deployEnv b o
 	   else if x = "const" && o = 1 && c = 1 then deployEnv b o
-	   else if p = 0 then (CONST c)::(deployEnv b o)
-	   else if c = 1 && p = 1 then (VAR x)::(deployEnv b o)
-	   else if p = 1 then TIMES[CONST c; VAR x]::(deployEnv b o)
-	   else if c = 1 then POWER(x, p)::(deployEnv b o)
-	   else TIMES [CONST c; POWER(x, p)]::(deployEnv b o)
+	   else if p = 0 then (Const c)::(deployEnv b o)
+	   else if c = 1 && p = 1 then (Var x)::(deployEnv b o)
+	   else if p = 1 then Times[Const c; Var x]::(deployEnv b o)
+	   else if c = 1 then Power(x, p)::(deployEnv b o)
+	   else Times [Const c; Power(x, p)]::(deployEnv b o)
       )
   | [] -> [] in
   let rec updateEnv o e env  = 
@@ -40,78 +40,78 @@ let diff (f, v) =
     | [] -> e::[] in
   let rec doDiff (f, v) =
     match f with
-    | CONST _ -> CONST 0
-    | VAR x ->
-	if x = v then CONST 1
-	else CONST 0
-    | POWER (x, p) ->
-	if p = 0 then CONST 0
-	else if x = v then TIMES ((CONST p)::POWER (x, p-1)::[])
-	else CONST 0
-    | TIMES x -> 
+    | Const _ -> Const 0
+    | Var x ->
+	if x = v then Const 1
+	else Const 0
+    | Power (x, p) ->
+	if p = 0 then Const 0
+	else if x = v then Times ((Const p)::Power (x, p-1)::[])
+	else Const 0
+    | Times x -> 
 	(match x with
 	| (a::[]) -> doDiff (a, v)
 	| (a::b) -> 
 	    let da = doDiff(a, v) in
-	    let db = doDiff((TIMES b), v) in
+	    let db = doDiff((Times b), v) in
 	    (
 	     match (a, db, b, da) with
-	     | (CONST p, CONST q, (CONST r)::[], CONST s) -> CONST (p*q + r*s)
-	     | (CONST p, CONST q, _, _) -> 
-		 if da = CONST 0 || b = (CONST 0)::[] then CONST (p*q)
-		 else SUM (CONST(p*q)::TIMES(da::b)::[])
-	     | (_, _, (CONST r)::[], CONST s) -> 
-		 if a = CONST 0 || db = CONST 0 then CONST (r*s)
-		 else  SUM (TIMES(a::db::[])::CONST(r*s)::[])
+	     | (Const p, Const q, (Const r)::[], Const s) -> Const (p*q + r*s)
+	     | (Const p, Const q, _, _) -> 
+		 if da = Const 0 || b = (Const 0)::[] then Const (p*q)
+		 else Sum (Const(p*q)::Times(da::b)::[])
+	     | (_, _, (Const r)::[], Const s) -> 
+		 if a = Const 0 || db = Const 0 then Const (r*s)
+		 else  Sum (Times(a::db::[])::Const(r*s)::[])
 	     | _ -> 
-		 if a = CONST 0 || db = CONST 0 then TIMES(da::b)
-		 else if b = (CONST 0)::[] || da = CONST 0 then TIMES(a::db::[])
-		 else SUM(TIMES(a::db::[])::TIMES(da::b)::[])
+		 if a = Const 0 || db = Const 0 then Times(da::b)
+		 else if b = (Const 0)::[] || da = Const 0 then Times(a::db::[])
+		 else Sum(Times(a::db::[])::Times(da::b)::[])
 	    )
-	| [] -> CONST 0)
-    | SUM x -> SUM(List.map (fun x -> doDiff(x, v)) x) in
+	| [] -> Const 0)
+    | Sum x -> Sum(List.map (fun x -> doDiff(x, v)) x) in
   let rec prettyAE f env o = 
     match f with
-    | SUM x -> 
+    | Sum x -> 
 	( 
 	  match x with
-	  | (CONST a)::z -> prettyAE (SUM z) (updateEnv 0 ("const", a, 0) env) 0
-	  | (VAR a)::z -> prettyAE (SUM z) (updateEnv 0 (a, 1, 1) env) 0
-	  | (POWER (a, b))::z -> prettyAE (SUM z) (updateEnv 0 (a, 1, b) env ) 0
-	  | (SUM y)::z -> prettyAE (SUM (List.append y z)) env 0
-	  | (TIMES y)::z -> 
+	  | (Const a)::z -> prettyAE (Sum z) (updateEnv 0 ("const", a, 0) env) 0
+	  | (Var a)::z -> prettyAE (Sum z) (updateEnv 0 (a, 1, 1) env) 0
+	  | (Power (a, b))::z -> prettyAE (Sum z) (updateEnv 0 (a, 1, b) env ) 0
+	  | (Sum y)::z -> prettyAE (Sum (List.append y z)) env 0
+	  | (Times y)::z -> 
 	      (
-	       let l = prettyAE (TIMES y) [] 1 in
+	       let l = prettyAE (Times y) [] 1 in
 	       match l with
 	       | h::t -> 
-		   if t = [] then List.append l (prettyAE (SUM z) env 0)
-		   else List.append (TIMES l::[]) (prettyAE (SUM z) env 0)
+		   if t = [] then List.append l (prettyAE (Sum z) env 0)
+		   else List.append (Times l::[]) (prettyAE (Sum z) env 0)
 	       | [] -> []
 	      )
 	  | [] -> deployEnv env 0
 	 )
-    | TIMES x ->
+    | Times x ->
 	(
 	 match x with
-	 | (CONST a)::z -> prettyAE (TIMES z) (updateEnv 1 ("const", a, 0) env) 1
-	 | (VAR a)::z -> prettyAE (TIMES z) (updateEnv 1 (a, 1, 1) env) 1
-	 | (POWER (a, b))::z -> prettyAE (TIMES z) (updateEnv 1 (a, 1, b) env ) 1
-	 | (SUM y)::z -> 
+	 | (Const a)::z -> prettyAE (Times z) (updateEnv 1 ("const", a, 0) env) 1
+	 | (Var a)::z -> prettyAE (Times z) (updateEnv 1 (a, 1, 1) env) 1
+	 | (Power (a, b))::z -> prettyAE (Times z) (updateEnv 1 (a, 1, b) env ) 1
+	 | (Sum y)::z -> 
 	     (
-	      let l = prettyAE (SUM y) [] 0 in
+	      let l = prettyAE (Sum y) [] 0 in
 	      match l with
 	      | h::t -> 
-		  if t = [] then List.append l (prettyAE (TIMES z) env 1)
-		  else List.append (SUM l::[]) (prettyAE (TIMES z) env 1)
+		  if t = [] then List.append l (prettyAE (Times z) env 1)
+		  else List.append (Sum l::[]) (prettyAE (Times z) env 1)
 	      | [] -> []
 	     )
-	 | (TIMES y)::z ->  prettyAE (TIMES (List.append y z)) env 1
+	 | (Times y)::z ->  prettyAE (Times (List.append y z)) env 1
 	 | [] -> deployEnv env 1
 	) in
 
 
   let res = doDiff (f, v) in
   match res with
-  | SUM _ -> SUM (prettyAE res [] 0)
-  | TIMES _ -> TIMES (prettyAE res [] 1)
+  | Sum _ -> Sum (prettyAE res [] 0)
+  | Times _ -> Times (prettyAE res [] 1)
   | _ -> res

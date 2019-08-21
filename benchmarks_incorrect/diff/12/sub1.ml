@@ -1,22 +1,22 @@
 exception EMPTYLIST
-type ae = CONST of int
-	| VAR of string
-	| SUM of ae list
-	| TIMES of ae list
-	| POWER of string * int
- let rec diff (ae, str) =
+type aexp = Const of int
+	| Var of string
+	| Sum of aexp list
+	| Times of aexp list
+	| Power of string * int
+ let rec diff (aexp, str) =
  
-	match ae with
+	match aexp with
 	  
-	| CONST a -> CONST 0
-	| VAR b -> if str = b then CONST 1
-			   else CONST 0
-	| POWER (pstr,i) -> if str = pstr then TIMES [CONST i;POWER (pstr, i-1)]
-						else CONST 0
-	| TIMES alst -> (match alst with
-					| [] -> CONST 0
+	| Const a -> Const 0
+	| Var b -> if str = b then Const 1
+			   else Const 0
+	| Power (pstr,i) -> if str = pstr then Times [Const i;Power (pstr, i-1)]
+						else Const 0
+	| Times alst -> (match alst with
+					| [] -> Const 0
 					| (h::[]) -> diff (h,str)
-					| (h::t) -> SUM [TIMES (diff (h, str)::t);TIMES (h::[diff(TIMES t,str)])])
-	| SUM [] -> CONST 0
-	| SUM (h::[]) -> CONST 0
-	| SUM (h::t) -> SUM [diff (h, str);diff (SUM t, str)]
+					| (h::t) -> Sum [Times (diff (h, str)::t);Times (h::[diff(Times t,str)])])
+	| Sum [] -> Const 0
+	| Sum (h::[]) -> Const 0
+	| Sum (h::t) -> Sum [diff (h, str);diff (Sum t, str)]

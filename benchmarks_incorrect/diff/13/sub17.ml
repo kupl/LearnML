@@ -1,33 +1,33 @@
 exception InvalidArgument
 exception L2AL_null
-type ae = CONST of int
-		| VAR of string
-		| POWER of string * int
-		| TIMES of ae list
-		| SUM of ae list
-let rec diff(ae,str) = 
-	let rec list2aelist(aelist,st)= 
-		match aelist with
+type aexp = Const of int
+		| Var of string
+		| Power of string * int
+		| Times of aexp list
+		| Sum of aexp list
+let rec diff(aexp,str) = 
+	let rec list2aexplist(aexplist,st)= 
+		match aexplist with
 		|h::[] -> [diff(h,st)]
-		|h::t -> [diff(h,st)]@(list2aelist(t,st))
+		|h::t -> [diff(h,st)]@(list2aexplist(t,st))
 		|[] -> raise L2AL_null
 	in
-	match ae with
-	| CONST c -> CONST 0
-	| VAR s
-		 -> if(s=str) then CONST 1
-		 	else CONST 0
-	| POWER(s,n) ->
-		 if(n==0) then CONST 1
-		 else if(n==1&&s=str) then CONST 1
-		 else if(n==1&&s!=str) then CONST 0
-		 else if(s=str) then TIMES[CONST n;POWER(s,n-1)]
-		 else CONST 0
-	| SUM aelist ->(match aelist with
+	match aexp with
+	| Const c -> Const 0
+	| Var s
+		 -> if(s=str) then Const 1
+		 	else Const 0
+	| Power(s,n) ->
+		 if(n==0) then Const 1
+		 else if(n==1&&s=str) then Const 1
+		 else if(n==1&&s!=str) then Const 0
+		 else if(s=str) then Times[Const n;Power(s,n-1)]
+		 else Const 0
+	| Sum aexplist ->(match aexplist with
 					|[] -> raise InvalidArgument
 					|h::[] -> diff(h,str)
-					|h::t -> SUM([diff(h,str)]@list2aelist(t,str)))
-	| TIMES aelist ->(match aelist with
+					|h::t -> Sum([diff(h,str)]@list2aexplist(t,str)))
+	| Times aexplist ->(match aexplist with
 					|[] -> raise InvalidArgument
 					|h::[] -> diff(h,str)
-					|h::t -> SUM[TIMES([diff(h,str)]@t);TIMES([h]@[diff((TIMES t),str)])])
+					|h::t -> Sum[Times([diff(h,str)]@t);Times([h]@[diff((Times t),str)])])

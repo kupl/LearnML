@@ -1,21 +1,21 @@
-type ae = CONST of int
-		| VAR of string
-		| POWER of string * int
-		| TIMES of ae list
-		| SUM of ae list
+type aexp = Const of int
+		| Var of string
+		| Power of string * int
+		| Times of aexp list
+		| Sum of aexp list
 		
-let rec diff (ae, str) =
-	let rec isThereStr ae str =
-		match ae with
-		CONST i -> false
-		| VAR s -> (s = str)
-		| POWER (s, i) -> (s = str)
-		| TIMES l -> (match l with
+let rec diff (aexp, str) =
+	let rec isThereStr aexp str =
+		match aexp with
+		Const i -> false
+		| Var s -> (s = str)
+		| Power (s, i) -> (s = str)
+		| Times l -> (match l with
 						[] -> false
-						| h::t -> (isThereStr h str) || (isThereStr (TIMES t) str))
-		| SUM l -> (match l with
+						| h::t -> (isThereStr h str) || (isThereStr (Times t) str))
+		| Sum l -> (match l with
 					[] -> false
-					| h::t -> (isThereStr h str) || (isThereStr (SUM t) str))
+					| h::t -> (isThereStr h str) || (isThereStr (Sum t) str))
 	in
 	let rec mul al str =
 		match al with
@@ -23,16 +23,16 @@ let rec diff (ae, str) =
 		| h::[] -> if(isThereStr h str) then [diff(h, str)] else [h]
 		| h::t -> if(isThereStr h str) then List.append [diff(h, str)] (mul t str) else List.append [h] (mul t str)
 	in
-	match ae with
-	CONST i -> CONST 0
-	| VAR s -> if (s = str) then CONST 1
-				else CONST 0
-	| POWER (s, i) -> if (s = str) then ( if (i > 1) then TIMES [(CONST i); (POWER (s, i-1))]
-											else CONST 1 )
-						else CONST 0
-	| TIMES l -> if (isThereStr ae str) then TIMES (mul l str)
-					else CONST 0
-	| SUM l -> match l with
-				[] -> CONST 0
+	match aexp with
+	Const i -> Const 0
+	| Var s -> if (s = str) then Const 1
+				else Const 0
+	| Power (s, i) -> if (s = str) then ( if (i > 1) then Times [(Const i); (Power (s, i-1))]
+											else Const 1 )
+						else Const 0
+	| Times l -> if (isThereStr aexp str) then Times (mul l str)
+					else Const 0
+	| Sum l -> match l with
+				[] -> Const 0
 				| h::[] -> diff (h, str)
-				| h::t -> SUM (List.append [diff (h, str)] [diff ( (SUM t), str ) ])
+				| h::t -> Sum (List.append [diff (h, str)] [diff ( (Sum t), str ) ])

@@ -1,20 +1,20 @@
-type ae = CONST of int
-				| VAR of string
-				| POWER of string * int
-				| TIMES of ae list
-				| SUM of ae list
+type aexp = Const of int
+				| Var of string
+				| Power of string * int
+				| Times of aexp list
+				| Sum of aexp list
 
-let rec diff ((a:ae), (s:string)) =
+let rec diff ((a:aexp), (s:string)) =
 	match a with
-		| CONST i -> CONST 0
-		| VAR v -> if v = s then CONST 1
-							 else CONST 0
-		| POWER (v, p) -> if v <> s || p = 0 then CONST 0
-											else if p = 1 then CONST 1
-											else TIMES ((CONST p)::(POWER (v, p-1))::[])
+		| Const i -> Const 0
+		| Var v -> if v = s then Const 1
+							 else Const 0
+		| Power (v, p) -> if v <> s || p = 0 then Const 0
+											else if p = 1 then Const 1
+											else Times ((Const p)::(Power (v, p-1))::[])
 											
-		| TIMES l -> SUM (List.map (fun x -> if (diff (x, s) = CONST 0) then CONST 0
-																				 else if (diff(x, s) = CONST 1) then TIMES (List.filter (fun y -> y != x) l)
-																				 else TIMES ((diff (x, s))::(List.filter (fun y -> y != x) l))) l)
-		| SUM l -> SUM (List.filter (fun x -> x <> CONST 0) (List.map (fun x -> diff (x, s)) l))
+		| Times l -> Sum (List.map (fun x -> if (diff (x, s) = Const 0) then Const 0
+																				 else if (diff(x, s) = Const 1) then Times (List.filter (fun y -> y != x) l)
+																				 else Times ((diff (x, s))::(List.filter (fun y -> y != x) l))) l)
+		| Sum l -> Sum (List.filter (fun x -> x <> Const 0) (List.map (fun x -> diff (x, s)) l))
 

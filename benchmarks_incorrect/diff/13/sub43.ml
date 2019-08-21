@@ -1,19 +1,19 @@
-type ae = CONST of int
-        | VAR of string
-        | POWER of string * int
-        | TIMES of ae list
-        | SUM of ae list
+type aexp = Const of int
+        | Var of string
+        | Power of string * int
+        | Times of aexp list
+        | Sum of aexp list
 
 exception InvalidArgument
 
-let rec diff(ae, str) =
-    match ae with
-    | CONST n -> CONST 0
-    | VAR s -> if s = str then CONST 1
-               else CONST 0
-    | POWER (s, n) -> if s = str then TIMES [CONST n; POWER(s, n-1)]
-                      else CONST 0
-    | SUM [] -> raise InvalidArgument
-    | TIMES [] -> raise InvalidArgument
-    | SUM el -> SUM (List.map (fun x -> diff(x, str)) el)
-    | TIMES el -> SUM (List.map (fun x -> TIMES (diff(x, str)::(List.filter (fun y -> x <> y) el))) el)
+let rec diff(aexp, str) =
+    match aexp with
+    | Const n -> Const 0
+    | Var s -> if s = str then Const 1
+               else Const 0
+    | Power (s, n) -> if s = str then Times [Const n; Power(s, n-1)]
+                      else Const 0
+    | Sum [] -> raise InvalidArgument
+    | Times [] -> raise InvalidArgument
+    | Sum el -> Sum (List.map (fun x -> diff(x, str)) el)
+    | Times el -> Sum (List.map (fun x -> Times (diff(x, str)::(List.filter (fun y -> x <> y) el))) el)

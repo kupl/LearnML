@@ -1,52 +1,52 @@
-type ae =
-    CONST of int
-	|VAR of string
-	|POWER of string * int
-	|TIMES of ae list
-	|SUM of ae list
+type aexp =
+    Const of int
+	|Var of string
+	|Power of string * int
+	|Times of aexp list
+	|Sum of aexp list
 
 exception InvalidArgument
 
-let rec diff:ae*string -> ae=
+let rec diff:aexp*string -> aexp=
     fun (a,str)->
 	    match a with
-		|CONST n -> CONST 0
-		|VAR s -> 
-		    if s=str then CONST 1
-			else CONST 0
-		|POWER (s,n) -> 
+		|Const n -> Const 0
+		|Var s -> 
+		    if s=str then Const 1
+			else Const 0
+		|Power (s,n) -> 
 		    if s=str then
-			    if n=2 then TIMES [CONST 2;VAR s]
-				else if n=1 then CONST 1
-				else if n=0 then CONST 0
-				else TIMES [CONST n;POWER(s,(n-1))]
-			else CONST 0
-		|TIMES [] -> raise InvalidArgument
-		|TIMES aes ->
-	        let clean aes=
-			    if (List.mem (CONST 0) aes) then CONST 0
+			    if n=2 then Times [Const 2;Var s]
+				else if n=1 then Const 1
+				else if n=0 then Const 0
+				else Times [Const n;Power(s,(n-1))]
+			else Const 0
+		|Times [] -> raise InvalidArgument
+		|Times aexps ->
+	        let clean aexps=
+			    if (List.mem (Const 0) aexps) then Const 0
 				else
-				    let filt=(List.filter (fun x -> (x<>(CONST 1))) aes) in
-					if (List.length filt)=0 then CONST 0
+				    let filt=(List.filter (fun x -> (x<>(Const 1))) aexps) in
+					if (List.length filt)=0 then Const 0
 					else if (List.length filt)=1 then List.hd filt
-					else TIMES filt 
+					else Times filt 
 			in
-			let new_aes=(List.filter (fun n -> (n<>CONST 0))
+			let new_aexps=(List.filter (fun n -> (n<>Const 0))
 					        (List.map (fun x ->
 		   	                               (clean (List.map (fun y -> 
 							                              if (x=y) then (diff (y,str))
-						                                  else y) aes))) 
-						aes)) in
+						                                  else y) aexps))) 
+						aexps)) in
 							
-			if (List.length new_aes)=0 then CONST 0
-			else if (List.length new_aes)=1 then List.hd new_aes
-			else SUM new_aes
-		|SUM [] -> raise InvalidArgument
-		|SUM aes ->
-            let new_aes= 
-			    (List.filter (fun n->(n<>CONST 0))
-				    (List.map (fun x-> (diff (x,str))) aes)) in
-			if (List.length new_aes)=0 then CONST 0
-			else if (List.length new_aes)=1 then List.hd new_aes
-			else SUM new_aes
+			if (List.length new_aexps)=0 then Const 0
+			else if (List.length new_aexps)=1 then List.hd new_aexps
+			else Sum new_aexps
+		|Sum [] -> raise InvalidArgument
+		|Sum aexps ->
+            let new_aexps= 
+			    (List.filter (fun n->(n<>Const 0))
+				    (List.map (fun x-> (diff (x,str))) aexps)) in
+			if (List.length new_aexps)=0 then Const 0
+			else if (List.length new_aexps)=1 then List.hd new_aexps
+			else Sum new_aexps
 			

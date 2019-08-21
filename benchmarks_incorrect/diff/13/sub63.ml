@@ -1,25 +1,25 @@
-type ae = CONST of int
-| VAR of string
-| POWER of string * int
-| TIMES of ae list
-| SUM of ae list
+type aexp = Const of int
+| Var of string
+| Power of string * int
+| Times of aexp list
+| Sum of aexp list
 
 exception InvalidArgument  
-  let rec diff_temp (ae, str) =
-  match ae with
-  CONST(n)->CONST(0)
-  | VAR(str1)->if(str1=str) then CONST(1) else CONST(0)
-  | POWER(str1,n)->if(str1=str) then TIMES([CONST(n); POWER(str1, n-1)]) else CONST(0)
-  | TIMES(aelist)->if(List.tl aelist=[]) then diff_temp(List.hd aelist, str)
-  else SUM(TIMES(diff_temp(List.hd aelist, str)::TIMES(List.tl aelist)::[])::TIMES(List.hd aelist::diff_temp(TIMES(List.tl aelist), str)::[])::[])
-  | SUM(aelist)->if(List.tl aelist=[]) then diff_temp(List.hd aelist, str) else SUM(diff_temp(List.hd aelist,str)::diff_temp(SUM(List.tl aelist),str)::[])
+  let rec diff_temp (aexp, str) =
+  match aexp with
+  Const(n)->Const(0)
+  | Var(str1)->if(str1=str) then Const(1) else Const(0)
+  | Power(str1,n)->if(str1=str) then Times([Const(n); Power(str1, n-1)]) else Const(0)
+  | Times(aexplist)->if(List.tl aexplist=[]) then diff_temp(List.hd aexplist, str)
+  else Sum(Times(diff_temp(List.hd aexplist, str)::Times(List.tl aexplist)::[])::Times(List.hd aexplist::diff_temp(Times(List.tl aexplist), str)::[])::[])
+  | Sum(aexplist)->if(List.tl aexplist=[]) then diff_temp(List.hd aexplist, str) else Sum(diff_temp(List.hd aexplist,str)::diff_temp(Sum(List.tl aexplist),str)::[])
   
-  let diff (ae, str) =
-  match ae with
-  CONST(n)->CONST(0)
-  | VAR(str1)->if(str1=str) then CONST(1) else CONST(0)
-  | POWER(str1,n)->if(str1=str) then TIMES([CONST(n); POWER(str1, n-1)]) else CONST(0)
-  | TIMES(aelist)->if(aelist=[]) then raise InvalidArgument
-  else SUM(TIMES(diff_temp(List.hd aelist, str)::TIMES(List.tl aelist)::[])::TIMES(List.hd aelist::diff_temp(TIMES(List.tl aelist), str)::[])::[])
-  | SUM(aelist)->if(aelist=[]) then raise InvalidArgument
-  else SUM(diff_temp(List.hd aelist,str)::diff_temp(SUM(List.tl aelist),str)::[])
+  let diff (aexp, str) =
+  match aexp with
+  Const(n)->Const(0)
+  | Var(str1)->if(str1=str) then Const(1) else Const(0)
+  | Power(str1,n)->if(str1=str) then Times([Const(n); Power(str1, n-1)]) else Const(0)
+  | Times(aexplist)->if(aexplist=[]) then raise InvalidArgument
+  else Sum(Times(diff_temp(List.hd aexplist, str)::Times(List.tl aexplist)::[])::Times(List.hd aexplist::diff_temp(Times(List.tl aexplist), str)::[])::[])
+  | Sum(aexplist)->if(aexplist=[]) then raise InvalidArgument
+  else Sum(diff_temp(List.hd aexplist,str)::diff_temp(Sum(List.tl aexplist),str)::[])
