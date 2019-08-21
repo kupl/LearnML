@@ -1,35 +1,35 @@
-type ae =
-	| CONST of int
-	| VAR of string
-	| POWER of string * int
-	| TIMES of ae list
-	| SUM of ae list
+type aexp =
+	| Const of int
+	| Var of string
+	| Power of string * int
+	| Times of aexp list
+	| Sum of aexp list
 
-let rec diff (ae, str) =
-	match ae with
-	| CONST i -> CONST 0
-	| VAR var ->
+let rec diff (aexp, str) =
+	match aexp with
+	| Const i -> Const 0
+	| Var var ->
 		if var = str
-			then CONST 1
-			else CONST 0
-	| POWER (var, pow) ->
+			then Const 1
+			else Const 0
+	| Power (var, pow) ->
 		if var = str
 			then
 				if pow = 1
-					then CONST 1
-					else TIMES [CONST pow; POWER (var, pow-1)]
-			else CONST 0
-	| TIMES lst ->
+					then Const 1
+					else Times [Const pow; Power (var, pow-1)]
+			else Const 0
+	| Times lst ->
 		let rec diff_product left_elts right_elts =
 			if right_elts = []
 				then []
 				else
 					let hd = List.hd right_elts in
 					let tl = List.tl right_elts in
-					(TIMES (List.rev_append left_elts (diff (hd, str)::tl)))::( diff_product (hd::left_elts) tl )
+					(Times (List.rev_append left_elts (diff (hd, str)::tl)))::( diff_product (hd::left_elts) tl )
 		in
-		SUM (diff_product [] lst)
-	| SUM lst ->
+		Sum (diff_product [] lst)
+	| Sum lst ->
 		let rec diff_sum elts =
 			if elts = []
 				then []
@@ -38,4 +38,4 @@ let rec diff (ae, str) =
 					let tl = List.tl elts in
 					(diff (hd, str))::(diff_sum tl)
 		in
-		SUM (diff_sum lst)
+		Sum (diff_sum lst)

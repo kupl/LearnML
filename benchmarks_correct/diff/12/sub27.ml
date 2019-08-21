@@ -1,11 +1,11 @@
 (* hw2-2 *)
 (* 2010-11687 Keunjun Choi *)
 
-type ae = CONST of int
-    | VAR of string
-    | POWER of string * int
-    | TIMES of ae list
-    | SUM of ae list
+type aexp = Const of int
+    | Var of string
+    | Power of string * int
+    | Times of aexp list
+    | Sum of aexp list
 
 let rec diff (expr, value) =
     let rec sum_term expr =
@@ -24,34 +24,34 @@ let rec diff (expr, value) =
 		    (expr1)::(dx (expr2, (count + 1)))
 		else
 		    match expr1 with
-		    | CONST opr -> (CONST 0)::(dx (expr2, (count + 1)))
-		    | VAR opr ->
+		    | Const opr -> (Const 0)::(dx (expr2, (count + 1)))
+		    | Var opr ->
 			(if (opr = value) then
-			    (CONST 1)::(dx (expr2, (count + 1)))
-			else (CONST 0)::(dx (expr2, (count + 1))))
-		    | POWER (opr1, opr2) ->
+			    (Const 1)::(dx (expr2, (count + 1)))
+			else (Const 0)::(dx (expr2, (count + 1))))
+		    | Power (opr1, opr2) ->
 			(if ((opr1 = value) && (opr2 != 0)) then
-			    (CONST opr2)::(POWER (opr1, (opr2 - 1)))::(dx (expr2, count + 1))
-			else (CONST 0)::(dx (expr2, (count + 1))))
-		    | TIMES opr ->
-			(SUM (time_term (opr, 0)))::(dx (expr2, (count + 1)))
-		    | SUM opr ->
-			(SUM (sum_term opr))::(dx (expr2, (count + 1))))
+			    (Const opr2)::(Power (opr1, (opr2 - 1)))::(dx (expr2, count + 1))
+			else (Const 0)::(dx (expr2, (count + 1))))
+		    | Times opr ->
+			(Sum (time_term (opr, 0)))::(dx (expr2, (count + 1)))
+		    | Sum opr ->
+			(Sum (sum_term opr))::(dx (expr2, (count + 1))))
 	in
 
 	(if (num = (List.length expr)) then []
-	else (TIMES (dx (expr, 0)))::(time_term (expr, (num + 1))))
+	else (Times (dx (expr, 0)))::(time_term (expr, (num + 1))))
     in
 
     match expr with
-    | CONST opr -> (CONST 0)
-    | VAR opr ->
+    | Const opr -> (Const 0)
+    | Var opr ->
 	(if (opr = value) then
-	    (CONST 1)
-	else (CONST 0))
-    | POWER (opr1, opr2) ->
+	    (Const 1)
+	else (Const 0))
+    | Power (opr1, opr2) ->
 	(if ((opr1 = value) && (opr2 != 0)) then
-	    (TIMES ((CONST opr2)::(POWER (opr1, (opr2 - 1))::[])))
-	else (CONST 0))
-    | TIMES opr -> (SUM (time_term (opr, 0)))
-    | SUM opr -> (SUM (sum_term (opr)))
+	    (Times ((Const opr2)::(Power (opr1, (opr2 - 1))::[])))
+	else (Const 0))
+    | Times opr -> (Sum (time_term (opr, 0)))
+    | Sum opr -> (Sum (sum_term (opr)))

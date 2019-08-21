@@ -1,8 +1,8 @@
-type ae = CONST of int
-| VAR of string
-| POWER of string * int
-| TIMES of ae list
-| SUM of ae list
+type aexp = Const of int
+| Var of string
+| Power of string * int
+| Times of aexp list
+| Sum of aexp list
 
 let rec diff (ex, str) =
 
@@ -15,43 +15,41 @@ let rec diff (ex, str) =
 	let rec timesdiff l sl el =
 		match l with
 		| [] -> el
-	        | a::l1 -> (timesdiff l1 (sl@[a]) (el@[TIMES (sl@[diff(a,str)]@l1)]))
+	        | a::l1 -> (timesdiff l1 (sl@[a]) (el@[Times (sl@[diff(a,str)]@l1)]))
         in
 
 		
-	 (* 미분해야되면=const가 살아있으면 true
-           0이 되야 되면 false *)
         	
 	let rec constcheck (e1, st)=
         match e1 with
-        | (CONST a)::b -> constcheck (b, st)
-        | (VAR a)::b -> if a=st then true else false
-        | (POWER (a,n))::b -> if a=st then true else false
-        | (TIMES a)::b -> if constcheck(a,st)=true then constcheck (b, st) else false
-        | (SUM a)::b -> if constcheck(a,st)=true then constcheck (b, st) else false
+        | (Const a)::b -> constcheck (b, st)
+        | (Var a)::b -> if a=st then true else false
+        | (Power (a,n))::b -> if a=st then true else false
+        | (Times a)::b -> if constcheck(a,st)=true then constcheck (b, st) else false
+        | (Sum a)::b -> if constcheck(a,st)=true then constcheck (b, st) else false
         | [] -> false
 
         in
 (*
 	let rec varcheck (e1, st, sum)=
         match e1 with
-        | (CONST a)::b -> varcheck (b, st, sum)
-        | (VAR a)::b -> if a=st then varcheck (b, st, sum+1) else varcheck (b, st, sum)
-        | (POWER (a,n))::b -> if a=st then varcheck (b, st, sum+n) else varcheck (b, st, sum)
-        | (TIMES a)::b -> varcheck(b,st,sum+varcheck(TIMES a,st,0))
-        | (SUM a)::b -> if constcheck(a,st)=true then constcheck (b, st) else false
+        | (Const a)::b -> varcheck (b, st, sum)
+        | (Var a)::b -> if a=st then varcheck (b, st, sum+1) else varcheck (b, st, sum)
+        | (Power (a,n))::b -> if a=st then varcheck (b, st, sum+n) else varcheck (b, st, sum)
+        | (Times a)::b -> varcheck(b,st,sum+varcheck(Times a,st,0))
+        | (Sum a)::b -> if constcheck(a,st)=true then constcheck (b, st) else false
         | [] -> sum
 
         in
 *)
 	let rec mibun (e1, st) =
 	match e1 with
-	| CONST n -> CONST 0
-	| VAR s -> if st=s then CONST 1 else CONST 0
-	| POWER (s,n) -> if st=s then TIMES [CONST n;POWER (s,(n-1))]
-			else CONST 0
-	| TIMES l -> SUM (timesdiff l [] [])
-	| SUM l -> SUM (ldiff l [])
+	| Const n -> Const 0
+	| Var s -> if st=s then Const 1 else Const 0
+	| Power (s,n) -> if st=s then Times [Const n;Power (s,(n-1))]
+			else Const 0
+	| Times l -> Sum (timesdiff l [] [])
+	| Sum l -> Sum (ldiff l [])
 	
 	in
 	

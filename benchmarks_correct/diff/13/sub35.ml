@@ -1,57 +1,57 @@
-(* 4190.310 Programming Languages - Daegeun Lee <elnn@elnn.kr> *)
+(* 4190.310 Programming Languages - Daexpgeun Lee <elnn@elnn.kr> *)
 
-type ae = CONST of int
-        | VAR of string
-        | POWER of string * int
-        | TIMES of ae list
-        | SUM of ae list
+type aexp = Const of int
+        | Var of string
+        | Power of string * int
+        | Times of aexp list
+        | Sum of aexp list
 
 exception InvalidArgument
 
 let diff = fun (e, x) ->
     let rec diff' = fun (e, x) ->
         match e with
-        | CONST(c) -> CONST(0)
-        | VAR(y) -> if x = y then CONST(1) else CONST(0)
-        | POWER(y,n) -> if x = y then TIMES(CONST(n)::POWER(x,n-1)::[]) else CONST(0)
-        | TIMES([]) -> raise InvalidArgument
-        | TIMES(hd::[]) -> diff'(hd,x)
-        | TIMES(hd::tl) -> SUM(TIMES(diff'(hd,x)::tl)::TIMES(hd::(diff'(TIMES(tl),x))::[])::[])
-        | SUM([]) -> raise InvalidArgument
-        | SUM(hd::[]) -> diff'(hd,x)
-        | SUM(hd::tl) -> SUM(diff'(hd,x)::diff'(SUM(tl),x)::[])
+        | Const(c) -> Const(0)
+        | Var(y) -> if x = y then Const(1) else Const(0)
+        | Power(y,n) -> if x = y then Times(Const(n)::Power(x,n-1)::[]) else Const(0)
+        | Times([]) -> raise InvalidArgument
+        | Times(hd::[]) -> diff'(hd,x)
+        | Times(hd::tl) -> Sum(Times(diff'(hd,x)::tl)::Times(hd::(diff'(Times(tl),x))::[])::[])
+        | Sum([]) -> raise InvalidArgument
+        | Sum(hd::[]) -> diff'(hd,x)
+        | Sum(hd::tl) -> Sum(diff'(hd,x)::diff'(Sum(tl),x)::[])
     in
     let rec simplify = fun e ->
         match e with
-        | CONST(c) -> e
-        | VAR(y) -> e
-        | POWER(y,1) -> VAR(y)
-        | POWER(y,n) -> POWER(y,n)
-        | TIMES([]) -> raise InvalidArgument
-        | TIMES(hd::[]) -> simplify(hd)
-        | TIMES(hd::tl) -> (let t1 = simplify(hd) in
-                            let t2 = simplify(TIMES(tl)) in
+        | Const(c) -> e
+        | Var(y) -> e
+        | Power(y,1) -> Var(y)
+        | Power(y,n) -> Power(y,n)
+        | Times([]) -> raise InvalidArgument
+        | Times(hd::[]) -> simplify(hd)
+        | Times(hd::tl) -> (let t1 = simplify(hd) in
+                            let t2 = simplify(Times(tl)) in
                                 match (t1,t2) with
-                                | (CONST(x),CONST(y)) -> CONST(x*y)
-                                | (CONST(0),_) -> CONST(0)
-                                | (_,CONST(0)) -> CONST(0)
-                                | (t1,CONST(1)) -> t1
-                                | (CONST(1),t2) -> t2
-                                | (t1,TIMES(t)) -> TIMES(t1::t)
-                                | (TIMES(t),t2) -> TIMES(t2::t)
-                                | (t1,t2) -> TIMES(t1::t2::[])
+                                | (Const(x),Const(y)) -> Const(x*y)
+                                | (Const(0),_) -> Const(0)
+                                | (_,Const(0)) -> Const(0)
+                                | (t1,Const(1)) -> t1
+                                | (Const(1),t2) -> t2
+                                | (t1,Times(t)) -> Times(t1::t)
+                                | (Times(t),t2) -> Times(t2::t)
+                                | (t1,t2) -> Times(t1::t2::[])
                            )
-        | SUM([]) -> raise InvalidArgument
-        | SUM(hd::[]) -> simplify(hd)
-        | SUM(hd::tl) -> (let t1 = simplify(hd) in
-                          let t2 = simplify(SUM(tl)) in
+        | Sum([]) -> raise InvalidArgument
+        | Sum(hd::[]) -> simplify(hd)
+        | Sum(hd::tl) -> (let t1 = simplify(hd) in
+                          let t2 = simplify(Sum(tl)) in
                               match (t1,t2) with
-                              | (CONST(x),CONST(y)) -> CONST(x+y)
-                              | (t1,CONST(0)) -> t1
-                              | (CONST(0),t2) -> t2
-                              | (t1,SUM(t)) -> SUM(t1::t)
-                              | (SUM(t),t2) -> SUM(t2::t)
-                              | (t1,t2) -> SUM(t1::t2::[])
+                              | (Const(x),Const(y)) -> Const(x+y)
+                              | (t1,Const(0)) -> t1
+                              | (Const(0),t2) -> t2
+                              | (t1,Sum(t)) -> Sum(t1::t)
+                              | (Sum(t),t2) -> Sum(t2::t)
+                              | (t1,t2) -> Sum(t1::t2::[])
                          )
     in
     simplify(diff'(e, x))

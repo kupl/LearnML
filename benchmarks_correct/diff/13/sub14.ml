@@ -1,59 +1,59 @@
-type ae = CONST of int
-	| VAR of string
-	| POWER of string * int
-	| TIMES of ae list
-	| SUM of ae list
+type aexp = Const of int
+	| Var of string
+	| Power of string * int
+	| Times of aexp list
+	| Sum of aexp list
 
 exception InvalidArgument
 
 let diff (a, b) = 
 	let rec realdiff (a, b) = 
 		match a with
-		| CONST x -> CONST 0
-		| VAR x -> if x=b then CONST 1
-			   else CONST 0
-		| POWER (x, y) -> if x=b then TIMES [CONST y;POWER (x, y-1)]
-				  else CONST 0
-		| TIMES lst -> (match lst with
+		| Const x -> Const 0
+		| Var x -> if x=b then Const 1
+			   else Const 0
+		| Power (x, y) -> if x=b then Times [Const y;Power (x, y-1)]
+				  else Const 0
+		| Times lst -> (match lst with
 				| hd::[] -> realdiff (hd, b)
-				| hd::tl -> SUM [TIMES [hd;realdiff(TIMES tl, b)] ; TIMES [realdiff(hd, b);TIMES tl]]
+				| hd::tl -> Sum [Times [hd;realdiff(Times tl, b)] ; Times [realdiff(hd, b);Times tl]]
 				| [] -> raise InvalidArgument
 			       )
-		| SUM lst -> (match lst with
+		| Sum lst -> (match lst with
 				| hd::[] -> realdiff (hd, b)
-				| hd::tl -> SUM[realdiff(hd, b);realdiff(SUM tl, b)]
+				| hd::tl -> Sum[realdiff(hd, b);realdiff(Sum tl, b)]
 				| [] -> raise InvalidArgument
 			     )
 	in
 	let maketime (a, b) = 
 		match b with
-		| TIMES lst -> TIMES (a::lst)
-		| _ -> TIMES (a::b::[])
+		| Times lst -> Times (a::lst)
+		| _ -> Times (a::b::[])
 	in
 	let makesum (a, b) = 
 		match b with
-		| SUM lst -> SUM (a::lst)
-		| _ -> SUM (a::b::[])
+		| Sum lst -> Sum (a::lst)
+		| _ -> Sum (a::b::[])
 	in
 	let rec simplifier a = 
 		match a with
-		| CONST x -> CONST x
-		| VAR x -> VAR x
-		| POWER (x, y) -> POWER (x, y)
-		| TIMES lst -> (match lst with
+		| Const x -> Const x
+		| Var x -> Var x
+		| Power (x, y) -> Power (x, y)
+		| Times lst -> (match lst with
 				| hd::[] -> simplifier hd
-				| hd::tl -> if (simplifier (TIMES tl))=(CONST 1) then simplifier hd
-					    else if (simplifier (TIMES tl))=(CONST 0) then CONST 0
-					    else if (simplifier hd)=(CONST 0) then CONST 0
-					    else if (simplifier hd)=(CONST 1) then simplifier (TIMES tl)
-					    else maketime (simplifier hd, simplifier (TIMES tl))
+				| hd::tl -> if (simplifier (Times tl))=(Const 1) then simplifier hd
+					    else if (simplifier (Times tl))=(Const 0) then Const 0
+					    else if (simplifier hd)=(Const 0) then Const 0
+					    else if (simplifier hd)=(Const 1) then simplifier (Times tl)
+					    else maketime (simplifier hd, simplifier (Times tl))
 				| [] -> raise InvalidArgument
 				)
-		| SUM lst -> (match lst with
+		| Sum lst -> (match lst with
 				| hd::[] -> simplifier hd
-				| hd::tl -> if (simplifier (SUM tl))=(CONST 0) then simplifier hd
-					    else if (simplifier hd)=(CONST 0) then simplifier (SUM tl)
-					    else makesum (simplifier hd, simplifier (SUM tl))
+				| hd::tl -> if (simplifier (Sum tl))=(Const 0) then simplifier hd
+					    else if (simplifier hd)=(Const 0) then simplifier (Sum tl)
+					    else makesum (simplifier hd, simplifier (Sum tl))
 				| [] -> raise InvalidArgument
 			     )
 	in

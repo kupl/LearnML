@@ -1,29 +1,29 @@
-type ae =
-	  CONST of int
-	| VAR of string
-	| POWER of string * int
-	| TIMES of ae list
-	| SUM of ae list
+type aexp =
+	  Const of int
+	| Var of string
+	| Power of string * int
+	| Times of aexp list
+	| Sum of aexp list
 
 let rec diff (f, x) =
 	let rec t_diff (i, n, l) = match l with
 		| h::rm ->
-			if i = n then TIMES (List.append [diff (h,x)] rm)
-			else SUM [TIMES (List.append [diff (h, x)] rm); t_diff (i + 1, n, List.append rm [h])]
+			if i = n then Times (List.append [diff (h,x)] rm)
+			else Sum [Times (List.append [diff (h, x)] rm); t_diff (i + 1, n, List.append rm [h])]
 	in
 	match f with
-		| CONST i -> CONST 0
-		| VAR v ->
-			if v = x then CONST 1
-			else CONST 0
-		| POWER (v, n) ->
-			if n = 0 || v != x then CONST 0
-			else TIMES [CONST n; POWER (v, n - 1)]
-		| TIMES l ->
-			if (List.length l) = 0 then invalid_arg "Empty TIMES"
+		| Const i -> Const 0
+		| Var v ->
+			if v = x then Const 1
+			else Const 0
+		| Power (v, n) ->
+			if n = 0 || v != x then Const 0
+			else Times [Const n; Power (v, n - 1)]
+		| Times l ->
+			if (List.length l) = 0 then invalid_arg "Empty Times"
 			else if (List.length l) = 1 then diff ((List.hd l), x)
 			else t_diff (1, List.length l, l)
-		| SUM l -> (match l with
-			| [] -> CONST 0
+		| Sum l -> (match l with
+			| [] -> Const 0
 			| [a] -> diff (a, x)
-			| h::rm -> SUM [diff (h,x); diff (SUM rm, x)])
+			| h::rm -> Sum [diff (h,x); diff (Sum rm, x)])

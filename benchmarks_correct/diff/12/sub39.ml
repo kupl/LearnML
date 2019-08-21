@@ -1,8 +1,8 @@
-type ae = CONST of int
-	| VAR of string
-	| POWER of string * int
-	| TIMES of ae list
-	| SUM of ae list
+type aexp = Const of int
+	| Var of string
+	| Power of string * int
+	| Times of aexp list
+	| Sum of aexp list
 
 
 let rec diff (a, s) =
@@ -18,7 +18,7 @@ let rec diff (a, s) =
 			        else (cutlistl (List.tl l) (n - 1))
 			in
 		
-			(TIMES ((cutlistf l n) @ [(diff ((List.nth l n), s))] @ (cutlistl l n)))
+			(Times ((cutlistf l n) @ [(diff ((List.nth l n), s))] @ (cutlistl l n)))
 		in
 
 		if (n = (List.length l)) then []
@@ -28,11 +28,11 @@ let rec diff (a, s) =
 	let diffs na = (diff (na, s)) in
 
 	match a with
-	| CONST n -> (CONST 0)
-	| VAR ms -> if (ms = s) then (CONST 1)
-			else (CONST 0)
-	| POWER (ms, n) -> if (ms = s) then (TIMES [(CONST n); (POWER (ms, (n - 1)))])
-			else (CONST 0)
-	| TIMES l -> (SUM (timesf l 0))
-	| SUM l -> (SUM (List.map diffs l))
+	| Const n -> (Const 0)
+	| Var ms -> if (ms = s) then (Const 1)
+			else (Const 0)
+	| Power (ms, n) -> if (ms = s) then (Times [(Const n); (Power (ms, (n - 1)))])
+			else (Const 0)
+	| Times l -> (Sum (timesf l 0))
+	| Sum l -> (Sum (List.map diffs l))
 	

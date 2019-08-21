@@ -1,29 +1,29 @@
-type ae = CONST of int
-	| VAR of string
-	| POWER of string * int
-	| TIMES of ae list
-	| SUM of ae list
+type aexp = Const of int
+	| Var of string
+	| Power of string * int
+	| Times of aexp list
+	| Sum of aexp list
 
 exception InvalidArgument
 
-let rec diff(ae,str) =
-	match ae with
-	| CONST c -> CONST (0)
-	| VAR s -> if(s=str) then CONST (1)
-		else CONST (0)
-	| POWER (s, c) ->  if(s=str) then TIMES[POWER(s, c-1);CONST (c)]
-		else CONST (0)
-	| TIMES li ->
+let rec diff(aexp,str) =
+	match aexp with
+	| Const c -> Const (0)
+	| Var s -> if(s=str) then Const (1)
+		else Const (0)
+	| Power (s, c) ->  if(s=str) then Times[Power(s, c-1);Const (c)]
+		else Const (0)
+	| Times li ->
 	(
 		match li with
 		| [] -> raise InvalidArgument
 		| [head] -> diff(head, str)
-		| head :: tail -> SUM[TIMES[diff(head, str);TIMES(tail)] ; TIMES[head ; diff(TIMES(tail), str)]]
+		| head :: tail -> Sum[Times[diff(head, str);Times(tail)] ; Times[head ; diff(Times(tail), str)]]
 	)
-	| SUM l ->
+	| Sum l ->
 	(
 		match l with
 		| [] -> raise InvalidArgument
 		| [head] -> diff(head, str)
-		| head :: tail -> SUM[diff(head, str) ; diff(SUM(tail), str)]
+		| head :: tail -> Sum[diff(head, str) ; diff(Sum(tail), str)]
 	)

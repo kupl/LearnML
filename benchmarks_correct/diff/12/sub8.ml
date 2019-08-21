@@ -1,44 +1,44 @@
 
 exception Error of string
 
-type ae = CONST of int
-		| VAR of string
-		| POWER of string * int
-		| TIMES of ae list
-		| SUM of ae list
+type aexp = Const of int
+		| Var of string
+		| Power of string * int
+		| Times of aexp list
+		| Sum of aexp list
 
-let rec diff (ae_exp, str_diff) =
+let rec diff (aexp_exp, str_diff) =
 	(
-	match ae_exp with
-	| CONST (i) -> CONST 0
-	| VAR (str) ->	if str=str_diff then
-						CONST 1
+	match aexp_exp with
+	| Const (i) -> Const 0
+	| Var (str) ->	if str=str_diff then
+						Const 1
 					else
-						CONST 0
-	| POWER (str, i) -> if str=str_diff then
-						TIMES [CONST i;POWER (str, i-1)]
+						Const 0
+	| Power (str, i) -> if str=str_diff then
+						Times [Const i;Power (str, i-1)]
 					else
-						CONST 0
-	| TIMES (list_ae) ->
+						Const 0
+	| Times (list_aexp) ->
 		(
-		match list_ae with
-		| [] -> raise (Error "Invalid TIMES []")
+		match list_aexp with
+		| [] -> raise (Error "Invalid Times []")
 		| hd::[] -> diff(hd, str_diff)
-		| hd::tl -> SUM [TIMES (diff(hd, str_diff)::tl);TIMES (hd::[diff(TIMES tl, str_diff)])]
+		| hd::tl -> Sum [Times (diff(hd, str_diff)::tl);Times (hd::[diff(Times tl, str_diff)])]
 		)
-	| SUM (list_ae) ->
+	| Sum (list_aexp) ->
 		(
-		match list_ae with
-		| [] -> raise (Error "Invalid SUM []")
+		match list_aexp with
+		| [] -> raise (Error "Invalid Sum []")
 		| _ ->
-			let rec diff_sum (list_ae_, result) =
+			let rec diff_sum (list_aexp_, result) =
 				(
-				match list_ae_ with
+				match list_aexp_ with
 				| [] -> result
 				| hd::tl -> diff_sum(tl, List.append result [diff(hd, str_diff)])
 				)
 			in
-			SUM (diff_sum (list_ae, []))
+			Sum (diff_sum (list_aexp, []))
 		)
 	)
 

@@ -1,36 +1,36 @@
 exception Failure of string
 
-type ae =
-	| CONST of int
-	| VAR of string
-	| POWER of string * int
-	| TIMES of ae list
-	| SUM of ae list
+type aexp =
+	| Const of int
+	| Var of string
+	| Power of string * int
+	| Times of aexp list
+	| Sum of aexp list
 
-let rec map : (ae * string -> ae) -> ae list * string  -> ae list
+let rec map : (aexp * string -> aexp) -> aexp list * string  -> aexp list
 = fun f (l, x) ->
 	match l with
 	| [] -> []
 	| hd::tl -> (f (hd, x))::(map f (tl, x))
 
-let rec diff : ae * string -> ae
+let rec diff : aexp * string -> aexp
 = fun (e, x) ->
 	match e with
-	| CONST n -> CONST 0
-	| VAR a -> if (a <> x) then CONST 0 else CONST 1
-	| POWER (a, n) -> 
+	| Const n -> Const 0
+	| Var a -> if (a <> x) then Const 0 else Const 1
+	| Power (a, n) -> 
 		if n < 0 then raise (Failure "Invalid") 
-		else if (n = 0) || (a <> x) then CONST 0
-		else TIMES [CONST n; POWER (a, n-1)]
-	| TIMES l ->
+		else if (n = 0) || (a <> x) then Const 0
+		else Times [Const n; Power (a, n-1)]
+	| Times l ->
 		begin 
 			match l with
 			| [] -> raise (Failure "Invalid")
 			| [hd] -> diff (hd, x)
-			| hd::tl -> SUM [TIMES ((diff (hd, x))::tl); TIMES [hd; diff (TIMES tl, x)]]
+			| hd::tl -> Sum [Times ((diff (hd, x))::tl); Times [hd; diff (Times tl, x)]]
 		end
-	| SUM l -> 
+	| Sum l -> 
 		begin match l with
 		| [] -> raise (Failure "Invalid")
-		| _ -> SUM (map diff (l, x))
+		| _ -> Sum (map diff (l, x))
 		end

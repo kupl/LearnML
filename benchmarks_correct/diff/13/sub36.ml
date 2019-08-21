@@ -1,8 +1,8 @@
-type ae = CONST of int
-        | VAR of string
-        | POWER of string * int
-        | TIMES of ae list
-        | SUM of ae list
+type aexp = Const of int
+        | Var of string
+        | Power of string * int
+        | Times of aexp list
+        | Sum of aexp list
 
 exception InvalidArgument
 
@@ -11,26 +11,26 @@ exception InvalidArgument
 
 
 
-let rec diff (ae, var) =
+let rec diff (aexp, var) =
     let rec diff_sub a =
         diff (a, var)
     in
-    match ae with
-    | CONST a -> CONST 0
-    | VAR a -> 
-            if a = var then CONST 1
-            else CONST 0
-    | POWER (a, n) ->
+    match aexp with
+    | Const a -> Const 0
+    | Var a -> 
+            if a = var then Const 1
+            else Const 0
+    | Power (a, n) ->
             if a = var then 
-                (if n = 1 then CONST 1
-                else TIMES [CONST n; POWER (a, n-1)])
-            else CONST 0
-    | TIMES l ->
+                (if n = 1 then Const 1
+                else Times [Const n; Power (a, n-1)])
+            else Const 0
+    | Times l ->
             (match l with
             | [] -> raise InvalidArgument
             | (hd::[]) -> diff (hd, var)
-            | (hd::tl) -> SUM ([TIMES ((diff (hd, var))::tl)]@[TIMES (hd::[diff (TIMES tl, var)])]))
-    | SUM l ->
+            | (hd::tl) -> Sum ([Times ((diff (hd, var))::tl)]@[Times (hd::[diff (Times tl, var)])]))
+    | Sum l ->
             (match l with
             | [] -> raise InvalidArgument
-            | _ -> SUM (List.map diff_sub l))
+            | _ -> Sum (List.map diff_sub l))

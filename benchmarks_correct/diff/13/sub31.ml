@@ -1,24 +1,24 @@
-type ae = CONST of int
-				| VAR of string
-				| POWER of string * int
-				| TIMES of ae list
-				| SUM of ae list
+type aexp = Const of int
+				| Var of string
+				| Power of string * int
+				| Times of aexp list
+				| Sum of aexp list
 
 exception InvalidArgument
 
-let rec diff (ae, v) =
-	let rec aux (ae, v) =
-		match ae with
-		| CONST c -> CONST 0
-		| VAR x -> if x = v then CONST 1 else CONST 0
-		| POWER (x, n) -> if x = v
-											then TIMES[ (CONST n); (POWER (x, n - 1)) ]
-											else CONST 0
-		| TIMES [] -> CONST 0
-		| TIMES ((CONST 0)::tl) -> CONST 0
-		| TIMES (hd::tl) -> SUM (TIMES (aux (hd, v)::tl)::(TIMES (hd::aux ((TIMES tl),v)::[]))::[])
-		| SUM aelist -> SUM (List.map (fun ae -> aux (ae, v)) aelist) in 
-	match ae with
-	| TIMES [] -> raise InvalidArgument
-	| SUM [] -> raise InvalidArgument
-	| _ -> aux (ae, v)
+let rec diff (aexp, v) =
+	let rec aux (aexp, v) =
+		match aexp with
+		| Const c -> Const 0
+		| Var x -> if x = v then Const 1 else Const 0
+		| Power (x, n) -> if x = v
+											then Times[ (Const n); (Power (x, n - 1)) ]
+											else Const 0
+		| Times [] -> Const 0
+		| Times ((Const 0)::tl) -> Const 0
+		| Times (hd::tl) -> Sum (Times (aux (hd, v)::tl)::(Times (hd::aux ((Times tl),v)::[]))::[])
+		| Sum aexplist -> Sum (List.map (fun aexp -> aux (aexp, v)) aexplist) in 
+	match aexp with
+	| Times [] -> raise InvalidArgument
+	| Sum [] -> raise InvalidArgument
+	| _ -> aux (aexp, v)

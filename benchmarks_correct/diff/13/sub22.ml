@@ -1,24 +1,24 @@
-type ae=
-CONST of int
-|VAR of string
-|POWER of string*int
-|TIMES of ae list
-|SUM of ae list
+type aexp=
+Const of int
+|Var of string
+|Power of string*int
+|Times of aexp list
+|Sum of aexp list
 
 exception InvalidArgument
 
 let rec diff (a, x)=
 match a with
-|CONST a->CONST(0)
-|VAR a->if a=x then CONST(1) else CONST(0)
-|POWER(a,b) ->if a=x then TIMES(CONST(b)::POWER(a,b-1)::[]) else CONST(0)
-|TIMES a->(match a with
+|Const a->Const(0)
+|Var a->if a=x then Const(1) else Const(0)
+|Power(a,b) ->if a=x then Times(Const(b)::Power(a,b-1)::[]) else Const(0)
+|Times a->(match a with
 		|[]->raise InvalidArgument
 		|hd::tl->if tl=[] then diff(hd, x) else
-			SUM((TIMES((diff(hd, x))::tl)) :: (TIMES(hd::(diff(TIMES(tl),x))::[])) :: [])
+			Sum((Times((diff(hd, x))::tl)) :: (Times(hd::(diff(Times(tl),x))::[])) :: [])
 		)
-|SUM a->(match a with
+|Sum a->(match a with
 		|[]->raise InvalidArgument
 		|hd::tl->if tl=[] then diff(hd, x) else
-			SUM( diff(hd, x):: diff(SUM(tl), x) :: [])
+			Sum( diff(hd, x):: diff(Sum(tl), x) :: [])
 		)

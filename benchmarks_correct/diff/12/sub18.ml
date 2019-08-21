@@ -1,9 +1,9 @@
 (* ex2 *)
-type ae = CONST of int
-		| VAR of string
-		| POWER of string * int
-		| TIMES of ae list
-		| SUM of ae list
+type aexp = Const of int
+		| Var of string
+		| Power of string * int
+		| Times of aexp list
+		| Sum of aexp list
 
 let rec diff (ex, var) = 
 	let diffSum e = diff (e, var) in
@@ -19,16 +19,16 @@ let rec diff (ex, var) =
 	let diffTimes lst = 
 		let rec looper i n = 
 			if i = n then []
-			else (TIMES (replace lst i (diff (List.nth lst i, var))))::(looper (i + 1) n) in
-		SUM (looper 0 (List.length lst)) in
+			else (Times (replace lst i (diff (List.nth lst i, var))))::(looper (i + 1) n) in
+		Sum (looper 0 (List.length lst)) in
 		
 	
 	match ex with
-	  CONST i -> CONST 0
-	| VAR v -> if v = var then CONST 1 else CONST 0
-	| POWER (v, i) -> if v = var then
-					      if i = 1 then CONST i
-						  else TIMES [CONST i; POWER (v, i - 1)]
-					  else CONST 0
-	| TIMES lst -> diffTimes lst
-	| SUM lst -> SUM (List.map diffSum lst)
+	  Const i -> Const 0
+	| Var v -> if v = var then Const 1 else Const 0
+	| Power (v, i) -> if v = var then
+					      if i = 1 then Const i
+						  else Times [Const i; Power (v, i - 1)]
+					  else Const 0
+	| Times lst -> diffTimes lst
+	| Sum lst -> Sum (List.map diffSum lst)

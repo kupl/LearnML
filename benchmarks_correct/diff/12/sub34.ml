@@ -1,15 +1,15 @@
-type ae = CONST of int
-        | VAR of string
-        | POWER of string * int
-        | TIMES of ae list
-        | SUM of ae list
+type aexp = Const of int
+        | Var of string
+        | Power of string * int
+        | Times of aexp list
+        | Sum of aexp list
 
-let rec diff (ae,str) =
-        match (ae,str) with
-        |(CONST a, str) -> CONST 0
-        |(VAR a, str) -> if(a=str) then CONST 1 else CONST 0
-        |(POWER (a , n),str) -> if(a=str) then TIMES [CONST n;POWER(a,(n-1))] else CONST 0
-        |(TIMES (hd::[]),str) -> (diff (hd, str))
-        |(TIMES (hd::tl),str) -> (SUM (( TIMES ((diff (hd,str))::tl) ) :: [( TIMES ( hd :: [(diff ((TIMES tl),str))] ) )]))
-        |(SUM (hd::[]),str) -> (diff (hd,str))
-        |(SUM (hd::tl),str) -> SUM ((diff (hd,str))::[(diff ((SUM tl),str))])
+let rec diff (aexp,str) =
+        match (aexp,str) with
+        |(Const a, str) -> Const 0
+        |(Var a, str) -> if(a=str) then Const 1 else Const 0
+        |(Power (a , n),str) -> if(a=str) then Times [Const n;Power(a,(n-1))] else Const 0
+        |(Times (hd::[]),str) -> (diff (hd, str))
+        |(Times (hd::tl),str) -> (Sum (( Times ((diff (hd,str))::tl) ) :: [( Times ( hd :: [(diff ((Times tl),str))] ) )]))
+        |(Sum (hd::[]),str) -> (diff (hd,str))
+        |(Sum (hd::tl),str) -> Sum ((diff (hd,str))::[(diff ((Sum tl),str))])

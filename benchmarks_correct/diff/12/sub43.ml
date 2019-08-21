@@ -1,14 +1,14 @@
-type ae = CONST of int
-	|VAR of string
-	|POWER of string * int
-	|TIMES of ae list
-	|SUM of ae list
+type aexp = Const of int
+	|Var of string
+	|Power of string * int
+	|Times of aexp list
+	|Sum of aexp list
 
 let rec diff (exp ,s) = 
 	let rec mul (a, b) = 
 		match b with
 		| [] -> []
-		| hd::tl ->  (TIMES ( (diff (hd,s))::(List.append a tl)) ) ::mul(hd::a, tl)
+		| hd::tl ->  (Times ( (diff (hd,s))::(List.append a tl)) ) ::mul(hd::a, tl)
 	in
 	let rec hap a = 
 		match a with
@@ -16,8 +16,8 @@ let rec diff (exp ,s) =
 		| hd::tl -> (diff (hd, s))::(hap tl)
 	in
 	match exp with
-	| CONST a -> CONST 0
-	| VAR a -> if a = s then CONST 1 else CONST 0
-	| POWER (a, b) -> if a = s then TIMES [CONST b; POWER (a, b-1)] else CONST 0
-	| TIMES a -> SUM (mul ([], a))
-	| SUM a -> SUM (hap a)
+	| Const a -> Const 0
+	| Var a -> if a = s then Const 1 else Const 0
+	| Power (a, b) -> if a = s then Times [Const b; Power (a, b-1)] else Const 0
+	| Times a -> Sum (mul ([], a))
+	| Sum a -> Sum (hap a)

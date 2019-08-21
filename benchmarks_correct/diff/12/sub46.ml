@@ -1,18 +1,18 @@
-type ae = 
-	  CONST of int
-	| VAR of string
-	| POWER of string * int
-	| TIMES of ae list
-	| SUM of ae list
+type aexp = 
+	  Const of int
+	| Var of string
+	| Power of string * int
+	| Times of aexp list
+	| Sum of aexp list
 
 let rec diff (exp, var) =
 	match exp with
-	| CONST(_) -> CONST 0
-	| VAR(str) -> if str = var then CONST 1 else CONST 0
-	| POWER(str, n) -> if str = var then TIMES( (CONST n) :: (POWER(str, n-1)) :: []) else CONST 0
-	| TIMES([]) | SUM([]) -> CONST 0
-	| TIMES(hd::tl) -> SUM(
-						(TIMES( (diff(hd, var))::tl )) :: 
-						(TIMES( hd :: diff(TIMES(tl), var) :: [])) :: [])
-	| SUM(hd::tl) -> SUM( (diff(hd, var)) :: (diff(SUM(tl), var)) :: [])
+	| Const(_) -> Const 0
+	| Var(str) -> if str = var then Const 1 else Const 0
+	| Power(str, n) -> if str = var then Times( (Const n) :: (Power(str, n-1)) :: []) else Const 0
+	| Times([]) | Sum([]) -> Const 0
+	| Times(hd::tl) -> Sum(
+						(Times( (diff(hd, var))::tl )) :: 
+						(Times( hd :: diff(Times(tl), var) :: [])) :: [])
+	| Sum(hd::tl) -> Sum( (diff(hd, var)) :: (diff(Sum(tl), var)) :: [])
 	

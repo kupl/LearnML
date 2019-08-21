@@ -1,23 +1,23 @@
-type ae = CONST of int
-	| VAR of string
-	| POWER of string * int
-	| TIMES of ae list
-	| SUM of ae list
+type aexp = Const of int
+	| Var of string
+	| Power of string * int
+	| Times of aexp list
+	| Sum of aexp list
 
 exception InvalidArgument
 
 let rec diff (a, s) =
 match a with
-| CONST c -> CONST 0
-| VAR c -> if c=s then CONST 1
-		else CONST 0
-| POWER (c, n) -> if c=s then 
-			if n!=0 then TIMES (CONST n :: [POWER (c, n-1)])
-			else CONST 0
-		else CONST 0
-| TIMES [] -> raise InvalidArgument
-| TIMES (hd::[]) -> diff (hd, s)
-| TIMES (hd::tl) -> SUM [TIMES [ (diff (hd, s)) ; TIMES tl] ; (TIMES [ hd ; (diff (TIMES tl, s))])] 
-| SUM [] -> raise InvalidArgument
-| SUM (hd::[]) -> diff (hd, s)
-| SUM (hd::tl) -> SUM [diff (hd, s) ; diff(SUM tl, s)]
+| Const c -> Const 0
+| Var c -> if c=s then Const 1
+		else Const 0
+| Power (c, n) -> if c=s then 
+			if n!=0 then Times (Const n :: [Power (c, n-1)])
+			else Const 0
+		else Const 0
+| Times [] -> raise InvalidArgument
+| Times (hd::[]) -> diff (hd, s)
+| Times (hd::tl) -> Sum [Times [ (diff (hd, s)) ; Times tl] ; (Times [ hd ; (diff (Times tl, s))])] 
+| Sum [] -> raise InvalidArgument
+| Sum (hd::[]) -> diff (hd, s)
+| Sum (hd::tl) -> Sum [diff (hd, s) ; diff(Sum tl, s)]

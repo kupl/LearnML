@@ -1,13 +1,13 @@
 (* HW2 exercise2 2009-11697 Kim HyunJoon *)
 (* Mathemadiga *)
 
-type ae = CONST of int
-	| VAR of string
-	| POWER of string * int
-	| TIMES of ae list
-	| SUM of ae list
+type aexp = Const of int
+	| Var of string
+	| Power of string * int
+	| Times of aexp list
+	| Sum of aexp list
 
-let rec diff : ae * string -> ae =
+let rec diff : aexp * string -> aexp =
 	fun (exp, str) ->
 	let rec partialDiff lst n =
 		match lst with
@@ -16,35 +16,35 @@ let rec diff : ae * string -> ae =
 	and myTimes lst nth =
 		match lst with
 		| [] -> []
-		| _ -> if nth < (List.length lst) then (TIMES (partialDiff lst nth))::(myTimes lst (nth+1)) else []
+		| _ -> if nth < (List.length lst) then (Times (partialDiff lst nth))::(myTimes lst (nth+1)) else []
 	and myDiff exp = 
 		match exp with
-		| CONST n -> (CONST 0)
-		| VAR var ->
-			if var = str then (CONST 1)
-			else (CONST 0)	
-		| POWER (var, n) -> 
-			if var = str then if n = 0 then (CONST 0) else (TIMES [(CONST n); (POWER (var, (n-1)))])
-			else (CONST 0)
-		| TIMES lst -> (SUM (myTimes lst 0))
-		| SUM lst -> (SUM (List.map myDiff lst))
+		| Const n -> (Const 0)
+		| Var var ->
+			if var = str then (Const 1)
+			else (Const 0)	
+		| Power (var, n) -> 
+			if var = str then if n = 0 then (Const 0) else (Times [(Const n); (Power (var, (n-1)))])
+			else (Const 0)
+		| Times lst -> (Sum (myTimes lst 0))
+		| Sum lst -> (Sum (List.map myDiff lst))
 	in
 	let rec removeZero exp =
 		match exp with
-		| TIMES lst -> if List.mem (CONST 0) lst then (CONST 0) else (TIMES (List.map removeZero lst))
-		| SUM lst -> SUM (List.map removeZero (List.filter (fun exp -> if exp != (CONST 0) then true else false) lst))
+		| Times lst -> if List.mem (Const 0) lst then (Const 0) else (Times (List.map removeZero lst))
+		| Sum lst -> Sum (List.map removeZero (List.filter (fun exp -> if exp != (Const 0) then true else false) lst))
 		| _ -> exp 
 	in
 	(removeZero (myDiff exp))
 
 
 (*
-let one = CONST 1
-let x = VAR "x"
-let x2 = POWER ("x", 2)
-let a = VAR "a"
-let b = VAR "b"
-let c = VAR "c"
-let eq = SUM [(TIMES [a;x2]);(TIMES [b;x]);c]
+let one = Const 1
+let x = Var "x"
+let x2 = Power ("x", 2)
+let a = Var "a"
+let b = Var "b"
+let c = Var "c"
+let eq = Sum [(Times [a;x2]);(Times [b;x]);c]
 *)
 

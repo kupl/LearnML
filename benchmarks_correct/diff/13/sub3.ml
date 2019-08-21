@@ -5,36 +5,36 @@
  * 2006-11855, Jung Yonghyuk (ever103@snu.ac.kr)
  *)
 
-type ae = CONST of int
-	| VAR of string
-	| POWER of string * int
-	| TIMES of ae list
-	| SUM of ae list
+type aexp = Const of int
+	| Var of string
+	| Power of string * int
+	| Times of aexp list
+	| Sum of aexp list
 
 exception InvalidArgument
 
-(* diff: ae * string -> ae *)
-let rec diff (ae, s) =
-	match ae with
-	| CONST i -> CONST 0
-	| VAR s' ->
-		if s = s' then CONST 1
-		else CONST 0
-	| POWER (s', i) ->
-		if s = s' then TIMES [(CONST i) ; (POWER (s, (i-1)))]
-		else CONST 0
-	| SUM al ->
+(* diff: aexp * string -> aexp *)
+let rec diff (aexp, s) =
+	match aexp with
+	| Const i -> Const 0
+	| Var s' ->
+		if s = s' then Const 1
+		else Const 0
+	| Power (s', i) ->
+		if s = s' then Times [(Const i) ; (Power (s, (i-1)))]
+		else Const 0
+	| Sum al ->
 		(match al with
 		| [] -> raise InvalidArgument
-		| _ -> SUM (List.map (fun x -> diff (x, s)) al)
+		| _ -> Sum (List.map (fun x -> diff (x, s)) al)
 		)
-	| TIMES al ->
+	| Times al ->
 		(match al with
 		| [] -> raise InvalidArgument
 		| h::[] -> diff (h, s)
 		| h::t ->
 			let f = h in
 			let f' = diff (f, s) in
-			let g = TIMES t in
+			let g = Times t in
 			let g' = diff (g, s) in
-			SUM [TIMES [f'; g]; TIMES [f; g']])
+			Sum [Times [f'; g]; Times [f; g']])

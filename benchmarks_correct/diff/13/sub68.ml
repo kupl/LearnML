@@ -1,25 +1,25 @@
-type ae = CONST of int
-| VAR of string
-| POWER of string * int
-| TIMES of ae list
-| SUM of ae list
+type aexp = Const of int
+| Var of string
+| Power of string * int
+| Times of aexp list
+| Sum of aexp list
 exception InvalidArgument
 let rec diff (arg,var) = match arg with
-| (CONST a)->CONST 0
-| (VAR a)->
-if a = var then CONST 1
-else CONST 0
-| POWER (a,b) ->
-if a = var then TIMES(CONST b::POWER(a, b-1)::[])
-else CONST 0
-| (TIMES a) -> 
+| (Const a)->Const 0
+| (Var a)->
+if a = var then Const 1
+else Const 0
+| Power (a,b) ->
+if a = var then Times(Const b::Power(a, b-1)::[])
+else Const 0
+| (Times a) -> 
 if List.length(a) = 0 then raise InvalidArgument
 else if List.length(a) = 1 then diff(List.hd(a), var)
 else
-SUM(TIMES(diff(List.hd(a),var)::List.tl(a))::TIMES(List.hd(a)::diff(TIMES(List.tl(a)),var)::[])::[])
-| (SUM a) -> 
+Sum(Times(diff(List.hd(a),var)::List.tl(a))::Times(List.hd(a)::diff(Times(List.tl(a)),var)::[])::[])
+| (Sum a) -> 
 if List.length(a) = 0 then raise InvalidArgument
 else if List.length(a) = 1 then diff(List.hd(a), var)
 else
 let diff2 x = diff(x, var)
-in SUM (List.map diff2 a)
+in Sum (List.map diff2 a)

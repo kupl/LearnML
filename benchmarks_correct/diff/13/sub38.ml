@@ -1,28 +1,28 @@
-type ae = CONST of int
-        | VAR of string
-        | POWER of string * int
-        | TIMES of ae list
-        | SUM of ae list
+type aexp = Const of int
+        | Var of string
+        | Power of string * int
+        | Times of aexp list
+        | Sum of aexp list
 
 exception InvalidArgument
 
 let rec diff (xp, str) =
   match xp with
-  | CONST _ -> CONST 0
-  | VAR str0 ->
-      if str = str0 then CONST 1
-      else CONST 0
-  | POWER (str0, n) ->
+  | Const _ -> Const 0
+  | Var str0 ->
+      if str = str0 then Const 1
+      else Const 0
+  | Power (str0, n) ->
       if str = str0
-      then TIMES [CONST n; POWER (str0, n-1)]
-      else CONST 0
-  | TIMES [] -> raise InvalidArgument
-  | TIMES [xp0] -> diff (xp0, str)
-  | TIMES xp_ls ->
-      SUM [TIMES ((diff (List.hd xp_ls, str))::(List.tl xp_ls));
-           TIMES [List.hd xp_ls;
-                  diff (TIMES (List.tl xp_ls), str)]]
-  | SUM [] -> raise InvalidArgument
-  | SUM [xp0] -> diff (xp0, str)
-  | SUM xp_ls ->
-      SUM (List.map (fun _xp -> diff (_xp, str)) xp_ls)
+      then Times [Const n; Power (str0, n-1)]
+      else Const 0
+  | Times [] -> raise InvalidArgument
+  | Times [xp0] -> diff (xp0, str)
+  | Times xp_ls ->
+      Sum [Times ((diff (List.hd xp_ls, str))::(List.tl xp_ls));
+           Times [List.hd xp_ls;
+                  diff (Times (List.tl xp_ls), str)]]
+  | Sum [] -> raise InvalidArgument
+  | Sum [xp0] -> diff (xp0, str)
+  | Sum xp_ls ->
+      Sum (List.map (fun _xp -> diff (_xp, str)) xp_ls)
