@@ -1,7 +1,7 @@
-  type exp =
+  type lambda =
   | V of var
-  | P of var * exp
-  | C of exp * exp
+  | P of var * lambda
+  | C of lambda * lambda
 
   let rec checklst (*true if there is no this value before*)
   = fun lst val1 -> match lst with
@@ -9,10 +9,10 @@
   | [] -> true
 
   let rec checkExp
-  = fun lst exp -> match exp with
+  = fun lst lambda -> match lambda with
   | V var -> if checklst lst var then false else true
-  | P (var, exp) -> if checklst lst var then checkExp (var::lst) exp else checkExp lst exp
-  | C (exp1, exp2) ->if (checkExp lst exp1 == true && checkExp lst exp2 == true) then true else false
+  | P (var, lambda) -> if checklst lst var then checkExp (var::lst) lambda else checkExp lst lambda
+  | C (lambda1, lambda2) ->if (checkExp lst lambda1 == true && checkExp lst lambda2 == true) then true else false
 
-   let check : exp -> bool
-  = fun exp -> let varlst = [] in checkExp varlst exp
+   let check : lambda -> bool
+  = fun lambda -> let varlst = [] in checkExp varlst lambda

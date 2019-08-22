@@ -1,16 +1,16 @@
 
-  type exp =
+  type lambda =
   | V of var
-  | P of var * exp
-  | C of exp * exp
+  | P of var * lambda
+  | C of lambda * lambda
   and var = string
 
-  let rec makePList exp pl = match exp with
+  let rec makePList lambda pl = match lambda with
   | V v -> pl
   | P (v, e) -> pl @ [v] @ makePList e pl
   | C (e1, e2) -> makePList e1 pl @ makePList e2 pl
 
-  let rec makeVList exp vl = match exp with
+  let rec makeVList lambda vl = match lambda with
   | V v -> vl @ [v]
   | P (v, e) -> vl @ makeVList e vl
   | C (e1, e2) -> makeVList e1 vl @ makeVList e2 vl
@@ -25,11 +25,11 @@
 
 
 
-  let rec check : exp -> bool
-  = fun exp -> match exp with
+  let rec check : lambda -> bool
+  = fun lambda -> match lambda with
   | V v -> false
   | P (v, e)->
-      let pl = makePList exp []
-        in let vl = makeVList exp []
+      let pl = makePList lambda []
+        in let vl = makeVList lambda []
           in compareList pl vl
   | C (e1, e2) -> check e1 && check e2

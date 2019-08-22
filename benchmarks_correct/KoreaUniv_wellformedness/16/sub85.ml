@@ -1,12 +1,12 @@
 
-  type exp =
+  type lambda =
   | V of var
-  | P of var * exp
-  | C of exp * exp
+  | P of var * lambda
+  | C of lambda * lambda
   and var = string
 
-  let rec evaluate_vpc expression vpc =
-    match expression with
+  let rec evaluate_vpc lambdaression vpc =
+    match lambdaression with
     |V a -> let rec check lst st = 
           match lst with      
           [] -> false 
@@ -14,6 +14,6 @@
     | P (pa, ex1) -> if ( evaluate_vpc ex1 (vpc @ [pa]) ) then true else false
     | C (ex1, ex2) -> if (evaluate_vpc ex1 vpc && evaluate_vpc ex2 vpc) then true else false;;
 
-  let check : exp -> bool
-  = fun exp -> evaluate_vpc exp [];; (* raise NotImplemented *) (* TODO *)
+  let check : lambda -> bool
+  = fun lambda -> evaluate_vpc lambda [];; (* raise NotImplemented *) (* TODO *)
 

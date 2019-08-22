@@ -1,13 +1,13 @@
 
-  type exp =
+  type lambda =
   | V of var
-  | P of var * exp
-  | C of exp * exp
+  | P of var * lambda
+  | C of lambda * lambda
   and var = string
 
-  let rec check : exp -> bool
-  = fun exp ->
-  match exp with 
+  let rec check : lambda -> bool
+  = fun lambda ->
+  match lambda with 
   |P(s, V a)                -> if (s= a) then true else false
   |P(s, P(s1, e1))          -> 
     begin match e1 with 

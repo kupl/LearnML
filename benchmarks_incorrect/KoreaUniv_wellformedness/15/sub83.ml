@@ -1,6 +1,6 @@
-  type exp = V of var
-           | P of var * exp
-           | C of exp * exp
+  type lambda = V of var
+           | P of var * lambda
+           | C of lambda * lambda
   and var = string
 let rec exist v lst = match lst with 
 | [] -> false
@@ -11,5 +11,5 @@ let rec checker e lst = match e with
 | P (v,e) -> checker e (lst@[v])
 | C(e1,e2) ->if ((checker e1 lst) = (checker e2 lst)) then true else false
  
-let rec check : exp -> bool
+let rec check : lambda -> bool
 = fun e -> checker e []

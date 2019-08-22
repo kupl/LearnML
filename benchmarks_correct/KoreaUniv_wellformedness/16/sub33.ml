@@ -1,12 +1,12 @@
 
-  type exp =
+  type lambda =
   | V of var
-  | P of var * exp
-  | C of exp * exp
+  | P of var * lambda
+  | C of lambda * lambda
   and var = string
 
-  let check : exp -> bool
-  = fun exp -> 
+  let check : lambda -> bool
+  = fun lambda -> 
   let rec m x l = 
     match l with
     | [] -> false
@@ -16,4 +16,4 @@
     | P(x, y) -> find y (x :: l) 
     | C(x, y) -> find x l && find y l
     | V(x) -> m x l
-  in find exp []
+  in find lambda []

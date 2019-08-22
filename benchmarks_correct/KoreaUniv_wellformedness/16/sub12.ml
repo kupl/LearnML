@@ -1,8 +1,8 @@
 
-  type exp =
+  type lambda =
   | V of var
-  | P of var * exp
-  | C of exp * exp
+  | P of var * lambda
+  | C of lambda * lambda
   and var = string
 
   let rec findvariable : var -> var list -> bool
@@ -11,9 +11,9 @@
   		| [] -> false
   		| hd::tl -> if hd = v then true else findvariable v tl
 
-  let rec checkcheck : exp -> var list -> bool
-  = fun exp l ->
-  	match exp with
+  let rec checkcheck : lambda -> var list -> bool
+  = fun lambda l ->
+  	match lambda with
   		| V a ->
   			findvariable a l
   		| P (a, b) ->
@@ -21,6 +21,6 @@
   		| C (a, b) ->
   			(checkcheck a l)&&(checkcheck b l)
 
-  let check : exp -> bool
-  = fun exp ->
-  	checkcheck exp []
+  let check : lambda -> bool
+  = fun lambda ->
+  	checkcheck lambda []

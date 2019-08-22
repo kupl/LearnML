@@ -1,12 +1,12 @@
-  type exp = V of var
-           | P of var * exp
-           | C of exp * exp
+  type lambda = V of var
+           | P of var * lambda
+           | C of lambda * lambda
   and var = string
   
-  let rec check : exp -> bool
+  let rec check : lambda -> bool
   = fun e -> true
 
-	let rec check_2 : exp*(var list) -> bool
+	let rec check_2 : lambda*(var list) -> bool
 	= fun (e,l) ->
 	match e with
 	V v ->
@@ -17,5 +17,5 @@
 | C (e1,e2) -> if check_2 (e1,l)=true && check_2 (e2,l)=true then true
 								else false;;
 
-	let check : exp -> bool
+	let check : lambda -> bool
 	= fun e -> check_2 (e,[]);;

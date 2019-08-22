@@ -1,6 +1,6 @@
-type exp = V of var
-					|P of var * exp
-					|C of exp * exp
+type lambda = V of var
+					|P of var * lambda
+					|C of lambda * lambda
 and var = string
 
 let eval mlist = 
@@ -10,6 +10,6 @@ let eval mlist =
 			|P (a,b)-> ival b(a::one_list)
 			|C (a,b) ->ival a one_list && ival b one_list in ival mlist[]
 
-let check : exp -> bool
+let check : lambda -> bool
 = fun e -> if (eval e=true)  then true else false
 ;;

@@ -1,11 +1,11 @@
 
-  type exp =
+  type lambda =
       | V of var
-      | P of var * exp
-      | C of exp * exp
+      | P of var * lambda
+      | C of lambda * lambda
   and var = string
-  let rec check : exp -> bool
-    = fun exp -> 
+  let rec check : lambda -> bool
+    = fun lambda -> 
 
       (*let lst = [](*default list*)*)
 
@@ -29,4 +29,4 @@
         |[] -> false
         |hd::tl -> if hd == v then true else (checklst e tl)*)
 
-      in (checklst exp [])
+      in (checklst lambda [])

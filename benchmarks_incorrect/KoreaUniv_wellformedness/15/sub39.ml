@@ -1,9 +1,9 @@
-  type exp = V of var
-           | P of var * exp
-           | C of exp * exp
+  type lambda = V of var
+           | P of var * lambda
+           | C of lambda * lambda
   and var = string
   
-  let rec ptree : var * exp -> bool
+  let rec ptree : var * lambda -> bool
   =fun (e1,e2) -> match e2 with
   | P (x,y) -> 
   (match y with
@@ -14,7 +14,7 @@
   | C (x,y) -> ptree(e1,x) && ptree(e1,y)
   | V x -> e1=x
   
-  let rec ctree : exp * exp -> bool
+  let rec ctree : lambda * lambda -> bool
   =fun (e1,e2) -> match e1,e2 with
   | P (x1,y1), P (x2,y2) -> ptree(x1,y1) && ptree(x2,y2)
   | C (x1,y1), P (x2,y2) -> ctree(x1,y1) && ptree(x2,y2)
@@ -23,7 +23,7 @@
   | V x, _ -> false
   | _, V y -> false
   
-  let check : exp -> bool
+  let check : lambda -> bool
   =fun e -> match e with
   | P (x,y) -> ptree (x,y)
   | C (x,y) -> ctree (x,y)

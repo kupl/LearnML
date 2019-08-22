@@ -1,6 +1,6 @@
-  type exp = V of var
-           | P of var * exp
-           | C of exp * exp
+  type lambda = V of var
+           | P of var * lambda
+           | C of lambda * lambda
   and var = string
 
   let append_item lst a = lst @ [a]
@@ -16,5 +16,5 @@
   | P(a,e) -> check_scope e (append_item lst a)
   | C(e1,e2) -> (check_scope e1 lst) && (check_scope e2 lst)
 
-  let check : exp -> bool
+  let check : lambda -> bool
   =fun e -> let init = [] in check_scope e init

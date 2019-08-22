@@ -1,8 +1,8 @@
 
-  type exp =
+  type lambda =
   | V of var
-  | P of var * exp
-  | C of exp * exp
+  | P of var * lambda
+  | C of lambda * lambda
   and var = string
 
   let rec check3 v l= match l with
@@ -11,8 +11,8 @@
 
   let rec check2 e l = match e with
      V(v)->check3 v l
-    |P(v, exp1)->check2 exp1 (l@[v])
-    |C(exp2, exp3)->check2 exp2 l&&check2 exp3 l
+    |P(v, lambda1)->check2 lambda1 (l@[v])
+    |C(lambda2, lambda3)->check2 lambda2 l&&check2 lambda3 l
 
-  let check : exp -> bool
-  = fun exp -> check2 exp []
+  let check : lambda -> bool
+  = fun lambda -> check2 lambda []

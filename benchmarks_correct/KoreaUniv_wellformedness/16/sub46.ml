@@ -1,26 +1,26 @@
 
-  type exp =
+  type lambda =
   | V of var
-  | P of var * exp
-  | C of exp * exp
+  | P of var * lambda
+  | C of lambda * lambda
   and var = string
 
-  let rec expToVar : exp -> var
-  = fun exp ->
-      match exp with
+  let rec lambdaToVar : lambda -> var
+  = fun lambda ->
+      match lambda with
       |V var        -> var
-      |P (var,ex)   -> expToVar(ex)
-      |C (ex1,ex2)  -> expToVar(ex2)
+      |P (var,ex)   -> lambdaToVar(ex)
+      |C (ex1,ex2)  -> lambdaToVar(ex2)
 
-  let rec check : exp -> bool
-  = fun exp -> 
-    let rec pcheck : exp * (var list) -> bool
-    = fun (aexp, vlist) -> 
-      match aexp with
+  let rec check : lambda -> bool
+  = fun lambda -> 
+    let rec pcheck : lambda * (var list) -> bool
+    = fun (alambda, vlist) -> 
+      match alambda with
         V s -> (match vlist with
           [] -> false
           | h::t -> if s = h then true else pcheck (V s, t))
-      | P (v,exp) -> pcheck (exp, v::vlist)
-      | C (exp1, exp2) -> (pcheck (exp1,vlist)) && (pcheck (exp2,vlist))            
+      | P (v,lambda) -> pcheck (lambda, v::vlist)
+      | C (lambda1, lambda2) -> (pcheck (lambda1,vlist)) && (pcheck (lambda2,vlist))            
     in 
-  pcheck (exp,[]);;
+  pcheck (lambda,[]);;

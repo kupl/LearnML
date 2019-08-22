@@ -1,15 +1,15 @@
 
-type exp = V of var
-         | P of var * exp
-         | C of exp * exp
+type lambda = V of var
+         | P of var * lambda
+         | C of lambda * lambda
 and var = string
 
 
-let rec chk : exp -> string list -> bool
+let rec chk : lambda -> string list -> bool
 = fun e env ->
 	match e with
 	| V (a) -> if findInEnv a env then true else false
-	| P (v, exp) -> chk exp (v::env)
+	| P (v, lambda) -> chk lambda (v::env)
 	| C (e1, e2) -> (chk e1 env) && (chk e2 env)
 	
 and findInEnv : string -> string list -> bool
@@ -19,6 +19,6 @@ and findInEnv : string -> string list -> bool
 	|hd::tl -> if var = hd then true else findInEnv var tl
 
 
-let check : exp -> bool
+let check : lambda -> bool
 =fun e -> (* TODO *)
 	chk e []

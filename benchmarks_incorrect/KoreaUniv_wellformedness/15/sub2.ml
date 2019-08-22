@@ -1,6 +1,6 @@
-  type exp = V of var
-           | P of var * exp
-           | C of exp * exp
+  type lambda = V of var
+           | P of var * lambda
+           | C of lambda * lambda
   and var = string
 
 let rec comblist = fun (l1,l2) -> match l1 with
@@ -18,13 +18,13 @@ let rec complist : string list -> string list
 | hd::tl -> if (searchlist(hd, tl)) then complist(tl)
 else hd::tl
 
-let rec vars : exp -> string list
+let rec vars : lambda -> string list
 =fun e -> match e with
 | V x -> [x]
 | P (x, e1) -> vars(e1)
 | C (e1, e2) -> comblist(vars(e1),vars(e2))
 
-let rec used : exp -> string list
+let rec used : lambda -> string list
 =fun e -> match e with
 | V x -> []
 | P (x, e1) -> x::used(e1)
@@ -36,5 +36,5 @@ let rec matchvar : (string list * string list) -> bool
 | hd::tl, us -> if (searchlist(hd, us)) then matchvar(tl, us)
 else false
   
-  let check : exp -> bool
+  let check : lambda -> bool
   =fun e -> matchvar(complist(vars(e)), used(e))

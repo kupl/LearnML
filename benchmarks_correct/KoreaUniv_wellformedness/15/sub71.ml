@@ -1,23 +1,23 @@
 	
-type exp = V of var
-		| P of var * exp  (*procedure*)
-		| C of exp * exp  (*call expression(procedure)*)
+type lambda = V of var
+		| P of var * lambda  (*procedure*)
+		| C of lambda * lambda  (*call lambdaression(procedure)*)
 and var = string
 
-let rec check exp =
-			match exp with
+let rec check lambda =
+			match lambda with
 				V var -> false
-				|_->checkExp(exp,[])
+				|_->checkExp(lambda,[])
 
 
-and checkExp = fun(exp,env)->
-		match exp with
+and checkExp = fun(lambda,env)->
+		match lambda with
 			V var-> (match env with 	
 				[]-> false
-				|hd::tail-> if hd = var then true else checkExp (exp,tail)
+				|hd::tail-> if hd = var then true else checkExp (lambda,tail)
 				)
-			|P (var,exp)-> 	checkExp(exp,(var::env))
+			|P (var,lambda)-> 	checkExp(lambda,(var::env))
 			
-			|C (exp1,exp2)->  
-				if checkExp(exp1,env) = true then 
-				if checkExp(exp2,env) = true then true else false else false
+			|C (lambda1,lambda2)->  
+				if checkExp(lambda1,env) = true then 
+				if checkExp(lambda2,env) = true then true else false else false

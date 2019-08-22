@@ -1,11 +1,11 @@
 
-	type exp =
+	type lambda =
 	| V of var
-	| P of var * exp
-	| C of exp * exp
+	| P of var * lambda
+	| C of lambda * lambda
 	and var = string
 
-let rec check2 : exp*(var list) -> bool
+let rec check2 : lambda*(var list) -> bool
 = fun (e,l) ->
 	match e with
 	|V v ->
@@ -16,5 +16,5 @@ let rec check2 : exp*(var list) -> bool
 	|C(e1, e2)-> if check2(e1,l) = true && check2(e2,l) = true then true
 		else false
 
-let rec check : exp -> bool
-= fun exp -> check2(exp, [])
+let rec check : lambda -> bool
+= fun lambda -> check2(lambda, [])

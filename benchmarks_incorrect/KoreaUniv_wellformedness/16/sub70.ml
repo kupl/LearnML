@@ -1,8 +1,8 @@
 
-  type exp =
+  type lambda =
   | V of var
-  | P of var * exp
-  | C of exp * exp
+  | P of var * lambda
+  | C of lambda * lambda
   and var = string
 
   let rec comparelist : 'a list -> 'a list -> 'a list
@@ -12,21 +12,21 @@
     else (comparelist [hd1] tl2)@(comparelist tl1 vardata)
 	| ([],hd2::tl2)       -> hd2::tl2;; 
 	
-  let rec varlist : exp -> var list
-  = fun exp ->  match exp with
+  let rec varlist : lambda -> var list
+  = fun lambda ->  match lambda with
 	| V v     -> [v]
   | P (_, a) -> varlist a
   | C (a, b) -> varlist a@varlist b;;
 
-  let rec proclist : exp -> var list
-	= fun exp -> match exp with
+  let rec proclist : lambda -> var list
+	= fun lambda -> match lambda with
 	| P (v, a) -> v::proclist a
 	| C (a, b) -> proclist a@proclist b
   |_         -> [];;
 
-  let check : exp -> bool
-  = fun exp -> let list1 = proclist exp in
-		            let list2 = varlist exp in
+  let check : lambda -> bool
+  = fun lambda -> let list1 = proclist lambda in
+		            let list2 = varlist lambda in
 								 let list3 = comparelist list1 list2 in
 										if list3 = [] then true
 										else false;;

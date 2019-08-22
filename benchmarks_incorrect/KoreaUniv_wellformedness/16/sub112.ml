@@ -1,9 +1,9 @@
 
-  type exp =
+  type lambda =
   | V of var
-  | P of var * exp
-  | C of exp * exp
+  | P of var * lambda
+  | C of lambda * lambda
   and var = string
 
-  let check : exp -> bool
-  = fun exp -> false;; 
+  let check : lambda -> bool
+  = fun lambda -> false;; 

@@ -1,6 +1,6 @@
-  type exp = V of var
-           | P of var * exp
-           | C of exp * exp
+  type lambda = V of var
+           | P of var * lambda
+           | C of lambda * lambda
   and var = string
  
 	let rec checklist : string * string list -> bool
@@ -9,11 +9,11 @@
 														else checklist(s,tl)
 								| [] -> false
 
-	let rec parse : exp * string list -> bool
+	let rec parse : lambda * string list -> bool
 	=fun (e,l) -> match e with
 								| V a -> checklist(a,l)
 								| P (v,e) -> parse(e,(v::l))
 								| C (e1,e2) -> parse(e1,l) && parse(e2,l)
 	
-  let check : exp -> bool
+  let check : lambda -> bool
   =fun e -> parse (e,[])

@@ -1,9 +1,9 @@
-  type exp = V of var
-           | P of var * exp
-           | C of exp * exp
+  type lambda = V of var
+           | P of var * lambda
+           | C of lambda * lambda
   and var = string
  
-   let check : exp -> bool
+   let check : lambda -> bool
   =fun e -> true
  
 let rec exist v lst = match lst with 
@@ -15,6 +15,6 @@ let rec finding e lst = match e with
 | P (v,e) ->  finding e (lst@[v])
 | C (e1,e2) -> if ((finding e1 lst) && (finding e2 lst)) then true else false
  
-let rec check : exp -> bool
+let rec check : lambda -> bool
 = fun e -> finding e []
  

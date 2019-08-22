@@ -1,6 +1,6 @@
-  type exp = V of var
-           | P of var * exp
-           | C of exp * exp
+  type lambda = V of var
+           | P of var * lambda
+           | C of lambda * lambda
   and var = string
   
 let rec seek : var -> var list -> bool
@@ -9,9 +9,9 @@ let rec seek : var -> var list -> bool
   | [] -> false
   | hd :: tl -> if hd = v then true else seek v tl
 
-let check : exp -> bool
+let check : lambda -> bool
 = fun e ->
-  let rec check_sub : exp -> var list -> bool
+  let rec check_sub : lambda -> var list -> bool
   = fun e li ->
     match e with
     | V v -> seek v li

@@ -1,12 +1,12 @@
-  type exp = V of var
-           | P of var * exp
-           | C of exp * exp
+  type lambda = V of var
+           | P of var * lambda
+           | C of lambda * lambda
   and var = string
   
-  let rec check : exp -> bool
+  let rec check : lambda -> bool
   =fun e -> 
-    let rec remove_var exp var =
-    match exp with
+    let rec remove_var lambda var =
+    match lambda with
     | P (v,ex) -> P (v, remove_var ex var)
     | C (ex,ex') -> C (remove_var ex var, remove_var ex' var)
     | V v -> if (v = var) then V "" else V v

@@ -1,9 +1,9 @@
-  type exp = V of var
-           | P of var * exp
-           | C of exp * exp
+  type lambda = V of var
+           | P of var * lambda
+           | C of lambda * lambda
   and var = string
 
-  let rec extract : exp -> var list
+  let rec extract : lambda -> var list
   =fun e -> match e with 
   			| V v -> []
   		    | P (v1, e1) -> [v1] @ extract e1
@@ -17,12 +17,12 @@
   				   | head :: tail -> if ((v = head) || search (v, tail)) then true 
   									 else false
  
-  let rec check2 : exp * var list -> bool
+  let rec check2 : lambda * var list -> bool
   =fun (e, a) -> match e with
   			     | V v1 -> search (v1, a)
   			     | P (v1, e1) -> check2 (e1, a)
   		   	     | C (e1, e2) -> check2 (e1, a) && check2 (e2, a)
 
-  let check : exp -> bool
+  let check : lambda -> bool
   =fun e -> check2 (e, extract e)
  

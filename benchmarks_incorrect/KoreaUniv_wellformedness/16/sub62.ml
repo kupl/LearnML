@@ -1,20 +1,20 @@
 
-  type exp =
+  type lambda =
   | V of var
-  | P of var * exp
-  | C of exp * exp
+  | P of var * lambda
+  | C of lambda * lambda
   and var = string
   
-let rec getBoundValues : exp -> var list
-	= fun exp ->
-	match exp with
+let rec getBoundValues : lambda -> var list
+	= fun lambda ->
+	match lambda with
 	| V v -> []
 	| P (v, e) -> v::getBoundValues(e)
 	| C (e1, e2) -> getBoundValues(e1)@getBoundValues(e2)
 	
-let rec getValues : exp -> var list
-	= fun exp ->
-	match exp with
+let rec getValues : lambda -> var list
+	= fun lambda ->
+	match lambda with
 	|V v -> [v]
 	|P (v, e) -> getValues(e)
 	|C (e1, e2) -> getValues(e1)@getValues(e2)
@@ -32,5 +32,5 @@ let rec compare : var list * var list-> bool
 	else if compareHelper(valueHd, bound) then compare(valueTl, bound)
 	else false
 	
-  let check : exp -> bool
-  = fun exp -> compare(getValues(exp), getBoundValues(exp))
+  let check : lambda -> bool
+  = fun lambda -> compare(getValues(lambda), getBoundValues(lambda))

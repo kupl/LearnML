@@ -1,18 +1,18 @@
-type exp = V of var
-         | P of var * exp
-         | C of exp * exp
+type lambda = V of var
+         | P of var * lambda
+         | C of lambda * lambda
 and var = string
 
-let check : exp -> bool =
+let check : lambda -> bool =
  fun ex -> 
-  let rec var_list : exp -> var list =
+  let rec var_list : lambda -> var list =
     fun ex2 ->
     match ex2 with
     | V v -> [v]
     | P(v2, ex3) -> var_list ex3
     | C(ex3, ex4) -> (var_list ex3) @ (var_list ex4)
   in
-  let rec proc_list : exp -> var list =
+  let rec proc_list : lambda -> var list =
     fun ex2 ->
     match ex2 with
     | V v -> []

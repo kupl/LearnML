@@ -1,8 +1,8 @@
 
-  type exp =
+  type lambda =
   | V of var
-  | P of var * exp
-  | C of exp * exp
+  | P of var * lambda
+  | C of lambda * lambda
   and var = string
 
   type env = Env of var list
@@ -15,10 +15,10 @@
   = fun (env, var) -> match env with
         | Env(lst) -> Env(lst@[var])
 
-  let rec envCheck : env * exp -> bool 
-  = fun (env, exp) -> match exp with
+  let rec envCheck : env * lambda -> bool 
+  = fun (env, lambda) -> match lambda with
   | V(v) -> envHasIt(env, v)
   | P(v, e) -> envCheck(addVarToEnv(env, v), e)
   | C(e1, e2) -> envCheck(env, e1) && envCheck(env, e2)
-  let check : exp -> bool
-  = fun exp -> envCheck(Env([]), exp)
+  let check : lambda -> bool
+  = fun lambda -> envCheck(Env([]), lambda)

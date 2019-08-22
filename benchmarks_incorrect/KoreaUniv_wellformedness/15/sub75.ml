@@ -1,9 +1,9 @@
-  type exp = V of var
-           | P of var * exp
-           | C of exp * exp
+  type lambda = V of var
+           | P of var * lambda
+           | C of lambda * lambda
   and var = string
   
-  let rec check : exp -> bool
+  let rec check : lambda -> bool
   =fun e -> match e with
 | V x -> true
 | P(x,y) -> check(y) && checkx(x,y)

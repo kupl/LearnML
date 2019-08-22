@@ -1,30 +1,30 @@
 
-  type exp =
+  type lambda =
   | V of var
-  | P of var * exp
-  | C of exp * exp
+  | P of var * lambda
+  | C of lambda * lambda
   and var = string
 
 
-  let rec comp : exp -> string list -> bool
-  = fun exp lst ->
-    match exp with
+  let rec comp : lambda -> string list -> bool
+  = fun lambda lst ->
+    match lambda with
     | V x -> 
 			begin
       match lst with
       | [] -> false
       | hd::tl -> if x = hd then true
-                  else comp exp tl
+                  else comp lambda tl
 			end
-    | P (x, expa) -> comp expa (x::lst)
-		| C (expa, expb) -> (comp expa lst) && (comp expb lst)
+    | P (x, lambdaa) -> comp lambdaa (x::lst)
+		| C (lambdaa, lambdab) -> (comp lambdaa lst) && (comp lambdab lst)
 
 
-  let rec check : exp -> bool
-  = fun exp ->
+  let rec check : lambda -> bool
+  = fun lambda ->
 		let lst = [] in   
-		match exp with
+		match lambda with
 		| V x -> false
-		| P (x, expa) -> comp expa (x::lst)
-		| C (expa, expb) -> (comp expa lst) && (comp expb lst)
+		| P (x, lambdaa) -> comp lambdaa (x::lst)
+		| C (lambdaa, lambdab) -> (comp lambdaa lst) && (comp lambdab lst)
 

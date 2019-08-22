@@ -1,12 +1,12 @@
 
-      type exp =
+      type lambda =
             | V of var
-              | P of var * exp
-                | C of exp * exp
+              | P of var * lambda
+                | C of lambda * lambda
                   and var = string
 
-                    let check : exp -> bool
-                      = fun exp ->
+                    let check : lambda -> bool
+                      = fun lambda ->
                             let rec find = fun e env ->
                                   match e with
                                     | V n ->
@@ -17,4 +17,4 @@
                                                                                                   end
                                                         | P (v, f) -> find f ([v] @ env)
                                                           | C (f1, f2) -> if (find f1 env) && (find f2 env) then true else false
-                                                            in find exp []
+                                                            in find lambda []

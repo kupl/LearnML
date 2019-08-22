@@ -1,26 +1,26 @@
-type exp = V of var
-         | P of var * exp
-         | C of exp * exp
+type lambda = V of var
+         | P of var * lambda
+         | C of lambda * lambda
 and var = string
 
-let rec envmt : exp -> string list
+let rec envmt : lambda -> string list
 = fun e ->
 let lst =[] in
 match e with 
 V v -> lst
-|P (v, expr) -> v::(envmt expr)@lst
-|C (exp1, exp2) -> (envmt exp1)@(envmt exp2)@lst
+|P (v, lambdar) -> v::(envmt lambdar)@lst
+|C (lambda1, lambda2) -> (envmt lambda1)@(envmt lambda2)@lst
 
-let rec exist : exp * string list -> int 
+let rec exist : lambda * string list -> int 
 = fun (e, lst) ->
 match e with
 V v -> (match lst with
 	[] -> 0
 	|hd::tl -> if hd = v then 1 + (exist (e,tl)) else (exist (e, tl)))
-|P (v, exp1) -> (exist (exp1, lst))
-|C (exp1, exp2) -> (exist (exp1, lst)) +  (exist (exp2, lst))
+|P (v, lambda1) -> (exist (lambda1, lst))
+|C (lambda1, lambda2) -> (exist (lambda1, lst)) +  (exist (lambda2, lst))
 
-let check : exp -> bool
+let check : lambda -> bool
 =fun e -> 
 let env = (envmt e) in
 if (exist (e, env)) = 0 then false

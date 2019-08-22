@@ -1,12 +1,12 @@
 
-  type exp =
+  type lambda =
   | V of var
-  | P of var * exp
-  | C of exp * exp
+  | P of var * lambda
+  | C of lambda * lambda
   and var = string
 
-let check : exp -> bool
-  = fun exp -> 
+let check : lambda -> bool
+  = fun lambda -> 
     let rec deletehd : string -> string list -> bool 
     = fun var l -> 
     match l with
@@ -15,12 +15,12 @@ let check : exp -> bool
                     else deletehd var tl
     in 
 
-    let rec isbound : exp -> string list -> bool
-    = fun exp lst ->
-      match exp with
-        | P(var, exp1) -> isbound exp1 (var :: lst) 
-        | C(exp1, exp2) -> isbound exp1 lst && isbound exp2 lst
+    let rec isbound : lambda -> string list -> bool
+    = fun lambda lst ->
+      match lambda with
+        | P(var, lambda1) -> isbound lambda1 (var :: lst) 
+        | C(lambda1, lambda2) -> isbound lambda1 lst && isbound lambda2 lst
         | V(var) -> deletehd var lst
     in 
 
-    isbound exp []
+    isbound lambda []

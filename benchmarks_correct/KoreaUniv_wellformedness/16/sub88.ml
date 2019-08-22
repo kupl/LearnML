@@ -1,8 +1,8 @@
 
-  type exp =
+  type lambda =
   | V of var
-  | P of var * exp
-  | C of exp * exp
+  | P of var * lambda
+  | C of lambda * lambda
   and var = string
 
   let rec chkList
@@ -11,8 +11,8 @@
         | V var -> (match li with 
                       [] -> false
                       | h::t -> if (var = h) then true else chkList (V var, t) )
-        | P (var,exp) -> chkList (exp, var::li)
-        | C (exp1, exp2) -> if(chkList (exp1,li) && chkList (exp2,li)) then true else false
-  let check : exp -> bool
-  = fun exp -> chkList (exp, [])
+        | P (var,lambda) -> chkList (lambda, var::li)
+        | C (lambda1, lambda2) -> if(chkList (lambda1,li) && chkList (lambda2,li)) then true else false
+  let check : lambda -> bool
+  = fun lambda -> chkList (lambda, [])
   

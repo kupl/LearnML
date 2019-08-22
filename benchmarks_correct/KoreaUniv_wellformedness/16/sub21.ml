@@ -1,7 +1,7 @@
 
-type exp = V of var
-				 | P of var * exp
-				 | C of exp * exp
+type lambda = V of var
+				 | P of var * lambda
+				 | C of lambda * lambda
 and var = string
 
 
@@ -16,5 +16,5 @@ let rec findv
 	|P(va,a1)-> findv(a1,(la @ [va]))
 	|C(a1,a2) -> if (findv(a1,la)&&findv(a2,la)) = true then true else false;;
 
-let check : exp -> bool
+let check : lambda -> bool
 = fun a -> findv(a,[]);;

@@ -1,14 +1,14 @@
 
-  type exp =
+  type lambda =
 	| V of var
-	| P of var * exp
-	| C of exp * exp
+	| P of var * lambda
+	| C of lambda * lambda
 	and var = string
 	;;
 
-	let rec has : string -> exp -> bool
-	  = fun str expression ->
-	    match expression with
+	let rec has : string -> lambda -> bool
+	  = fun str lambdaression ->
+	    match lambdaression with
 	    | V(v) -> false
 	    | P(v, e) ->
 	      if v = str then true else false
@@ -16,14 +16,14 @@
 	      (has str e1) || (has str e2)
 	;;
 
-	let rec checkOriginal : exp -> exp -> bool
-	  = fun exp original ->
-	    match exp with
+	let rec checkOriginal : lambda -> lambda -> bool
+	  = fun lambda original ->
+	    match lambda with
 	    | V(v) -> (has v original)
 	    | P(v, e) -> (checkOriginal e original)
 	    | C(e1, e2) -> (checkOriginal e1 original) && (checkOriginal e2 original)
 
-	let rec check : exp -> bool
-	  = fun exp ->
-	    checkOriginal exp exp
+	let rec check : lambda -> bool
+	  = fun lambda ->
+	    checkOriginal lambda lambda
 	;;

@@ -1,12 +1,12 @@
 
-  type exp =
+  type lambda =
   | V of var
-  | P of var * exp
-  | C of exp * exp
+  | P of var * lambda
+  | C of lambda * lambda
   and var = string
 
-  let rec ch : exp * exp list -> bool
-  = fun (exp,lst) -> match exp with
+  let rec ch : lambda * lambda list -> bool
+  = fun (lambda,lst) -> match lambda with
   | V (a) ->( match lst with
         | [] -> false
         | hd::tl -> if hd = V a then true
@@ -16,5 +16,5 @@
   | P (a,b) -> ch (b, V a::lst)
   | C (a,b) -> ch (a, lst) && ch (b, lst)
 
-  let check : exp -> bool
-  = fun exp -> ch (exp , [])
+  let check : lambda -> bool
+  = fun lambda -> ch (lambda , [])

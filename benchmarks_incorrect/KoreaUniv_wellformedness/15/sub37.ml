@@ -1,9 +1,9 @@
-type exp = V of var
-         | P of var * exp
-         | C of exp * exp
+type lambda = V of var
+         | P of var * lambda
+         | C of lambda * lambda
 and var = string
 
-let rec chars : exp -> var
+let rec chars : lambda -> var
 = fun e ->
   match e with
   | V a -> a
@@ -20,7 +20,7 @@ let rec chars : exp -> var
     )
 
 
-let check : exp -> bool
+let check : lambda -> bool
 =fun e ->
   match e with
   | V a -> true

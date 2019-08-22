@@ -1,27 +1,27 @@
 
-  type exp =
+  type lambda =
   | V of var
-  | P of var * exp
-  | C of exp * exp
+  | P of var * lambda
+  | C of lambda * lambda
   and var = string
 
-  let rec matchi : exp -> string list -> bool
-  = fun exp lst -> 
-  	match exp with
+  let rec matchi : lambda -> string list -> bool
+  = fun lambda lst -> 
+  	match lambda with
   	| V(a) -> 
   		begin
   		match lst with 
   			|[] -> false
   			|hd::tl ->if(hd = a) then true
-  					 else matchi exp tl
+  					 else matchi lambda tl
   		end
   	| P(a,b) -> matchi b ([a]@lst)
   	| C(a,b) -> (matchi a lst)&&(matchi b lst)
 
 
-  let rec check : exp -> bool
-  = fun exp ->  
-  	match exp with
-  		| V(a) -> matchi exp []
+  let rec check : lambda -> bool
+  = fun lambda ->  
+  	match lambda with
+  		| V(a) -> matchi lambda []
   		| P(a,b) -> matchi b [a]
   		| C(a,b) -> (matchi a [])&&(matchi b [])

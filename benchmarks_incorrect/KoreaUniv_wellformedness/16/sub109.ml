@@ -1,21 +1,21 @@
 
-  type exp =
+  type lambda =
   | V of var
-  | P of var * exp
-  | C of exp * exp
+  | P of var * lambda
+  | C of lambda * lambda
   and var = string
 
-let rec var_find exp =
-match exp with
+let rec var_find lambda =
+match lambda with
 |V a -> []
-|P (a, exp1) -> a::(var_find exp1)
-|C (exp1, exp2) -> (var_find exp1)@(var_find exp2)
+|P (a, lambda1) -> a::(var_find lambda1)
+|C (lambda1, lambda2) -> (var_find lambda1)@(var_find lambda2)
 
-let rec exp_find exp =
-match exp with
+let rec lambda_find lambda =
+match lambda with
 |V a -> [a]
-|P (a, exp1) -> exp_find exp1
-|C (exp1,exp2) -> (exp_find exp1)@(exp_find exp2)
+|P (a, lambda1) -> lambda_find lambda1
+|C (lambda1,lambda2) -> (lambda_find lambda1)@(lambda_find lambda2)
 
 let rec find s l =
 match l with
@@ -27,6 +27,6 @@ match l2 with
 |[] -> true
 |hd::tl -> (find hd l1)&&(find_match l1 tl)
 
- let check : exp -> bool
-= fun exp ->
-find_match (var_find exp) (exp_find exp)
+ let check : lambda -> bool
+= fun lambda ->
+find_match (var_find lambda) (lambda_find lambda)

@@ -1,16 +1,16 @@
-  type exp = V of var
-           | P of var * exp
-           | C of exp * exp
+  type lambda = V of var
+           | P of var * lambda
+           | C of lambda * lambda
   and var = string
   
-  let check : exp -> bool
+  let check : lambda -> bool
   =fun e -> true 
 
   let rec contain ex l=
   match ex with 
   |V(v)-> if List.mem v l then true else false
   |P(v,y)-> contain y (l@[v])
-  |C(exp1,exp2) -> (contain exp1 l)&&(contain exp2 l)
+  |C(lambda1,lambda2) -> (contain lambda1 l)&&(contain lambda2 l)
 
 let check ex =
   contain ex []

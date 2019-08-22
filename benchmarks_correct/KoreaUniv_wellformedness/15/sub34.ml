@@ -1,7 +1,7 @@
-type exp = 
+type lambda = 
   V of var 
-  | P of var * exp 
-  | C of exp * exp 
+  | P of var * lambda 
+  | C of lambda * lambda 
 and var = string 
 
 
@@ -21,7 +21,7 @@ let var v = V(v)
    if List.mem v1 l then fresh_var(v1 ^ "'") l
    else v1
 
-  let check : exp -> bool
+  let check : lambda -> bool
   = fun e ->
   if free_vars e = [] then true
   else false

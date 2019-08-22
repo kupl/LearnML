@@ -1,8 +1,8 @@
 
-  type exp =
+  type lambda =
   | V of var
-  | P of var * exp
-  | C of exp * exp
+  | P of var * lambda
+  | C of lambda * lambda
   and var = string
 
   let rec evaluate temp1 temp2 =
@@ -16,6 +16,6 @@
     P (v, e1) -> if (evaluate e1 (temp2@[v])) then true else false |
     C (e1, e2) -> if (evaluate e1 temp2 && evaluate e2 temp2) then true else false;;
 
-let check : exp -> bool
-=fun exp ->
-      evaluate exp []
+let check : lambda -> bool
+=fun lambda ->
+      evaluate lambda []

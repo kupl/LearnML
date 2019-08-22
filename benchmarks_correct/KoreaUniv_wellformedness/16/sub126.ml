@@ -1,12 +1,12 @@
 
-  type exp =
+  type lambda =
   | V of var
-  | P of var * exp
-  | C of exp * exp
+  | P of var * lambda
+  | C of lambda * lambda
   and var = string
 
-	let rec para : (exp*string list) -> bool
-	= fun (exp, lst) -> match exp with
+	let rec para : (lambda*string list) -> bool
+	= fun (lambda, lst) -> match lambda with
 	| V(x) -> (let rec ac : (string list*string) -> bool
 						=fun (oh, ho) -> (match oh with
 						|[]-> false
@@ -17,5 +17,5 @@
 	| C(e1, e2) -> ((para(e1, lst))&&(para(e2, lst)))
 
 
-  let rec check : exp -> bool
-  = fun exp -> para(exp, [])
+  let rec check : lambda -> bool
+  = fun lambda -> para(lambda, [])

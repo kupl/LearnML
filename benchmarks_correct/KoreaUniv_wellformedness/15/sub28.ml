@@ -1,9 +1,9 @@
-type exp = V of var
-         | P of var * exp
-         | C of exp * exp
+type lambda = V of var
+         | P of var * lambda
+         | C of lambda * lambda
 and var = string
 
-let addlist : exp -> var list-> var list
+let addlist : lambda -> var list-> var list
 =fun e l ->
 match e with
   |P (v,e1) -> v::l
@@ -18,12 +18,12 @@ match l with
 
 let var_list : var list = []
 
-let rec eval : exp -> var list -> bool
+let rec eval : lambda -> var list -> bool
 =fun e l ->
 match e with
   |V var -> check_env l var
   |P (v,e1) ->(eval e1 (addlist e l))
   |C (e1,e2) -> (eval e1 l) && (eval e2 l)
 
-let rec check : exp -> bool
+let rec check : lambda -> bool
 =fun e -> eval e var_list

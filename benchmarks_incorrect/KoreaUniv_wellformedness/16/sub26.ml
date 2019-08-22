@@ -1,8 +1,8 @@
 
-  type exp =
+  type lambda =
   | V of var
-  | P of var * exp
-  | C of exp * exp
+  | P of var * lambda
+  | C of lambda * lambda
   and var = string
 ;;
 
@@ -19,9 +19,9 @@ match bd with
   |C (a, b) -> (evalCheck2 ex a) && (evalCheck2 ex b)
 ;;
 
-  let rec check : exp -> bool
-  = fun exp -> match exp with
+  let rec check : lambda -> bool
+  = fun lambda -> match lambda with
     |V x -> false
-    |P (arg, body) -> (evalCheck2 exp body)
+    |P (arg, body) -> (evalCheck2 lambda body)
     |C (a, b) -> (check a) && (check b)
 ;;

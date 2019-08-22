@@ -1,6 +1,6 @@
-  type exp = V of var
-           | P of var * exp
-           | C of exp * exp
+  type lambda = V of var
+           | P of var * lambda
+           | C of lambda * lambda
   and var = string
   
   let rec contain
@@ -9,10 +9,10 @@
 		|h::t -> if (h = str) then true else contain str t
 
   let rec chk
-	= fun expr env -> match expr with
+	= fun lambdar env -> match lambdar with
 		V str -> contain str env
 		|P (s, e) -> chk e (env@[s])
 		|C (e1, e2) -> chk e1 env && chk e2 env
 		
-  let check : exp -> bool
+  let check : lambda -> bool
   =fun e -> chk e []

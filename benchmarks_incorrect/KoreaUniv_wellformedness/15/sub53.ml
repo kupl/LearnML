@@ -1,13 +1,13 @@
-  type exp = V of var
-           | P of var * exp
-           | C of exp * exp
+  type lambda = V of var
+           | P of var * lambda
+           | C of lambda * lambda
   and var = string
   
-  let rec check_list(exp, lst) = 
-	match exp with
+  let rec check_list(lambda, lst) = 
+	match lambda with
 	|V(var) -> if List.mem var lst then true else false
-	|P(var,exp) -> check_list(exp, lst@[var])
-	|C(exp1, exp2) -> check_list(exp2,lst) && check_list(exp2,lst)
+	|P(var,lambda) -> check_list(lambda, lst@[var])
+	|C(lambda1, lambda2) -> check_list(lambda2,lst) && check_list(lambda2,lst)
 
-  let check : exp -> bool
+  let check : lambda -> bool
   =fun e -> check_list(e,[])

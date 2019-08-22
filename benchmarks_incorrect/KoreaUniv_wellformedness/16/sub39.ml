@@ -1,14 +1,14 @@
 
-  type exp =
+  type lambda =
   | V of var
-  | P of var * exp
-  | C of exp * exp
+  | P of var * lambda
+  | C of lambda * lambda
   and var = string
 
 
-	let rec check : exp -> bool
-	= fun exp ->
-		match exp with
+	let rec check : lambda -> bool
+	= fun lambda ->
+		match lambda with
 		| V (_) -> false
 		| P (a, e) -> let l = cklist e in
 								(match l with
@@ -23,8 +23,8 @@
 																										| C (e1, e2) -> check e)
 															else false)
 		| C (e1, e2) -> check e1 && check e2
-	and cklist exp =
-		match exp with
+	and cklist lambda =
+		match lambda with
 		| V (a) -> [a]
 		| P (a, e) -> cklist e
 		| C (e1, e2) -> cklist e1 @ cklist e2

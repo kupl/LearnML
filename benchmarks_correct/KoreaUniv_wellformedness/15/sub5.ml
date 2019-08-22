@@ -1,10 +1,10 @@
 
-  type exp = V of var
-           | P of var * exp
-           | C of exp * exp
+  type lambda = V of var
+           | P of var * lambda
+           | C of lambda * lambda
   and var = string
   
-let rec check : exp -> bool
+let rec check : lambda -> bool
 =fun e -> 
 let a = (eval e []) in
 match a with
@@ -12,7 +12,7 @@ match a with
 | false -> false
 
 
-and eval: exp -> var list -> bool
+and eval: lambda -> var list -> bool
 = fun e env->
 match e with
 | V x -> lookup x env

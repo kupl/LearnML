@@ -1,16 +1,16 @@
 
-  type exp =
+  type lambda =
   | V of var
-  | P of var * exp
-  | C of exp * exp
+  | P of var * lambda
+  | C of lambda * lambda
   and var = string
 	
-	let rec checkEnv : exp * var list -> bool
-	= fun (exp, env) -> match (exp, env) with
+	let rec checkEnv : lambda * var list -> bool
+	= fun (lambda, env) -> match (lambda, env) with
 	| (V _, []) -> false
 	| (V var, hd::tl) -> if var = hd then true else checkEnv (V var, tl)
-	| (P (var, exp), env) -> checkEnv (exp, var::env)
+	| (P (var, lambda), env) -> checkEnv (lambda, var::env)
 	| (C (e1, e2), env) -> checkEnv (e1, env) && checkEnv (e2, env)
 
-  let check : exp -> bool
-  = fun exp -> checkEnv (exp, [])
+  let check : lambda -> bool
+  = fun lambda -> checkEnv (lambda, [])

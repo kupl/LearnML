@@ -1,8 +1,8 @@
 
-  type exp =
+  type lambda =
   | V of var
-  | P of var * exp
-  | C of exp * exp
+  | P of var * lambda
+  | C of lambda * lambda
   and var = string
 
 let rec forcheck 
@@ -12,5 +12,5 @@ let rec forcheck
 	|P(v, e1) -> forcheck(e1, v::l)
 	|C(e1, e2) -> if forcheck(e1, l)=true && forcheck(e2, l)=true then true else false
 
-  let check : exp -> bool
-  = fun exp -> forcheck(exp,[])
+  let check : lambda -> bool
+  = fun lambda -> forcheck(lambda,[])

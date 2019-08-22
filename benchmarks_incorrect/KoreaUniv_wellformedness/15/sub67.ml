@@ -1,6 +1,6 @@
-type exp = V of var
-           | P of var * exp
-           | C of exp * exp
+type lambda = V of var
+           | P of var * lambda
+           | C of lambda * lambda
   and var = string
 
   let rec comp va exorg = 
@@ -15,7 +15,7 @@ type exp = V of var
     |P (va1, ex1) -> (find ex1 exorg)
     |C (ex1, ex2) -> (find ex1 exorg) && (find ex2 exorg)
 
-  let rec check : exp -> bool
+  let rec check : lambda -> bool
   =fun e -> 
     match e with
     |V va -> false

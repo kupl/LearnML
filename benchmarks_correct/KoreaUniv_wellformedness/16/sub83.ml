@@ -1,8 +1,8 @@
 
-  type exp =
+  type lambda =
   | V of var
-  | P of var * exp
-  | C of exp * exp
+  | P of var * lambda
+  | C of lambda * lambda
   and var = string
 
   let rec chk
@@ -14,12 +14,12 @@
   let lst = []    
 
   let rec chk2
-  = fun lst exp ->
-  match exp with
+  = fun lst lambda ->
+  match lambda with
   | P(a,b) -> chk2 (a::lst) b
   | C(a,b) -> if((chk2 lst a)&&(chk2 lst b)) then true else false
   | V(a) -> if(chk lst a) then true else false
 
 
-  let rec check : exp -> bool
-  = fun exp -> chk2 [] exp
+  let rec check : lambda -> bool
+  = fun lambda -> chk2 [] lambda

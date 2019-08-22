@@ -1,27 +1,27 @@
 
-  type exp =
+  type lambda =
   | V of var
-  | P of var * exp
-  | C of exp * exp
+  | P of var * lambda
+  | C of lambda * lambda
   and var = string
 
-  let rec eval : exp -> var list -> bool
-  = fun exp lst ->
-  	match exp with
+  let rec eval : lambda -> var list -> bool
+  = fun lambda lst ->
+  	match lambda with
   	| V var -> 
 	  	begin
 	  		match lst with
 	  		|[] -> false
-	  		|hd::tl -> if var = hd then true else eval exp tl
+	  		|hd::tl -> if var = hd then true else eval lambda tl
 	  	end
-	| P (var, exp2) -> eval exp2 (var::lst)
-	| C (exp1, exp2) -> (eval exp1 lst)&&(eval exp2 lst)
+	| P (var, lambda2) -> eval lambda2 (var::lst)
+	| C (lambda1, lambda2) -> (eval lambda1 lst)&&(eval lambda2 lst)
 
 
-  let check : exp -> bool
-  = fun exp -> 
+  let check : lambda -> bool
+  = fun lambda -> 
   	let state = [] in
-  		match exp with
-  		| V var -> eval exp state
-  		| P (var, exp) -> eval exp (var::state)
-  		| C (exp1, exp2) -> (eval exp1 state)&&(eval exp2 state)
+  		match lambda with
+  		| V var -> eval lambda state
+  		| P (var, lambda) -> eval lambda (var::state)
+  		| C (lambda1, lambda2) -> (eval lambda1 state)&&(eval lambda2 state)

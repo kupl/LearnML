@@ -1,18 +1,18 @@
-  type exp = V of var
-           | P of var * exp
-           | C of exp * exp
+  type lambda = V of var
+           | P of var * lambda
+           | C of lambda * lambda
   and var = string
 
-  let rec pcheck : var list * exp -> bool
-    =fun (var, exp) ->
-      match exp with
+  let rec pcheck : var list * lambda -> bool
+    =fun (var, lambda) ->
+      match lambda with
           V evar -> List.exists(fun v -> v = evar) var
-        | P (v, exp) -> pcheck(v::var, exp)
+        | P (v, lambda) -> pcheck(v::var, lambda)
         | C (e1, e2) -> pcheck(var, e1) && pcheck(var ,e2)
 
-  let check : exp -> bool
+  let check : lambda -> bool
     =fun e ->
       match e with
           V v-> false
-        | P (v, exp) -> pcheck(v::[], exp)
+        | P (v, lambda) -> pcheck(v::[], lambda)
         | C (e1, e2) -> false

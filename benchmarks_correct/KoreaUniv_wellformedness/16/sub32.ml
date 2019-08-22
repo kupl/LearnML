@@ -1,13 +1,13 @@
 
-  type exp =
+  type lambda =
   | V of var
-  | P of var * exp
-  | C of exp * exp
+  | P of var * lambda
+  | C of lambda * lambda
   and var = string
 
-let rec check_val : exp * (var list) -> bool
-= fun (exp, lst) ->
-   match exp with
+let rec check_val : lambda * (var list) -> bool
+= fun (lambda, lst) ->
+   match lambda with
    | V x -> (match lst with
              | [] -> false
              | hd::tl -> if x=hd then true else check_val(V x, tl))
@@ -15,5 +15,5 @@ let rec check_val : exp * (var list) -> bool
    | C (e1, e2) -> if (check_val(e1, lst)=true && check_val(e2, lst)=true) 
                    then true else false;;
 
-let check : exp -> bool
-= fun exp -> check_val (exp, []);;
+let check : lambda -> bool
+= fun lambda -> check_val (lambda, []);;

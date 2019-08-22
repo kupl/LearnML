@@ -1,21 +1,21 @@
 
-  type exp =
+  type lambda =
   | V of var
-  | P of var * exp
-  | C of exp * exp
+  | P of var * lambda
+  | C of lambda * lambda
 	 and var = string
 
 	
-	let rec lcheck: exp * var list -> bool
-	= fun (exp, varList) ->
-		match exp with
+	let rec lcheck: lambda * var list -> bool
+	= fun (lambda, varList) ->
+		match lambda with
 			| V(var1) -> (match varList with
 										| [] -> false
-										| hd :: tl -> if hd = var1 then true else lcheck(exp, tl))
-			| P(var1, exp1) -> lcheck(exp1,  var1 :: varList)
-			| C(exp1, exp2) -> lcheck(exp1, varList) && lcheck(exp2, varList)
+										| hd :: tl -> if hd = var1 then true else lcheck(lambda, tl))
+			| P(var1, lambda1) -> lcheck(lambda1,  var1 :: varList)
+			| C(lambda1, lambda2) -> lcheck(lambda1, varList) && lcheck(lambda2, varList)
 
 	 
 
-  let check : exp -> bool
-  = fun exp -> lcheck(exp, [])
+  let check : lambda -> bool
+  = fun lambda -> lcheck(lambda, [])

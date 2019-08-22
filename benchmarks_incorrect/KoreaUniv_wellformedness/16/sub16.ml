@@ -1,12 +1,12 @@
 
-  type exp =
+  type lambda =
   | V of var
-  | P of var * exp
-  | C of exp * exp
+  | P of var * lambda
+  | C of lambda * lambda
   and var = string
 
-  let check : exp -> bool
-  = fun exp -> let rec e exp = match exp with
+  let check : lambda -> bool
+  = fun lambda -> let rec e lambda = match lambda with
 		| V v -> false
 		| P (p,l) -> let rec f p l = begin match l with 
 				|V a -> if a=p then true else false
@@ -24,4 +24,4 @@
 			|(P (x,y)),(C (z,t)) ->if ((e (P(x,y)))||(e (C(y,z)))||(e (C(y,t))))&&((e (P(x,z)))||(e (C(z,t)))||(e (C(z,y))))&&((e (P(x,t)))||(e (C(t,y)))||(e (C(t,z)))) then true else false
 			|(C (z,t)),(P (x,y)) ->if ((e (P(x,y)))||(e (C(y,z)))||(e (C(y,t))))&&((e (P(x,z)))||(e (C(z,t)))||(e (C(z,y))))&&((e (P(x,t)))||(e (C(t,y)))||(e (C(t,z)))) then true else false
 			|(C (x,y)),(C (z,t)) -> if ((e (C(x,y)))||(e (C(x,z)))||(e (C(x,t))))&&((e (C(y,z)))||(e (C(y,t)))||(e (C(y,x))))&&((e (C(z,t)))||(e (C(z,x)))||(e (C(z,y))))&&((e (C(t,x)))||(e (C(t,y)))||(e (C(t,z)))) then true else false	
-		in e exp
+		in e lambda

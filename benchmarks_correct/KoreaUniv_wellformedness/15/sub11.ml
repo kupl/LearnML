@@ -1,17 +1,17 @@
-  type exp = V of var
-           | P of var * exp
-           | C of exp * exp
+  type lambda = V of var
+           | P of var * lambda
+           | C of lambda * lambda
   and var = string
   
-  let rec is_well_formed : exp -> var list -> bool
+  let rec is_well_formed : lambda -> var list -> bool
   =fun e env -> 
 	match e with
 		| V v -> if (List.mem v env) then true else false
-		| P (v,exp') -> let env' = v::env in (is_well_formed exp' env')
-		| C (exp1, exp2) -> 
-			let r1 = is_well_formed exp1 env in
-			let r2 = is_well_formed exp2 env in
+		| P (v,lambda') -> let env' = v::env in (is_well_formed lambda' env')
+		| C (lambda1, lambda2) -> 
+			let r1 = is_well_formed lambda1 env in
+			let r2 = is_well_formed lambda2 env in
 				r1 && r2
 
-  let check : exp -> bool
+  let check : lambda -> bool
   =fun e -> is_well_formed e [] 

@@ -1,6 +1,6 @@
-type exp = V of var
-         | P of var * exp
-         | C of exp * exp
+type lambda = V of var
+         | P of var * lambda
+         | C of lambda * lambda
 and var = string
 
 let rec isinList a l = 
@@ -8,12 +8,12 @@ let rec isinList a l =
       [] -> false
     | h::t -> if(h = a) then true else isinList a t
 ;;
-let rec validCheck : exp -> var list -> bool
+let rec validCheck : lambda -> var list -> bool
   = fun e l ->
     match e with
         V(_v) -> isinList _v l
       | P(_v, _e) -> let _l = _v::l in validCheck _e _l
       | C(_e1, _e2) -> validCheck _e1 l && validCheck _e2 l
 ;;
-let check : exp -> bool
+let check : lambda -> bool
   = fun e -> validCheck e [];;

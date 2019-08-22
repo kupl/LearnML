@@ -1,8 +1,8 @@
 
-  type exp =
+  type lambda =
   | V of var
-  | P of var * exp
-  | C of exp * exp
+  | P of var * lambda
+  | C of lambda * lambda
   and var = string
 
 let rec compare v l = match l with
@@ -11,7 +11,7 @@ let rec compare v l = match l with
 
 let rec makel e l = match e with
 V(v) -> compare v l
-|P(v,exp1)-> makel exp1 (l@[v])
-|C(exp2,exp3) -> makel exp2 l&&makel exp3 l;;
-  let check : exp -> bool
-  = fun exp -> makel exp [];;
+|P(v,lambda1)-> makel lambda1 (l@[v])
+|C(lambda2,lambda3) -> makel lambda2 l&&makel lambda3 l;;
+  let check : lambda -> bool
+  = fun lambda -> makel lambda [];;

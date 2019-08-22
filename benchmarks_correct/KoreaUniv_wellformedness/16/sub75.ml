@@ -1,13 +1,13 @@
 
-  type exp =
+  type lambda =
   | V of var
-  | P of var * exp
-  | C of exp * exp
+  | P of var * lambda
+  | C of lambda * lambda
   and var = string
 
-  let rec lcheck : exp * string list -> bool
-  = fun (exp,lst) ->
-  match exp with
+  let rec lcheck : lambda * string list -> bool
+  = fun (lambda,lst) ->
+  match lambda with
   | V (a) ->(
     match lst with
     | [] -> false
@@ -20,6 +20,6 @@
   | C (a,b) ->
     lcheck (a, lst) && lcheck (b, lst)
 
-  let check : exp -> bool
-  = fun exp -> (* TODO *)
-  lcheck (exp , [])
+  let check : lambda -> bool
+  = fun lambda -> (* TODO *)
+  lcheck (lambda , [])

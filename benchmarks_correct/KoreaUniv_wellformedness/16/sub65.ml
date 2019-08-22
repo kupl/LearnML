@@ -1,15 +1,15 @@
 
-  type exp =
+  type lambda =
   | V of var
-  | P of var * exp
-  | C of exp * exp
+  | P of var * lambda
+  | C of lambda * lambda
   and var = string
 
-let rec ck : exp*string list -> int
-= fun (exp, lst)->
+let rec ck : lambda*string list -> int
+= fun (lambda, lst)->
   
 
-  match exp with
+  match lambda with
   |P(va, ex) -> ck(ex, va::lst)
   |C(ex1, ex2) -> ck(ex1, lst) + ck(ex2, lst)
   |V(va) -> if (List.mem va lst = true) then 0 else 1 
@@ -20,9 +20,9 @@ let rec ck : exp*string list -> int
 (*=====================================================*)
 (*스타또!*)
 (*=====================================================*)
-  let check : exp -> bool
-  = fun exp -> (* TODO *)
+  let check : lambda -> bool
+  = fun lambda -> (* TODO *)
     
-    if(ck(exp, [])=0) then true
+    if(ck(lambda, [])=0) then true
     else false
 

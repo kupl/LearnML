@@ -1,8 +1,8 @@
 type var = string
- type exp = Var of var
- | P of var * exp
- | C of exp * exp
+ type lambda = Var of var
+ | P of var * lambda
+ | C of lambda * lambda
 
-let check : exp -> bool
+let check : lambda -> bool
 =fun e -> true
 
