@@ -207,7 +207,8 @@ let rec update_var_comp : prog -> (label * exp) list -> (label * exp) BatSet.t
 		let (_, _, v_t, _) = Type.run pgm in
 		let vars = BatMap.foldi (fun x typ vars ->
 			match typ with
-			| TCtor _ | TArr _ -> vars
+            | TCtor _ -> vars
+			(*| TCtor _| TArr _-> vars*)
 			| _ -> x::vars
 		) (BatMap.find hole v_t) [] in
 		let result = subst_var_comp (l, e) vars in
@@ -294,6 +295,8 @@ let run : prog -> prog -> examples -> prog option
 	print_endline ("Size of repair Cand : " ^ string_of_int (BatSet.cardinal repair_cand));
 	let repair = List.find_opt (fun (l, e) -> 
 		let pgm' = List.map (fun decl -> subst_decl decl (l, e)) pgm in
+		print_endline ("label : " ^ string_of_int l);
+        print_endline (Print.exp_to_string (l, e));
 		(*Print.print_header "Repair Candidate"; Print.print_pgm pgm';*)
 		Eval.is_solution pgm' testcases
 	) (BatSet.to_list repair_cand) 

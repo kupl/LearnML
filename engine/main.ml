@@ -158,9 +158,10 @@ let fix_without_testcases : prog -> prog -> unit
       print_endline ("Total Time : " ^ string_of_float !task_time)
     )
 *)
+let topk = 10
 let fix_with_vectors2 : prog -> (string*prog) list -> examples -> unit
 = fun sub solutions testcases->
-  let k = 2 in
+  let k = topk in
   let topk_lst = Vector.search_solutions2 k sub solutions in
 
   print_endline "@#$@#$@#$";
@@ -169,16 +170,18 @@ let fix_with_vectors2 : prog -> (string*prog) list -> examples -> unit
   List.iter (fun (filename, sol,(map,dist)) ->
   print_endline "@#$@#$@#$";
   Print.print_header ("filename: "^filename); 
-  Print.print_header "solution"; Print.print_pgm sol;
+  (*Print.print_header "solution"; Print.print_pgm sol;*)
   Print.print_header ("distance with submission: "^(string_of_float dist));
+  try 
+    ignore (Vrepairer.run sub sol map testcases);
+  with Type.TypeError -> raise (Failure filename)
 
-  ignore (Vrepairer.run sub sol map testcases);
   print_endline "@#$@#$@#$";
   ) topk_lst
 
 let fix_with_vectors : prog -> (string*prog) list -> examples -> unit
 = fun sub solutions testcases->
-  let k = 2 in
+  let k = topk in
   let topk_lst = Vector.search_solutions k sub solutions in
 
   print_endline "@#$@#$@#$";
@@ -187,7 +190,7 @@ let fix_with_vectors : prog -> (string*prog) list -> examples -> unit
   List.iter (fun (filename, sol, dist) ->
   print_endline "@#$@#$@#$";
   Print.print_header ("filename: "^filename); 
-  Print.print_header "solution"; Print.print_pgm sol;
+  (*Print.print_header "solution"; Print.print_pgm sol;*)
   Print.print_header ("distance with submission: "^(string_of_float dist));
   ignore (Repairer.run sub sol testcases);
 
@@ -266,7 +269,7 @@ let main () =
       match submission with
       | Some sub -> Print.print_header (Print.program_to_string sub); Print.print_header (Pp_tree.program_to_tree 0 sub);
                     print_header "Summary"; print_endline (Selector.A.string_of_t (Selector.get_summary sub));                   
-                    Print.print_header "test function extractor"; 
+                    Print.print_header "test function extractor"; Vrepairer.test sub;
 
       | _ -> raise (Failure(!opt_submission_filename ^ " does not exist"))
     end

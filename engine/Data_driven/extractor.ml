@@ -82,7 +82,7 @@ let rec extract_body : t -> lexp -> lexp * t
     let (e2', env'') = extract_body env' e2 in
     (l,EApp (e1',e2')), env''
   | ELet (f, is_rec, args, typ, e1, e2) ->
-    if is_fun typ then 
+    if args <> [] || is_fun typ then 
       let (e1',env') = extract_body env e1 in
       let (e2',env'') = extract_body env' e2 in
       e2', ((get_bindvar f),e1')::env'' 
@@ -91,16 +91,37 @@ let rec extract_body : t -> lexp -> lexp * t
       (l,ELet (f, is_rec,args, typ, e1, body)), env'
   | EFun (a,e) -> extract_body env e 
   (*EMatch, EBlock, *)
-  | EMatch (e,bs) -> (l,exp), env
+  | EMatch (e,bs) -> 
+    let rec flatten_branch : branch list -> branch list
+    = fun bs ->
+      match bs with 
+      | [] -> []
+      | (p,e)::bs ->
+        begin match p with
+        | Pats ps -> let flat_bs = (List.map (fun p -> (p,e)) ps) in
+          (flatten_branch flat_bs) @ (flatten_branch bs)
+        | _ -> (p,e) :: (flatten_branch bs)
+        end
+    in 
+    let bs = flatten_branch bs in
+    let (e',env') = extract_body env e in
+    let (bs',env'') = 
+      List.fold_left (fun (bs, cur_env) (p, cur_e) ->
+        let (ne,nenv) = extract_body cur_env cur_e in
+        ((p,ne)::bs, nenv) 
+      ) ([], env') bs
+    in (l, EMatch (e',bs')), env''
   | _ -> (l,exp), env
+
     
-let extract_func : t -> decl -> t
+let rec extract_func : t -> decl -> t
 = fun acc decl -> 
   match decl with
   | DLet (f, is_rec, args, typ, e) -> 
     let empty = [] in 
     let body, inner_func= extract_body empty e in
    ((get_bindvar f, body)::inner_func)@acc
+  | DBlock (is_rec, bindings) -> List.fold_left (fun acc binding -> extract_func acc (DLet binding)) acc bindings
   | _ -> acc 
 
 let extract_func_all : prog -> t

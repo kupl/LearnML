@@ -198,8 +198,8 @@ module N = struct
       in iter tbl init_vector 
 end
 
-
     type t = int list
+    let empty_padding = List.map (fun (k,v) -> v) N.init_vector 
 
     (*
     let to_string: t -> string
@@ -283,23 +283,38 @@ end
     = fun ts1 ts2 ->
         let len1 = List.length ts1 in
         let len2 = List.length ts2 in
-
         if len1 = len2 then 
           let perms = permutations ts2 in 
           List.fold_left (fun acc y -> 
             (List.map2 (fun (s,t) (s',t') -> (s,t,s',t')) ts1 y)::acc) [] perms
         (*num of func is different*)
         else if len1 < len2 then 
+            begin
+            ignore(Print.print_header "not padding!!");
+            [] 
+            end
+          (*
           let combs = partial_combinations ts2 len1 in
-          let perms = List.map (fun x -> permutations x) combs |> List.flatten in
+          let perms = List.map (fun x -> permutations x) combs |> List.flatten in 
+          let perms = permutations ts2 in
           List.fold_left (fun acc y ->
             (List.map2 (fun (s,t) (s',t') -> (s,t,s',t')) ts1 y)::acc) [] perms
+          *)
         (*len1 > len2*)
-        else
+        else 
+            begin 
+            ignore(Print.print_header "not padding!!"); 
+            []
+            end
+          (* 
+          let perms = permutations ts2 in
+          List.fold_left (fun acc y ->
+            (List.map2 (fun (s,t) (s',t') -> (s,t,s',t')) ts1 y)::acc) [] perms
           let combs = partial_combinations ts1 len2 in
           let perms = List.map (fun x -> permutations x) combs |> List.flatten in
           List.fold_left (fun acc y ->
             (List.map2 (fun (s,t) (s',t') -> (s,t,s',t')) y ts2)::acc) [] perms
+          *)
 
     let rec gen_score_map : (string * t) list -> (string * t) list -> ((string * string) * float) list 
     = fun ts1 ts2 ->
@@ -308,11 +323,28 @@ end
      | (s,v)::t ->
        let with_s = List.map (fun (s',v') -> let dist = calculate_distance v v' in 
          (s,s'), dist) ts2 in with_s @ gen_score_map t ts2
+    
+    let padding 
+    = fun ts1 ts2 ->
+      let len1 = List.length ts1 in
+      let len2 = List.length ts2 in
+
+      if len1 = len2 then ts1,ts2
+      else if len1 < len2 then 
+          let rec iter = fun acc count ->
+              if count <> (len2-len1) then iter (("___padding"^string_of_int(count+1), empty_padding)::acc) (count+1) else acc in
+          let ts1 = iter ts1 0 in ts1,ts2
+      else 
+          let rec iter = fun acc count ->
+              if count <> (len1-len2) then iter (("___padding"^string_of_int(count+1), empty_padding)::acc) (count+1) else acc in
+          let ts2 = iter ts2 0 in ts1,ts2
 
     let calculate_mapping_distance : (string*t) list -> (string*t) list -> (string * string) list * float 
     = fun ts1 ts2 ->
+      let ts1,ts2 = padding ts1 ts2 in
       let all_func_mapping = gen_mapping ts1 ts2 in
       let score_map = gen_score_map ts1 ts2 in
+      (*print_endline ("size: " ^ string_of_int (List.length all_func_mapping));*)
       let calculate_func_score = List.fold_left (fun acc (s,t,s',t') -> 
                                    let score = List.assoc (s,s') score_map in 
                                    acc +. score) 0.0 in
@@ -321,7 +353,7 @@ end
                           let cur_score = calculate_func_score cur_map in
                           if min > cur_score then ((List.map key_filter cur_map), cur_score)
                                              else (min_map, min)) 
-                          ([],max_float) all_func_mapping
+                          ([],max_float) all_func_mapping 
       in min_mapping
     
     let search_solutions_by_program_match : int -> prog -> (string * prog) list -> (string * prog * float) list
