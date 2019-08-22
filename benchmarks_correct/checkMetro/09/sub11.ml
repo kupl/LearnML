@@ -1,21 +1,21 @@
-type metro = STATION of name
-           | AREA of name * metro
-		   | CONNECT of metro * metro
-and name = string
+type lambda = V of var
+           | P of var * lambda
+		   | C of lambda * lambda
+and var = string
 
-let rec checkMetro m =
+let rec check m =
   let rec cm m l =
     match m with
-	  STATION n -> if (List.mem n l) then true else false
-	| AREA (n, m) -> (cm m (if (List.mem n l) then l else n::l))
-	| CONNECT (m1, m2) -> ((cm m1 l) && (cm m2 l))
+	  V n -> if (List.mem n l) then true else false
+	| P (n, m) -> (cm m (if (List.mem n l) then l else n::l))
+	| C (m1, m2) -> ((cm m1 l) && (cm m2 l))
   in
     (cm m [])
 
-let a = AREA("a", STATION "a")
-let b = AREA("a", AREA("a", STATION "a"))
-let c = AREA("a", AREA("b", CONNECT(STATION "a", STATION "b")))
-let d = AREA("a", CONNECT(STATION "a", AREA("b", STATION "a")))
-let e = AREA("a", STATION "b")
-let f = AREA("a", CONNECT(STATION "a", AREA("b", STATION "c")))
-let g = AREA("a", AREA("b", CONNECT(STATION "a", STATION "c")))
+let a = P("a", V "a")
+let b = P("a", P("a", V "a"))
+let c = P("a", P("b", C(V "a", V "b")))
+let d = P("a", C(V "a", P("b", V "a")))
+let e = P("a", V "b")
+let f = P("a", C(V "a", P("b", V "c")))
+let g = P("a", P("b", C(V "a", V "c")))

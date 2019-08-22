@@ -6,16 +6,16 @@
  *)
 
 (* Exercise 1 : CheckMetroMap *)
-type metro = STATION of name
-           | AREA of name * metro
-           | CONNECT of metro * metro
-and name = string
+type lambda = V of var
+           | P of var * lambda
+           | C of lambda * lambda
+and var = string
 
-let checkMetro: metro -> bool = fun m ->
-  let rec checkMetroSub: name list -> metro -> bool = fun nl m ->
+let check: lambda -> bool = fun m ->
+  let rec checkSub: var list -> lambda -> bool = fun nl m ->
     match m with
-    | STATION name             -> (List.mem name nl)
-    | AREA (name, metro)       -> (checkMetroSub (name::nl) metro)
-    | CONNECT (metro1, metro2) -> (checkMetroSub nl metro1) && (checkMetroSub nl metro2)
+    | V var             -> (List.mem var nl)
+    | P (var, lambda)       -> (checkSub (var::nl) lambda)
+    | C (lambda1, lambda2) -> (checkSub nl lambda1) && (checkSub nl lambda2)
   in
-  (checkMetroSub [] m)
+  (checkSub [] m)

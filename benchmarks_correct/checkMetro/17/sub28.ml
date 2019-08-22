@@ -3,34 +3,34 @@
  exercise 4
  *)
 
-type metro = STATION of name
-					 | AREA of name * metro
-					 | CONNECT of metro * metro
-	and name = string
+type lambda = V of var
+					 | P of var * lambda
+					 | C of lambda * lambda
+	and var = string
 
 (*
 (* true *)
-let a = AREA ("a", STATION "a")
-let b = AREA ("a", AREA ("a", STATION "a"))
-let c = AREA ("a", AREA ("b", CONNECT (STATION "a", STATION "b")))
-let d = AREA ("a", CONNECT (STATION "a", AREA ("b", STATION "a")))
+let a = P ("a", V "a")
+let b = P ("a", P ("a", V "a"))
+let c = P ("a", P ("b", C (V "a", V "b")))
+let d = P ("a", C (V "a", P ("b", V "a")))
 (* false *)
-let e = AREA ("a", STATION "b")
-let f = AREA ("a", CONNECT (STATION "a", AREA ("b", STATION "c")))
-let g = AREA ("a", AREA ("b", CONNECT (STATION "a", STATION "c")))
+let e = P ("a", V "b")
+let f = P ("a", C (V "a", P ("b", V "c")))
+let g = P ("a", P ("b", C (V "a", V "c")))
 *)
 
-(* checkMetro : metro -> bool *)
-let (* rec *) checkMetro m =
+(* check : lambda -> bool *)
+let (* rec *) check m =
 	let rec main (m, saveStation) = 
 		match m with
-		| STATION pname -> 
-				if List.mem pname saveStation = true then true
+		| V pvar -> 
+				if List.mem pvar saveStation = true then true
 				else false
 
-		| AREA (pname, pmetro) -> 
-				main (pmetro, pname::saveStation)
+		| P (pvar, plambda) -> 
+				main (plambda, pvar::saveStation)
 
-		| CONNECT (leftmetro, rightmetro) ->
-				main (leftmetro, saveStation) && main (rightmetro, saveStation) in
+		| C (leftlambda, rightlambda) ->
+				main (leftlambda, saveStation) && main (rightlambda, saveStation) in
 	main(m, [])

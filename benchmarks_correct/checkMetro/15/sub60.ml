@@ -1,8 +1,8 @@
-type name = string;;
+type var = string;;
 
-type metro = STATION of name
-	| AREA of name * metro
-	| CONNECT of metro * metro;;
+type lambda = V of var
+	| P of var * lambda
+	| C of lambda * lambda;;
 
 let rec contains = fun (l, item)->
 	match l with
@@ -11,11 +11,11 @@ let rec contains = fun (l, item)->
 		if(item = h) then true
 		else contains(tail, item);;
 
-let rec metro = fun (l, m)->
+let rec lambda = fun (l, m)->
 	match m with
-	|STATION n -> contains(l, n)
-	|AREA (id, area) -> metro(id::l, area) 
-	|CONNECT (m1, m2) -> metro(l,m1) && metro(l,m2);;
+	|V n -> contains(l, n)
+	|P (id, area) -> lambda(id::l, area) 
+	|C (m1, m2) -> lambda(l,m1) && lambda(l,m2);;
 
-let checkMetro = fun m -> metro ([], m);;
+let check = fun m -> lambda ([], m);;
 

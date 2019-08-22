@@ -1,18 +1,18 @@
-type metro=STATION of name
-          |AREA of name*metro
-          |CONNECT of metro*metro
-and name=string
+type lambda=V of var
+          |P of var*lambda
+          |C of lambda*lambda
+and var=string
 
-let rec checkMetro:metro->bool=fun(a)->
-  let rec checkMetroList:(name list*metro)->bool=fun(l,m)->
-    let rec checkNameinList:(name*(name list))->bool=fun(n,nl)->
+let rec check:lambda->bool=fun(a)->
+  let rec checkList:(var list*lambda)->bool=fun(l,m)->
+    let rec checkNameinList:(var*(var list))->bool=fun(n,nl)->
       match nl with
         |[]->false
         |nlhd::nltl->(n=nlhd)||(checkNameinList(n,nltl))
     in
     match m with
-      |STATION n->checkNameinList(n,l)
-      |AREA (n,mt)->checkMetroList(n::l,mt)
-      |CONNECT (ma,mb)->checkMetroList(l,ma)&&checkMetroList(l,mb)
+      |V n->checkNameinList(n,l)
+      |P (n,mt)->checkList(n::l,mt)
+      |C (ma,mb)->checkList(l,ma)&&checkList(l,mb)
   in
-  checkMetroList([],a)
+  checkList([],a)

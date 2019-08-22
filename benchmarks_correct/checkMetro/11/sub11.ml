@@ -1,30 +1,27 @@
-(* HW 1-7 / 2007-11603 / 컴퓨터공학부 / 이영준 *)
 
-type metro = STATION of name
-	   | AREA of name * metro
-	   | CONNECT of metro * metro
+type lambda = V of var
+	   | P of var * lambda
+	   | C of lambda * lambda
 
-and name = string
+and var = string
 
 
-let checkMetro m =
+let check m =
 
-	let rec valify (name_, covers) =
-		match covers with STATION n -> false
-		                | AREA (n, m_) -> ( if n = name_ then
+	let rec valify (var_, covers) =
+		match covers with V n -> false
+		                | P (n, m_) -> ( if n = var_ then
 							true
 						    else
-							valify (name_, m_) )
-				| CONNECT (m1, m2) -> false (* 이 경우에 도달하는 일은 없다. *)
-				  (* covers는 무조건 AREA( n, AREA (n, ....   STATION " ")... *)
-				  (* covers가 CONNECT를 포함할 순 없다. *)
+							valify (var_, m_) )
+				| C (m1, m2) -> false 
 	in
 
 	let rec findStation (cur, covers) =
-		match cur with STATION n -> valify (n, covers)
-			     | AREA (n, m_) -> findStation (m_, AREA (n, covers))
-			     | CONNECT (m1, m2) -> 
+		match cur with V n -> valify (n, covers)
+			     | P (n, m_) -> findStation (m_, P (n, covers))
+			     | C (m1, m2) -> 
 				(findStation (m1, covers)) && (findStation (m2, covers))
 	in	
 
-	findStation (m, STATION " ")
+	findStation (m, V " ")

@@ -1,7 +1,7 @@
-type metro = STATION of name
-	| AREA of name * metro
-	| CONNECT of metro * metro
-and name = string
+type lambda = V of var
+	| P of var * lambda
+	| C of lambda * lambda
+and var = string
 
 let rec list_del lst element =
 	match lst with
@@ -11,11 +11,11 @@ let rec list_del lst element =
 
 let rec remainStation m =
 	match m with
-	| STATION str -> [str]
-	| AREA (str, met) -> list_del (remainStation met) str
-	| CONNECT (met1, met2) -> (remainStation met1) @ (remainStation met2)
+	| V str -> [str]
+	| P (str, met) -> list_del (remainStation met) str
+	| C (met1, met2) -> (remainStation met1) @ (remainStation met2)
 
-let rec checkMetro m =
+let rec check m =
 	if (List.length (remainStation m)) = 0 then true
 	else false
 

@@ -1,46 +1,46 @@
-type metro = STATION of name
-		   | AREA of name * metro
-		   | CONNECT of metro * metro
-and name = string
+type lambda = V of var
+		   | P of var * lambda
+		   | C of lambda * lambda
+and var = string
 
-let rec checkMetro_withList (m: metro) (l: name list): bool =
+let rec check_withList (m: lambda) (l: var list): bool =
 	match m with
-	| STATION name -> List.mem name l
-	| AREA (name, metro) -> checkMetro_withList metro (name::l)
-	| CONNECT (metro1, metro2) -> (checkMetro_withList metro1 l) && (checkMetro_withList metro2 l)
+	| V var -> List.mem var l
+	| P (var, lambda) -> check_withList lambda (var::l)
+	| C (lambda1, lambda2) -> (check_withList lambda1 l) && (check_withList lambda2 l)
 
-let rec checkMetro (m: metro): bool =
-	checkMetro_withList m []
+let rec check (m: lambda): bool =
+	check_withList m []
 
 (* using test *)
 (*
 let _ =
-	let msg = string_of_bool (checkMetro (AREA("a", CONNECT(STATION "a", AREA("b", AREA("c", STATION "c")))))) in
+	let msg = string_of_bool (check (P("a", C(V "a", P("b", P("c", V "c")))))) in
 	print_endline msg
 
 let _ =
-	let msg = string_of_bool (checkMetro (AREA("a", STATION "b"))) in
+	let msg = string_of_bool (check (P("a", V "b"))) in
 	print_endline msg
 
 let _ =
-	let msg = string_of_bool (checkMetro (AREA("a", AREA("a", STATION "a")))) in
+	let msg = string_of_bool (check (P("a", P("a", V "a")))) in
 	print_endline msg
 *)
 (*
 let _= 
 let print_bool x = print_endline (string_of_bool x) in 
 
-let a81 = checkMetro (AREA("a", STATION "a")) in 
-let a82 = checkMetro (AREA("a", AREA("a", STATION "a"))) in 
-let a83 = checkMetro (AREA("a", AREA("b", CONNECT(STATION "a", STATION "b")))) in 
-let a84 = checkMetro (AREA("a", CONNECT(STATION "a", AREA("b", STATION "a")))) in 
-let a85 = checkMetro (AREA("a", STATION "b")) in 
-let a86 = checkMetro (AREA("a", CONNECT(STATION "a", AREA("b", STATION "c")))) in 
-let a87 = checkMetro (AREA("a", AREA("b", CONNECT(STATION "a", STATION "c")))) in 
+let a81 = check (P("a", V "a")) in 
+let a82 = check (P("a", P("a", V "a"))) in 
+let a83 = check (P("a", P("b", C(V "a", V "b")))) in 
+let a84 = check (P("a", C(V "a", P("b", V "a")))) in 
+let a85 = check (P("a", V "b")) in 
+let a86 = check (P("a", C(V "a", P("b", V "c")))) in 
+let a87 = check (P("a", P("b", C(V "a", V "c")))) in 
 
-print_bool(false = checkMetro ( STATION "a")); 
-print_bool(true = checkMetro ( CONNECT (AREA ("a", STATION "a"), AREA ("b", AREA("a", CONNECT(STATION "b", STATION "a")))))); 
-print_bool(false = checkMetro ( CONNECT (AREA ("c", STATION "c"), AREA ("b", AREA("a", CONNECT(STATION "b", STATION "c")))))); 
+print_bool(false = check ( V "a")); 
+print_bool(true = check ( C (P ("a", V "a"), P ("b", P("a", C(V "b", V "a")))))); 
+print_bool(false = check ( C (P ("c", V "c"), P ("b", P("a", C(V "b", V "c")))))); 
 print_bool(true = a81); 
 print_bool(true = a82); 
 print_bool(true = a83); 

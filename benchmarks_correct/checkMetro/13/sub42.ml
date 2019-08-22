@@ -1,12 +1,12 @@
-type metro = STATION of name
-           | AREA of name * metro
-           | CONNECT of metro * metro
-and name = string
+type lambda = V of var
+           | P of var * lambda
+           | C of lambda * lambda
+and var = string
 
-let rec checkMetroByList (m, l) =
+let rec checkByList (m, l) =
     match m with
-    | STATION a -> List.exists (fun x -> x = a) l
-    | AREA (n, a) -> checkMetroByList (a, l @ [n])
-    | CONNECT (a, b) -> checkMetroByList (a, l) && checkMetroByList (b, l)
+    | V a -> List.exists (fun x -> x = a) l
+    | P (n, a) -> checkByList (a, l @ [n])
+    | C (a, b) -> checkByList (a, l) && checkByList (b, l)
 
-let checkMetro m = checkMetroByList (m, [])
+let check m = checkByList (m, [])

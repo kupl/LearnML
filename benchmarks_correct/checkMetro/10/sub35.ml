@@ -1,8 +1,8 @@
-type metro = STATION of name
-	   | AREA of name * metro
-	   | CONNECT of metro * metro
+type lambda = V of var
+	   | P of var * lambda
+	   | C of lambda * lambda
 
-and name = string
+and var = string
 
 
 let add_element x set =
@@ -13,12 +13,12 @@ let rec check x set =
 
 
 
-let rec sub_checkMetro metro set=
-	match metro with
-	AREA (x, m) -> (sub_checkMetro m (add_element x set))
-	|STATION n -> (check n set)
-	|CONNECT (m1, m2) -> (sub_checkMetro m1 set) && (sub_checkMetro m2 set) ;;
+let rec sub_check lambda set=
+	match lambda with
+	P (x, m) -> (sub_check m (add_element x set))
+	|V n -> (check n set)
+	|C (m1, m2) -> (sub_check m1 set) && (sub_check m2 set) ;;
 	
 
-let rec checkMetro metro =
-	sub_checkMetro metro []
+let rec check lambda =
+	sub_check lambda []

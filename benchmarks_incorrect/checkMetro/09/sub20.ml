@@ -1,38 +1,35 @@
-(* C:\Documents and Settings\Administrator\¹ÙÅÁ È­¸é\pl_first_homework\Excercise8.ml *)
-
-(* Computer S&E/2007-15612/park sungjun*)
 (*Exercise 8 Though wornning is exist, this program run well*)
 exception Error of string
-type metro =
-    STATION of string
-  | AREA of string * metro
-  | CONNECT of metro * metro
+type lambda =
+    V of string
+  | P of string * lambda
+  | C of lambda * lambda
                                                     
- let rec checkMetro met=	 	
+ let rec check met=	 	
 	let rec check a me =
 	match me with
-	| STATION x ->(
+	| V x ->(
 			if x=a then true
 			else false
 			)
-	| AREA (q, STATION b ) -> (
+	| P (q, V b ) -> (
 			if a=b then true
 			else false		
 			)
-	| AREA (x,CONNECT(t, p)) ->(
+	| P (x,C(t, p)) ->(
 				   match (t,p) with
-			           |(STATION e, STATION f)-> (check x t) || (check x p)
+			           |(V e, V f)-> (check x t) || (check x p)
 				   | _-> (check x t) && (check x p)
 				   )
-	| AREA (x,(AREA (e,f))) -> (check x (AREA (e,f))) && (check e f)
-	| CONNECT (x, y) -> (
+	| P (x,(P (e,f))) -> (check x (P (e,f))) && (check e f)
+	| C (x, y) -> (
 				   match (x,y) with
-			           |(STATION e, STATION f)-> (check a x) || (check a y)
+			           |(V e, V f)-> (check a x) || (check a y)
 				   | _-> (check a x) && (check a x)
 				   )
 	in
 	match met with
-	| AREA (b, c)-> (check b c)
+	| P (b, c)-> (check b c)
 	| _ -> raise ( Error "Illegal input")	
 ;;
 

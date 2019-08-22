@@ -1,16 +1,16 @@
 (* hw 2-1 *)
 (* 2012-11269 DongJae Lim *)
 
-type metro = STATION of name
-           | AREA of name * metro
-           | CONNECT of metro * metro
-and name = string
+type lambda = V of var
+           | P of var * lambda
+           | C of lambda * lambda
+and var = string
 
-let rec cM ((m : metro), (ml : name list)) : bool =
+let rec cM ((m : lambda), (ml : var list)) : bool =
   match m with
-  | STATION (n0) -> (List.mem n0 ml)
-  | AREA (n0, m0) -> (cM (m0, ml @ [n0]))
-  | CONNECT (m0, m1) -> (cM (m0, ml)) && (cM (m1, ml))
+  | V (n0) -> (List.mem n0 ml)
+  | P (n0, m0) -> (cM (m0, ml @ [n0]))
+  | C (m0, m1) -> (cM (m0, ml)) && (cM (m1, ml))
 
-let checkMetro (m : metro) : bool =
+let check (m : lambda) : bool =
   cM (m, [])

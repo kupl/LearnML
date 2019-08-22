@@ -1,23 +1,23 @@
-type metro = STATION of name
-| AREA of name * metro
-| CONNECT of metro * metro
-and name = string;;
+type lambda = V of var
+| P of var * lambda
+| C of lambda * lambda
+and var = string;;
 
-let rec checkMetroHelper areaList metro =
-    match metro with
-    | STATION name ->
-        if List.mem name areaList
+let rec checkHelper areaList lambda =
+    match lambda with
+    | V var ->
+        if List.mem var areaList
             then true
             else false
-    | AREA (name, metro) -> checkMetroHelper (name::areaList) metro
-    | CONNECT (metro1, metro2) -> checkMetroHelper areaList metro1 && checkMetroHelper areaList metro2;;
+    | P (var, lambda) -> checkHelper (var::areaList) lambda
+    | C (lambda1, lambda2) -> checkHelper areaList lambda1 && checkHelper areaList lambda2;;
 
-let rec checkMetro metro =
-    checkMetroHelper ([]) metro;;
+let rec check lambda =
+    checkHelper ([]) lambda;;
 
 (*
 let print_bool x = print_endline (string_of_bool x);;
 
-print_bool(checkMetro ( CONNECT (AREA ("a", STATION "a"), AREA ("b", AREA("a", CONNECT(STATION "b", STATION "a"))))));;
-print_bool(checkMetro ( CONNECT (AREA ("c", STATION "c"), AREA ("b", AREA("a", CONNECT(STATION "b", STATION "c"))))));;
+print_bool(check ( C (P ("a", V "a"), P ("b", P("a", C(V "b", V "a"))))));;
+print_bool(check ( C (P ("c", V "c"), P ("b", P("a", C(V "b", V "c"))))));;
 *)

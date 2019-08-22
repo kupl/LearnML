@@ -1,16 +1,16 @@
-type metro = STATION of name
-| AREA of name * metro
-| CONNECT of metro * metro
-and name = string
+type lambda = V of var
+| P of var * lambda
+| C of lambda * lambda
+and var = string
 
 let rec dec met lst=
   match met with
-  |STATION a -> if(List.mem a lst)=true then true else false
-  |CONNECT (m1, m2) -> (dec m1 lst)&&(dec m1 lst)
-  |AREA(n1, m1)->(dec m1 (n1::lst))
+  |V a -> if(List.mem a lst)=true then true else false
+  |C (m1, m2) -> (dec m1 lst)&&(dec m1 lst)
+  |P(n1, m1)->(dec m1 (n1::lst))
   
-  let rec checkMetro m=
+  let rec check m=
   match m with
-  |STATION a -> false
-  |AREA(n1, m1) -> (dec m (n1::[]))  
-  |CONNECT(m1, m2) ->(dec m1 [])&&(dec m2 [])
+  |V a -> false
+  |P(n1, m1) -> (dec m (n1::[]))  
+  |C(m1, m2) ->(dec m1 [])&&(dec m2 [])

@@ -1,22 +1,22 @@
-type metro =
-  | STATION of name
-  | AREA of name * metro
-  | CONNECT of metro * metro
-and name = string
+type lambda =
+  | V of var
+  | P of var * lambda
+  | C of lambda * lambda
+and var = string
 
-let rec is_mem : name list -> name -> bool
-= fun names name ->
-  match names with
+let rec is_mem : var list -> var -> bool
+= fun vars var ->
+  match vars with
   | [] -> false
-  | hd::tl -> if (hd = name) then true else is_mem tl name
+  | hd::tl -> if (hd = var) then true else is_mem tl var
 
-let rec sub_checkMetro : metro -> name list -> bool
-= fun met names ->
+let rec sub_check : lambda -> var list -> bool
+= fun met vars ->
   match met with
-  | STATION n -> is_mem names n
-  | AREA (n, m) -> sub_checkMetro m (n::names)
-  | CONNECT (m1, m2) -> (sub_checkMetro m1 names) && (sub_checkMetro m2 names)
+  | V n -> is_mem vars n
+  | P (n, m) -> sub_check m (n::vars)
+  | C (m1, m2) -> (sub_check m1 vars) && (sub_check m2 vars)
 
-let rec checkMetro : metro -> bool
+let rec check : lambda -> bool
 = fun met ->
-  sub_checkMetro met []
+  sub_check met []

@@ -2,18 +2,18 @@
  * Homework #1 - Exercise 7 (CheckMetroMap)	*
  * 2008-11744 Jongwook Choi 				*)
 
-type metro  = STATION of name
-			| AREA of name * metro
-			| CONNECT of metro * metro
-	and name = string
+type lambda  = V of var
+			| P of var * lambda
+			| C of lambda * lambda
+	and var = string
 
-let rec checkMetro : metro -> bool = fun m ->
-	let rec checkMetroAux env m =
+let rec check : lambda -> bool = fun m ->
+	let rec checkAux env m =
 		match m with
-			  STATION name -> List.exists (fun t -> (t = name)) env
-			| AREA (name, m') -> checkMetroAux (name :: env) m'
-			| CONNECT (m1, m2) -> (checkMetroAux env m1) && (checkMetroAux env m2)
+			  V var -> List.exists (fun t -> (t = var)) env
+			| P (var, m') -> checkAux (var :: env) m'
+			| C (m1, m2) -> (checkAux env m1) && (checkAux env m2)
 	in
-		checkMetroAux [] m
+		checkAux [] m
 ;;
 

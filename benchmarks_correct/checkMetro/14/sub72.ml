@@ -1,21 +1,21 @@
-type metro = STATION of name
-| AREA of name * metro
-| CONNECT of metro * metro
-and name = string
+type lambda = V of var
+| P of var * lambda
+| C of lambda * lambda
+and var = string
 
 
-let rec comparing (name, li) =
+let rec comparing (var, li) =
 	match li with
 	| [] -> false
 	| st::li' ->
-		if(name = st) then true else comparing(name, li')
+		if(var = st) then true else comparing(var, li')
 		
 	let rec buff (under, li) =
 		match under with
-		| STATION st_name -> comparing(st_name, li)
-		| AREA(id, m) -> buff ( m, List.append li [id])
-		| CONNECT(m1, m2) -> (buff (m1, li) ) && (buff(m2, li))
+		| V st_var -> comparing(st_var, li)
+		| P(id, m) -> buff ( m, List.append li [id])
+		| C(m1, m2) -> (buff (m1, li) ) && (buff(m2, li))
 		
 
-let rec checkMetro under = buff(under, [])
+let rec check under = buff(under, [])
 		

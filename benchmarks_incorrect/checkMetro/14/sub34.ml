@@ -1,26 +1,26 @@
 exception TODO
 
-type metro = STATION of name
+type lambda = V of var
 
-| AREA of name * metro
-| CONNECT of metro * metro
-and name = string
-let rec checkMetro (m: metro) :bool =
+| P of var * lambda
+| C of lambda * lambda
+and var = string
+let rec check (m: lambda) :bool =
 	match m with
-	| AREA (id, y) -> 
-			if (checkMetro y) then true else 
+	| P (id, y) -> 
+			if (check y) then true else 
 				(match y with
-				| STATION s -> s=id
-				| AREA (a,metr) ->  
+				| V s -> s=id
+				| P (a,metr) ->  
 					(match metr with
-					| CONNECT(m1,m2) -> (checkMetro (AREA(a,m1)) || checkMetro (AREA(id,m1)))
-								&& (checkMetro (AREA(a,m2)) || checkMetro (AREA(id,m2)))
+					| C(m1,m2) -> (check (P(a,m1)) || check (P(id,m1)))
+								&& (check (P(a,m2)) || check (P(id,m2)))
 					|_ ->
-						checkMetro (AREA(id,metr)) || checkMetro (AREA(a,metr)) 
+						check (P(id,metr)) || check (P(a,metr)) 
 					)
-				| CONNECT (m1,m2) -> 
-					checkMetro (AREA(id,m1)) && checkMetro (AREA(id,m2))
+				| C (m1,m2) -> 
+					check (P(id,m1)) && check (P(id,m2))
 
 				)
-	| CONNECT (m1,m2) -> (checkMetro m1) && (checkMetro m2)
+	| C (m1,m2) -> (check m1) && (check m2)
 	| _ -> false

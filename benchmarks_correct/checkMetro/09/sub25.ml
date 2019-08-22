@@ -4,19 +4,19 @@
  * HW 1 - Exercise 8
  *)
 
-type metro = STATION of name
-	     | AREA of name * metro
-	     | CONNECT of metro * metro
-and name = string;;
+type lambda = V of var
+	     | P of var * lambda
+	     | C of lambda * lambda
+and var = string;;
 
-let checkMetro m = 
+let check m = 
   let rec myCheck m l =
     match m with
-	STATION(name) -> 
-	  List.mem name l
-      |	AREA(name,metro) ->
-	  myCheck metro (name::l)
-      | CONNECT(metro1,metro2) ->
-	  (myCheck metro1 l)&(myCheck metro2 l)
+	V(var) -> 
+	  List.mem var l
+      |	P(var,lambda) ->
+	  myCheck lambda (var::l)
+      | C(lambda1,lambda2) ->
+	  (myCheck lambda1 l)&(myCheck lambda2 l)
   in
     myCheck m [];;

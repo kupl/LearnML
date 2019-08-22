@@ -1,22 +1,22 @@
-type metro = STATION of name
-			|AREA of name * metro
-			|CONNECT of metro * metro
-and name = string
+type lambda = V of var
+			|P of var * lambda
+			|C of lambda * lambda
+and var = string
 
-let rec findStringinList ((l : string list),(name : string)) : bool =
+let rec findStringinList ((l : string list),(var : string)) : bool =
 	match l with
 		[] -> false
-		|hd::tl -> if((hd = name)) then true else findStringinList(tl,name)
+		|hd::tl -> if((hd = var)) then true else findStringinList(tl,var)
 
-let rec checkMetrowithList ((m : metro),(l : string list)) : bool =
+let rec checkwithList ((m : lambda),(l : string list)) : bool =
 	match m with
-				STATION(name_) -> if(findStringinList(l,name_)) then true else false
-				|AREA(name_,metro_) -> checkMetrowithList(metro_ , name_::l)
-				|CONNECT(metro_1,metro_2) -> checkMetrowithList(metro_1,l)&&checkMetrowithList(metro_2,l)
+				V(var_) -> if(findStringinList(l,var_)) then true else false
+				|P(var_,lambda_) -> checkwithList(lambda_ , var_::l)
+				|C(lambda_1,lambda_2) -> checkwithList(lambda_1,l)&&checkwithList(lambda_2,l)
 
-let checkMetro (m : metro) : bool =
+let check (m : lambda) : bool =
 		 match m with
-		 STATION(name_) -> false
-		|AREA(name_,metro_) -> checkMetrowithList(metro_,[name_])
-		|CONNECT(metro_1,metro_2) -> checkMetrowithList(metro_1,[])&&checkMetrowithList(metro_2,[])
+		 V(var_) -> false
+		|P(var_,lambda_) -> checkwithList(lambda_,[var_])
+		|C(lambda_1,lambda_2) -> checkwithList(lambda_1,[])&&checkwithList(lambda_2,[])
 

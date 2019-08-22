@@ -1,22 +1,22 @@
-type metro = STATION of name
-| AREA of name * metro
-| CONNECT of metro * metro
-and name = string
+type lambda = V of var
+| P of var * lambda
+| C of lambda * lambda
+and var = string
 
-let rec contains ((n: name), (l: name list)): bool = (*List.contains function*)
+let rec contains ((n: var), (l: var list)): bool = (*List.contains function*)
 	match l with 
 	| [] -> false
 	| h::t -> if (n=h) then true
 			  else contains(n, t)
 
-let rec checkMetrosub((m: metro), (l: name list)): bool = 
+let rec checksub((m: lambda), (l: var list)): bool = 
 	match m with
-	| STATION n -> contains(n, l)
-	| AREA (n, m) -> checkMetrosub(m, [n] @ l)
-	| CONNECT(m1, m2) -> checkMetrosub (m1, l) && checkMetrosub (m2, l)
+	| V n -> contains(n, l)
+	| P (n, m) -> checksub(m, [n] @ l)
+	| C(m1, m2) -> checksub (m1, l) && checksub (m2, l)
 
-let checkMetro (m: metro): bool = 
+let check (m: lambda): bool = 
 	match m with
-	| STATION n -> false 
-	| AREA (n, m) -> checkMetrosub (m, [n])
-	| CONNECT (m1, m2) -> checkMetrosub (m1, []) && checkMetrosub (m2, [])
+	| V n -> false 
+	| P (n, m) -> checksub (m, [n])
+	| C (m1, m2) -> checksub (m1, []) && checksub (m2, [])

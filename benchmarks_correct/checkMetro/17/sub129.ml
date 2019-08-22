@@ -1,16 +1,16 @@
-type metro = STATION of name
-|AREA of name * metro
-|CONNECT of metro * metro
-and name = string
+type lambda = V of var
+|P of var * lambda
+|C of lambda * lambda
+and var = string
 
-let rec checkMetro : metro -> bool = fun met ->
+let rec check : lambda -> bool = fun met ->
 match met with
-|STATION n -> false
-|AREA (name , met) -> checkArea(met,name::[])
-|CONNECT (m1,m2) -> checkMetro m1 && checkMetro m2
-and checkArea : metro * string list -> bool = fun (m,nl) ->
+|V n -> false
+|P (var , met) -> checkArea(met,var::[])
+|C (m1,m2) -> check m1 && check m2
+and checkArea : lambda * string list -> bool = fun (m,nl) ->
 match (m,nl) with
-|(STATION name,[]) -> false 
-|(STATION name,n::nl) -> if n=name then true else checkArea(STATION name,nl)
-|(CONNECT(m1,m2),nl) -> checkArea(m1,nl) && checkArea(m2,nl)
-|(AREA(name,met),nl) -> checkArea(met,name::nl)
+|(V var,[]) -> false 
+|(V var,n::nl) -> if n=var then true else checkArea(V var,nl)
+|(C(m1,m2),nl) -> checkArea(m1,nl) && checkArea(m2,nl)
+|(P(var,met),nl) -> checkArea(met,var::nl)

@@ -1,15 +1,15 @@
-type metro = STATION of name
-            |AREA of name * metro
-            |CONNECT of metro * metro
-and name = string
+type lambda = V of var
+            |P of var * lambda
+            |C of lambda * lambda
+and var = string
 
 let rec checkList (met, l) =
   match met with
-  STATION n -> if (List.mem n l) then true else false
-  |AREA (n, m) -> checkList(m, [n]@l)
-  |CONNECT (m1, m2) -> checkList(m1, l) && checkList(m2, l)
+  V n -> if (List.mem n l) then true else false
+  |P (n, m) -> checkList(m, [n]@l)
+  |C (m1, m2) -> checkList(m1, l) && checkList(m2, l)
 
-let rec checkMetro met =
+let rec check met =
   checkList(met, [])
 
 

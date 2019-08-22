@@ -1,11 +1,11 @@
 (* 2009-11824 Jieun-Jeong HW1-7 *)
 
-type metro = STATION of name
-	| AREA of name * metro
-	| CONNECT of metro * metro
-and name = string
+type lambda = V of var
+	| P of var * lambda
+	| C of lambda * lambda
+and var = string
 
-let checkMetro input =
+let check input =
 	let rec is_in_area n lst =
 		match lst with
 		[]	-> false
@@ -13,9 +13,9 @@ let checkMetro input =
 	in
 	let rec check m lst =
 		match m with
-		STATION n	-> (is_in_area n lst)
-		|AREA (n, x)	-> (check x (n::lst)) 
-		|CONNECT (l, r)	-> if (check l lst) then (check r lst) else false
+		V n	-> (is_in_area n lst)
+		|P (n, x)	-> (check x (n::lst)) 
+		|C (l, r)	-> if (check l lst) then (check r lst) else false
 	in
 	check input []
 

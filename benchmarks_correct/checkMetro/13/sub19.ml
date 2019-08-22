@@ -1,20 +1,20 @@
-type metro  = STATION of name
-			| AREA of name * metro
-			| CONNECT of metro * metro
-			and name = string
-let rec checkMetro : metro -> bool = 
-	let rec matchStr : name list * name -> bool =
-		fun(namelist,name) ->
-			match namelist with
-			| h::t -> if(h=name) then true
-					  else matchStr(t,name)
+type lambda  = V of var
+			| P of var * lambda
+			| C of lambda * lambda
+			and var = string
+let rec check : lambda -> bool = 
+	let rec matchStr : var list * var -> bool =
+		fun(varlist,var) ->
+			match varlist with
+			| h::t -> if(h=var) then true
+					  else matchStr(t,var)
 			| [] -> false
 	in
-	let rec checkDeeper : metro * name list -> bool = 
-		fun(metro,namelist) ->
-			match metro with
-			|STATION name -> matchStr(namelist,name)
-			|AREA (n,m) -> checkDeeper(m,[n]@namelist)
-			|CONNECT (m1,m2)-> checkDeeper(m1,namelist)&&checkDeeper(m2,namelist)
+	let rec checkDeeper : lambda * var list -> bool = 
+		fun(lambda,varlist) ->
+			match lambda with
+			|V var -> matchStr(varlist,var)
+			|P (n,m) -> checkDeeper(m,[n]@varlist)
+			|C (m1,m2)-> checkDeeper(m1,varlist)&&checkDeeper(m2,varlist)
 	in
-	fun metro -> checkDeeper(metro,[])
+	fun lambda -> checkDeeper(lambda,[])

@@ -1,18 +1,18 @@
-type metro = STATION of name
-           | AREA of name * metro
-           | CONNECT of metro * metro
-and name = string
+type lambda = V of var
+           | P of var * lambda
+           | C of lambda * lambda
+and var = string
 
-let rec checkMetro (m : metro) =   
+let rec check (m : lambda) =   
     match m with
-       AREA(a, STATION b) -> if a=b then true
+       P(a, V b) -> if a=b then true
                                         else false
-     |AREA (a,(AREA(b, c))) -> if a=b then checkMetro (AREA(b,c))
-                                         else if checkMetro (AREA(a,c))=true then true
-                                         else if checkMetro (AREA(b,c))=true then true
+     |P (a,(P(b, c))) -> if a=b then check (P(b,c))
+                                         else if check (P(a,c))=true then true
+                                         else if check (P(b,c))=true then true
                                          else false
-     |AREA(a, (CONNECT(b,c))) -> if checkMetro(AREA(a,b))=true then
-                                                         if checkMetro(AREA(a,c))=true then true
+     |P(a, (C(b,c))) -> if check(P(a,b))=true then
+                                                         if check(P(a,c))=true then true
                                                          else false
                                                     else false ;;
 
@@ -21,27 +21,27 @@ let rec checkMetro (m : metro) =
 
 
 
-type metro = STATION of name
-           | AREA of name * metro
-           | CONNECT of metro * metro
-and name = string
+type lambda = V of var
+           | P of var * lambda
+           | C of lambda * lambda
+and var = string
 
-let rec checkMetro (m : metro) =   
+let rec check (m : lambda) =   
     match m with
-       AREA(a, STATION b) -> if a=b then true
+       P(a, V b) -> if a=b then true
                                         else false
-     |AREA (a,(AREA(b, c))) -> if a=b then checkMetro(AREA(b,c))
-                                         else if checkMetro(AREA(a,c))=true then checkMetro(AREA(a,c))
-                                         else if checkMetro(AREA(b,c))=true then checkMetro(AREA(b,c))
+     |P (a,(P(b, c))) -> if a=b then check(P(b,c))
+                                         else if check(P(a,c))=true then check(P(a,c))
+                                         else if check(P(b,c))=true then check(P(b,c))
                                          else false
-     |AREA(a, (CONNECT(b,c))) -> if checkMetro(AREA(a,b))=true then
-                                                         if checkMetro(AREA(a,c))=true then true
+     |P(a, (C(b,c))) -> if check(P(a,b))=true then
+                                                         if check(P(a,c))=true then true
                                                          else false
                                                  else false
                                                 
-     |STATION(a) -> false
-     |CONNECT(a,b) -> if checkMetro(a)=true then
-                                    if checkMetro(b)=true then true
+     |V(a) -> false
+     |C(a,b) -> if check(a)=true then
+                                    if check(b)=true then true
                                     else false
                                 else false;;
 

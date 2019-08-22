@@ -1,11 +1,11 @@
-type metro = STATION of name
-		   | AREA of name * metro
-		   | CONNECT of metro * metro
-and name = string;;
+type lambda = V of var
+		   | P of var * lambda
+		   | C of lambda * lambda
+and var = string;;
 
-let checkMetro input =
+let check input =
 	let rec aux arealist = function
-	| STATION(m) -> (List.mem m arealist)
-	| AREA(n, m) -> aux (n::arealist) m
-	| CONNECT(m1, m2) -> (aux arealist m1) && (aux arealist m2) in
+	| V(m) -> (List.mem m arealist)
+	| P(n, m) -> aux (n::arealist) m
+	| C(m1, m2) -> (aux arealist m1) && (aux arealist m2) in
 	aux [] input;;

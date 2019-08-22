@@ -1,9 +1,9 @@
 (*2009-11718 1-7*)
 
-type metro = STATION of name
-	| AREA of name * metro
-	| CONNECT of metro * metro
-and name = string
+type lambda = V of var
+	| P of var * lambda
+	| C of lambda * lambda
+and var = string
 
 let rec checkStation (a, lst) =
 	match lst with
@@ -12,12 +12,12 @@ let rec checkStation (a, lst) =
 		else hd::checkStation(a, tl))
 
 	
-let rec checkMetro met =
+let rec check met =
 	let rec makeMetro met lst =
 		match met with
-		STATION a -> a::lst
-		| AREA (a, mtro) -> checkStation(a, (makeMetro mtro lst))
-		| CONNECT (met1, met2) -> (makeMetro met1 lst)@(makeMetro met2 lst) in
+		V a -> a::lst
+		| P (a, mtro) -> checkStation(a, (makeMetro mtro lst))
+		| C (met1, met2) -> (makeMetro met1 lst)@(makeMetro met2 lst) in
 	if (makeMetro met [])=[] then
 	true
 	else false

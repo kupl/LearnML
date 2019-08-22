@@ -1,14 +1,14 @@
-type metro = STATION of name
-	| AREA of name * metro
-	| CONNECT of metro * metro
-and name = string;; 
+type lambda = V of var
+	| P of var * lambda
+	| C of lambda * lambda
+and var = string;; 
 
-let rec checkMetroG lst met =
+let rec checkG lst met =
 	match met with
-	| AREA(n, m) -> checkMetroG (n::lst) m
-	| CONNECT(m1, m2) -> checkMetroG lst m1 && checkMetroG lst m2
-	| STATION t ->
+	| P(n, m) -> checkG (n::lst) m
+	| C(m1, m2) -> checkG lst m1 && checkG lst m2
+	| V t ->
 		if List.mem t lst then true
 		else false;;
 
-let checkMetro = checkMetroG [];;	
+let check = checkG [];;	

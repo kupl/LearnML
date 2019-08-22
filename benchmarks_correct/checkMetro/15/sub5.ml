@@ -1,23 +1,23 @@
 (* SNU Programming Language Fall 2015
  * Homework 2 
- * Exercise 3: checkMetro
+ * Exercise 3: check
  * Written by Dongho Kang 
  *)
 
-type metro = STATION of name
-| AREA of name * metro
-| CONNECT of metro * metro
-and name = string
+type lambda = V of var
+| P of var * lambda
+| C of lambda * lambda
+and var = string
 ;;
 
-let rec checkMetro: metro -> bool = fun m -> 
-    let rec checkMetro_sub: metro * name list -> bool = fun (m, l) ->
+let rec check: lambda -> bool = fun m -> 
+    let rec check_sub: lambda * var list -> bool = fun (m, l) ->
         match m with 
-        | STATION n             -> (List.mem n l)
-        | AREA (n, m_n)         -> checkMetro_sub (m_n, n::l)
-        | CONNECT (m_1, m_2)    -> checkMetro_sub (m_1, l) && checkMetro_sub (m_2, l)
+        | V n             -> (List.mem n l)
+        | P (n, m_n)         -> check_sub (m_n, n::l)
+        | C (m_1, m_2)    -> check_sub (m_1, l) && check_sub (m_2, l)
     in
 
-    checkMetro_sub (m, [])
+    check_sub (m, [])
 ;;
 

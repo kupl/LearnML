@@ -1,16 +1,16 @@
-type metro = STATION of name
-		   | AREA of name * metro
-		   | CONNECT of metro * metro
-  and name = string
+type lambda = V of var
+		   | P of var * lambda
+		   | C of lambda * lambda
+  and var = string
 
-let checkMetro : metro -> bool = fun m ->
-	let rec checkmetro' = fun m namelist ->
+let check : lambda -> bool = fun m ->
+	let rec checklambda' = fun m varlist ->
 		match m with
-		| STATION name -> if (List.mem name namelist) then true
+		| V var -> if (List.mem var varlist) then true
 						  else false
-		| AREA (name, metro) ->	checkmetro' metro (name::namelist)
-		| CONNECT (met1, met2) -> checkmetro' met1 namelist && checkmetro' met2 namelist
+		| P (var, lambda) ->	checklambda' lambda (var::varlist)
+		| C (met1, met2) -> checklambda' met1 varlist && checklambda' met2 varlist
 	in
-	checkmetro' m []
+	checklambda' m []
 
 

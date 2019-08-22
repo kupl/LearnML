@@ -1,14 +1,14 @@
-type metro = 	STATION of name
-		| AREA of name * metro
-		| CONNECT of metro * metro
-and name = string
+type lambda = 	V of var
+		| P of var * lambda
+		| C of lambda * lambda
+and var = string
 
-let rec checkMetro m =
-	let rec checkMetroProxy n areaList =
+let rec check m =
+	let rec checkProxy n areaList =
 		match n with
-		| STATION x -> List.mem x areaList
-		| AREA (x, y) -> checkMetroProxy y (x :: areaList)
-		| CONNECT (x, y) -> (checkMetroProxy x areaList) && (checkMetroProxy y areaList)
+		| V x -> List.mem x areaList
+		| P (x, y) -> checkProxy y (x :: areaList)
+		| C (x, y) -> (checkProxy x areaList) && (checkProxy y areaList)
 	in
-	checkMetroProxy m []
+	checkProxy m []
 

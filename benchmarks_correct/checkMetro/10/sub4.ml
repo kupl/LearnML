@@ -1,24 +1,24 @@
 (* 2004-11957 "Computer science and engineering" "Park Kwang-seok" homework#1-7 *)
 
-type metro = STATION of name
-	| AREA of name * metro
-	| CONNECT of metro * metro
-	and name = string
+type lambda = V of var
+	| P of var * lambda
+	| C of lambda * lambda
+	and var = string
 
-let rec checkMetroPre (m, l) = match m with
-		STATION a -> List.mem a l
-		| AREA (a, b) -> checkMetroPre (b, a :: l)
-		| CONNECT (a, b) -> checkMetroPre (a, l) && checkMetroPre (b, l)
+let rec checkPre (m, l) = match m with
+		V a -> List.mem a l
+		| P (a, b) -> checkPre (b, a :: l)
+		| C (a, b) -> checkPre (a, l) && checkPre (b, l)
 
-let rec checkMetro m = checkMetroPre (m, [])
+let rec check m = checkPre (m, [])
 
 (*
 (* test code *)
-let _ = print_endline (string_of_bool (checkMetroPre (AREA("a", STATION "a"), [])));
-	print_endline (string_of_bool (checkMetroPre (AREA("a", AREA("a", STATION "a")), [])));
-	print_endline (string_of_bool (checkMetroPre (AREA("a", AREA("b", CONNECT(STATION "a", STATION "b"))), [])));
-	print_endline (string_of_bool (checkMetroPre (AREA("a", CONNECT(STATION "a", AREA("b", STATION "a"))), [])));
-	print_endline (string_of_bool (checkMetroPre (AREA("a", STATION "b"), [])));
-	print_endline (string_of_bool (checkMetroPre (AREA("a", CONNECT(STATION "a", AREA("b", STATION "c"))), [])));
-	print_endline (string_of_bool (checkMetroPre (AREA("a", AREA("b", CONNECT(STATION "a", STATION "c"))), [])))
+let _ = print_endline (string_of_bool (checkPre (P("a", V "a"), [])));
+	print_endline (string_of_bool (checkPre (P("a", P("a", V "a")), [])));
+	print_endline (string_of_bool (checkPre (P("a", P("b", C(V "a", V "b"))), [])));
+	print_endline (string_of_bool (checkPre (P("a", C(V "a", P("b", V "a"))), [])));
+	print_endline (string_of_bool (checkPre (P("a", V "b"), [])));
+	print_endline (string_of_bool (checkPre (P("a", C(V "a", P("b", V "c"))), [])));
+	print_endline (string_of_bool (checkPre (P("a", P("b", C(V "a", V "c"))), [])))
 *)

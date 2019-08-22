@@ -4,27 +4,27 @@
     Sep 28, 2017
 *)
 
-type metro = STATION of name
-           | AREA of name * metro
-           | CONNECT of metro * metro
-and name = string
+type lambda = V of var
+           | P of var * lambda
+           | C of lambda * lambda
+and var = string
 
-let rec checkMetro: metro -> bool =
+let rec check: lambda -> bool =
     let rec checkInList: 'a * 'a list -> bool = fun (value, lst) ->
         match lst with
         | [] -> false
         | hd::tl -> if value = hd then true else checkInList (value, tl)
     in
 
-    let rec checkMetroHelper: string list * metro -> bool = fun (areaList, met) ->
+    let rec checkHelper: string list * lambda -> bool = fun (areaList, met) ->
         match met with
-        | STATION (stationName) -> checkInList (stationName, areaList)
-        | AREA (areaName, nextMetro) -> (
-            if (checkInList (areaName, areaList)) then checkMetroHelper (areaList, nextMetro)
-            else checkMetroHelper (areaName::areaList, nextMetro)
+        | V (stationName) -> checkInList (stationName, areaList)
+        | P (areaName, nextMetro) -> (
+            if (checkInList (areaName, areaList)) then checkHelper (areaList, nextMetro)
+            else checkHelper (areaName::areaList, nextMetro)
             )
-        | CONNECT (metro1, metro2) ->
-            checkMetroHelper (areaList, metro1) && checkMetroHelper (areaList, metro2)
+        | C (lambda1, lambda2) ->
+            checkHelper (areaList, lambda1) && checkHelper (areaList, lambda2)
     in
 
-    fun met -> checkMetroHelper ([], met)
+    fun met -> checkHelper ([], met)

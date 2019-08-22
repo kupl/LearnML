@@ -1,19 +1,19 @@
-type metro = 
-  STATION of name
-  | AREA of name * metro
-  | CONNECT of metro * metro
-and name = string
+type lambda = 
+  V of var
+  | P of var * lambda
+  | C of lambda * lambda
+and var = string
 
-let checkMetro m =
+let check m =
   let rec checkName (str, l) =
     match l with
     | [] -> false
     | head::tail -> if str=head then true else checkName(str, tail)
   in
-  let rec checkMetro2 (m, l) = 
+  let rec check2 (m, l) = 
     match m with
-    | STATION a ->checkName(a, l)
-    | AREA (a, b) -> checkMetro2(b, a::l)
-    | CONNECT (a, b) -> (checkMetro2(a, l) && checkMetro2(b, l))
+    | V a ->checkName(a, l)
+    | P (a, b) -> check2(b, a::l)
+    | C (a, b) -> (check2(a, l) && check2(b, l))
   in
-  checkMetro2(m,[]);;
+  check2(m,[]);;

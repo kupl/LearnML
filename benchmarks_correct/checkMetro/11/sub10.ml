@@ -1,17 +1,17 @@
-type metro = STATION of name
-        | AREA of name * metro
-        | CONNECT of metro * metro
-and name = string
+type lambda = V of var
+        | P of var * lambda
+        | C of lambda * lambda
+and var = string
 
-let compareList (name, l) =
-        List.mem name l
+let compareList (var, l) =
+        List.mem var l
 
-let rec checkMetroTail (metro, l) = match metro with
-        STATION (x) -> compareList(x, l)
-        | AREA (x, y) -> checkMetroTail(y, x::l)
-        | CONNECT (x, y) -> checkMetroTail(x, l) && checkMetroTail(y, l)
+let rec checkTail (lambda, l) = match lambda with
+        V (x) -> compareList(x, l)
+        | P (x, y) -> checkTail(y, x::l)
+        | C (x, y) -> checkTail(x, l) && checkTail(y, l)
 
-let checkMetro metro = let l = [] in match metro with
-         STATION (x) -> compareList(x, l)
-        | AREA (x, y) -> checkMetroTail(y, x::l)
-        | CONNECT (x, y) -> checkMetroTail(x, l) && checkMetroTail(y, l)
+let check lambda = let l = [] in match lambda with
+         V (x) -> compareList(x, l)
+        | P (x, y) -> checkTail(y, x::l)
+        | C (x, y) -> checkTail(x, l) && checkTail(y, l)

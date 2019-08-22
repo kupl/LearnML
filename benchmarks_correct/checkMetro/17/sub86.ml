@@ -1,18 +1,18 @@
-type metro = 
-  | STATION of name
-  | AREA of name * metro
-  | CONNECT of metro * metro
+type lambda = 
+  | V of var
+  | P of var * lambda
+  | C of lambda * lambda
 and 
-  name = string
+  var = string
 (*
-let rec checkMetro (m: metro) : bool =
+let rec check (m: lambda) : bool =
   match m with
-  | STATION n -> true
-  | CONNECT (m1, m2) -> (checkMetro m1) && (checkMetro m2)
-  | AREA (n, m) -> 
+  | V n -> true
+  | C (m1, m2) -> (check m1) && (check m2)
+  | P (n, m) -> 
       ( match m with
-      | STATION n2 -> (if (n=n2) then true else false)
-      | _ -> (checkMetro m)
+      | V n2 -> (if (n=n2) then true else false)
+      | _ -> (check m)
       )
 *)
 let rec checkMemory (m, mem): bool =
@@ -23,11 +23,11 @@ let rec checkMemory (m, mem): bool =
       then true
       else checkMemory(m, tl)
 
-let rec checkMetro_wMem (m, mem): bool=
+let rec check_wMem (m, mem): bool=
   match m with
-  | STATION n -> checkMemory(n, mem)
-  | CONNECT (m1, m2)-> (checkMetro_wMem (m1, mem)) && (checkMetro_wMem (m2, mem))
-  | AREA (n, m1) -> checkMetro_wMem (m1, (n::mem))
+  | V n -> checkMemory(n, mem)
+  | C (m1, m2)-> (check_wMem (m1, mem)) && (check_wMem (m2, mem))
+  | P (n, m1) -> check_wMem (m1, (n::mem))
 
-let checkMetro (m: metro) : bool=
-  checkMetro_wMem(m, [])
+let check (m: lambda) : bool=
+  check_wMem(m, [])

@@ -1,20 +1,20 @@
-type metro = STATION of name
-| AREA of name * metro
-| CONNECT of metro * metro
-and name = string
+type lambda = V of var
+| P of var * lambda
+| C of lambda * lambda
+and var = string
 
-let checkMetro m=
+let check m=
 	let rec make_area_list m=
 		match m with 
-			| STATION(n)-> []
-			| AREA(n, m1)-> n::(make_area_list m1)
-			| CONNECT(m1, m2)-> (make_area_list m1)@(make_area_list m2)
+			| V(n)-> []
+			| P(n, m1)-> n::(make_area_list m1)
+			| C(m1, m2)-> (make_area_list m1)@(make_area_list m2)
 	in
 	let rec match_list_with_station m l=
 		match m with
-			| AREA(n,m1)->match_list_with_station m1 l
-			| CONNECT(m1, m2)->(match_list_with_station m1 l)&&(match_list_with_station m2 l)
-			| STATION(n)->
+			| P(n,m1)->match_list_with_station m1 l
+			| C(m1, m2)->(match_list_with_station m1 l)&&(match_list_with_station m2 l)
+			| V(n)->
 				if(List.exists (fun x->(x=n)) l ) then true
 				else false
 	in

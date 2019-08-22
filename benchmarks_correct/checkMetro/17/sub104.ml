@@ -1,17 +1,17 @@
-type metro = STATION of name
-| AREA of name * metro
-| CONNECT of metro * metro
-and name = string
+type lambda = V of var
+| P of var * lambda
+| C of lambda * lambda
+and var = string
 
-let checker (a:name) (b:name) : bool =
+let checker (a:var) (b:var) : bool =
     if a = b then true
     else false
 
-let rec checkMetroHelper ((a:metro),(l:name list)) : bool =
+let rec checkHelper ((a:lambda),(l:var list)) : bool =
     match a with
-    | STATION x -> List.exists(checker x) l
-    | AREA(x,y) -> checkMetroHelper(y,x::l)
-    | CONNECT(x,y) -> checkMetroHelper(x,l) && checkMetroHelper(y,l)
+    | V x -> List.exists(checker x) l
+    | P(x,y) -> checkHelper(y,x::l)
+    | C(x,y) -> checkHelper(x,l) && checkHelper(y,l)
 
-let checkMetro (a:metro) : bool =
-    checkMetroHelper(a,[])
+let check (a:lambda) : bool =
+    checkHelper(a,[])

@@ -1,23 +1,23 @@
 (* 2008-11874 EXERCISE 8 *)
 
-type metro = STATION of name
-| AREA of name * metro
-| CONNECT of metro * metro
-and name = string
+type lambda = V of var
+| P of var * lambda
+| C of lambda * lambda
+and var = string
 
-let rec checkMetro metro =
-	let rec nameStation metro =
-		match metro with
-			| STATION(n) -> n::[]
-			| AREA(n,m) -> nameStation m
-			| CONNECT(m1,m2) -> List.append (nameStation m1) (nameStation m2)
+let rec check lambda =
+	let rec varStation lambda =
+		match lambda with
+			| V(n) -> n::[]
+			| P(n,m) -> varStation m
+			| C(m1,m2) -> List.append (varStation m1) (varStation m2)
 	in
 	
-	let rec nameArea metro =
-		match metro with
-			| STATION(n) -> []
-			| AREA(n,m) -> n::(nameArea m)
-			| CONNECT(m1,m2) -> List.append (nameArea m1) (nameArea m2)
+	let rec varArea lambda =
+		match lambda with
+			| V(n) -> []
+			| P(n,m) -> n::(varArea m)
+			| C(m1,m2) -> List.append (varArea m1) (varArea m2)
 	in
 	
 	let rec check l1 l2 =
@@ -26,6 +26,6 @@ let rec checkMetro metro =
 			| hd::tl -> (List.mem hd l2) && (check tl l2)
 	in
 	
-	check (nameStation metro) (nameArea metro)
+	check (varStation lambda) (varArea lambda)
 	
 	

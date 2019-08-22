@@ -1,20 +1,20 @@
-type metro = STATION of name
-	| AREA of name * metro
-	| CONNECT of metro * metro
-and name = string
+type lambda = V of var
+	| P of var * lambda
+	| C of lambda * lambda
+and var = string
 
-let rec checkMetro: metro -> bool = fun x ->
+let rec check: lambda -> bool = fun x ->
 	let rec listing m l = 
 		(match m with
-		| STATION st -> List.mem st l
-		| AREA (aname, mm) -> listing mm (aname::l)
-		| CONNECT (m1, m2) -> (listing m1 l) && (listing m2 l)) in
+		| V st -> List.mem st l
+		| P (avar, mm) -> listing mm (avar::l)
+		| C (m1, m2) -> (listing m1 l) && (listing m2 l)) in
 	listing x []
 
-let x1 = AREA("a", STATION "a")
-let x2 = AREA("a", AREA("a", STATION "a"))
-let x3 = AREA("a", AREA("b", CONNECT(STATION "a", STATION "b")))
-let x4 = AREA("a", CONNECT(STATION "a", AREA("b", STATION "a")))
-let x5 = AREA("a", STATION "b")
-let x6 = AREA("a", CONNECT(STATION "a", AREA("b", STATION "c")))
-let x7 = AREA("a", AREA("b", CONNECT(STATION "a", STATION "c")))
+let x1 = P("a", V "a")
+let x2 = P("a", P("a", V "a"))
+let x3 = P("a", P("b", C(V "a", V "b")))
+let x4 = P("a", C(V "a", P("b", V "a")))
+let x5 = P("a", V "b")
+let x6 = P("a", C(V "a", P("b", V "c")))
+let x7 = P("a", P("b", C(V "a", V "c")))

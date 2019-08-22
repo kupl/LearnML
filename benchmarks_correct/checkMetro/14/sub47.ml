@@ -1,16 +1,16 @@
-type metro = STATION of name
-	| AREA of name * metro
-	| CONNECT of metro * metro
-and name = string
+type lambda = V of var
+	| P of var * lambda
+	| C of lambda * lambda
+and var = string
 
-let rec checkMetroProc (met:metro) (l:name list) : bool =
+let rec checkProc (met:lambda) (l:var list) : bool =
 	match met with
-	| STATION n -> (List.mem n l)
-	| AREA (n,m) -> (checkMetroProc m (l@[n]))
-	| CONNECT (m1,m2) -> (checkMetroProc m1 l)&&(checkMetroProc m2 l)
+	| V n -> (List.mem n l)
+	| P (n,m) -> (checkProc m (l@[n]))
+	| C (m1,m2) -> (checkProc m1 l)&&(checkProc m2 l)
 
-let checkMetro (met:metro) : bool =
+let check (met:lambda) : bool =
 	match met with
-	| STATION n -> false
-	| AREA (n,m) -> (checkMetroProc m [n])
-	| CONNECT (m1,m2) -> (checkMetroProc m1 [])&&(checkMetroProc m2 [])
+	| V n -> false
+	| P (n,m) -> (checkProc m [n])
+	| C (m1,m2) -> (checkProc m1 [])&&(checkProc m2 [])

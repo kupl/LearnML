@@ -1,16 +1,16 @@
 exception Error of string
-type metro = STATION of name
-  | AREA of name * metro
-  | CONNECT of metro * metro
-                         and name = string
+type lambda = V of var
+  | P of var * lambda
+  | C of lambda * lambda
+                         and var = string
 
-let checkMetro : metro -> bool =
-  fun metro ->
-    let rec checkMetro : metro -> name list -> bool =
-      fun metro -> fun env ->
-        match metro
-        with STATION(n) -> (List.mem n env)
-          | AREA(n,m) -> (checkMetro m (n::env))
-          | CONNECT(m1,m2) -> ((checkMetro m1 env) && (checkMetro m2 env))
+let check : lambda -> bool =
+  fun lambda ->
+    let rec check : lambda -> var list -> bool =
+      fun lambda -> fun env ->
+        match lambda
+        with V(n) -> (List.mem n env)
+          | P(n,m) -> (check m (n::env))
+          | C(m1,m2) -> ((check m1 env) && (check m2 env))
     in
-      (checkMetro metro [])
+      (check lambda [])

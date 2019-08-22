@@ -1,17 +1,17 @@
 
-type metro = STATION of name
-		   | AREA of name * metro
-		   | CONNECT of metro * metro
-and name = string
+type lambda = V of var
+		   | P of var * lambda
+		   | C of lambda * lambda
+and var = string
 
 let rec checklist(me, li) =
 	match me with
-	| STATION n -> List.mem n li
-	| AREA(n1, me1) -> checklist (me1, n1::li)
-	| CONNECT(me1,me2) -> checklist(me1, li) && checklist(me2, li)
+	| V n -> List.mem n li
+	| P(n1, me1) -> checklist (me1, n1::li)
+	| C(me1,me2) -> checklist(me1, li) && checklist(me2, li)
 
 
-let rec checkMetro me =
+let rec check me =
 	let l = [] in
 		checklist(me, l)
 

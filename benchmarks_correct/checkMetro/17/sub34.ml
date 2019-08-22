@@ -1,36 +1,36 @@
-    type metro = STATION of name
-    | AREA of name * metro
-    | CONNECT of metro * metro
-    and name = string
+    type lambda = V of var
+    | P of var * lambda
+    | C of lambda * lambda
+    and var = string
 
-    let checkMetro m = 
+    let check m = 
     (
     let rec firstcheck_rec al m =
     match m with
-    | AREA(name,m1) -> firstcheck_rec (name::al) m1
-    | CONNECT(m1,m2) -> firstcheck_rec al m1 && firstcheck_rec al m2
-    | STATION(name) -> List.mem name al
+    | P(var,m1) -> firstcheck_rec (var::al) m1
+    | C(m1,m2) -> firstcheck_rec al m1 && firstcheck_rec al m2
+    | V(var) -> List.mem var al
     in
     firstcheck_rec []  m
     )
 
 (*
     let _ =
-        if checkMetro(AREA("a",STATION "b")) = true then print_string("hello")
+        if check(P("a",V "b")) = true then print_string("hello")
         else print_string("hhh")
 
         let _ = 
         let test_case : int * bool -> unit = fun (n, x) -> 
         print_endline ("Case " ^ string_of_int(n) ^ " : " ^ string_of_bool(x)) in 
-        test_case(1, true == checkMetro(AREA("a", STATION "a"))); 
-        test_case(2, true == checkMetro(AREA("a", AREA("a", STATION "a")))); 
-        test_case(3, true == checkMetro(AREA("a", AREA("b", CONNECT(STATION "a", STATION "b"))))); 
-        test_case(4, true == checkMetro(AREA("a", CONNECT(STATION "a", AREA("b", STATION "a"))))); 
-        test_case(5, false == checkMetro(AREA("a", STATION "b"))); 
-        test_case(6, false == checkMetro(AREA("a", CONNECT(STATION "a", AREA("b", STATION "c"))))); 
-        test_case(7, false == checkMetro(AREA("a", AREA("b", CONNECT(STATION "a", STATION "c"))))); 
-        test_case(8, true == checkMetro(CONNECT(AREA("a", STATION "a"), AREA("b", AREA("a", CONNECT(STATION "b", STATION "a")))))); 
-        test_case(9, false == checkMetro(CONNECT(AREA("c", STATION "c"), AREA("b", AREA("a", CONNECT(STATION "b", STATION "c")))))); 
-        test_case(10, false == checkMetro(STATION "a"))
+        test_case(1, true == check(P("a", V "a"))); 
+        test_case(2, true == check(P("a", P("a", V "a")))); 
+        test_case(3, true == check(P("a", P("b", C(V "a", V "b"))))); 
+        test_case(4, true == check(P("a", C(V "a", P("b", V "a"))))); 
+        test_case(5, false == check(P("a", V "b"))); 
+        test_case(6, false == check(P("a", C(V "a", P("b", V "c"))))); 
+        test_case(7, false == check(P("a", P("b", C(V "a", V "c"))))); 
+        test_case(8, true == check(C(P("a", V "a"), P("b", P("a", C(V "b", V "a")))))); 
+        test_case(9, false == check(C(P("c", V "c"), P("b", P("a", C(V "b", V "c")))))); 
+        test_case(10, false == check(V "a"))
 
 *)

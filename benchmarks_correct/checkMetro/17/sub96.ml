@@ -1,17 +1,17 @@
-type metro = STATION of name
-| AREA of name * metro
-| CONNECT of metro * metro
-and name = string
+type lambda = V of var
+| P of var * lambda
+| C of lambda * lambda
+and var = string
 
 let same y = fun x -> (x= y)
 
-let rec checkMetroName (x, y) = match y with
-							|STATION a -> List.exists (same a) x
-							|AREA (a, b) -> checkMetroName(List.append x [a], b)
-							|CONNECT (a, b) -> checkMetroName(x, a) && checkMetroName(x, b)
+let rec checkName (x, y) = match y with
+							|V a -> List.exists (same a) x
+							|P (a, b) -> checkName(List.append x [a], b)
+							|C (a, b) -> checkName(x, a) && checkName(x, b)
 
-let rec checkMetro x = match x with
-						|STATION a -> false
-						|CONNECT (a, b) -> (checkMetro a) && (checkMetro b)
-						|AREA (a, b) -> checkMetroName ([a], b)
+let rec check x = match x with
+						|V a -> false
+						|C (a, b) -> (check a) && (check b)
+						|P (a, b) -> checkName ([a], b)
 

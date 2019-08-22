@@ -1,16 +1,16 @@
-type metro = STATION of name
-           | AREA of name * metro
-           | CONNECT of metro * metro
-and name = string
+type lambda = V of var
+           | P of var * lambda
+           | C of lambda * lambda
+and var = string
 
 let rec check mt arealist =
     match mt with
-    | STATION str ->
+    | V str ->
             List.exists (fun x -> x=str) arealist
-    | CONNECT (m1,m2) ->
+    | C (m1,m2) ->
             (check m1 arealist) && (check m2 arealist)
-    | AREA  (str, m) ->
+    | P  (str, m) ->
             check m (str::arealist)
 
-let checkMetro met =
+let check met =
     check met []

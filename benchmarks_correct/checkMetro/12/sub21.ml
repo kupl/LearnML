@@ -1,19 +1,19 @@
 (* HW1 exercise8 2009-11697 Kim HyunJoon *)
 (* CheckMetroMap *)
 
-type metro 	= STATION of name
-		| AREA of name * metro
-		| CONNECT of metro * metro
+type lambda 	= V of var
+		| P of var * lambda
+		| C of lambda * lambda
 
-and name = string
+and var = string
 
-let checkMetro : metro -> bool =
+let check : lambda -> bool =
 	fun met ->
 	let rec myCheckMetro m lst =	
 		match m with
-		| STATION s -> (List.mem s lst)
-		| AREA (a, n) -> (myCheckMetro n (a::lst))
-		| CONNECT (m1, m2) -> (myCheckMetro m1 lst) && (myCheckMetro m2 lst)
+		| V s -> (List.mem s lst)
+		| P (a, n) -> (myCheckMetro n (a::lst))
+		| C (m1, m2) -> (myCheckMetro m1 lst) && (myCheckMetro m2 lst)
 	in
 	(myCheckMetro met [])
 

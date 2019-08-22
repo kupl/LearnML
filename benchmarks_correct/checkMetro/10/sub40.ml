@@ -1,13 +1,13 @@
 exception Error of string
-type metro = STATION of name
-			| AREA of name * metro
-			| CONNECT of metro * metro
-and name = string
+type lambda = V of var
+			| P of var * lambda
+			| C of lambda * lambda
+and var = string
 
-let checkMetro m =
-	let rec checkMetro_in m areas =
+let check m =
+	let rec check_in m areas =
 		match m with
-			STATION st ->
+			V st ->
 				let rec is_valid st area_list = 
 					(match area_list with
 						[] -> false
@@ -15,8 +15,8 @@ let checkMetro m =
 								  else is_valid st t)
 				in
 					is_valid st areas
-			| AREA (st, m') -> checkMetro_in m' (st::areas)
-			| CONNECT (m1, m2) -> (checkMetro_in m1 areas) && (checkMetro_in m2 areas)
+			| P (st, m') -> check_in m' (st::areas)
+			| C (m1, m2) -> (check_in m1 areas) && (check_in m2 areas)
 	in
-		checkMetro_in m []
+		check_in m []
 ;;	

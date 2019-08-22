@@ -1,24 +1,24 @@
-type metro = STATION of name
-	   | AREA of name * metro
-	   | CONNECT of metro * metro
-and name = string
-let rec deletecity(name, lis) =
-	if name = List.hd(lis) then if List.length(lis)=1 then [] else  deletecity(name, List.tl(lis))
-	else if List.length(lis)=1 then lis else List.hd(lis)::deletecity(name,List.tl(lis))
+type lambda = V of var
+	   | P of var * lambda
+	   | C of lambda * lambda
+and var = string
+let rec deletecity(var, lis) =
+	if var = List.hd(lis) then if List.length(lis)=1 then [] else  deletecity(var, List.tl(lis))
+	else if List.length(lis)=1 then lis else List.hd(lis)::deletecity(var,List.tl(lis))
 let rec findcity met =
 	match met with
-	| STATION name -> name::[]
-	| AREA (name, metro) -> deletecity(name, findcity(metro))
-	| CONNECT (met1, met2) -> List.rev_append (findcity(met1)) (findcity(met2))
+	| V var -> var::[]
+	| P (var, lambda) -> deletecity(var, findcity(lambda))
+	| C (met1, met2) -> List.rev_append (findcity(met1)) (findcity(met2))
 
-let deletestation(name, metro) =
-	let citylist = findcity(metro) in
-	if deletecity(name, citylist)=[]
+let deletestation(var, lambda) =
+	let citylist = findcity(lambda) in
+	if deletecity(var, citylist)=[]
 	then true else false
 
-let rec checkMetro met =
+let rec check met =
 	match met with
-	| STATION name -> false
-	| AREA (name, metro) -> if checkMetro(metro) then true 
-		else deletestation(name, metro)
-	| CONNECT (met1, met2) -> checkMetro(met1) && checkMetro(met2)
+	| V var -> false
+	| P (var, lambda) -> if check(lambda) then true 
+		else deletestation(var, lambda)
+	| C (met1, met2) -> check(met1) && check(met2)

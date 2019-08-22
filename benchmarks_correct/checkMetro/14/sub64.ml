@@ -1,17 +1,17 @@
-type metro = STATION of name
-  | AREA of name * metro
-  | CONNECT of metro * metro
-and name = string
+type lambda = V of var
+  | P of var * lambda
+  | C of lambda * lambda
+and var = string
 
 let streq a b =
   a = b
 
-let rec checkMetro_lst mtr lst = 
+let rec check_lst mtr lst = 
   match mtr with
-    | STATION x -> List.exists (streq x) lst
-    | AREA (x, y) -> checkMetro_lst y (x::lst)
-    | CONNECT (x, y) -> (checkMetro_lst x lst) && (checkMetro_lst y lst)
+    | V x -> List.exists (streq x) lst
+    | P (x, y) -> check_lst y (x::lst)
+    | C (x, y) -> (check_lst x lst) && (check_lst y lst)
 
-let checkMetro mtr = 
-  checkMetro_lst mtr []
+let check mtr = 
+  check_lst mtr []
 

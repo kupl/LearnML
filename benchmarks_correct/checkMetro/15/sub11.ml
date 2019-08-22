@@ -1,35 +1,35 @@
 
-type metro = STATION of name
-            | AREA of name * metro
-            | CONNECT of metro * metro
-        and name = string
+type lambda = V of var
+            | P of var * lambda
+            | C of lambda * lambda
+        and var = string
 
-let checkMetro: metro -> bool = fun(m) ->
-    let rec checkMetroInternal: string list * metro -> bool = fun(sl, m) ->
+let check: lambda -> bool = fun(m) ->
+    let rec checkInternal: string list * lambda -> bool = fun(sl, m) ->
         match m with
-        | STATION(n) -> List.mem n sl
-        | AREA(n, m) -> checkMetroInternal(n::sl, m)
-        | CONNECT(m1, m2) -> checkMetroInternal(sl, m1) && checkMetroInternal(sl, m2)
+        | V(n) -> List.mem n sl
+        | P(n, m) -> checkInternal(n::sl, m)
+        | C(m1, m2) -> checkInternal(sl, m1) && checkInternal(sl, m2)
         in
-    checkMetroInternal([], m)
+    checkInternal([], m)
 
 
 (*
 
-let t1 = AREA("a", STATION "a")
-let t2 = AREA("a", AREA("a", STATION "a"))
-let t3 = AREA("a", AREA("b", CONNECT(STATION "a", STATION "b")))
-let t4 = AREA("a", CONNECT(STATION "a", AREA("b", STATION "a")))
+let t1 = P("a", V "a")
+let t2 = P("a", P("a", V "a"))
+let t3 = P("a", P("b", C(V "a", V "b")))
+let t4 = P("a", C(V "a", P("b", V "a")))
 
-let f1 = AREA("a", STATION "b")
-let f2 = AREA("a", CONNECT(STATION "a", AREA("b", STATION "c")))
-let f3 = AREA("a", AREA("b", CONNECT(STATION "a", STATION "c")))
+let f1 = P("a", V "b")
+let f2 = P("a", C(V "a", P("b", V "c")))
+let f3 = P("a", P("b", C(V "a", V "c")))
 
-let _ = print_endline(string_of_bool(checkMetro(t1)))
-let _ = print_endline(string_of_bool(checkMetro(t2)))
-let _ = print_endline(string_of_bool(checkMetro(t3)))
-let _ = print_endline(string_of_bool(checkMetro(t4)))
-let _ = print_endline(string_of_bool(checkMetro(f1)))
-let _ = print_endline(string_of_bool(checkMetro(f2)))
-let _ = print_endline(string_of_bool(checkMetro(f3)))
+let _ = print_endline(string_of_bool(check(t1)))
+let _ = print_endline(string_of_bool(check(t2)))
+let _ = print_endline(string_of_bool(check(t3)))
+let _ = print_endline(string_of_bool(check(t4)))
+let _ = print_endline(string_of_bool(check(f1)))
+let _ = print_endline(string_of_bool(check(f2)))
+let _ = print_endline(string_of_bool(check(f3)))
 *)

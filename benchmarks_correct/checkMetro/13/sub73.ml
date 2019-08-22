@@ -1,18 +1,18 @@
 
-type metro = STATION of name
-						| AREA of name * metro
-						| CONNECT of metro * metro
-and name = string
+type lambda = V of var
+						| P of var * lambda
+						| C of lambda * lambda
+and var = string
 
-let checkMetro : metro -> bool = fun metro -> 
-	let rec checkMetroInner metro metroList = 
-		match metro with
-		| STATION(name) ->	
-			List.mem name metroList
-		| AREA(name, m) -> 
-			checkMetroInner m (name::metroList)
-		| CONNECT(m1, m2) -> 
-			(checkMetroInner m1 metroList)&&(checkMetroInner m2 metroList)
+let check : lambda -> bool = fun lambda -> 
+	let rec checkInner lambda lambdaList = 
+		match lambda with
+		| V(var) ->	
+			List.mem var lambdaList
+		| P(var, m) -> 
+			checkInner m (var::lambdaList)
+		| C(m1, m2) -> 
+			(checkInner m1 lambdaList)&&(checkInner m2 lambdaList)
 	in 
 	
-	checkMetroInner metro []
+	checkInner lambda []

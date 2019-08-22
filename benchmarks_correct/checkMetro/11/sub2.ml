@@ -1,17 +1,17 @@
-type metro = STATION of name
-| AREA of name * metro
-| CONNECT of metro * metro
+type lambda = V of var
+| P of var * lambda
+| C of lambda * lambda
 
-and name = string
+and var = string
 
 
-let rec checkMetro metro_input = 
+let rec check lambda_input = 
 	let 
 		rec listStation m_input =
 			match m_input with
-			| STATION(n) -> [n]
-			| AREA(n,m) -> deleteAll (listStation(m), n)
-			| CONNECT(m1,m2) -> listStation(m1)@listStation(m2)
+			| V(n) -> [n]
+			| P(n,m) -> deleteAll (listStation(m), n)
+			| C(m1,m2) -> listStation(m1)@listStation(m2)
 	and
 		deleteAll (list_input,target) =
 			match list_input with
@@ -20,4 +20,4 @@ let rec checkMetro metro_input =
 				else l::deleteAll(remain_list, target)
 			| [] -> []
 	in
-		if listStation(metro_input) = [] then true else false
+		if listStation(lambda_input) = [] then true else false

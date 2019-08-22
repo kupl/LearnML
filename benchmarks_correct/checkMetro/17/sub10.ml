@@ -1,15 +1,15 @@
 (* Homework 2 - Exercise 4
  * 2011-10492 Jaeyeong Yang *)
-type metro = STATION of name
-           | AREA of name * metro
-           | CONNECT of metro * metro
-and name = string
+type lambda = V of var
+           | P of var * lambda
+           | C of lambda * lambda
+and var = string
 
-let checkMetro: metro -> bool = fun m ->
-  let rec auc: metro * name list -> bool = fun (mm, env) ->
+let check: lambda -> bool = fun m ->
+  let rec auc: lambda * var list -> bool = fun (mm, env) ->
     match mm with
-    | STATION n -> List.mem n env
-    | AREA (n, ml) -> auc (ml, n :: env)
-    | CONNECT (m1, m2) -> auc (m1, env) && auc (m2, env)
+    | V n -> List.mem n env
+    | P (n, ml) -> auc (ml, n :: env)
+    | C (m1, m2) -> auc (m1, env) && auc (m2, env)
   in
   auc (m, [])

@@ -1,8 +1,8 @@
-type metro = STATION of name
-| AREA of name * metro
-| CONNECT of metro * metro
+type lambda = V of var
+| P of var * lambda
+| C of lambda * lambda
 
-and name = string
+and var = string
 
 let rec sub (l,a) =
 match l with
@@ -14,17 +14,17 @@ match a with
 [] -> b
 | hd::tl -> hd::concat(tl,b)
 
-let rec listsub (m:metro) =
+let rec listsub (m:lambda) =
 match m with
- STATION a -> [a]
-| AREA (a,b) -> sub(listsub(b), a)
-| CONNECT (a,b) -> concat(listsub(a),listsub(b))
+ V a -> [a]
+| P (a,b) -> sub(listsub(b), a)
+| C (a,b) -> concat(listsub(a),listsub(b))
 
-let checkMetro (m:metro) =
+let check (m:lambda) =
 match m with
- STATION a -> false
-| AREA (a,b) -> if sub(listsub(b), a) = [] then true else false
-| CONNECT (a,b) -> false
+ V a -> false
+| P (a,b) -> if sub(listsub(b), a) = [] then true else false
+| C (a,b) -> false
 
 
 

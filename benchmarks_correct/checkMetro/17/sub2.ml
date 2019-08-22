@@ -4,24 +4,24 @@
   Name : HyeonIL Choi (최현일)
   Date: 2017-9-13
   Homework-# : 2-4
-  Excercise-Name : Check metro map
+  Excercise-Name : Check lambda map
 *)
 
-type metro = STATION of name
-          | AREA of name * metro
-          | CONNECT of metro * metro
-and name = string
+type lambda = V of var
+          | P of var * lambda
+          | C of lambda * lambda
+and var = string
 
-let checkMetro metro = (
-  let rec checkMetroInContext (metro, ctx) = (
-    match metro with
-    | CONNECT (m1,m2) -> (checkMetroInContext (m1, ctx)) && (checkMetroInContext (m2,ctx))
-    | AREA (name, m) -> (
-      checkMetroInContext(m, name::ctx)
+let check lambda = (
+  let rec checkInContext (lambda, ctx) = (
+    match lambda with
+    | C (m1,m2) -> (checkInContext (m1, ctx)) && (checkInContext (m2,ctx))
+    | P (var, m) -> (
+      checkInContext(m, var::ctx)
     )
-    | STATION name -> (
-      List.mem name ctx
+    | V var -> (
+      List.mem var ctx
     )
-  ) in checkMetroInContext (metro, [])
+  ) in checkInContext (lambda, [])
 )
 

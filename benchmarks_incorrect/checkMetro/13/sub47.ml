@@ -1,16 +1,16 @@
-type metro = STATION of name
-| AREA of name * metro
-| CONNECT of metro * metro
-and name = string
+type lambda = V of var
+| P of var * lambda
+| C of lambda * lambda
+and var = string
 
 let rec checkArea n e =
   match e with
-    AREA(a, b) -> (checkArea (n @ [a]) b)
-  | CONNECT(a, b) -> ((checkArea n a) && (checkArea n b))
-  | STATION a -> List.exists (fun x -> x = a) n
+    P(a, b) -> (checkArea (n @ [a]) b)
+  | C(a, b) -> ((checkArea n a) && (checkArea n b))
+  | V a -> List.exists (fun x -> x = a) n
 
-let rec checkMetro e =
+let rec check e =
   match e with
-    AREA(a, b) -> checkArea [a] b
-  | CONNECT(a,b) -> (checkMetro a) && (checkMetro b)
-  | STATION n -> true (* no works - default value *)
+    P(a, b) -> checkArea [a] b
+  | C(a,b) -> (check a) && (check b)
+  | V n -> true (* no works - default value *)

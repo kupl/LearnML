@@ -1,7 +1,7 @@
-type metro = STATION of name
-		| AREA of name * metro
-		| CONNECT of metro * metro
-and name = string
+type lambda = V of var
+		| P of var * lambda
+		| C of lambda * lambda
+and var = string
 
 
 let isIn (str, areas) =
@@ -9,9 +9,9 @@ let isIn (str, areas) =
 
 let rec subChkMet (met, areas) =
 	match met with
-	| STATION n -> if (isIn (n, areas)) then true else false
-	| AREA (n, smet) -> subChkMet(smet, n::areas)
-	| CONNECT (met1, met2) -> if ((subChkMet (met1, areas))&&(subChkMet (met2, areas))) then true else false
+	| V n -> if (isIn (n, areas)) then true else false
+	| P (n, smet) -> subChkMet(smet, n::areas)
+	| C (met1, met2) -> if ((subChkMet (met1, areas))&&(subChkMet (met2, areas))) then true else false
 
-let checkMetro met =
+let check met =
         subChkMet (met, [])

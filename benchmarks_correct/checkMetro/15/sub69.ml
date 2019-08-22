@@ -1,10 +1,10 @@
-type metro =
-    |STATION of name
-    |AREA of name * metro
-    |CONNECT of metro * metro
-and name = string;;
+type lambda =
+    |V of var
+    |P of var * lambda
+    |C of lambda * lambda
+and var = string;;
 
-let rec checkMetro met =
+let rec check met =
     let rec inList lst a =
         match lst with
         |[] -> false
@@ -13,8 +13,8 @@ let rec checkMetro met =
     in
     let rec aux listArea met =
         match met with
-        |STATION name -> inList listArea name
-        |AREA (name, submet) -> aux (name::listArea) submet
-        |CONNECT (submet1, submet2) -> (aux listArea submet1) && (aux listArea submet2)
+        |V var -> inList listArea var
+        |P (var, submet) -> aux (var::listArea) submet
+        |C (submet1, submet2) -> (aux listArea submet1) && (aux listArea submet2)
     in
     aux [] met;;

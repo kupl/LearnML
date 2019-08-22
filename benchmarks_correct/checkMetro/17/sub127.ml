@@ -1,15 +1,15 @@
 
 (* exercise 4 not yet*)
-type name = string
-type metro = STATION of name
-           | AREA of name * metro
-           | CONNECT of metro * metro
+type var = string
+type lambda = V of var
+           | P of var * lambda
+           | C of lambda * lambda
 
-let checkMetro largein =
-        let rec metrorec smallin l = 
+let check largein =
+        let rec lambdarec smallin l = 
                 match smallin with
-                | STATION(x) -> (List.mem x l)
-                | AREA(x, y) -> (metrorec y (x::l))
-                | CONNECT(y, z) -> ((metrorec y l) && (metrorec z l))
+                | V(x) -> (List.mem x l)
+                | P(x, y) -> (lambdarec y (x::l))
+                | C(y, z) -> ((lambdarec y l) && (lambdarec z l))
          in
-         metrorec largein []
+         lambdarec largein []

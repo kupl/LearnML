@@ -1,18 +1,18 @@
-type metro =
-    STATION of name
-    | AREA of name * metro
-    | CONNECT of metro * metro
-and name = string
+type lambda =
+    V of var
+    | P of var * lambda
+    | C of lambda * lambda
+and var = string
 
-let rec checker name_list m = match m with
-    | STATION s ->
+let rec checker var_list m = match m with
+    | V s ->
             let p str =
                 s = str in
-            List.exists p name_list
-    | AREA (a, m) ->
-            checker (a::name_list) m
-    | CONNECT (m1, m2) ->
-            checker name_list m1 && checker name_list m2
+            List.exists p var_list
+    | P (a, m) ->
+            checker (a::var_list) m
+    | C (m1, m2) ->
+            checker var_list m1 && checker var_list m2
 ;;
 
-let checkMetro m = checker [] m;;
+let check m = checker [] m;;

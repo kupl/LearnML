@@ -1,7 +1,7 @@
-type metro = STATION of name
-		 | AREA of name * metro
-		 | CONNECT of metro * metro
-and name = string
+type lambda = V of var
+		 | P of var * lambda
+		 | C of lambda * lambda
+and var = string
 
 let rec isinlst mtr lst =
 	match (mtr,lst) with
@@ -9,21 +9,21 @@ let rec isinlst mtr lst =
 	|(_, _) -> if mtr=(List.hd lst) then true else isinlst mtr (List.tl lst)
 
 
-let rec checkMetro1 mtr lst=
+let rec check1 mtr lst=
 	match mtr with 
-		|STATION st -> isinlst st lst
-		|AREA (name, mt)-> checkMetro1 mt (name::lst)
-		|CONNECT (m1, m2)-> checkMetro1 m1 lst && checkMetro1 m2 lst
+		|V st -> isinlst st lst
+		|P (var, mt)-> check1 mt (var::lst)
+		|C (m1, m2)-> check1 m1 lst && check1 m2 lst
 
-let rec checkMetro mtr = checkMetro1 mtr []
+let rec check mtr = check1 mtr []
 
 (*
-let t1 = checkMetro(AREA("a", STATION "a"))
- let t2=checkMetro(AREA("a", AREA("a", STATION "a")))
- let t3=checkMetro(AREA("a", AREA("b", CONNECT(STATION "a", STATION "b"))))
- let t4=checkMetro(AREA("a", CONNECT(STATION "a", AREA("b", STATION "a"))))
- let t5=checkMetro(AREA("a", STATION "b"))
- let t6=checkMetro(AREA("a", CONNECT(STATION "a", AREA("b", STATION "c"))))
- let t7=checkMetro(AREA("a", AREA("b", CONNECT(STATION "a", STATION "c"))))
+let t1 = check(P("a", V "a"))
+ let t2=check(P("a", P("a", V "a")))
+ let t3=check(P("a", P("b", C(V "a", V "b"))))
+ let t4=check(P("a", C(V "a", P("b", V "a"))))
+ let t5=check(P("a", V "b"))
+ let t6=check(P("a", C(V "a", P("b", V "c"))))
+ let t7=check(P("a", P("b", C(V "a", V "c"))))
 
 *)

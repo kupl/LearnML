@@ -1,27 +1,27 @@
-type metro = STATION of name
-			  | AREA of name * metro
-			  | CONNECT of metro * metro
-and name = string
+type lambda = V of var
+			  | P of var * lambda
+			  | C of lambda * lambda
+and var = string
 
-let checkMetro m =
-	let rec checkMetro_ m (al, nl) =
+let check m =
+	let rec check_ m (al, nl) =
 		match m with
-			| STATION n -> (List.for_all (fun x -> List.mem x al) (n::nl))
-			| AREA (n, m_) -> checkMetro_ m_ (n::al, nl)
-			| CONNECT (m_1, m_2) -> (checkMetro_ m_1 (al, nl)) && (checkMetro_ m_2 (al, nl)) in
-	checkMetro_ m ([], [])
+			| V n -> (List.for_all (fun x -> List.mem x al) (n::nl))
+			| P (n, m_) -> check_ m_ (n::al, nl)
+			| C (m_1, m_2) -> (check_ m_1 (al, nl)) && (check_ m_2 (al, nl)) in
+	check_ m ([], [])
 	
 (* TEST SET *)
 (*
-checkMetro (STATION "a");;
-checkMetro (AREA("a", STATION "a"));;
-checkMetro (AREA("a", AREA("b", AREA ("c", CONNECT(STATION "c", STATION "c")))));;
-checkMetro (AREA("b", CONNECT(STATION "a", STATION "b")));;
-checkMetro (AREA("a", CONNECT(STATION "a", AREA("b", AREA ("b", STATION "b")))));;
-checkMetro (AREA("a", AREA("a", STATION "a")));;
-checkMetro (AREA("a", AREA("b", CONNECT(STATION "a", STATION "b"))));;
-checkMetro (AREA("a", CONNECT(STATION "a", AREA("b", STATION "a"))));;
-checkMetro (AREA("a", STATION "b"));;
-checkMetro (AREA("a", CONNECT(STATION "a", AREA("b", STATION "c"))));;
-checkMetro (AREA("a", AREA("b", CONNECT(STATION "a", STATION "c"))));;
+check (V "a");;
+check (P("a", V "a"));;
+check (P("a", P("b", P ("c", C(V "c", V "c")))));;
+check (P("b", C(V "a", V "b")));;
+check (P("a", C(V "a", P("b", P ("b", V "b")))));;
+check (P("a", P("a", V "a")));;
+check (P("a", P("b", C(V "a", V "b"))));;
+check (P("a", C(V "a", P("b", V "a"))));;
+check (P("a", V "b"));;
+check (P("a", C(V "a", P("b", V "c"))));;
+check (P("a", P("b", C(V "a", V "c"))));;
 *)

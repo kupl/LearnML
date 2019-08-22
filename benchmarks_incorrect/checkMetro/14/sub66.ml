@@ -1,7 +1,7 @@
-type metro = STATION of name
-	|AREA of name * metro
-	|CONNECT of metro * metro
-and name = string
+type lambda = V of var
+	|P of var * lambda
+	|C of lambda * lambda
+and var = string
 
 let rec contains listOfArea s =
 	match listOfArea with
@@ -9,13 +9,13 @@ let rec contains listOfArea s =
 	|h::t -> (if h = s then true
 		else contains t s)
 
-let rec checkMetro2 x listOfArea =
+let rec check2 x listOfArea =
 	match x with
-	|STATION s -> contains listOfArea s
-	|AREA (n, m) -> checkMetro2 m (n::listOfArea)
-	|CONNECT (m1, m2) -> checkMetro2 m1 listOfArea && checkMetro2 m2 listOfArea
+	|V s -> contains listOfArea s
+	|P (n, m) -> check2 m (n::listOfArea)
+	|C (m1, m2) -> check2 m1 listOfArea && check2 m2 listOfArea
 
-let checkMetro x =
+let check x =
 	match x with
-	|STATION s-> true
-	|_ -> checkMetro2 x []
+	|V s-> true
+	|_ -> check2 x []

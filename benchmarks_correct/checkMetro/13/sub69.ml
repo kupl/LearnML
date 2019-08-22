@@ -1,12 +1,12 @@
-type metro = STATION of name
-		   | AREA of name * metro
-		   | CONNECT of metro * metro
-and name = string
+type lambda = V of var
+		   | P of var * lambda
+		   | C of lambda * lambda
+and var = string
 
-let rec checkMetro_ namelist m =
+let rec check_ varlist m =
 	match m with
-	| STATION(id) -> (List.mem id namelist)
-	| AREA(id, m) -> (checkMetro_ (id::namelist) m)
-	| CONNECT(m1, m2) -> (checkMetro_ namelist m1 && checkMetro_ namelist m2)
+	| V(id) -> (List.mem id varlist)
+	| P(id, m) -> (check_ (id::varlist) m)
+	| C(m1, m2) -> (check_ varlist m1 && check_ varlist m2)
 	
-let checkMetro m = (checkMetro_ [] m)
+let check m = (check_ [] m)

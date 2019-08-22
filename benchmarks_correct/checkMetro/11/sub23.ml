@@ -1,14 +1,14 @@
-type metro = STATION of name
-           | AREA of name * metro
-           | CONNECT of metro * metro
-and name = string
+type lambda = V of var
+           | P of var * lambda
+           | C of lambda * lambda
+and var = string
 
-let checkMetro met = 
+let check met = 
   let rec proc(m, met_list) = 
     match m with
-    | STATION(name) -> List.mem name met_list
-    | AREA(name, metro) -> proc(metro, name::met_list)
-    | CONNECT(a, b) -> proc(a, met_list) && proc(b, met_list)
+    | V(var) -> List.mem var met_list
+    | P(var, lambda) -> proc(lambda, var::met_list)
+    | C(a, b) -> proc(a, met_list) && proc(b, met_list)
   in
   proc(met, [])
 

@@ -1,13 +1,13 @@
-type metro = STATION of name
-			|AREA of name * metro
-			|CONNECT of metro * metro
-and name = string 
+type lambda = V of var
+			|P of var * lambda
+			|C of lambda * lambda
+and var = string 
 
-let rec inner_check: (name list*metro) -> bool =
+let rec inner_check: (var list*lambda) -> bool =
 	fun (l, met) ->
 		match met with 
-			| STATION name ->  (List.mem name l)
-			| CONNECT (m1, m2) -> (inner_check (l, m1)) && (inner_check (l, m2))
-			| AREA (name, m) -> inner_check (name::l, m)
+			| V var ->  (List.mem var l)
+			| C (m1, m2) -> (inner_check (l, m1)) && (inner_check (l, m2))
+			| P (var, m) -> inner_check (var::l, m)
 
-let checkMetro m = inner_check ([], m)	
+let check m = inner_check ([], m)	

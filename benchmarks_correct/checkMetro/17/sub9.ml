@@ -1,9 +1,9 @@
-type metro = STATION of name | AREA of name * metro | CONNECT of metro * metro
-and name = string
+type lambda = V of var | P of var * lambda | C of lambda * lambda
+and var = string
 
-let rec checkMetro (m : metro) =
-let rec evalMetro ((areas: name list), (m_eval : metro)) = match m_eval with
-| STATION(sname) -> List.mem sname areas
-| AREA(aname, m_prime) -> evalMetro((aname :: areas), m_prime)
-| CONNECT(m1, m2) -> evalMetro(areas, m1) && evalMetro(areas, m2)
+let rec check (m : lambda) =
+let rec evalMetro ((areas: var list), (m_eval : lambda)) = match m_eval with
+| V(svar) -> List.mem svar areas
+| P(avar, m_prime) -> evalMetro((avar :: areas), m_prime)
+| C(m1, m2) -> evalMetro(areas, m1) && evalMetro(areas, m2)
 in evalMetro([], m)

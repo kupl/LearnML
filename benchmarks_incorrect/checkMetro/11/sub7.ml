@@ -1,18 +1,18 @@
 (* hw 1_7. *)
-type metro = STATION of name
-		   | AREA of name * metro
-		   | CONNECT of metro * metro
-and name = string
-let checkMetro m =
+type lambda = V of var
+		   | P of var * lambda
+		   | C of lambda * lambda
+and var = string
+let check m =
 	let rec areaList m1 =
 		match m1 with
-		 AREA(a, b) -> a::areaList b
+		 P(a, b) -> a::areaList b
 		|_ -> [] in
 	let rec stationList m2 =
 		match m2 with
-		 STATION a -> [a]
-		|AREA(a, b) -> stationList b
-		|CONNECT(a, b) -> stationList a @ stationList b in
+		 V a -> [a]
+		|P(a, b) -> stationList b
+		|C(a, b) -> stationList a @ stationList b in
 	let rec searchArea al st =
 		match al with
 		 [] -> false
@@ -31,17 +31,17 @@ let checkMetro m =
 
 	(*
 let _ =
-	checkMetro (AREA("a", STATION "a"))
+	check (P("a", V "a"))
 let _ =
-	checkMetro (AREA("a", AREA("a", STATION "a")))
+	check (P("a", P("a", V "a")))
 let _ =
-	checkMetro (AREA("a", AREA("b", CONNECT(STATION "a", STATION "b"))))
+	check (P("a", P("b", C(V "a", V "b"))))
 let _ =
-	checkMetro (AREA("a", CONNECT(STATION "a", AREA("b", STATION "a"))))
+	check (P("a", C(V "a", P("b", V "a"))))
 let _ =
-	checkMetro (AREA("a", STATION "b"))
+	check (P("a", V "b"))
 let _ =
-	checkMetro (AREA("a", CONNECT(STATION "a", AREA("b", STATION "c"))))
+	check (P("a", C(V "a", P("b", V "c"))))
 let _ =
-	checkMetro (AREA("a", AREA("b", CONNECT(STATION "a", STATION "c"))))
+	check (P("a", P("b", C(V "a", V "c"))))
 	*)

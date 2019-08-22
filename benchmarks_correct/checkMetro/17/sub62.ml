@@ -3,10 +3,10 @@
 	Homework 2: Exercies 4
 *)
 
-type metro = STATION of name
-					 | AREA of name * metro
-					 | CONNECT of metro * metro
-and name = string
+type lambda = V of var
+					 | P of var * lambda
+					 | C of lambda * lambda
+and var = string
 
 let rec isitin((l: string list), (s: string)): bool = 
 	match l with
@@ -27,16 +27,16 @@ let rec isitin((l: string list), (s: string)): bool =
 		else
 			isitin(List.tl l, s))
 *)
-let rec inner((l: string list), (m: metro)): bool =
+let rec inner((l: string list), (m: lambda)): bool =
 	match m with
-	| STATION s -> isitin(l, s)
-	| AREA(nn, mm) -> inner(nn::l, mm)
-	| CONNECT(c1, c2) -> (
+	| V s -> isitin(l, s)
+	| P(nn, mm) -> inner(nn::l, mm)
+	| C(c1, c2) -> (
 		if inner(l, c1) == true && inner(l, c2) == true
 			then true
 		else
 			false)
 
-let checkMetro(m: metro): bool =
+let check(m: lambda): bool =
 	inner([], m)
 

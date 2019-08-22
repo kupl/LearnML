@@ -1,19 +1,19 @@
-type metro =
-	STATION		of name
-	|AREA		of name * metro
-	|CONNECT	of metro * metro
-and name = string
+type lambda =
+	V		of var
+	|P		of var * lambda
+	|C	of lambda * lambda
+and var = string
 
-let rec checkMetro met =
+let rec check met =
 	
-	let rec checkMetroTmp areaList metTemp =
+	let rec checkTmp areaList metTemp =
 		match metTemp with
-		STATION a	-> List.mem a areaList
-		|AREA (a, b)	-> checkMetroTmp (a::areaList) b
-		|CONNECT (a, b)	-> (checkMetroTmp areaList a) && (checkMetroTmp areaList b)
+		V a	-> List.mem a areaList
+		|P (a, b)	-> checkTmp (a::areaList) b
+		|C (a, b)	-> (checkTmp areaList a) && (checkTmp areaList b)
 	in
 
 	match met with
-	STATION a	-> false
-	|AREA (a, b)	-> checkMetroTmp [a] b
-	|CONNECT (a, b)	-> (checkMetro a) && (checkMetro b)
+	V a	-> false
+	|P (a, b)	-> checkTmp [a] b
+	|C (a, b)	-> (check a) && (check b)

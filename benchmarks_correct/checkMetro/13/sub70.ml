@@ -1,7 +1,7 @@
-type metro = STATION of name
-| AREA of name * metro
-| CONNECT of metro * metro
-and name = string
+type lambda = V of var
+| P of var * lambda
+| C of lambda * lambda
+and var = string
 
 let rec licheck s1 lst1 =
   match lst1 with
@@ -10,9 +10,9 @@ let rec licheck s1 lst1 =
 
 let rec sicheck m lst =
   match m with
-  | AREA(s,m1) -> (sicheck m1 (s::lst))
-  | CONNECT(m1,m2) -> (sicheck m1 lst) && (sicheck m2 lst)
-  | STATION s -> (licheck s lst)
+  | P(s,m1) -> (sicheck m1 (s::lst))
+  | C(m1,m2) -> (sicheck m1 lst) && (sicheck m2 lst)
+  | V s -> (licheck s lst)
 
-let rec checkMetro mtr =
+let rec check mtr =
  sicheck mtr []

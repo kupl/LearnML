@@ -1,20 +1,19 @@
-(*2011-11004 ³²À±¼® ¹®Á¦ 1*)
 
-type metro = STATION of name
-	| AREA of name * metro
-	| CONNECT of metro * metro
-and name = string
+type lambda = V of var
+	| P of var * lambda
+	| C of lambda * lambda
+and var = string
 
 let rec subCheck(s,a) =
 	match s with
-	STATION x -> 
+	V x -> 
 		if List.mem x a then true
 		else false
-	| AREA (name, s2) -> subCheck(s2, name::a)
-	| CONNECT (s2, s3) -> subCheck(s2, a) && subCheck(s3, a)
+	| P (var, s2) -> subCheck(s2, var::a)
+	| C (s2, s3) -> subCheck(s2, a) && subCheck(s3, a)
 	
 
-let rec checkMetro s =
+let rec check s =
 	let alist = [] in
 	subCheck(s, alist)
 			

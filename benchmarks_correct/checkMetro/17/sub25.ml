@@ -1,7 +1,7 @@
-type metro = STATION of name
-	| AREA of name * metro
-	| CONNECT of metro * metro
-and name = string
+type lambda = V of var
+	| P of var * lambda
+	| C of lambda * lambda
+and var = string
 
 
 let rec check id = function
@@ -11,11 +11,11 @@ let rec check id = function
 	  else check(id)(tl)
 
 let rec foo areas = function
-	| STATION (id) -> check(id)(areas)
-	| AREA (id, m) -> foo([id]@areas)(m)
-	| CONNECT (m1, m2) -> foo(areas)(m1) && foo(areas)(m2)
+	| V (id) -> check(id)(areas)
+	| P (id, m) -> foo([id]@areas)(m)
+	| C (m1, m2) -> foo(areas)(m1) && foo(areas)(m2)
 
-let rec checkMetro = foo []
+let rec check = foo []
 
 
 

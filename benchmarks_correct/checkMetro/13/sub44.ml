@@ -1,20 +1,20 @@
-type metro = STATION of name
-                   | AREA of name*metro
-                   | CONNECT of metro*metro
-and name = string
+type lambda = V of var
+                   | P of var*lambda
+                   | C of lambda*lambda
+and var = string
 
-let rec checkPos name area =
+let rec checkPos var area =
                 match area with
-                | hd::tl -> if (hd=name) then true
-                            else (checkPos name tl)
+                | hd::tl -> if (hd=var) then true
+                            else (checkPos var tl)
                 | [] -> false
 
 let rec subfunc m area =
         match m with
-				| AREA (n,msub) -> (subfunc msub (area@[n]))
-				| STATION n -> (checkPos n area)
-        | CONNECT (n1,n2) -> ((subfunc n1 area) && (subfunc n2 area))
+				| P (n,msub) -> (subfunc msub (area@[n]))
+				| V n -> (checkPos n area)
+        | C (n1,n2) -> ((subfunc n1 area) && (subfunc n2 area))
 
-let checkMetro m =
+let check m =
     (subfunc m [])
 

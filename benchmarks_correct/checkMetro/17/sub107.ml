@@ -1,12 +1,12 @@
- type metro = STATION of name | AREA of name * metro | CONNECT of metro * metro
- and name = string
+ type lambda = V of var | P of var * lambda | C of lambda * lambda
+ and var = string
 
-let rec checkMetroWList ((ilist : string list),(met : metro)) : bool = 
+let rec checkWList ((ilist : string list),(met : lambda)) : bool = 
 match (ilist,met) with
-|(lst,AREA(id,m)) -> checkMetroWList(id::lst, m)
-|(lst,STATION id) -> List.mem id lst
-|(lst,CONNECT(m1,m2)) -> checkMetroWList(lst,m1) && checkMetroWList(lst,m2)
+|(lst,P(id,m)) -> checkWList(id::lst, m)
+|(lst,V id) -> List.mem id lst
+|(lst,C(m1,m2)) -> checkWList(lst,m1) && checkWList(lst,m2)
 
-let checkMetro (met : metro) : bool = 
-checkMetroWList([],met)
+let check (met : lambda) : bool = 
+checkWList([],met)
 

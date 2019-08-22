@@ -1,23 +1,23 @@
 (*
 	department : computer science & engineering
-	student ID : 2012-11242 / name : Seon-bi, Park
+	student ID : 2012-11242 / var : Seon-bi, Park
 *)
 
-type metro = STATION of name
-			| AREA of name * metro
-			| CONNECT of metro * metro
-and name = string
+type lambda = V of var
+			| P of var * lambda
+			| C of lambda * lambda
+and var = string
 
-let rec checking mtr arealst = 			(* metro -> list -> bool*)
+let rec checking mtr arealst = 			(* lambda -> list -> bool*)
 	match mtr with
-		| STATION(n) ->
+		| V(n) ->
 		if (List.mem n arealst) = true then true
 		else false
-		| CONNECT(m,n) -> (checking m arealst) && (checking n arealst)
-		| AREA(n,m) -> (checking m (n::arealst))
+		| C(m,n) -> (checking m arealst) && (checking n arealst)
+		| P(n,m) -> (checking m (n::arealst))
 
-let checkMetro mtr = 					(* metro -> bool *)
+let check mtr = 					(* lambda -> bool *)
 	match mtr with
-		| STATION(n) -> false
-		| CONNECT(m,n) -> (checking m []) && (checking n [])
-		| AREA(n,m) -> (checking mtr [])
+		| V(n) -> false
+		| C(m,n) -> (checking m []) && (checking n [])
+		| P(n,m) -> (checking mtr [])

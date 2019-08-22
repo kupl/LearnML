@@ -1,15 +1,15 @@
-type metro = STATION of name
-           | AREA of name * metro
-           | CONNECT of metro * metro
-  and name = string
+type lambda = V of var
+           | P of var * lambda
+           | C of lambda * lambda
+  and var = string
 
-let checkMetro metro =
-  let rec iter target names =
+let check lambda =
+  let rec iter target vars =
     match target with
-    | STATION station_name ->
-      (List.length (List.filter (fun x -> x = station_name) names)) > 0
-    | AREA (area_name, new_target) -> iter new_target (area_name::names)
-    | CONNECT (metro_a, metro_b) -> (iter metro_a names)
-                                    && (iter metro_b names)
+    | V station_var ->
+      (List.length (List.filter (fun x -> x = station_var) vars)) > 0
+    | P (area_var, new_target) -> iter new_target (area_var::vars)
+    | C (lambda_a, lambda_b) -> (iter lambda_a vars)
+                                    && (iter lambda_b vars)
   in
-    iter metro []
+    iter lambda []

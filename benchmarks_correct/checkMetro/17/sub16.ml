@@ -1,9 +1,9 @@
-type metro = STATION of name
-					| AREA of name * metro
-					| CONNECT of metro * metro
-and name = string
+type lambda = V of var
+					| P of var * lambda
+					| C of lambda * lambda
+and var = string
 
-let rec checkMetro m =
+let rec check m =
 	let rec checkArea (lst, n) =
 		match lst with
 		| [] -> false
@@ -20,9 +20,9 @@ let rec checkMetro m =
 	in
 	let rec my_check (env, m) =
 		match m with
-		| STATION n -> checkArea (env, n)
-		| AREA (n, m) -> my_check (add_env (env, n), m)
-		| CONNECT (m1, m2) -> (my_check (env, m1)) && (my_check (env, m2))
+		| V n -> checkArea (env, n)
+		| P (n, m) -> my_check (add_env (env, n), m)
+		| C (m1, m2) -> (my_check (env, m1)) && (my_check (env, m2))
 	in
 	my_check ([], m)
 

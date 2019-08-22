@@ -1,13 +1,13 @@
 
 (* ex 7 *)
 
-type metro = STATION of name
-		   | AREA of name * metro
-		   | CONNECT of metro * metro 
+type lambda = V of var
+		   | P of var * lambda
+		   | C of lambda * lambda 
 
-and name = string
+and var = string
 
-let checkMetro met =
+let check met =
 	let rec checkList(s,l) =
 		match l with
 		| [] -> false
@@ -16,9 +16,9 @@ let checkMetro met =
 
 	let rec cal(m,l) =
 		match m with 
-		| STATION n -> checkList(n,l) 
-		| AREA(n,m1) -> cal(m1,n::l) 
-		| CONNECT(m1,m2) -> cal(m1,l) && cal(m2,l)
+		| V n -> checkList(n,l) 
+		| P(n,m1) -> cal(m1,n::l) 
+		| C(m1,m2) -> cal(m1,l) && cal(m2,l)
 	in
 
 	cal(met,[])

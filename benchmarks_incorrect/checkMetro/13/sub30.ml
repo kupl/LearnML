@@ -1,22 +1,22 @@
-type name = string
+type var = string
 
-type metro = STATION of name
-        | AREA of name * metro
-        | CONNECT of metro * metro
+type lambda = V of var
+        | P of var * lambda
+        | C of lambda * lambda
 
 let rec apl (b, m) =
         match (b, m) with
-        | (b, STATION a) -> if (b = a) then AREA (b, STATION a) else STATION a
-        | (b, AREA(a, STATION c)) -> if (a != c && b = c) then AREA(b, STATION c) else AREA(a, STATION c)
-        | (b, AREA(a, AREA(c, d))) -> AREA (a, AREA (c, apl (b, d)))
-        | (b, AREA(a, CONNECT (c, d))) -> AREA (a, apl (b, CONNECT (c, d)))
-        | (b, CONNECT(a, c)) -> CONNECT(apl (b, a), apl (b, c))
+        | (b, V a) -> if (b = a) then P (b, V a) else V a
+        | (b, P(a, V c)) -> if (a != c && b = c) then P(b, V c) else P(a, V c)
+        | (b, P(a, P(c, d))) -> P (a, P (c, apl (b, d)))
+        | (b, P(a, C (c, d))) -> P (a, apl (b, C (c, d)))
+        | (b, C(a, c)) -> C(apl (b, a), apl (b, c))
 
-let rec checkMetro m =
+let rec check m =
         match m with
-        | AREA(a, STATION b) -> if (a = b) then true else false
-        | AREA(a, CONNECT (b, c)) -> checkMetro (AREA (a, b)) && checkMetro (AREA (a, c))
-        | AREA(a, AREA(b, STATION c)) -> checkMetro (AREA (a, STATION c)) || checkMetro (AREA (b, STATION c))
-        | AREA(a, AREA(b, c)) -> checkMetro (apl(b, AREA (a, c))) || checkMetro (apl(a, AREA (b, c)))
-        | CONNECT(a, b) -> checkMetro a && checkMetro b
+        | P(a, V b) -> if (a = b) then true else false
+        | P(a, C (b, c)) -> check (P (a, b)) && check (P (a, c))
+        | P(a, P(b, V c)) -> check (P (a, V c)) || check (P (b, V c))
+        | P(a, P(b, c)) -> check (apl(b, P (a, c))) || check (apl(a, P (b, c)))
+        | C(a, b) -> check a && check b
 	| _ -> false

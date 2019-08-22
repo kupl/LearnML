@@ -1,15 +1,15 @@
-type metro = STATION of name
-	| AREA of name * metro
-	| CONNECT of metro * metro
-and name = string
+type lambda = V of var
+	| P of var * lambda
+	| C of lambda * lambda
+and var = string
 
 
-let checkMetro t =
+let check t =
 	let rec getid t r = 
 	match t with
-	AREA(t1, t2) -> getid t2 (t1::r)
-	|CONNECT(t1, t2) -> (getid t1 r) && (getid t2 r)
-	|STATION t1 -> List.exists (fun x -> if x = t1 then true else false) r
+	P(t1, t2) -> getid t2 (t1::r)
+	|C(t1, t2) -> (getid t1 r) && (getid t2 r)
+	|V t1 -> List.exists (fun x -> if x = t1 then true else false) r
 	in
 
 	getid t []

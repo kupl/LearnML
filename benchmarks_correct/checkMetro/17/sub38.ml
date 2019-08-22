@@ -1,13 +1,13 @@
-type metro = STATION of name
-            | AREA of name * metro
-            | CONNECT of metro * metro
-and name = string
+type lambda = V of var
+            | P of var * lambda
+            | C of lambda * lambda
+and var = string
 
-let rec checkMetro (x : metro) : bool = 
-	let rec checkMetroIter ((x : metro), (nlist : string list)) : bool = 
+let rec check (x : lambda) : bool = 
+	let rec checkIter ((x : lambda), (nlist : string list)) : bool = 
 		match x with
-		| STATION a -> (List.mem a nlist)
-		| AREA (n, m) -> checkMetroIter (m, n :: nlist)
-		| CONNECT (a, b) -> (checkMetroIter (a, nlist)) && (checkMetroIter (b, nlist))
+		| V a -> (List.mem a nlist)
+		| P (n, m) -> checkIter (m, n :: nlist)
+		| C (a, b) -> (checkIter (a, nlist)) && (checkIter (b, nlist))
 	in
-	checkMetroIter(x, [])
+	checkIter(x, [])

@@ -1,12 +1,11 @@
-(*2006-11681 °­Çö¼®*)
 exception Invalid_input of string
 
-type metro = STATION of name
-		   | AREA of name * metro
-		   | CONNECT of metro * metro
-and name = string
+type lambda = V of var
+		   | P of var * lambda
+		   | C of lambda * lambda
+and var = string
 
-let checkMetro m =
+let check m =
 	
 	let rec check_sub(m ,l) =
 		let rec checkArea(s, l) =
@@ -17,20 +16,20 @@ let checkMetro m =
 		in
 
 		match m with
-		STATION s -> checkArea(s, l)
-		| AREA(a,m) -> check_sub(m,a::l)
-		| CONNECT(m0,m1) -> check_sub(m0,l) && check_sub(m1,l)
+		V s -> checkArea(s, l)
+		| P(a,m) -> check_sub(m,a::l)
+		| C(m0,m1) -> check_sub(m0,l) && check_sub(m1,l)
 	in
 
 	match m with
-	STATION s -> raise (Invalid_input "STATION only")
+	V s -> raise (Invalid_input "V only")
 	| _ -> check_sub(m,[])
 (*
-let m1 = AREA("a", STATION "b")
-let m2 = AREA("a", CONNECT(STATION "a", AREA("b", STATION "c")))
-let m3 = AREA("a", AREA("b",CONNECT(STATION "a", STATION "c")))
-let m4 = AREA("a", CONNECT(STATION "a", AREA("b", STATION "a")))
-let m5 = AREA("a", AREA("b", CONNECT(STATION "a", STATION "b")))
+let m1 = P("a", V "b")
+let m2 = P("a", C(V "a", P("b", V "c")))
+let m3 = P("a", P("b",C(V "a", V "c")))
+let m4 = P("a", C(V "a", P("b", V "a")))
+let m5 = P("a", P("b", C(V "a", V "b")))
 *)
 
 	

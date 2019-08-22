@@ -1,24 +1,24 @@
-type metro = STATION of name
-	| AREA of name * metro
-	| CONNECT of metro * metro
-and name = string
+type lambda = V of var
+	| P of var * lambda
+	| C of lambda * lambda
+and var = string
 
-let checkMetro m =
-let rec checkMetro m pl = match m with
-	  STATION n -> (List.mem n pl)
-	| AREA (n,m1) -> (checkMetro m1 (n::pl))
-	| CONNECT (m1,m2) -> (checkMetro m1 pl) && (checkMetro m2 pl)
+let check m =
+let rec check m pl = match m with
+	  V n -> (List.mem n pl)
+	| P (n,m1) -> (check m1 (n::pl))
+	| C (m1,m2) -> (check m1 pl) && (check m2 pl)
 in
-	(checkMetro m [])
+	(check m [])
 
 (**
-AREA("a", STATION "a")
-AREA("a", AREA("a", STATION "a"))
-AREA("a", AREA("b", CONNECT(STATION "a", STATION "b")))
-AREA("a", CONNECT(STATION "a", AREA("b", STATION "a")))
+P("a", V "a")
+P("a", P("a", V "a"))
+P("a", P("b", C(V "a", V "b")))
+P("a", C(V "a", P("b", V "a")))
 
-AREA("a", STATION "b")
-AREA("a", CONNECT(STATION "a", AREA("b", STATION "c")))
-AREA("a", AREA("b", CONNECT(STATION "a", STATION "c")))
+P("a", V "b")
+P("a", C(V "a", P("b", V "c")))
+P("a", P("b", C(V "a", V "c")))
 *)
 

@@ -1,12 +1,12 @@
-type metro = 
-  | STATION of name
-  | AREA of name * metro
-  | CONNECT of metro * metro
-and name = string
+type lambda = 
+  | V of var
+  | P of var * lambda
+  | C of lambda * lambda
+and var = string
 
-let checkMetro (x: metro): bool = 
-  let rec checkMetroRec (x: metro) (y: name list): bool = match x with 
-  | STATION a -> List.exists (fun x -> x = a) y
-  | AREA (a, b) -> checkMetroRec b (a :: y)
-  | CONNECT(a, b) -> (checkMetroRec a y) && (checkMetroRec b y)
-  in checkMetroRec x []
+let check (x: lambda): bool = 
+  let rec checkRec (x: lambda) (y: var list): bool = match x with 
+  | V a -> List.exists (fun x -> x = a) y
+  | P (a, b) -> checkRec b (a :: y)
+  | C(a, b) -> (checkRec a y) && (checkRec b y)
+  in checkRec x []

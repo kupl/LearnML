@@ -1,16 +1,16 @@
-type metro=STATION of name
-|AREA of name * metro
-|CONNECT of metro* metro
+type lambda=V of var
+|P of var * lambda
+|C of lambda* lambda
 and
-name=string
+var=string
 
 
 
-let rec subcheckMetro m l=
+let rec subcheck m l=
 match m with
-|STATION a -> List.mem a l
-|AREA (a, b) ->subcheckMetro b (a::l)
-|CONNECT (a, b)->subcheckMetro a l && subcheckMetro b l
+|V a -> List.mem a l
+|P (a, b) ->subcheck b (a::l)
+|C (a, b)->subcheck a l && subcheck b l
 
-let checkMetro m=
-subcheckMetro m []
+let check m=
+subcheck m []

@@ -1,38 +1,38 @@
-type metro = STATION of name
-			| AREA of name * metro
-			| CONNECT of metro * metro
-and name = string
+type lambda = V of var
+			| P of var * lambda
+			| C of lambda * lambda
+and var = string
 
-let rec checkMetro m =
+let rec check m =
 	let rec is_connect m =
 		match m with
-		| STATION _ -> false
-		| CONNECT (_, _) -> true
-		| AREA (name, metro) -> is_connect metro in
+		| V _ -> false
+		| C (_, _) -> true
+		| P (var, lambda) -> is_connect lambda in
 	
 	let rec get_left m =
 		match m with
-		| STATION _ -> m
-		| CONNECT (l, _) -> l
-		| AREA (name, metro) -> AREA (name, get_left metro) in
+		| V _ -> m
+		| C (l, _) -> l
+		| P (var, lambda) -> P (var, get_left lambda) in
 	
 	let rec get_right m =
 		match m with
-		| STATION _ -> m
-		| CONNECT (_, r) -> r
-		| AREA (name, metro) -> AREA (name, get_right metro) in
+		| V _ -> m
+		| C (_, r) -> r
+		| P (var, lambda) -> P (var, get_right lambda) in
 
 
-	if is_connect m then (checkMetro (get_left m)) && (checkMetro (get_right m))
+	if is_connect m then (check (get_left m)) && (check (get_right m))
 	else match m with
-	| STATION _ -> false
-	| CONNECT (l, r) -> (checkMetro l) && (checkMetro r) 
-	| AREA (name, metro) ->
-		match metro with
-		| STATION s -> if name=s then true
+	| V _ -> false
+	| C (l, r) -> (check l) && (check r) 
+	| P (var, lambda) ->
+		match lambda with
+		| V s -> if var=s then true
 					else false
-		| CONNECT (left, right) -> (checkMetro (AREA(name, left))) && (checkMetro (AREA(name, right)))
-		| AREA (name2, metro2) -> (checkMetro (AREA(name, metro2))) || (checkMetro (AREA(name2, metro2)))
+		| C (left, right) -> (check (P(var, left))) && (check (P(var, right)))
+		| P (var2, lambda2) -> (check (P(var, lambda2))) || (check (P(var2, lambda2)))
 
 
 

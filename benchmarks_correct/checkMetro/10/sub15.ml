@@ -1,11 +1,11 @@
-type metro = STATION of name
-            |AREA of name * metro
-            |CONNECT of metro * metro
-and name = string
+type lambda = V of var
+            |P of var * lambda
+            |C of lambda * lambda
+and var = string
 
-let rec check var_metro = 
-  match var_metro with
-    CONNECT (m1, m2) -> (check m1)@(check m2)
-    |AREA (n,m) ->  (List.filter (fun x -> (x  != n)) (check m))
-    |STATION n -> n::[]
-let checkMetro var_metro = (List.length (check var_metro)) == 0
+let rec check var_lambda = 
+  match var_lambda with
+    C (m1, m2) -> (check m1)@(check m2)
+    |P (n,m) ->  (List.filter (fun x -> (x  != n)) (check m))
+    |V n -> n::[]
+let check var_lambda = (List.length (check var_lambda)) == 0

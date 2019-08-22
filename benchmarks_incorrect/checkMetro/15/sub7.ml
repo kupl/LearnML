@@ -1,16 +1,16 @@
-type metro = 	STATION of name
-		| AREA of name * metro
-		| CONNECT of metro * metro
-and name = string
+type lambda = 	V of var
+		| P of var * lambda
+		| C of lambda * lambda
+and var = string
 
 let rec station_list x =
 	match x with
-	| STATION n -> [n]
-	| AREA (n, m) -> (station_list m)
-	| CONNECT (m1, m2) -> List.append (station_list m1) (station_list m2)
+	| V n -> [n]
+	| P (n, m) -> (station_list m)
+	| C (m1, m2) -> List.append (station_list m1) (station_list m2)
 
-let rec checkMetro (x: metro): bool =
+let rec check (x: lambda): bool =
 	match x with
-	| STATION n -> false
-	| AREA (n, m) -> List.mem n (station_list m)
-	| CONNECT (m1, m2) -> false
+	| V n -> false
+	| P (n, m) -> List.mem n (station_list m)
+	| C (m1, m2) -> false

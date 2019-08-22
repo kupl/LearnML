@@ -1,59 +1,59 @@
 
 (* EXERCISE 4 *) 
 
-type name = string
+type var = string
 
-type metro = STATION of name
-	| AREA of name * metro
-	| CONNECT of metro * metro
+type lambda = V of var
+	| P of var * lambda
+	| C of lambda * lambda
 
-let rec find_namelist : name -> (name list) -> bool = fun input l ->
+let rec find_varlist : var -> (var list) -> bool = fun input l ->
 	match l with
 	| [] -> false
 	| h :: t -> if h = input then true
-		else (find_namelist input t)
+		else (find_varlist input t)
 
-let rec checkMetroProbe : metro * (name list) -> bool = fun (input , nlist) ->
+let rec checkProbe : lambda * (var list) -> bool = fun (input , nlist) ->
 	match input with
-	| STATION (station_name) -> (find_namelist station_name nlist)
-	| AREA (area_name, subinput) -> checkMetroProbe (subinput , (area_name :: nlist))
-	| CONNECT (subinput1, subinput2) -> checkMetroProbe(subinput1, nlist) && checkMetroProbe(subinput2, nlist)
+	| V (station_var) -> (find_varlist station_var nlist)
+	| P (area_var, subinput) -> checkProbe (subinput , (area_var :: nlist))
+	| C (subinput1, subinput2) -> checkProbe(subinput1, nlist) && checkProbe(subinput2, nlist)
 
 
-let checkMetro : metro -> bool = fun input -> checkMetroProbe (input, [])
+let check : lambda -> bool = fun input -> checkProbe (input, [])
 
 (*
 let _ = 
 let print_bool x = 
 print_endline (string_of_bool x) in 
-print_bool(true = (find_namelist "a" ("b"::"a"::"c"::[])))
+print_bool(true = (find_varlist "a" ("b"::"a"::"c"::[])))
 *)	
 (*
 let _ = 
 let print_bool x = 
 print_endline (string_of_bool x) in 
-print_bool(true = checkMetro ( CONNECT (AREA ("a", STATION "a"), AREA ("b", AREA("a", CONNECT(STATION "b", STATION "a"))))));
-print_bool(false = checkMetro ( CONNECT (AREA ("c", STATION "c"), AREA ("b", AREA("a", CONNECT(STATION "b", STATION "c")))))); 
-print_bool(true = checkMetro(AREA("a", CONNECT(STATION "a", AREA("b", STATION "a")))));
-print_bool(true = checkMetro(AREA("a", AREA("b", CONNECT(STATION "a", STATION "b")))));
-print_bool(true = checkMetro(AREA("a", AREA("a", STATION "a"))));
-print_bool(true = checkMetro(AREA("a", STATION "a")));
-print_bool(false = checkMetro(AREA("a", STATION "b")));
-print_bool(false = checkMetro(AREA("a", CONNECT(STATION "a", AREA("b", STATION "c")))));
-print_bool(false = checkMetro(AREA("a", AREA("b", CONNECT(STATION "a", STATION "c")))));
+print_bool(true = check ( C (P ("a", V "a"), P ("b", P("a", C(V "b", V "a"))))));
+print_bool(false = check ( C (P ("c", V "c"), P ("b", P("a", C(V "b", V "c")))))); 
+print_bool(true = check(P("a", C(V "a", P("b", V "a")))));
+print_bool(true = check(P("a", P("b", C(V "a", V "b")))));
+print_bool(true = check(P("a", P("a", V "a"))));
+print_bool(true = check(P("a", V "a")));
+print_bool(false = check(P("a", V "b")));
+print_bool(false = check(P("a", C(V "a", P("b", V "c")))));
+print_bool(false = check(P("a", P("b", C(V "a", V "c")))));
 *)
 (*
 let _ = 
 let test_case : int * bool -> unit = fun (n, x) -> 
 print_endline ("Case " ^ string_of_int(n) ^ " : " ^ string_of_bool(x)) in 
-test_case(1, true == checkMetro(AREA("a", STATION "a"))); 
-test_case(2, true == checkMetro(AREA("a", AREA("a", STATION "a")))); 
-test_case(3, true == checkMetro(AREA("a", AREA("b", CONNECT(STATION "a", STATION "b"))))); 
-test_case(4, true == checkMetro(AREA("a", CONNECT(STATION "a", AREA("b", STATION "a"))))); 
-test_case(5, false == checkMetro(AREA("a", STATION "b"))); 
-test_case(6, false == checkMetro(AREA("a", CONNECT(STATION "a", AREA("b", STATION "c"))))); 
-test_case(7, false == checkMetro(AREA("a", AREA("b", CONNECT(STATION "a", STATION "c"))))); 
-test_case(8, true == checkMetro(CONNECT(AREA("a", STATION "a"), AREA("b", AREA("a", CONNECT(STATION "b", STATION "a")))))); 
-test_case(9, false == checkMetro(CONNECT(AREA("c", STATION "c"), AREA("b", AREA("a", CONNECT(STATION "b", STATION "c")))))); 
-test_case(10, false == checkMetro(STATION "a"));
+test_case(1, true == check(P("a", V "a"))); 
+test_case(2, true == check(P("a", P("a", V "a")))); 
+test_case(3, true == check(P("a", P("b", C(V "a", V "b"))))); 
+test_case(4, true == check(P("a", C(V "a", P("b", V "a"))))); 
+test_case(5, false == check(P("a", V "b"))); 
+test_case(6, false == check(P("a", C(V "a", P("b", V "c"))))); 
+test_case(7, false == check(P("a", P("b", C(V "a", V "c"))))); 
+test_case(8, true == check(C(P("a", V "a"), P("b", P("a", C(V "b", V "a")))))); 
+test_case(9, false == check(C(P("c", V "c"), P("b", P("a", C(V "b", V "c")))))); 
+test_case(10, false == check(V "a"));
 *)

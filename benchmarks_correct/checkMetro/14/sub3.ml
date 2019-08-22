@@ -1,27 +1,27 @@
 (* C:\OCaml\lib\CheckMertoMap.ml *)
 
-type name = string
+type var = string
 
-type metro = STATION of name
-  |AREA of name * metro
-  |CONNECT of metro * metro
+type lambda = V of var
+  |P of var * lambda
+  |C of lambda * lambda
 
-let rec check_list (lst, name) = 
+let rec check_list (lst, var) = 
   match lst with
   |[] -> false
   |head::tail ->
-      (if head = name then true
-	  else (check_list (tail, name)))
+      (if head = var then true
+	  else (check_list (tail, var)))
   
-let rec list_make (lst, metro) =
-  match metro with
-  |STATION a -> check_list (lst, a)
-  |AREA (a, b) -> list_make (a::lst, b)
-  |CONNECT (a, b) -> list_make (lst, a) && list_make (lst, b)
+let rec list_make (lst, lambda) =
+  match lambda with
+  |V a -> check_list (lst, a)
+  |P (a, b) -> list_make (a::lst, b)
+  |C (a, b) -> list_make (lst, a) && list_make (lst, b)
 
-let rec checkMetro metro =
-  match metro with
-  |STATION a -> false
-  |AREA (a, b) -> list_make(a::[], b)
-  |CONNECT (a, b) -> (checkMetro a) && (checkMetro b)
+let rec check lambda =
+  match lambda with
+  |V a -> false
+  |P (a, b) -> list_make(a::[], b)
+  |C (a, b) -> (check a) && (check b)
       

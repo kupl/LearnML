@@ -1,15 +1,15 @@
-type metro = STATION of name
-	| AREA of name * metro
-	| CONNECT of metro * metro
-and name = string
+type lambda = V of var
+	| P of var * lambda
+	| C of lambda * lambda
+and var = string
 let rec com(l,n) =
 	match l with
 	| []->false
 	| head::tail -> ((head = n) || com(tail,n))
 let rec cMetro(l, m) = 
 	match m with
-	| STATION n -> com(l,n)
-	| AREA(n,mm) -> cMetro(n::l,mm)
-	| CONNECT(m1,m2) -> (cMetro(l,m1)) && (cMetro(l,m2))
-let rec checkMetro(m)=
+	| V n -> com(l,n)
+	| P(n,mm) -> cMetro(n::l,mm)
+	| C(m1,m2) -> (cMetro(l,m1)) && (cMetro(l,m2))
+let rec check(m)=
 	cMetro([],m)

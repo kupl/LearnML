@@ -1,7 +1,7 @@
-type metro = STATION of name
-	| AREA of name * metro
-	| CONNECT of metro * metro
-and name = string
+type lambda = V of var
+	| P of var * lambda
+	| C of lambda * lambda
+and var = string
 
 
 
@@ -11,14 +11,14 @@ let rec checkNameList(l, n) =
 	| hd::tl -> if hd = n then true
 				else checkNameList(tl, n)
 
-let rec checkMetroRec (l, m) =
+let rec checkRec (l, m) =
 	match m with
-	| STATION n -> checkNameList(l, n)
-	| AREA (n, m0) -> checkMetroRec(n::l, m0)
-	| CONNECT (m0, m1) -> checkMetroRec(l, m0) && checkMetroRec(l, m1)
+	| V n -> checkNameList(l, n)
+	| P (n, m0) -> checkRec(n::l, m0)
+	| C (m0, m1) -> checkRec(l, m0) && checkRec(l, m1)
 
-let rec checkMetro m =
+let rec check m =
 	match m with
-	| STATION n -> false
-	| AREA (n, m0) -> checkMetroRec(n::[], m0)
-	| CONNECT (m0, m1) -> checkMetro m0 && checkMetro m1
+	| V n -> false
+	| P (n, m0) -> checkRec(n::[], m0)
+	| C (m0, m1) -> check m0 && check m1

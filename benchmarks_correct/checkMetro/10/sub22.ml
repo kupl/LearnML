@@ -1,18 +1,18 @@
 (* Exercise 7 *)
-type metro =
-	STATION of name
-	| AREA of name * metro
-	| CONNECT of metro * metro
-and name = string
+type lambda =
+	V of var
+	| P of var * lambda
+	| C of lambda * lambda
+and var = string
 
-let rec checkId (metro, env) =
-	match metro with
-		STATION id ->
+let rec checkId (lambda, env) =
+	match lambda with
+		V id ->
 			(List.exists (fun x -> (x = id)) env)
-		| AREA (id, submetro) ->
-			(checkId (submetro, (id :: env)))
-		| CONNECT (submetro1, submetro2) ->
-			((checkId (submetro1, env)) && (checkId (submetro2, env)))
+		| P (id, sublambda) ->
+			(checkId (sublambda, (id :: env)))
+		| C (sublambda1, sublambda2) ->
+			((checkId (sublambda1, env)) && (checkId (sublambda2, env)))
 
-let rec checkMetro metro =
-	checkId (metro, [])
+let rec check lambda =
+	checkId (lambda, [])

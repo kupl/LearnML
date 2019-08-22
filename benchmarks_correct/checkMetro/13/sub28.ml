@@ -1,9 +1,9 @@
-type metro = STATION of name
-| AREA of name * metro
-| CONNECT of metro * metro
-and name = string
+type lambda = V of var
+| P of var * lambda
+| C of lambda * lambda
+and var = string
 
-let rec checkMetro met=
+let rec check met=
 	let rec return met lst=
 		let rec find a lst=
 			match lst with
@@ -13,8 +13,8 @@ let rec checkMetro met=
 				else find a tail
 		in
 		match met with
-		|STATION a-> find a lst
-		|AREA(a,b)-> return b (a::lst)
-		|CONNECT(a,b)->(return a lst)&&(return b lst)
+		|V a-> find a lst
+		|P(a,b)-> return b (a::lst)
+		|C(a,b)->(return a lst)&&(return b lst)
 	in
 	return met []	

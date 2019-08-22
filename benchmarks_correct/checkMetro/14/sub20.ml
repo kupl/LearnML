@@ -7,31 +7,31 @@
  ** Writ. by : CMS              **
  *********************************)
 
-type metro = STATION of name
-           | AREA of name * metro
-           | CONNECT of metro * metro
-and name = string
+type lambda = V of var
+           | P of var * lambda
+           | C of lambda * lambda
+and var = string
 
-let rec checkMetroMap area_list target = 
+let rec checkMap area_list target = 
 	match target with 
-	| STATION name -> 
-		if List.mem name area_list
+	| V var -> 
+		if List.mem var area_list
 		then true
 		else false
-	| AREA (id, m) -> 
+	| P (id, m) -> 
 		if isName id
 		then
 			if List.mem id area_list
-			then checkMetroMap area_list m
-			else checkMetroMap (id::area_list) m
+			then checkMap area_list m
+			else checkMap (id::area_list) m
 		else false
-	| CONNECT (m1, m2) -> 
-		if checkMetroMap area_list m1
-		then checkMetroMap area_list m2
+	| C (m1, m2) -> 
+		if checkMap area_list m1
+		then checkMap area_list m2
 		else false
 and isName str = 
 	match str with
 	| str1 -> true
 
-let checkMetro = checkMetroMap []
+let check = checkMap []
 

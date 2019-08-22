@@ -1,7 +1,7 @@
-type metro = STATION of name
-		| AREA of name * metro
-		| CONNECT of metro * metro
-and name = string
+type lambda = V of var
+		| P of var * lambda
+		| C of lambda * lambda
+and var = string
 
 let rec calarea (lst, st) =
 	match (lst, st) with
@@ -12,13 +12,13 @@ let rec calarea (lst, st) =
 
 let rec mycheck (m, lst) =
 	match m with
-	| STATION p -> calarea (lst, p)
-	| AREA (p, q) ->
+	| V p -> calarea (lst, p)
+	| P (p, q) ->
 		mycheck (q, lst @ [p])
-	| CONNECT (p, q) ->
+	| C (p, q) ->
 		mycheck (p, lst) && mycheck (q, lst)
 
-let rec checkMetro m =
+let rec check m =
 	let lst = []
 	in mycheck (m, lst)
 

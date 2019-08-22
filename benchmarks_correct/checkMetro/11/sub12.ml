@@ -2,29 +2,29 @@
    2007-11738
    알렉산더 *)
 
-type metro = STATION of name
-           | AREA of name * metro
-           | CONNECT of metro * metro
+type lambda = V of var
+           | P of var * lambda
+           | C of lambda * lambda
 
-and name = string
+and var = string
 
-(* checkMetro: metro -> bool *)
-let checkMetro mtr =
-    (* subfunction with area names list *)
-    let rec checkMetroInner (met, aNameList) =
+(* check: lambda -> bool *)
+let check mtr =
+    (* subfunction with area vars list *)
+    let rec checkInner (met, aNameList) =
         match met with
-             STATION stName -> if (List.mem stName aNameList) then true
+             V stName -> if (List.mem stName aNameList) then true
                                else false
-            |CONNECT (a, b) -> ((checkMetroInner (a, aNameList)) && (checkMetroInner (b, aNameList)))
-            |AREA (aName, CONNECT (a, b)) -> checkMetroInner (CONNECT (AREA (aName, a),AREA (aName, b)),
+            |C (a, b) -> ((checkInner (a, aNameList)) && (checkInner (b, aNameList)))
+            |P (aName, C (a, b)) -> checkInner (C (P (aName, a),P (aName, b)),
                                                               aNameList)
-            |AREA (aName, m) -> checkMetroInner (m, aName::aNameList)
+            |P (aName, m) -> checkInner (m, aName::aNameList)
     in
 
-    checkMetroInner (mtr, [])
+    checkInner (mtr, [])
 
 (*
-    aName - AREA name
-    stName - STATION name
-    aNameList - list of AREA names
+    aName - P var
+    stName - V var
+    aNameList - list of P vars
 *)

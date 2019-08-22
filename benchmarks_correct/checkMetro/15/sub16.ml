@@ -2,15 +2,15 @@
 (* Student ID: 2010-11834 *)
 (* Name: Kwonjoon Lee *)
 (* Exercise #3 *)
-type metro = STATION of name
-			| AREA of name * metro
-			| CONNECT of metro * metro
-and name = string
+type lambda = V of var
+			| P of var * lambda
+			| C of lambda * lambda
+and var = string
 
-let rec checkMetroAux (m, l) : bool = 
+let rec checkAux (m, l) : bool = 
 	match m with
-	| AREA(x, y) -> checkMetroAux(y, x::l)
-	| CONNECT(x, y) -> checkMetroAux(x, l) && checkMetroAux(y, l)
-	| STATION x -> List.mem x l
+	| P(x, y) -> checkAux(y, x::l)
+	| C(x, y) -> checkAux(x, l) && checkAux(y, l)
+	| V x -> List.mem x l
 
-let rec checkMetro (m : metro) : bool = checkMetroAux(m, [])
+let rec check (m : lambda) : bool = checkAux(m, [])

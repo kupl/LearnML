@@ -1,22 +1,22 @@
-type metro = STATION of name
-	| AREA of name * metro
-	| CONNECT of metro * metro
-and name = string
+type lambda = V of var
+	| P of var * lambda
+	| C of lambda * lambda
+and var = string
 ;;
 
-let rec checkMetro input =
-	let checkStation (areaList, station_name) =
-		if List.exists (fun x -> x = station_name) areaList then true
+let rec check input =
+	let checkStation (areaList, station_var) =
+		if List.exists (fun x -> x = station_var) areaList then true
 		else false
 	in
 	let rec checkArea (areaList, m) =
 		match m with
-		STATION value -> checkStation (areaList, value)
-		| AREA (value, m_prime) -> checkArea (areaList @ [value], m_prime)
-		| CONNECT (first, second) -> checkArea (areaList, first) && checkArea (areaList, second)
+		V value -> checkStation (areaList, value)
+		| P (value, m_prime) -> checkArea (areaList @ [value], m_prime)
+		| C (first, second) -> checkArea (areaList, first) && checkArea (areaList, second)
 	in	
         match input with
-        | STATION value -> checkStation ([], value)
-	| AREA (value, second) -> checkArea ([value], second)
-	| CONNECT (first,second) -> checkMetro first && checkMetro second
+        | V value -> checkStation ([], value)
+	| P (value, second) -> checkArea ([value], second)
+	| C (first,second) -> check first && check second
 ;;

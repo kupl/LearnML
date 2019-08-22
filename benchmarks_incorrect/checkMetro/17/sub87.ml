@@ -1,18 +1,18 @@
-type metro = STATION of name
-  | AREA of name * metro
-  | CONNECT of metro * metro
-and name = string
+type lambda = V of var
+  | P of var * lambda
+  | C of lambda * lambda
+and var = string
 
-  let rec checkMetro: metro -> bool = fun x -> match x with
-    | AREA(n, STATION(n1)) -> if( n1 = n) then true
+  let rec check: lambda -> bool = fun x -> match x with
+    | P(n, V(n1)) -> if( n1 = n) then true
     else false
-    | AREA(n, AREA(n1, m)) -> checkMetro(AREA(n,m)) && checkMetro(AREA(n1,m))
-    | AREA(n, CONNECT(STATION(m1),STATION(m2))) -> if((n = m1) || n = m2) then true
+    | P(n, P(n1, m)) -> check(P(n,m)) && check(P(n1,m))
+    | P(n, C(V(m1),V(m2))) -> if((n = m1) || n = m2) then true
     else false
-    | AREA(n, CONNECT(AREA(n1,m1), STATION(n2))) -> if((n = n2 || n1 = n2) && (checkMetro(AREA(n,m1))||checkMetro(AREA(n1,m1)))) then true
+    | P(n, C(P(n1,m1), V(n2))) -> if((n = n2 || n1 = n2) && (check(P(n,m1))||check(P(n1,m1)))) then true
     else false
-    | AREA(n, CONNECT( STATION(n2), AREA(n1,m1))) -> if((n = n2 || n1 = n2) && (checkMetro(AREA(n,m1))||checkMetro(AREA(n1,m1)))) then true
+    | P(n, C( V(n2), P(n1,m1))) -> if((n = n2 || n1 = n2) && (check(P(n,m1))||check(P(n1,m1)))) then true
     else false
-    | CONNECT(AREA(n1,m1),AREA(n2,m2)) -> if((checkMetro(AREA(n1,m1)) || checkMetro(AREA(n2,m1))) && (checkMetro(AREA(n1,m2)) || checkMetro(AREA(n2,m2)))) then true
+    | C(P(n1,m1),P(n2,m2)) -> if((check(P(n1,m1)) || check(P(n2,m1))) && (check(P(n1,m2)) || check(P(n2,m2)))) then true
     else false
-    | STATION(n) -> false
+    | V(n) -> false

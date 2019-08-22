@@ -1,19 +1,19 @@
-type metro = STATION of name
-	| AREA of name * metro
-	| CONNECT of metro * metro
-and name = string
+type lambda = V of var
+	| P of var * lambda
+	| C of lambda * lambda
+and var = string
 
 
 let rec asdf met l1 = 
 	match met with
-	| STATION a -> if (List.mem a l1)=true then true else false
-	| CONNECT (m1, m2) -> (asdf m1 l1)&&(asdf m2 l1)
-	| AREA (ne, mt) -> (asdf mt (ne::l1))
+	| V a -> if (List.mem a l1)=true then true else false
+	| C (m1, m2) -> (asdf m1 l1)&&(asdf m2 l1)
+	| P (ne, mt) -> (asdf mt (ne::l1))
 
-let rec checkMetro m =
+let rec check m =
         match m with
-        | STATION a -> false
-        | AREA (name, metro) -> asdf m []
-        | CONNECT (m1, m2) -> (asdf m1 [])&&(asdf m2 [])
+        | V a -> false
+        | P (var, lambda) -> asdf m []
+        | C (m1, m2) -> (asdf m1 [])&&(asdf m2 [])
 
 

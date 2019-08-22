@@ -1,14 +1,14 @@
-type metro = STATION of name
-	| AREA of name * metro
-	| CONNECT of metro * metro
-and name = string
+type lambda = V of var
+	| P of var * lambda
+	| C of lambda * lambda
+and var = string
 
 let ncor a b = a <> b
 
 let rec slist l = match l with
-	| STATION s -> [s]
-	| AREA (n, m) -> List.filter (ncor n) (slist m)
-	| CONNECT (m1, m2) -> List.append (slist m1) (slist m2)
-let rec checkMetro metro = match (slist metro) with
+	| V s -> [s]
+	| P (n, m) -> List.filter (ncor n) (slist m)
+	| C (m1, m2) -> List.append (slist m1) (slist m2)
+let rec check lambda = match (slist lambda) with
 	| [] -> true
 	| _ -> false

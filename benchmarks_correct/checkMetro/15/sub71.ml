@@ -1,12 +1,12 @@
-type metro =
-  STATION of name
-  | AREA of name * metro
-  | CONNECT of metro * metro
-and name =
+type lambda =
+  V of var
+  | P of var * lambda
+  | C of lambda * lambda
+and var =
   string
 
 
-let checkMetro = function metroLine ->
+let check = function lambdaLine ->
   let rec lstContains lst areaName =
     match lst with
     | [] -> false
@@ -14,15 +14,15 @@ let checkMetro = function metroLine ->
       if h = areaName then true
       else (lstContains rest areaName)
   in
-  let rec checkMetroArea = function
-    | (metroLine, areaLst) ->
-      (match metroLine with
-      | STATION stationName ->
+  let rec checkArea = function
+    | (lambdaLine, areaLst) ->
+      (match lambdaLine with
+      | V stationName ->
         lstContains areaLst stationName
-      | AREA (areaName, subMetro) ->
-        checkMetroArea(subMetro, areaLst@[areaName])
-      | CONNECT (metro1, metro2) ->
-        checkMetroArea(metro1, areaLst) &&
-        checkMetroArea(metro2, areaLst))
+      | P (areaName, subMetro) ->
+        checkArea(subMetro, areaLst@[areaName])
+      | C (lambda1, lambda2) ->
+        checkArea(lambda1, areaLst) &&
+        checkArea(lambda2, areaLst))
   in
-    checkMetroArea(metroLine, []);;
+    checkArea(lambdaLine, []);;

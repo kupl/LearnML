@@ -1,21 +1,21 @@
-type metro = STATION of name
-			| AREA of name * metro
-			| CONNECT of metro * metro
-and name = string
+type lambda = V of var
+			| P of var * lambda
+			| C of lambda * lambda
+and var = string
 
 
-let rec matchName (n: name) (l: name list): bool =
+let rec matchName (n: var) (l: var list): bool =
 	match l with
 	| [] -> false
 	| h::t -> if (n = h) then true
 			  else (matchName n t)
 
-let rec checkMetroRec (m: metro) (areas: name list): bool =
+let rec checkRec (m: lambda) (areas: var list): bool =
 	match m with
-	| STATION n -> (matchName n areas)
-	| CONNECT (m1, m2) -> 
-			((checkMetroRec m1 areas) && (checkMetroRec m2 areas))
-	| AREA (n, m) -> (checkMetroRec m (n::areas))
+	| V n -> (matchName n areas)
+	| C (m1, m2) -> 
+			((checkRec m1 areas) && (checkRec m2 areas))
+	| P (n, m) -> (checkRec m (n::areas))
 
-let checkMetro (m: metro): bool =
-	(checkMetroRec m [])
+let check (m: lambda): bool =
+	(checkRec m [])

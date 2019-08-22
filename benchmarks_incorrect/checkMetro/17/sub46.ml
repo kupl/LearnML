@@ -1,10 +1,10 @@
-type metro = STATION of name
-| AREA of name * metro
-| CONNECT of metro * metro
-and name = string
+type lambda = V of var
+| P of var * lambda
+| C of lambda * lambda
+and var = string
 
-let rec checkMetro : metro -> bool = fun metro ->
-match metro with
-| STATION _ -> false
-| AREA (a, b) -> true
-| CONNECT (a, b) -> true
+let rec check : lambda -> bool = fun lambda ->
+match lambda with
+| V _ -> false
+| P (a, b) -> true
+| C (a, b) -> true

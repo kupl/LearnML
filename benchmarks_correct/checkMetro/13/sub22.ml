@@ -1,8 +1,8 @@
-type metro = STATION of name
-| AREA of name * metro
-| CONNECT of metro * metro
+type lambda = V of var
+| P of var * lambda
+| C of lambda * lambda
 
-and name = string
+and var = string
 
 let rec inlist a l = 
 match l with
@@ -12,9 +12,9 @@ match l with
 
 let rec checkm l m =
 match m with
-| STATION a -> (inlist a l)
-| AREA (a, b) -> (checkm (a::l) b)
-| CONNECT (a, b) -> (checkm l a) && (checkm l b)
+| V a -> (inlist a l)
+| P (a, b) -> (checkm (a::l) b)
+| C (a, b) -> (checkm l a) && (checkm l b)
 
-let rec checkMetro m = 
+let rec check m = 
 (checkm [] m)

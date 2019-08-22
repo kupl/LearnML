@@ -1,19 +1,19 @@
-type metro = STATION of name
-	   | AREA of name * metro
-	   | CONNECT of metro * metro
-  and name = string
+type lambda = V of var
+	   | P of var * lambda
+	   | C of lambda * lambda
+  and var = string
 
 
-let rec checkMetro metro =
-    match metro with
-        STATION(name) -> false
-      | AREA(name1, STATION(name2)) -> (name1 = name2)
-      | AREA(name1, AREA(name2, CONNECT(metro1, metro2))) ->
-      				((checkMetro (AREA(name1, metro1))) && (checkMetro (AREA(name2, metro2)))) ||
-				((checkMetro (AREA(name1, metro2))) && (checkMetro (AREA(name2, metro1))))
-      | AREA(name1, AREA(name2, metro)) -> 
-      				((checkMetro (AREA(name1, metro))) || (checkMetro (AREA(name2, metro))))
-      | AREA(name, CONNECT(metro1, metro2)) -> 
-      				(checkMetro (AREA(name, metro1))) && (checkMetro (AREA(name, metro2)))
-      | CONNECT(metro1, metro2) -> ((checkMetro metro1) && (checkMetro metro2))
+let rec check lambda =
+    match lambda with
+        V(var) -> false
+      | P(var1, V(var2)) -> (var1 = var2)
+      | P(var1, P(var2, C(lambda1, lambda2))) ->
+      				((check (P(var1, lambda1))) && (check (P(var2, lambda2)))) ||
+				((check (P(var1, lambda2))) && (check (P(var2, lambda1))))
+      | P(var1, P(var2, lambda)) -> 
+      				((check (P(var1, lambda))) || (check (P(var2, lambda))))
+      | P(var, C(lambda1, lambda2)) -> 
+      				(check (P(var, lambda1))) && (check (P(var, lambda2)))
+      | C(lambda1, lambda2) -> ((check lambda1) && (check lambda2))
 

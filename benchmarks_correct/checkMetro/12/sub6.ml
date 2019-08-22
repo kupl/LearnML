@@ -1,15 +1,15 @@
 
-type metro = STATION of name
-| AREA of name * metro
-| CONNECT of metro * metro
-and name = string
+type lambda = V of var
+| P of var * lambda
+| C of lambda * lambda
+and var = string
 
 
-let checkMetro tak =
+let check tak =
   	let rec makeList a lst = 
   		match a with
-  			STATION s -> List.mem s lst
-  			|AREA(x,y) -> makeList y (x::lst)
-  			|CONNECT(x,y) -> (makeList x lst) && (makeList y lst)
+  			V s -> List.mem s lst
+  			|P(x,y) -> makeList y (x::lst)
+  			|C(x,y) -> (makeList x lst) && (makeList y lst)
   	in
   	makeList tak []

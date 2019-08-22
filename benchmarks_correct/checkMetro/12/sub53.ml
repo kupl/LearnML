@@ -2,62 +2,62 @@
 Name: Yoon Jae Nam (2012-81338)
 Organization: Seoul National University
 Class: Programming Language (4190.310)
-Problem: 8 (metro)
+Problem: 8 (lambda)
 *)
 
 (* Provided type declarations *)
-type metro = STATION of name
-			| AREA of name * metro
-			| CONNECT of metro * metro
-and name = string
+type lambda = V of var
+			| P of var * lambda
+			| C of lambda * lambda
+and var = string
 (* End of provided type declarations *)
 
-(* nameExists: function that checks if (arg1 : name)
-exists in (arg2 : name list) *)
-let rec nameExists : name * name list -> bool = 
-	fun (name_foo, name_list) ->
-		match name_list with
+(* varExists: function that checks if (arg1 : var)
+exists in (arg2 : var list) *)
+let rec varExists : var * var list -> bool = 
+	fun (var_foo, var_list) ->
+		match var_list with
 		[] -> false
 		| h::t -> 
-			(if name_foo = h then true
-			else (nameExists (name_foo, t)))
-(* end of nameExists *)
+			(if var_foo = h then true
+			else (varExists (var_foo, t)))
+(* end of varExists *)
 		
-(* addToNameList: adds (arg1 : name) to (arg2 : name list) if 
+(* addToNameList: adds (arg1 : var) to (arg2 : var list) if 
 arg1 doesn't already appear in arg2 *)
-let addToNameList : name * name list -> name list = 
-	fun (name_foo, name_list) ->
-		if (nameExists (name_foo, name_list)) then 
+let addToNameList : var * var list -> var list = 
+	fun (var_foo, var_list) ->
+		if (varExists (var_foo, var_list)) then 
 		(* alreay exists; don't have to add *)
-			name_list
-		else (* need to add name_foo to name_list *) 
-			name_foo::name_list
+			var_list
+		else (* need to add var_foo to var_list *) 
+			var_foo::var_list
 (* end of addToNameList *)
 
-(* checkMetroRec: helper function that has another argument of type 
-(name list). arg2 is the list of names that a station can have *)
-let rec checkMetroRec : metro * name list -> bool = 
-	fun (metro_foo, name_list) ->
-		match metro_foo with
-		STATION(name_bar) -> 
-			(* true iff the name of the station exists in name_list *)
-			(nameExists(name_bar, name_list))
-		| AREA(name_bar, metro_bar) -> 
-			(* true iff the child metro is correct, after acknowledging 
-			its name as a possible station name *)
-			(checkMetroRec(metro_bar, addToNameList(name_bar, name_list)))
-		| CONNECT(metro_left, metro_right) ->  
-			(* true iff both metros are correct *)
-			(checkMetroRec(metro_left, name_list) 
-			&& checkMetroRec(metro_right, name_list))
-(* end of checkMetroRec *)
+(* checkRec: helper function that has another argument of type 
+(var list). arg2 is the list of vars that a station can have *)
+let rec checkRec : lambda * var list -> bool = 
+	fun (lambda_foo, var_list) ->
+		match lambda_foo with
+		V(var_bar) -> 
+			(* true iff the var of the station exists in var_list *)
+			(varExists(var_bar, var_list))
+		| P(var_bar, lambda_bar) -> 
+			(* true iff the child lambda is correct, after acknowledging 
+			its var as a possible station var *)
+			(checkRec(lambda_bar, addToNameList(var_bar, var_list)))
+		| C(lambda_left, lambda_right) ->  
+			(* true iff both lambdas are correct *)
+			(checkRec(lambda_left, var_list) 
+			&& checkRec(lambda_right, var_list))
+(* end of checkRec *)
 
-(* checkMetro function that checks for the correctness of a metro.
-Definition of the correctness of a metro (iff): The name of the station
-(id in STATION(id)) only appears in the area corresponding to that name 
-(m in AREA(id, m)) *)
-let checkMetro: metro -> bool = 
-	fun metro_foo -> checkMetroRec(metro_foo, [])
+(* check function that checks for the correctness of a lambda.
+Definition of the correctness of a lambda (iff): The var of the station
+(id in V(id)) only appears in the area corresponding to that var 
+(m in P(id, m)) *)
+let check: lambda -> bool = 
+	fun lambda_foo -> checkRec(lambda_foo, [])
 
 (* Below: for testing *)
 (*
@@ -65,16 +65,16 @@ let printBool(bool_foo) =
 	if bool_foo = true then print_string "true"
 	else print_string "false"		
 
-let test_runner (test_name, test_metro, expected) =
-	let actual = checkMetro(test_metro) in
+let test_runner (test_var, test_lambda, expected) =
+	let actual = check(test_lambda) in
 		print_endline ("---------------");
 		if actual = expected then
-			(print_string ("Good (" ^ test_name ^ "): ");
+			(print_string ("Good (" ^ test_var ^ "): ");
 			printBool (actual);
 			print_newline ()
 			)
 		else
-			(print_endline ("***BAD (" ^ test_name ^ ")");
+			(print_endline ("***BAD (" ^ test_var ^ ")");
 			print_string "Expected: ";
 			printBool(expected);
 			print_newline ();
@@ -84,58 +84,58 @@ let test_runner (test_name, test_metro, expected) =
 			raise (Invalid_argument "test_runner"))
 
 let test1 =
-	let test_metro = AREA("a", STATION "a") in
+	let test_lambda = P("a", V "a") in
 	let expected = true in
-	test_runner("test1", test_metro, expected)
+	test_runner("test1", test_lambda, expected)
 	
 let test2 =
-	let test_metro = AREA("a", AREA("a", STATION "a")) in
+	let test_lambda = P("a", P("a", V "a")) in
 	let expected = true in
-	test_runner("test2", test_metro, expected)
+	test_runner("test2", test_lambda, expected)
 	
 let test3 =
-	let test_metro = AREA("a", AREA("b", CONNECT(STATION "a", STATION "b"))) in
+	let test_lambda = P("a", P("b", C(V "a", V "b"))) in
 	let expected = true in
-	test_runner("test3", test_metro, expected)
+	test_runner("test3", test_lambda, expected)
 	
 let test4 =
-	let test_metro = AREA("a", CONNECT(STATION "a", AREA("b", STATION "a"))) in
+	let test_lambda = P("a", C(V "a", P("b", V "a"))) in
 	let expected = true in
-	test_runner("test4", test_metro, expected)
+	test_runner("test4", test_lambda, expected)
 	
 let test5 =
-	let test_metro = AREA("a", STATION "b") in
+	let test_lambda = P("a", V "b") in
 	let expected = false in
-	test_runner("test5", test_metro, expected)
+	test_runner("test5", test_lambda, expected)
 	
 let test6 =
-	let test_metro = AREA("a", CONNECT(STATION "a", AREA("b", STATION "c"))) in
+	let test_lambda = P("a", C(V "a", P("b", V "c"))) in
 	let expected = false in
-	test_runner("test6", test_metro, expected)
+	test_runner("test6", test_lambda, expected)
 	
 let test7 =
-	let test_metro = AREA("a", AREA("b", CONNECT(STATION "a", STATION "c"))) in
+	let test_lambda = P("a", P("b", C(V "a", V "c"))) in
 	let expected = false in
-	test_runner("test7", test_metro, expected)
+	test_runner("test7", test_lambda, expected)
 
 let test8 =
-	let test_metro = STATION "a" in
+	let test_lambda = V "a" in
 	let expected = false in
-	test_runner("test8", test_metro, expected)
+	test_runner("test8", test_lambda, expected)
 
 let test9 =
-	let test_metro = CONNECT(STATION "a", STATION "b") in
+	let test_lambda = C(V "a", V "b") in
 	let expected = false in
-	test_runner("test9", test_metro, expected)
+	test_runner("test9", test_lambda, expected)
 
 let test10 =
-	let test_metro = AREA(("c"), CONNECT(AREA("b", AREA("a", STATION "b")), AREA("c", STATION "b"))) in
-	let expected = false in (* because of STATION "b" at the end *)
-	test_runner("test10", test_metro, expected)
+	let test_lambda = P(("c"), C(P("b", P("a", V "b")), P("c", V "b"))) in
+	let expected = false in (* because of V "b" at the end *)
+	test_runner("test10", test_lambda, expected)
 
 let test11 =
-	let test_metro = AREA("b", AREA("c", CONNECT(AREA("b", AREA("a", STATION "b")), AREA("c", STATION "b")))) in
+	let test_lambda = P("b", P("c", C(P("b", P("a", V "b")), P("c", V "b")))) in
 	let expected = true in
-	test_runner("test11", test_metro, expected)
+	test_runner("test11", test_lambda, expected)
 (* end of test code *)
 *)

@@ -1,15 +1,15 @@
 (* 컴퓨터공학부 2013-11425 이창영 hw2_4 *)
-type name = string
+type var = string
 
-type metro = STATION of name
-            | AREA of name * metro
-            | CONNECT of metro * metro
+type lambda = V of var
+            | P of var * lambda
+            | C of lambda * lambda
 
-let rec checkMetro2 (m : metro) (l : string list) : bool =
+let rec check2 (m : lambda) (l : string list) : bool =
   match m with
-  | STATION a -> if List.mem a l then true else false
-  | AREA (a, b) -> checkMetro2 b (l @ [a])
-  | CONNECT (a, b) -> (checkMetro2 a l) && (checkMetro2 b l)
+  | V a -> if List.mem a l then true else false
+  | P (a, b) -> check2 b (l @ [a])
+  | C (a, b) -> (check2 a l) && (check2 b l)
 
-let checkMetro (m : metro) : bool =
-  checkMetro2 m []
+let check (m : lambda) : bool =
+  check2 m []

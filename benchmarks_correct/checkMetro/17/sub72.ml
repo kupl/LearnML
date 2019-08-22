@@ -1,13 +1,13 @@
-type name = string
-type metro = STATION of name
-            | AREA of name * metro
-            | CONNECT of metro * metro
+type var = string
+type lambda = V of var
+            | P of var * lambda
+            | C of lambda * lambda
 
-let checkMetro : metro -> bool = fun m ->
-  let rec findname : metro -> name list -> bool = fun n l ->
+let check : lambda -> bool = fun m ->
+  let rec findvar : lambda -> var list -> bool = fun n l ->
     match n with
-    | STATION o -> List.mem o l
-    | AREA (o, p) -> findname p (o::l)
-    | CONNECT (p, q) -> (findname p l) && (findname q l)
+    | V o -> List.mem o l
+    | P (o, p) -> findvar p (o::l)
+    | C (p, q) -> (findvar p l) && (findvar q l)
   in
-  findname m []
+  findvar m []

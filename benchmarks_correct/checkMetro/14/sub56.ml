@@ -1,15 +1,15 @@
-type metro =
-    | STATION of name
-    | AREA of name * metro
-    | CONNECT of metro * metro
-and name = string;;
+type lambda =
+    | V of var
+    | P of var * lambda
+    | C of lambda * lambda
+and var = string;;
 
-let rec checkMetro metro =
-    let rec checkMetroWithNames metro names =
-        match metro with
-        | STATION name -> List.exists (fun x -> x = name) names
-        | AREA (name, metro) -> checkMetroWithNames metro (name::names)
-        | CONNECT (metro0, metro1) -> (checkMetroWithNames metro0 names) &&
-        (checkMetroWithNames metro1 names)
+let rec check lambda =
+    let rec checkWithNames lambda vars =
+        match lambda with
+        | V var -> List.exists (fun x -> x = var) vars
+        | P (var, lambda) -> checkWithNames lambda (var::vars)
+        | C (lambda0, lambda1) -> (checkWithNames lambda0 vars) &&
+        (checkWithNames lambda1 vars)
     in
-    checkMetroWithNames metro [];;
+    checkWithNames lambda [];;

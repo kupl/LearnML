@@ -1,7 +1,7 @@
-type metro =	 STATION of name
-		|AREA of name * metro
-		|CONNECT of metro * metro
-and name = string
+type lambda =	 V of var
+		|P of var * lambda
+		|C of lambda * lambda
+and var = string
 
 let rec list_finder: 'a list * 'a -> bool = fun(list_, element_) ->
         (
@@ -10,19 +10,19 @@ let rec list_finder: 'a list * 'a -> bool = fun(list_, element_) ->
             | hd::tail -> ( if(hd = element_) then (true) else (list_finder(tail,element_)))
         )
 
-let rec checkMetro_helper: metro * string list -> bool = fun(met,env) ->
+let rec check_helper: lambda * string list -> bool = fun(met,env) ->
 (
           match met with
-                STATION(st_name) -> list_finder(env,st_name)
-                |AREA(ar_name,metro_) -> checkMetro_helper(metro_,ar_name::env )
-                |CONNECT(metro1_,metro2_) -> checkMetro_helper(metro1_,env) && checkMetro_helper(metro2_,env)
+                V(st_var) -> list_finder(env,st_var)
+                |P(ar_var,lambda_) -> check_helper(lambda_,ar_var::env )
+                |C(lambda1_,lambda2_) -> check_helper(lambda1_,env) && check_helper(lambda2_,env)
 
 )
 
-let rec checkMetro: metro -> bool = fun(met)
+let rec check: lambda -> bool = fun(met)
 -> 
 	(
-		checkMetro_helper(met,[])
+		check_helper(met,[])
 	)
 
 

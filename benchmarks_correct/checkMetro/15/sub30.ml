@@ -1,24 +1,24 @@
-(* C:\Users\saigoy\Desktop\checkMetro.ml *)
+(* C:\Users\saigoy\Desktop\check.ml *)
 
-type metro = STATION of name
-  | AREA of name * metro
-  | CONNECT of metro * metro
-  and name = string;;
+type lambda = V of var
+  | P of var * lambda
+  | C of lambda * lambda
+  and var = string;;
 
-let checkMetro : metro -> bool = fun metro ->
-  	let rec isProperStation (name, areaList) = 
+let check : lambda -> bool = fun lambda ->
+  	let rec isProperStation (var, areaList) = 
   	match areaList with
   	| [] -> false
   	| hd::tl -> 
   	(
-  		if(hd= name) then true
-  		else (isProperStation (name, tl))
+  		if(hd= var) then true
+  		else (isProperStation (var, tl))
   	)	in
   
-  	let rec checkMetro_Aux (metro, areaList) = 
-  	match metro with
-  	| STATION n -> isProperStation(n, areaList)
-  	| AREA (n, m) -> checkMetro_Aux (m, n::areaList)
-  	| CONNECT (lm, rm) -> ( checkMetro_Aux(lm, areaList) )&& ( checkMetro_Aux(rm, areaList) )	in
-  checkMetro_Aux(metro, []);;
+  	let rec check_Aux (lambda, areaList) = 
+  	match lambda with
+  	| V n -> isProperStation(n, areaList)
+  	| P (n, m) -> check_Aux (m, n::areaList)
+  	| C (lm, rm) -> ( check_Aux(lm, areaList) )&& ( check_Aux(rm, areaList) )	in
+  check_Aux(lambda, []);;
 

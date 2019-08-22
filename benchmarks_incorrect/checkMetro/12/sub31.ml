@@ -1,9 +1,9 @@
-type metro = STATION of name
-| AREA of name * metro
-| CONNECT of metro * metro
-and name = string
+type lambda = V of var
+| P of var * lambda
+| C of lambda * lambda
+and var = string
 
-let rec checkMetro m =
+let rec check m =
 	let rec checkElementInList (elem, lst) =
 		match lst with
 		| hd::tl -> if (elem = hd) then true else checkElementInList(elem, tl)
@@ -16,15 +16,15 @@ let rec checkMetro m =
 		in
 	let rec makeAreaList m_eq a_lst =
 		match m_eq with
-		| STATION x -> a_lst
-		| AREA(x, y) -> makeAreaList y (x::a_lst)
-		| CONNECT(x, y) -> (makeAreaList x a_lst) @ (makeAreaList y [])
+		| V x -> a_lst
+		| P(x, y) -> makeAreaList y (x::a_lst)
+		| C(x, y) -> (makeAreaList x a_lst) @ (makeAreaList y [])
 		in
 	let rec makeStationList m_eq s_lst = 
 		match m_eq with 
-		| STATION x -> x::s_lst
-		| AREA(x, y) -> makeStationList y s_lst
-		| CONNECT(x, y) -> (makeStationList x s_lst) @ (makeStationList y [])
+		| V x -> x::s_lst
+		| P(x, y) -> makeStationList y s_lst
+		| C(x, y) -> (makeStationList x s_lst) @ (makeStationList y [])
 		in
 	subset (makeStationList m []) (makeAreaList m [])
 

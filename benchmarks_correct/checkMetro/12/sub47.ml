@@ -1,9 +1,9 @@
-type metro =
-STATION of string
-|AREA of string*metro
-|CONNECT of metro*metro;;
+type lambda =
+V of string
+|P of string*lambda
+|C of lambda*lambda;;
 
-let checkMetro metro =
+let check lambda =
 	let rec chk what at =
 		match at with
 		|hd::tl -> if hd = what then true else (chk what tl)
@@ -11,10 +11,10 @@ let checkMetro metro =
 	in
 	let rec foo mtr lst = 
 		match mtr with
-		|STATION n -> (chk n lst)
-		|AREA (n,rest) -> (foo rest (n::lst))
-		|CONNECT (a,b) -> (foo a lst)&&(foo b lst)
+		|V n -> (chk n lst)
+		|P (n,rest) -> (foo rest (n::lst))
+		|C (a,b) -> (foo a lst)&&(foo b lst)
 	in
-	(foo metro [])
+	(foo lambda [])
 ;;
 

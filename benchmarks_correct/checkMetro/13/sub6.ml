@@ -1,28 +1,28 @@
 (* KIHWAN KANG HW01-4 *)
 
 (* PREDEFINED TYPES *)
-type metro = 
-	STATION of name
-	| AREA of name * metro
-	| CONNECT of metro * metro
-and name = string
+type lambda = 
+	V of var
+	| P of var * lambda
+	| C of lambda * lambda
+and var = string
 (* END OF PREDEFINED TYPES *)
 
-let rec checkMetro one = 
+let rec check one = 
 	let rec checkStationWithAreaList (station, area_list) = 
 		match (station, area_list) with
 		|(_, []) -> false
-		|(station, area_name::area_rest) -> 
-			if station = area_name
+		|(station, area_var::area_rest) -> 
+			if station = area_var
 			then true
 			else checkStationWithAreaList (station, area_rest)
 in
-	let rec checkMetroWithAreaList (one, area_list) = 
+	let rec checkWithAreaList (one, area_list) = 
 		match one with
-		|STATION station -> checkStationWithAreaList (station, area_list)
-		|AREA (area_name, area_metro) -> checkMetroWithAreaList (area_metro, area_name::area_list)
-		|CONNECT (front, rear) -> 
-			checkMetroWithAreaList (front, area_list)
-			&& checkMetroWithAreaList (rear, area_list)
+		|V station -> checkStationWithAreaList (station, area_list)
+		|P (area_var, area_lambda) -> checkWithAreaList (area_lambda, area_var::area_list)
+		|C (front, rear) -> 
+			checkWithAreaList (front, area_list)
+			&& checkWithAreaList (rear, area_list)
 in
-	checkMetroWithAreaList (one, [])
+	checkWithAreaList (one, [])

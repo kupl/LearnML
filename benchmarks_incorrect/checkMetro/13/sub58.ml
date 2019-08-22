@@ -1,14 +1,14 @@
-type metro = STATION of name|AREA of name*metro|CONNECT of metro*metro and name=string
+type lambda = V of var|P of var*lambda|C of lambda*lambda and var=string
 
 let addToList lst newInlst=newInlst::lst
-let rec check prevAreaName metro=
-	match metro with
-	|STATION(stationName)-> List.mem stationName prevAreaName
-	|AREA(areaName, nextMetro)-> check (areaName::prevAreaName) nextMetro
-	|CONNECT(metroA, metroB)-> check prevAreaName metroA && check prevAreaName metroB
+let rec check prevAreaName lambda=
+	match lambda with
+	|V(stationName)-> List.mem stationName prevAreaName
+	|P(areaName, nextMetro)-> check (areaName::prevAreaName) nextMetro
+	|C(lambdaA, lambdaB)-> check prevAreaName lambdaA && check prevAreaName lambdaB
 
-let rec checkMetro inpt =
+let rec check inpt =
 	match inpt with
-	| STATION(name)-> true
-	| AREA(name, metro)-> check (name::[]) metro
-	| CONNECT(metroA, metroB)-> checkMetro metroA && checkMetro metroB
+	| V(var)-> true
+	| P(var, lambda)-> check (var::[]) lambda
+	| C(lambdaA, lambdaB)-> check lambdaA && check lambdaB

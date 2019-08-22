@@ -1,22 +1,22 @@
 (* not tested *)
 
-type metro = STATION of name
-		   | AREA of name * metro
-		   | CONNECT of metro * metro
+type lambda = V of var
+		   | P of var * lambda
+		   | C of lambda * lambda
 
-and name = string
+and var = string
 
-let rec lst_check (l: name list) (elt: name) = 
+let rec lst_check (l: var list) (elt: var) = 
 	match l with
 	| hd::tl -> if (hd = elt) then true
 				else (lst_check tl elt)
 	| [] -> false
 
-let checkMetro (m: metro) = 
-	let rec checkMetro_sub (m: metro) (sl: name list) = 
+let check (m: lambda) = 
+	let rec check_sub (m: lambda) (sl: var list) = 
 		match m with
-		| STATION n -> lst_check sl n
-		| AREA (n, sub_metro) -> (checkMetro_sub sub_metro (sl@[n]))
-		| CONNECT (m1, m2) -> (checkMetro_sub m1 sl) && (checkMetro_sub m2 sl)
+		| V n -> lst_check sl n
+		| P (n, sub_lambda) -> (check_sub sub_lambda (sl@[n]))
+		| C (m1, m2) -> (check_sub m1 sl) && (check_sub m2 sl)
 	in
-	checkMetro_sub m []
+	check_sub m []

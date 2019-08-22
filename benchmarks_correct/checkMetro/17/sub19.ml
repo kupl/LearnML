@@ -1,13 +1,13 @@
-type metro = STATION of name
-            | AREA of name * metro
-            | CONNECT of metro * metro
-            and name = string
+type lambda = V of var
+            | P of var * lambda
+            | C of lambda * lambda
+            and var = string
 
-let checkMetro (m: metro) : bool =
-  let rec op ((l: string list), (a: metro)) =
+let check (m: lambda) : bool =
+  let rec op ((l: string list), (a: lambda)) =
     match a with
-    | STATION n -> List.exists (fun x -> x = n) l
-    | AREA (n, a') -> op((List.append [n] l), a')
-    | CONNECT (a', a'') -> (op (l, a')) && op (l, a'')
+    | V n -> List.exists (fun x -> x = n) l
+    | P (n, a') -> op((List.append [n] l), a')
+    | C (a', a'') -> (op (l, a')) && op (l, a'')
   in 
   op ([], m)

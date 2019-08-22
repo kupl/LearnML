@@ -1,14 +1,14 @@
 
-type name =string
-type metro =STATION of name | AREA of name*metro |CONNECT of metro* metro
+type var =string
+type lambda =V of var | P of var*lambda |C of lambda* lambda
 
-let checkMetro e =
-    let rec checkMetro_aux f =
+let check e =
+    let rec check_aux f =
     match f with 
-	|STATION(a),l-> if l =[] then false 
+	|V(a),l-> if l =[] then false 
                         else if a = List.hd l then true 
-                         else checkMetro_aux(STATION(a),List.tl l)
-        |AREA(a,b),l -> checkMetro_aux(b,a::l)  
-	|CONNECT(a,b),l->checkMetro_aux(a,l)&&checkMetro_aux(b,l) 
+                         else check_aux(V(a),List.tl l)
+        |P(a,b),l -> check_aux(b,a::l)  
+	|C(a,b),l->check_aux(a,l)&&check_aux(b,l) 
        
-     in checkMetro_aux(e,[])
+     in check_aux(e,[])

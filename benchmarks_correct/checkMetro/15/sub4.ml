@@ -1,36 +1,36 @@
-type metro = STATION of name
-              | AREA of name * metro
-              | CONNECT of metro * metro
-              and name = string;;
+type lambda = V of var
+              | P of var * lambda
+              | C of lambda * lambda
+              and var = string;;
 
-let rec checkMetroLi : metro * (name list) -> bool = fun (m,li) -> (
+let rec checkLi : lambda * (var list) -> bool = fun (m,li) -> (
 match m with
-    STATION n -> (
+    V n -> (
     if( List.mem n li) then (true) else (false)
-    )| AREA (n, mm) -> (
-    let childList : name list = n::li in
-    checkMetroLi(mm, childList)
-    )| CONNECT (mm1, mm2) -> (
-    checkMetroLi(mm1,li) && checkMetroLi(mm2,li)
+    )| P (n, mm) -> (
+    let childList : var list = n::li in
+    checkLi(mm, childList)
+    )| C (mm1, mm2) -> (
+    checkLi(mm1,li) && checkLi(mm2,li)
     )
 );;
 
-let checkMetro : metro -> bool = fun m -> (
-  checkMetroLi(m, [])
+let check : lambda -> bool = fun m -> (
+  checkLi(m, [])
 );;
 
 (*
 let testf = fun x ->
-    if( checkMetro(x)) then (print_endline "true") else (print_endline "false");;
+    if( check(x)) then (print_endline "true") else (print_endline "false");;
 
-testf(AREA("a", STATION "a"));
-testf(AREA("a", AREA("a", STATION "a")));
-testf(AREA("a", AREA("b", CONNECT(STATION "a", STATION "b"))));
-testf(AREA("a", CONNECT(STATION "a", AREA("b", STATION "a"))));
+testf(P("a", V "a"));
+testf(P("a", P("a", V "a")));
+testf(P("a", P("b", C(V "a", V "b"))));
+testf(P("a", C(V "a", P("b", V "a"))));
 
-testf(AREA("a", STATION "b"));
-testf(AREA("a", CONNECT(STATION "a", AREA("b", STATION "c"))));
-testf(AREA("a", AREA("b", CONNECT(STATION "a", STATION "c"))));
+testf(P("a", V "b"));
+testf(P("a", C(V "a", P("b", V "c"))));
+testf(P("a", P("b", C(V "a", V "c"))));
 *)
 
 

@@ -1,27 +1,27 @@
-type metro = STATION of name
-           | AREA of name * metro
-           | CONNECT of metro * metro
-and name = string
+type lambda = V of var
+           | P of var * lambda
+           | C of lambda * lambda
+and var = string
 
-let rec findStation: metro -> string list = fun x ->
+let rec findStation: lambda -> string list = fun x ->
   match x with
-  | STATION station -> [station]
-  | CONNECT(a, b) -> (findStation a)@(findStation b)
-  | AREA(area, next) -> findStation next
+  | V station -> [station]
+  | C(a, b) -> (findStation a)@(findStation b)
+  | P(area, next) -> findStation next
 
-let rec exclude: metro -> string list -> bool = fun m strl ->
+let rec exclude: lambda -> string list -> bool = fun m strl ->
   match strl with
   | [] -> true
   | _ ->
     (match m with
-     | STATION sta -> false
-     | AREA(area, next) ->
+     | V sta -> false
+     | P(area, next) ->
 	if (List.mem area strl) then (exclude next (List.filter (fun x -> x != area) strl))
 	else (exclude next strl)
-     | CONNECT(STATION sta, con2) -> exclude con2 strl
-     | CONNECT(con1, STATION sta) -> exclude con1 strl
-     | CONNECT(con1, con2) -> (exclude con1 (findStation con1)) && (exclude con2 (findStation con2))
+     | C(V sta, con2) -> exclude con2 strl
+     | C(con1, V sta) -> exclude con1 strl
+     | C(con1, con2) -> (exclude con1 (findStation con1)) && (exclude con2 (findStation con2))
     )
 
-let rec checkMetro: metro -> bool = fun x ->
+let rec check: lambda -> bool = fun x ->
   exclude x (findStation x)

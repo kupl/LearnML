@@ -1,17 +1,17 @@
-type metro = STATION of name
-			|AREA of name * metro
-			|CONNECT of metro * metro
-and name = string 
+type lambda = V of var
+			|P of var * lambda
+			|C of lambda * lambda
+and var = string 
 
 let rec contain (l, str) =
 	match l with
 		| [] -> false
 		| h::t -> (h = str) || contain (t, str)
 
-let rec checkMetro2 (s, m) =
+let rec check2 (s, m) =
 	match m with 
-		| STATION x -> contain (s, x)
-		| CONNECT (m1, m2) -> (checkMetro2 (s, m1)) && (checkMetro2 (s, m2))
-		| AREA (a, b) -> checkMetro2 (a::s, b)
+		| V x -> contain (s, x)
+		| C (m1, m2) -> (check2 (s, m1)) && (check2 (s, m2))
+		| P (a, b) -> check2 (a::s, b)
 
-let checkMetro m = checkMetro2 ([], m)	
+let check m = check2 ([], m)	

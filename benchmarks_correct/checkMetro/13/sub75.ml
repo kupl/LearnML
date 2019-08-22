@@ -1,19 +1,19 @@
-(* file name : ex4.ml *)
+(* file var : ex4.ml *)
 (* author : Jisoon Park (jspark@ropas.snu.ac.kr) *)
 (* date : 2013-09-13 *)
 (* Exercise 4 *)
-type metro = STATION of name
-						| AREA of name * metro
-						| CONNECT of metro * metro
-and name = string
+type lambda = V of var
+						| P of var * lambda
+						| C of lambda * lambda
+and var = string
 
-let rec checkMetroSub : metro * string list -> bool
+let rec checkSub : lambda * string list -> bool
  = fun (mtr, areaList) ->
 	match mtr with
-	| STATION st -> List.exists (fun x -> x = st) areaList
-	| AREA (ar, mtr2) -> checkMetroSub(mtr2, ar::areaList)
-	| CONNECT (mtr1, mtr2) -> checkMetroSub(mtr1, areaList) && checkMetroSub(mtr2, areaList) 
+	| V st -> List.exists (fun x -> x = st) areaList
+	| P (ar, mtr2) -> checkSub(mtr2, ar::areaList)
+	| C (mtr1, mtr2) -> checkSub(mtr1, areaList) && checkSub(mtr2, areaList) 
 
-let checkMetro : metro -> bool
+let check : lambda -> bool
  = fun mtr ->
-	checkMetroSub (mtr, [])
+	checkSub (mtr, [])

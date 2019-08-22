@@ -1,42 +1,42 @@
 (* 2010-11753 snucse Taekmin Kim *)
 (* HW 2-3 *)
 
-type metro = STATION of name
-| AREA of name * metro
-| CONNECT of metro * metro
-and name = string
+type lambda = V of var
+| P of var * lambda
+| C of lambda * lambda
+and var = string
 
-let rec isInGroup: name * name list -> bool = fun(n, l) ->
+let rec isInGroup: var * var list -> bool = fun(n, l) ->
   match l with
   | [] -> false
   | hd::tl -> if(hd = n) then true else isInGroup(n, tl) 
 
-let rec checkMetroInGroup: metro * name list -> bool = fun(m, l) ->
+let rec checkInGroup: lambda * var list -> bool = fun(m, l) ->
   match m with
-  | STATION n -> isInGroup(n, l)
-  | AREA (n, m1) -> checkMetroInGroup(m1, n::l)
-  | CONNECT (m1, m2) ->
-      if(checkMetroInGroup(m1, l)
-      && checkMetroInGroup(m2, l)) then true else false
+  | V n -> isInGroup(n, l)
+  | P (n, m1) -> checkInGroup(m1, n::l)
+  | C (m1, m2) ->
+      if(checkInGroup(m1, l)
+      && checkInGroup(m2, l)) then true else false
 
-let rec checkMetro: metro -> bool = fun(m) ->
-  checkMetroInGroup(m, [])
+let rec check: lambda -> bool = fun(m) ->
+  checkInGroup(m, [])
 
 (*
 let _= 
   let print_bool x = print_endline (string_of_bool x) in 
 
-  let a81 = checkMetro (AREA("a", STATION "a")) in 
-  let a82 = checkMetro (AREA("a", AREA("a", STATION "a"))) in 
-  let a83 = checkMetro (AREA("a", AREA("b", CONNECT(STATION "a", STATION "b")))) in 
-  let a84 = checkMetro (AREA("a", CONNECT(STATION "a", AREA("b", STATION "a")))) in 
-  let a85 = checkMetro (AREA("a", STATION "b")) in 
-  let a86 = checkMetro (AREA("a", CONNECT(STATION "a", AREA("b", STATION "c")))) in 
-  let a87 = checkMetro (AREA("a", AREA("b", CONNECT(STATION "a", STATION "c")))) in 
+  let a81 = check (P("a", V "a")) in 
+  let a82 = check (P("a", P("a", V "a"))) in 
+  let a83 = check (P("a", P("b", C(V "a", V "b")))) in 
+  let a84 = check (P("a", C(V "a", P("b", V "a")))) in 
+  let a85 = check (P("a", V "b")) in 
+  let a86 = check (P("a", C(V "a", P("b", V "c")))) in 
+  let a87 = check (P("a", P("b", C(V "a", V "c")))) in 
 
-  print_bool(false = checkMetro ( STATION "a" )); 
-  print_bool(true = checkMetro ( CONNECT (AREA ("a", STATION "a"), AREA ("b", AREA("a", CONNECT(STATION "b", STATION "a")))) )); 
-  print_bool(false = checkMetro ( CONNECT (AREA ("c", STATION "c"), AREA ("b", AREA("a", CONNECT(STATION "b", STATION     "c")))) )); 
+  print_bool(false = check ( V "a" )); 
+  print_bool(true = check ( C (P ("a", V "a"), P ("b", P("a", C(V "b", V "a")))) )); 
+  print_bool(false = check ( C (P ("c", V "c"), P ("b", P("a", C(V "b", V     "c")))) )); 
   print_bool(true = a81); 
   print_bool(true = a82); 
   print_bool(true = a83); 

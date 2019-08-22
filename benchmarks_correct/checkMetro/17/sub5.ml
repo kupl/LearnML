@@ -1,19 +1,19 @@
-type metro = STATION of name
-            | AREA of name * metro
-            | CONNECT of metro * metro
-and name = string
+type lambda = V of var
+            | P of var * lambda
+            | C of lambda * lambda
+and var = string
 
-let rec checkMetroHelper = (fun (env,inputMetro) ->
+let rec checkHelper = (fun (env,inputMetro) ->
   match inputMetro with
-  | STATION a ->
+  | V a ->
     if List.mem a env then true
     else false
-  | CONNECT(a,b) -> checkMetroHelper (env,a) && checkMetroHelper (env,b)
-  | AREA(a,b) ->
+  | C(a,b) -> checkHelper (env,a) && checkHelper (env,b)
+  | P(a,b) ->
     let newEnv = a::env in
-    checkMetroHelper(newEnv, b)
+    checkHelper(newEnv, b)
   )
 
-let rec checkMetro = (fun x ->
-  checkMetroHelper ([],x)
+let rec check = (fun x ->
+  checkHelper ([],x)
   )

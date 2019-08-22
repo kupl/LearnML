@@ -1,8 +1,8 @@
-type metro = STATION of name
-  | AREA of name * metro
-  | CONNECT of metro * metro
-and name = string
-let rec checkMetro met =
+type lambda = V of var
+  | P of var * lambda
+  | C of lambda * lambda
+and var = string
+let rec check met =
   let rec sset e set =
     match set with
     | [] -> false
@@ -10,8 +10,8 @@ let rec checkMetro met =
   in
   let rec inarray f lst =
     match f with
-    | STATION n -> (sset n lst)
-    | AREA (n, m) -> (inarray m (n::lst))
-    | CONNECT (m1, m2) -> (inarray m1 lst) && (inarray m2 lst)
+    | V n -> (sset n lst)
+    | P (n, m) -> (inarray m (n::lst))
+    | C (m1, m2) -> (inarray m1 lst) && (inarray m2 lst)
   in
   inarray met [] 

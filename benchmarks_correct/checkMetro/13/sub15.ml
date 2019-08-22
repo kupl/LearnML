@@ -1,18 +1,18 @@
-type metro = STATION of name
-	| AREA of name * metro
-	| CONNECT of metro * metro
-and name = string
+type lambda = V of var
+	| P of var * lambda
+	| C of lambda * lambda
+and var = string
 
 let rec in_list el lst =
 	match lst with [] -> false
 	| head::tail -> (head = el) || in_list el tail
 
-let rec checkMetro_sub metro lst =
-        match metro with
-	STATION s_name -> in_list s_name lst
-	| AREA (a_name, metro_sub) -> checkMetro_sub metro_sub (a_name::lst)
-       	| CONNECT (a,b) -> checkMetro_sub a lst && checkMetro_sub b lst
+let rec check_sub lambda lst =
+        match lambda with
+	V s_var -> in_list s_var lst
+	| P (a_var, lambda_sub) -> check_sub lambda_sub (a_var::lst)
+       	| C (a,b) -> check_sub a lst && check_sub b lst
 
-let checkMetro metro =
-	checkMetro_sub metro []
+let check lambda =
+	check_sub lambda []
 

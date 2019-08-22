@@ -1,14 +1,14 @@
 (* programming language, exercise07, 200611810 *)
 
-type metro = STATION of name | AREA of name*metro | CONNECT of metro*metro
-and name = string
+type lambda = V of var | P of var*lambda | C of lambda*lambda
+and var = string
 
-let rec checkMetro (met) =
+let rec check (met) =
 	match met with
-	| STATION (n) -> true
-	| CONNECT (met1, met2) -> 
-		 checkMetro(met1) && checkMetro(met2)
-	| AREA (stn0, met0) ->
+	| V (n) -> true
+	| C (met1, met2) -> 
+		 check(met1) && check(met2)
+	| P (stn0, met0) ->
 		let check (a, b) =
 			if a=b then true
 			else false
@@ -16,9 +16,9 @@ let rec checkMetro (met) =
 				
 		let rec chstn (stn, met) =
 			match met with	
-			|STATION (stn') -> check(stn, stn')
-			|CONNECT (n1, n2) -> chstn(stn,n1)|| chstn(stn,n2) 
-			|AREA (st, n3) -> check(stn, st) || chstn(stn,n3)
+			|V (stn') -> check(stn, stn')
+			|C (n1, n2) -> chstn(stn,n1)|| chstn(stn,n2) 
+			|P (st, n3) -> check(stn, st) || chstn(stn,n3)
 		in
 		
 		chstn(stn0,met0)

@@ -1,23 +1,23 @@
-type name = string
-type metro = STATION of name
-		   | AREA of name * metro
-		   | CONNECT of metro * metro
+type var = string
+type lambda = V of var
+		   | P of var * lambda
+		   | C of lambda * lambda
 
 type stack = NONE
-		   | STACK of name * stack
+		   | STACK of var * stack
 
 
-let rec stationinStack(name, stk) = 
+let rec stationinStack(var, stk) = 
 	match stk with 
 	| NONE -> false
 	| STACK(nm, st) ->
-		if nm = name then true
-		else stationinStack(name, st)
+		if nm = var then true
+		else stationinStack(var, st)
 
 let rec myCheckMetro(met, stk) = 
 	match met with 
-	| STATION nm -> stationinStack(nm, stk)
-	| AREA(nm, me) -> myCheckMetro(me, STACK(nm, stk))
-	| CONNECT(mea, meb) -> myCheckMetro(mea, stk) && myCheckMetro(meb, stk)
+	| V nm -> stationinStack(nm, stk)
+	| P(nm, me) -> myCheckMetro(me, STACK(nm, stk))
+	| C(mea, meb) -> myCheckMetro(mea, stk) && myCheckMetro(meb, stk)
 
-let checkMetro met = myCheckMetro(met, NONE)
+let check met = myCheckMetro(met, NONE)

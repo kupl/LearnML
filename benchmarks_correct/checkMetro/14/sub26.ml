@@ -1,9 +1,9 @@
 (* College of Liberal Studies 2010-13342 Kim Ye Jung *)
 (* 2014.2 Programming Languages Homework 2 - 1 *)
-type metro = STATION of name
-	| AREA of name * metro
-	| CONNECT of metro * metro
-and name = string
+type lambda = V of var
+	| P of var * lambda
+	| C of lambda * lambda
+and var = string
 
 type passlist = ONE of string
 	| LIST of passlist * string
@@ -14,16 +14,16 @@ let rec stationCheck : passlist * string -> bool =
 	| ONE(a) -> a = s
 	| LIST(a, b) -> (b = s) || stationCheck(a, s)
 	
-let rec checkName : passlist * metro -> bool =
+let rec checkName : passlist * lambda -> bool =
 	fun(l, m) ->
 	match m with
-	| STATION(a) -> stationCheck(l, a)
-	| AREA(a, b) -> checkName(LIST(l, a), b)
-	| CONNECT(a, b) -> checkName(l, a) && checkName(l, b)
+	| V(a) -> stationCheck(l, a)
+	| P(a, b) -> checkName(LIST(l, a), b)
+	| C(a, b) -> checkName(l, a) && checkName(l, b)
 	
-let rec checkMetro : metro -> bool =
+let rec check : lambda -> bool =
 	fun m ->
 	match m with
-	| STATION(a) -> false
-	| AREA(a, b) -> checkName(ONE a, b)
-	| CONNECT(a, b) -> checkMetro a && checkMetro b
+	| V(a) -> false
+	| P(a, b) -> checkName(ONE a, b)
+	| C(a, b) -> check a && check b

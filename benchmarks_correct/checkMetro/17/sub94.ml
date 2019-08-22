@@ -1,42 +1,42 @@
-type metro = STATION of name
-	| AREA of name * metro
-	| CONNECT of metro*metro
-and name=string
+type lambda = V of var
+	| P of var * lambda
+	| C of lambda*lambda
+and var=string
 
-let rec innermetro: name list * metro -> bool =
+let rec innerlambda: var list * lambda -> bool =
 	fun(area_list, input) ->
 	match input with
-	| CONNECT (a,b) -> innermetro(area_list, a) && innermetro(area_list, b)
-	| AREA (a,b) -> 
-		if (List.exists (fun x-> a=x) area_list) then innermetro(area_list, b)
-		else innermetro(a::area_list, b)
-	| STATION a ->
+	| C (a,b) -> innerlambda(area_list, a) && innerlambda(area_list, b)
+	| P (a,b) -> 
+		if (List.exists (fun x-> a=x) area_list) then innerlambda(area_list, b)
+		else innerlambda(a::area_list, b)
+	| V a ->
 		if List.exists (fun x-> a=x) area_list then true
 		else false
 
-let checkMetro: metro -> bool =
+let check: lambda -> bool =
 	fun(input) ->
-	let area_list:name list=[] in
-	innermetro (area_list, input)
+	let area_list:var list=[] in
+	innerlambda (area_list, input)
 	
 (*
-let rec checkMetro: metro -> bool =
+let rec check: lambda -> bool =
 	fun(input) ->
 	match input with
-	| CONNECT (a, b) -> (checkMetro a && checkMetro b)
-	| AREA (a, b) ->
-		if a==[] then checkMetro b
+	| C (a, b) -> (check a && check b)
+	| P (a, b) ->
+		if a==[] then check b
 		else if		
 		if 
-		| [] -> checkMetro b
+		| [] -> check b
 		| Lists.exists (fun x->a=x) area_list =true
-	| STATION a -> List.exists (fun x->a=x) area_list
+	| V a -> List.exists (fun x->a=x) area_list
 *)
 (*
-let rec checkMetro: metro->bool =
+let rec check: lambda->bool =
 	fun(input) ->
-	if input = CONNECT (a,b) then (checkMetro a && checkMetro b)
-	else if input = AREA (a,b) then 
-		if (List.exists (fun x->a=x) area_list) then checkMetro b
+	if input = C (a,b) then (check a && check b)
+	else if input = P (a,b) then 
+		if (List.exists (fun x->a=x) area_list) then check b
 		else area_list=area_list::a in
 *)

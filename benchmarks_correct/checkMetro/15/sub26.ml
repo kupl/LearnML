@@ -1,21 +1,21 @@
-type metro =
-  | STATION of name
-  | AREA of name * metro
-  | CONNECT of metro * metro
-and name =
+type lambda =
+  | V of var
+  | P of var * lambda
+  | C of lambda * lambda
+and var =
   string
 ;;
 
-let checkMetro metro =
-  let rec checkMetroWithNamespace (sub_metro, namespace) =
-    match sub_metro with
-    | STATION n ->
-        List.mem n namespace
-    | AREA (n, m) ->
-        checkMetroWithNamespace (m, n :: namespace)
-    | CONNECT(m1, m2) ->
-        checkMetroWithNamespace (m1, namespace) && checkMetroWithNamespace (m2, namespace)
-  in checkMetroWithNamespace (metro, [])
+let check lambda =
+  let rec checkWithNamespace (sub_lambda, varspace) =
+    match sub_lambda with
+    | V n ->
+        List.mem n varspace
+    | P (n, m) ->
+        checkWithNamespace (m, n :: varspace)
+    | C(m1, m2) ->
+        checkWithNamespace (m1, varspace) && checkWithNamespace (m2, varspace)
+  in checkWithNamespace (lambda, [])
 ;;
 
 (* Test Case *)
@@ -25,13 +25,13 @@ let _ =
     print_endline (string_of_bool x)
   in
 
-  print_bool (true = checkMetro ( CONNECT (AREA ("a", STATION "a"), AREA ("b", AREA("a", CONNECT(STATION "b", STATION "a"))))));
-  print_bool (false = checkMetro ( CONNECT (AREA ("c", STATION "c"), AREA ("b", AREA("a", CONNECT(STATION "b", STATION "c"))))));
-  print_bool (true = checkMetro ( AREA ("a", STATION "a")));
-  print_bool (true = checkMetro ( AREA("a", AREA("a", STATION "a"))));
-  print_bool (true = checkMetro ( AREA("a", AREA("b", CONNECT(STATION "a", STATION "b")))));
-  print_bool (true = checkMetro ( AREA("a", CONNECT(STATION "a", AREA("b", STATION "a")))));
-  print_bool (false = checkMetro ( AREA("a", STATION "b")));
-  print_bool (false = checkMetro ( AREA("a", CONNECT(STATION "a", AREA("b", STATION "c")))));
-  print_bool (false = checkMetro ( AREA("a", AREA("b", CONNECT(STATION "a", STATION "c")))));
+  print_bool (true = check ( C (P ("a", V "a"), P ("b", P("a", C(V "b", V "a"))))));
+  print_bool (false = check ( C (P ("c", V "c"), P ("b", P("a", C(V "b", V "c"))))));
+  print_bool (true = check ( P ("a", V "a")));
+  print_bool (true = check ( P("a", P("a", V "a"))));
+  print_bool (true = check ( P("a", P("b", C(V "a", V "b")))));
+  print_bool (true = check ( P("a", C(V "a", P("b", V "a")))));
+  print_bool (false = check ( P("a", V "b")));
+  print_bool (false = check ( P("a", C(V "a", P("b", V "c")))));
+  print_bool (false = check ( P("a", P("b", C(V "a", V "c")))));
   *)

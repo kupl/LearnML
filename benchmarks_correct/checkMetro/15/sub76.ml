@@ -1,14 +1,14 @@
-type metro = STATION of name
-        | AREA of name * metro
-        | CONNECT of metro * metro
-    and name = string
+type lambda = V of var
+        | P of var * lambda
+        | C of lambda * lambda
+    and var = string
 
-let checkMetro met =
+let check met =
     let rec checkInclude m l =
         match m with
-        | STATION s -> List.mem s l
-        | AREA (a, inner_m) -> checkInclude inner_m (a::l)
-        | CONNECT (a, b) -> (checkInclude a l) && (checkInclude b l)
+        | V s -> List.mem s l
+        | P (a, inner_m) -> checkInclude inner_m (a::l)
+        | C (a, b) -> (checkInclude a l) && (checkInclude b l)
     in checkInclude met [];;
 
 (*
@@ -17,11 +17,11 @@ let bool_to_string e =
     | true -> "true"
     | false -> "false";;
 
-print_endline( bool_to_string( checkMetro( AREA("a", STATION "a") ) ) );;
-print_endline( bool_to_string( checkMetro( AREA("a", AREA("a", STATION "a") ) ) ) );;
-print_endline( bool_to_string( checkMetro( AREA("a", AREA("b", CONNECT(STATION "a", STATION "b")) ) ) ) );;
-print_endline( bool_to_string( checkMetro( AREA("a", CONNECT(STATION "a", AREA("b", STATION "b") ) ) ) ) );;
-print_endline( bool_to_string( checkMetro( AREA("a", STATION "b") ) ) );;
-print_endline( bool_to_string( checkMetro( AREA("a", CONNECT(STATION "a", AREA("b", STATION "c"))) ) ) );;
-print_endline( bool_to_string( checkMetro( AREA("a", AREA("b", CONNECT(STATION "a", STATION "c"))) ) ) );;
+print_endline( bool_to_string( check( P("a", V "a") ) ) );;
+print_endline( bool_to_string( check( P("a", P("a", V "a") ) ) ) );;
+print_endline( bool_to_string( check( P("a", P("b", C(V "a", V "b")) ) ) ) );;
+print_endline( bool_to_string( check( P("a", C(V "a", P("b", V "b") ) ) ) ) );;
+print_endline( bool_to_string( check( P("a", V "b") ) ) );;
+print_endline( bool_to_string( check( P("a", C(V "a", P("b", V "c"))) ) ) );;
+print_endline( bool_to_string( check( P("a", P("b", C(V "a", V "c"))) ) ) );;
 *)

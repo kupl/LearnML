@@ -1,35 +1,35 @@
-type metro = STATION of name
-            | AREA of name * metro
-            | CONNECT of metro * metro
-and name = string
+type lambda = V of var
+            | P of var * lambda
+            | C of lambda * lambda
+and var = string
 
-let checkMetro: metro -> bool = fun(m) ->
-  let rec isNameInList: name * name list -> bool = fun (n, nl) ->
+let check: lambda -> bool = fun(m) ->
+  let rec isNameInList: var * var list -> bool = fun (n, nl) ->
     match nl with
       |[] -> false
       |nh :: nt -> (nh = n) || isNameInList(n, nt)
   in
-  let rec checkMetroWithNameSpace: metro * name list -> bool = fun (m, nl) ->
+  let rec checkWithNameSpace: lambda * var list -> bool = fun (m, nl) ->
     match m with
-      |STATION id -> isNameInList(id, nl)
-      |CONNECT(a, b) -> checkMetroWithNameSpace(a, nl) && checkMetroWithNameSpace(b, nl)
-      |AREA(id, mt) -> checkMetroWithNameSpace(mt, id :: nl)
+      |V id -> isNameInList(id, nl)
+      |C(a, b) -> checkWithNameSpace(a, nl) && checkWithNameSpace(b, nl)
+      |P(id, mt) -> checkWithNameSpace(mt, id :: nl)
   in
-  checkMetroWithNameSpace(m, [])
+  checkWithNameSpace(m, [])
 
 (* TEST *)
 (*
 let _ = 
   let test_case : int * bool -> unit = fun (n, x) -> 
     print_endline ("Case " ^ string_of_int(n) ^ " : " ^ string_of_bool(x)) in 
-  test_case(1, true == checkMetro(AREA("a", STATION "a"))); 
-  test_case(2, true == checkMetro(AREA("a", AREA("a", STATION "a")))); 
-  test_case(3, true == checkMetro(AREA("a", AREA("b", CONNECT(STATION "a", STATION "b"))))); 
-  test_case(4, true == checkMetro(AREA("a", CONNECT(STATION "a", AREA("b", STATION "a"))))); 
-  test_case(5, false == checkMetro(AREA("a", STATION "b"))); 
-  test_case(6, false == checkMetro(AREA("a", CONNECT(STATION "a", AREA("b", STATION "c"))))); 
-  test_case(7, false == checkMetro(AREA("a", AREA("b", CONNECT(STATION "a", STATION "c"))))); 
-  test_case(8, true == checkMetro(CONNECT(AREA("a", STATION "a"), AREA("b", AREA("a", CONNECT(STATION "b", STATION "a")))))); 
-  test_case(9, false == checkMetro(CONNECT(AREA("c", STATION "c"), AREA("b", AREA("a", CONNECT(STATION "b", STATION "c")))))); 
-  test_case(10, false == checkMetro(STATION "a"))
+  test_case(1, true == check(P("a", V "a"))); 
+  test_case(2, true == check(P("a", P("a", V "a")))); 
+  test_case(3, true == check(P("a", P("b", C(V "a", V "b"))))); 
+  test_case(4, true == check(P("a", C(V "a", P("b", V "a"))))); 
+  test_case(5, false == check(P("a", V "b"))); 
+  test_case(6, false == check(P("a", C(V "a", P("b", V "c"))))); 
+  test_case(7, false == check(P("a", P("b", C(V "a", V "c"))))); 
+  test_case(8, true == check(C(P("a", V "a"), P("b", P("a", C(V "b", V "a")))))); 
+  test_case(9, false == check(C(P("c", V "c"), P("b", P("a", C(V "b", V "c")))))); 
+  test_case(10, false == check(V "a"))
 *)

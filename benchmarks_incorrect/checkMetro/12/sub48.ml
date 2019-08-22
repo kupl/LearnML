@@ -1,9 +1,9 @@
-type metro = 
-	  STATION of name
-	| AREA of name * metro
-	| CONNECT of metro * metro
+type lambda = 
+	  V of var
+	| P of var * lambda
+	| C of lambda * lambda
 
-and name = string
+and var = string
 
 let rec checklist (arlist, stlist) =
 	let rec checkst (arlst, st) =
@@ -16,32 +16,32 @@ let rec checklist (arlist, stlist) =
 	| (_, []) -> true
 	| (a, b::c) -> if (checkst (a, b)) then (checklist (a, c)) else false
 
-let rec checkMetro (met:metro) = 
-	let rec makestlist (me:metro) = 
+let rec check (met:lambda) = 
+	let rec makestlist (me:lambda) = 
 		match me with
-		| STATION a -> a::[]
-		| AREA (a, b) -> (makestlist b)
-		| CONNECT (a, b) -> (makestlist a) @ (makestlist b)
+		| V a -> a::[]
+		| P (a, b) -> (makestlist b)
+		| C (a, b) -> (makestlist a) @ (makestlist b)
 	in
 
-	let rec makearlist (me:metro) = 
+	let rec makearlist (me:lambda) = 
 		match me with
-		| AREA (a, b) -> a::(makearlist b)
-		| CONNECT (a, b) -> 	(match (a, b) with
-					| (STATION c, STATION d) -> []
-					| (STATION c, AREA (d, e)) -> d::(makearlist e)
-					| (STATION c, CONNECT _) -> (makearlist b)
-					| (AREA (c, d), STATION e) -> c::(makearlist d)
-					| (AREA (c, d), AREA (e, f)) -> c::e::(makearlist d) @ (makearlist f)
-					| (AREA (c, d), CONNECT _) -> c::(makearlist d) @ (makearlist b)
-					| (CONNECT _, STATION c) -> (makearlist a)
-					| (CONNECT _, AREA (c, d)) -> (makearlist a) @ (c::(makearlist d))
-					| (CONNECT _, CONNECT _) -> (makearlist a) @ (makearlist b)
+		| P (a, b) -> a::(makearlist b)
+		| C (a, b) -> 	(match (a, b) with
+					| (V c, V d) -> []
+					| (V c, P (d, e)) -> d::(makearlist e)
+					| (V c, C _) -> (makearlist b)
+					| (P (c, d), V e) -> c::(makearlist d)
+					| (P (c, d), P (e, f)) -> c::e::(makearlist d) @ (makearlist f)
+					| (P (c, d), C _) -> c::(makearlist d) @ (makearlist b)
+					| (C _, V c) -> (makearlist a)
+					| (C _, P (c, d)) -> (makearlist a) @ (c::(makearlist d))
+					| (C _, C _) -> (makearlist a) @ (makearlist b)
 					)
 		| _ -> []
 	in
 
 	match met with
-	| AREA (a, b) -> (checklist ((a::(makearlist b)), (makestlist b))) 
-	| CONNECT (a, b) -> (checkMetro a) && (checkMetro b)
+	| P (a, b) -> (checklist ((a::(makearlist b)), (makestlist b))) 
+	| C (a, b) -> (check a) && (check b)
 	| _ -> false
