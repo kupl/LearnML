@@ -196,10 +196,10 @@ module N = struct
         | [] -> tbl
         | (hd,count)::tl -> BatHashtbl.replace tbl hd count; iter tbl tl
       in iter tbl init_vector 
+
 end
 
     type t = int list
-    let empty_padding = List.map (fun (k,v) -> v) N.init_vector 
 
     (*
     let to_string: t -> string
@@ -229,7 +229,7 @@ end
       let table = N.init_tbl () in N.traverse table node;
       let fold h = BatHashtbl.fold (fun k v acc -> (k,v) :: acc) h [] in
       let sorted = List.sort compare (fold table) in 
-      List.map (fun (k,v) -> v ) sorted 
+      List.map (fun (k,v) -> v) sorted 
 
     let prog_vectorize: prog -> t
     = fun prog -> 
@@ -268,17 +268,6 @@ end
     | x::[] -> [[x]]
     | x::xs -> List.fold_left (fun acc p -> acc @ ins_all_positions x p) [] (permutations xs)
 
-    let rec combinations = function
-    | [] -> [[]]
-    | h::t -> 
-      let cs = combinations t in
-      List.map (fun x -> h::x) cs @ cs 
-
-    let partial_combinations : 'a list -> int -> 'a list list
-    = fun l len ->
-      let combs = combinations l in
-      List.filter (fun x -> List.length x = len) combs
-
     let gen_mapping : (string*t) list -> (string*t) list -> (string * t * string * t) list list
     = fun ts1 ts2 ->
         let len1 = List.length ts1 in
@@ -288,33 +277,7 @@ end
           List.fold_left (fun acc y -> 
             (List.map2 (fun (s,t) (s',t') -> (s,t,s',t')) ts1 y)::acc) [] perms
         (*num of func is different*)
-        else if len1 < len2 then 
-            begin
-            ignore(Print.print_header "not padding!!");
-            [] 
-            end
-          (*
-          let combs = partial_combinations ts2 len1 in
-          let perms = List.map (fun x -> permutations x) combs |> List.flatten in 
-          let perms = permutations ts2 in
-          List.fold_left (fun acc y ->
-            (List.map2 (fun (s,t) (s',t') -> (s,t,s',t')) ts1 y)::acc) [] perms
-          *)
-        (*len1 > len2*)
-        else 
-            begin 
-            ignore(Print.print_header "not padding!!"); 
-            []
-            end
-          (* 
-          let perms = permutations ts2 in
-          List.fold_left (fun acc y ->
-            (List.map2 (fun (s,t) (s',t') -> (s,t,s',t')) ts1 y)::acc) [] perms
-          let combs = partial_combinations ts1 len2 in
-          let perms = List.map (fun x -> permutations x) combs |> List.flatten in
-          List.fold_left (fun acc y ->
-            (List.map2 (fun (s,t) (s',t') -> (s,t,s',t')) y ts2)::acc) [] perms
-          *)
+        else raise (Failure "func map length must be same")
 
     let rec gen_score_map : (string * t) list -> (string * t) list -> ((string * string) * float) list 
     = fun ts1 ts2 ->
@@ -328,6 +291,7 @@ end
     = fun ts1 ts2 ->
       let len1 = List.length ts1 in
       let len2 = List.length ts2 in
+      let empty_padding = List.map (fun (k,v) -> v) N.init_vector in
 
       if len1 = len2 then ts1,ts2
       else if len1 < len2 then 
@@ -344,7 +308,7 @@ end
       let ts1,ts2 = padding ts1 ts2 in
       let all_func_mapping = gen_mapping ts1 ts2 in
       let score_map = gen_score_map ts1 ts2 in
-      (*print_endline ("size: " ^ string_of_int (List.length all_func_mapping));*)
+      print_endline ("size: " ^ string_of_int (List.length all_func_mapping));
       let calculate_func_score = List.fold_left (fun acc (s,t,s',t') -> 
                                    let score = List.assoc (s,s') score_map in 
                                    acc +. score) 0.0 in
