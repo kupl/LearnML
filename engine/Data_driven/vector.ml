@@ -295,17 +295,10 @@ let gen_mapping : (string*t) list -> (string*t) list -> (string * t * string * t
       let vectorize = prog_vectorize in
       let calculate = calculate_distance in
       let v_sub = vectorize sub in
-      let v_solutions = List.map (fun (f, sol) -> (f, sol, (vectorize sol))) solutions in
-      let dists = List.map (fun (f, sol, v_sol) -> (f, sol, (calculate v_sub v_sol))) v_solutions in
-      let sorted = List.sort (fun (_,_,dist) (_,_,dist') -> compare dist dist') dists in
-
-      (*inner function pick_cand use free variable 'topk' *)
-      let rec pick_cand acc count cand = 
-        match cand with
-        | [] -> acc
-        | h::t -> if (count <= topk) then pick_cand (acc@[h]) (count+1) t else acc in
-
-      let topk_lst = pick_cand [] 1 sorted in
+      let topk_lst = List.map (fun (f, sol) -> (f, sol, (vectorize sol))) solutions |> 
+                     List.map (fun (f, sol, v_sol) -> (f, sol, (calculate v_sub v_sol))) |>
+                     List.sort (fun (_,_,dist) (_,_,dist') -> compare dist dist') |>
+                     BatList.take topk in
       topk_lst
     
     let search_solutions_by_function_match : int -> prog -> (string * prog) list -> (string * prog * ((string * string) list * float)) list
@@ -314,17 +307,10 @@ let gen_mapping : (string*t) list -> (string*t) list -> (string * t * string * t
       let calculate = calculate_mapping_distance in
       let preproc = (fun x -> x |>  Extractor.extract_func_all |> vectorize) in
       let v_sub = preproc sub in
-      let v_solutions = List.map (fun (f, sol) -> (f, sol, (preproc sol))) solutions in
-      let dists = List.map (fun (f, sol, v_sol) -> (f, sol, (calculate v_sub v_sol))) v_solutions in
-      let sorted = List.sort (fun (_,_,(_,dist)) (_,_,(_,dist')) -> compare dist dist') dists in 
-      
-      (*inner function pick_cand use free variable 'topk' *)
-      let rec pick_cand acc count cand =
-        match cand with
-        | [] -> acc
-        | h::t -> if (count <= topk) then pick_cand (acc@[h]) (count+1) t else acc in
-
-      let topk_lst = pick_cand [] 1 sorted in
+      let topk_lst = List.map (fun (f, sol) -> (f, sol, (preproc sol))) solutions |>
+                     List.map (fun (f ,sol, v_sol) -> (f, sol, (calculate v_sub v_sol))) |>
+                     List.sort (fun (_,_,(_,dist)) (_,_,(_,dist')) -> compare dist dist') |>
+                     BatList.take topk in
       topk_lst
     
     let search_solutions = search_solutions_by_program_match
