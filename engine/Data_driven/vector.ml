@@ -2,72 +2,77 @@ open Lang
 open Util
 open Type
 
-exception NotImplemented
 exception Invalid_Expression_Construct
 exception Emptyshouldnotbehere
-exception Update_Failure
+exception Table_Update_Failure
 
+(* Normalize lang types -> node type
+ *
+ *)
 module N = struct
-    (*ast flattening*)
-    type node = |Node of string * (node list)
-                |Id of string
-                |Const of int
-                |String of string 
-                |Bool of bool 
-                |Empty 
 
-    let rec_to_node : bool -> node
-    = fun b ->
-      match b with
-      | true -> Node ("Rec", [])
-      | false -> Node ("No Rec", [])
+  type node = |LNode of label * node 
+              |Node of string * (node list)
+              |Id of string
+              |Const of int
+              |String of string 
+              |Bool of bool 
+              |Empty 
 
-    let rec pat_to_node : pat -> node
-    = fun x ->
-      match x with
-      | PUnit -> Node ("PUnit",[])
-      | PUnder -> Node ("PUnder",[])
-      | PInt x -> Node ("PInt",[Const x])
-      | PBool b -> Node ("PBool",[Bool b])
-      | PVar x -> Node ("PVar", [Id x])
-      | PList lst -> Node ("PList", List.map pat_to_node lst)
-      | PCons lst -> Node ("PCons", List.map pat_to_node lst) 
-      | PTuple lst -> Node ("PTuple", List.map pat_to_node lst) 
-      | Pats lst -> Node ("Pats", List.map pat_to_node lst) 
-      | PCtor (x,lst) -> Node ("PCtor", (Id x)::(List.map pat_to_node lst))
+  let rec_to_node : bool -> node
+  = fun b ->
+    match b with
+    | true -> Node ("Rec", [])
+    | false -> Node ("No Rec", [])
+
+  let rec pat_to_node : pat -> node
+  = fun x ->
+    match x with
+    | PUnit -> Node ("PUnit",[])
+    | PUnder -> Node ("PUnder",[])
+    | PInt x -> Node ("PInt",[Const x])
+    | PBool b -> Node ("PBool",[Bool b])
+    | PVar x -> Node ("PVar", [Id x])
+    | PList lst -> Node ("PList", List.map pat_to_node lst)
+    | PCons lst -> Node ("PCons", List.map pat_to_node lst) 
+    | PTuple lst -> Node ("PTuple", List.map pat_to_node lst) 
+    | Pats lst -> Node ("Pats", List.map pat_to_node lst) 
+    | PCtor (x,lst) -> Node ("PCtor", (Id x)::(List.map pat_to_node lst))
     
-    let rec type_to_node : typ -> node
-    = fun t ->
-      match t with
-      | TUnit -> Node ("TUnit",[])
-      | TInt -> Node ("TInt",[])
-      | TString -> Node ("TString",[])
-      | TBool -> Node ("TBool",[])
-      | TBase id -> Node ("TBase",[Id id])
-      | TList t -> Node ("TList", [type_to_node t])
-      | TTuple l -> if (l=[]) then type_to_node TUnit
-                              else Node ("TTuple", List.map type_to_node l)
-      | TArr (t1,t2) -> Node ("TArr", [type_to_node t1; type_to_node t2])
-      | TVar x -> Node ("TVar",[Id x])
-      | TCtor (x,tl) -> Node ("TCtor", (type_to_node x)::(List.map type_to_node tl))
-      | TExn -> Node ("TExn",[])
+  let rec type_to_node : typ -> node
+  = fun t ->
+    match t with
+    | TUnit -> Node ("TUnit",[])
+    | TInt -> Node ("TInt",[])
+    | TString -> Node ("TString",[])
+    | TBool -> Node ("TBool",[])
+    | TBase id -> Node ("TBase",[Id id])
+    | TList t -> Node ("TList", [type_to_node t])
+    | TTuple l -> if (l=[]) then type_to_node TUnit
+                            else Node ("TTuple", List.map type_to_node l)
+    | TArr (t1,t2) -> Node ("TArr", [type_to_node t1; type_to_node t2])
+    | TVar x -> Node ("TVar",[Id x])
+    | TCtor (x,tl) -> Node ("TCtor", (type_to_node x)::(List.map type_to_node tl))
+    | TExn -> Node ("TExn",[])
 
-    let rec let_to_node : let_bind -> node
-    = fun bind ->
-      match bind with 
-      | BindUnder -> Node ("BindUnder", [])
-      | BindOne x -> Node ("BindOne", [Id x])
-      | BindTuple xs -> Node ("BindTuple", List.map let_to_node xs)
+  let rec let_to_node : let_bind -> node
+  = fun bind ->
+    match bind with 
+    | BindUnder -> Node ("BindUnder", [])
+    | BindOne x -> Node ("BindOne", [Id x])
+    | BindTuple xs -> Node ("BindTuple", List.map let_to_node xs)
 
-    let rec arg_to_node : arg -> node
-    = fun arg ->
-      match arg with
-      | ArgUnder typ -> Node ("ArgUnder", [type_to_node typ])
-      | ArgOne (x,typ) -> Node ("ArgOne", [Id x;type_to_node typ])
-      | ArgTuple xs -> Node ("ArgTuple", List.map arg_to_node xs)
+  let rec arg_to_node : arg -> node
+  = fun arg ->
+    match arg with
+    | ArgUnder typ -> Node ("ArgUnder", [type_to_node typ])
+    | ArgOne (x,typ) -> Node ("ArgOne", [Id x;type_to_node typ])
+    | ArgTuple xs -> Node ("ArgTuple", List.map arg_to_node xs)
 
-    let rec exp_to_node : lexp -> node 
-    = fun (_,exp) ->
+  let rec exp_to_node : lexp -> node 
+  = fun (l,exp) ->
+    let f : exp -> node
+    = fun exp ->
       match exp with
       | EUnit -> Node ("EUnit", [])
       | Const n -> Const n
@@ -105,139 +110,209 @@ module N = struct
               Node ("EBlock", (rec_to_node is_rec)::
                               (List.map binding_to_node elst)@[exp_to_node e])
       | EMatch (e,lst) -> 
-        let rec aux = fun lst -> 
-        begin
+        let rec aux = fun lst -> begin
           match lst with 
           |[] -> []
-          |(p,lexp)::tl -> (pat_to_node p)::(exp_to_node lexp)::(aux tl) 
-        end in
-        Node ("EMatch", (exp_to_node e)::(aux lst))
+          |(p,lexp)::tl -> (pat_to_node p)::(exp_to_node lexp)::(aux tl) end 
+        in Node ("EMatch", (exp_to_node e)::(aux lst))
       | Raise e -> Node ("Raise", [])
-      | _ -> raise Invalid_Expression_Construct
+      | _ -> raise Invalid_Expression_Construct in 
+        let node = f exp in 
+        LNode (l, node)
 
-    and binding_to_node : binding -> node
-    = fun (f,is_rec,args,typ,exp) ->
-        Node ("Binding", [let_to_node f; rec_to_node is_rec]@(List.map arg_to_node args)@[type_to_node typ; exp_to_node exp])
+  and binding_to_node : binding -> node
+  = fun (f,is_rec,args,typ,exp) ->
+    Node ("Binding", [let_to_node f; rec_to_node is_rec]@(List.map arg_to_node args)@[type_to_node typ; exp_to_node exp])
 
-    let decl_to_node : decl -> node
-    = fun decl -> 
-      match decl with
-      | DExcept _ -> Empty
-      | DEqn _ -> Empty
-      | DData _ -> Empty
-      | DLet bind_tuple -> Node ("DLet", [(binding_to_node bind_tuple)])
-      | DBlock (is_rec,bind_tuples) -> Node ("DBlock", rec_to_node is_rec :: (List.map binding_to_node bind_tuples))
-      | TBlock _ -> Empty
+  let decl_to_node : decl -> node
+  = fun decl -> 
+    match decl with
+    | DExcept _ -> Empty
+    | DEqn _ -> Empty
+    | DData _ -> Empty
+    | DLet bind_tuple -> Node ("DLet", [(binding_to_node bind_tuple)])
+    | DBlock (is_rec,bind_tuples) -> Node ("DBlock", rec_to_node is_rec :: (List.map binding_to_node bind_tuples))
+    | TBlock _ -> Empty
 
-    type table = (string,int) BatHashtbl.t
+  type table = (string,int) BatHashtbl.t
 
-    let update : table -> string -> unit
-    = fun tbl s ->
-      let cur = 
-        try BatHashtbl.find tbl s 
-        with Not_found -> raise Update_Failure in
-      BatHashtbl.replace tbl s (cur+1)
+  let update : table -> string -> unit
+  = fun tbl s ->
+    let cur = try BatHashtbl.find tbl s 
+              with Not_found -> raise Table_Update_Failure in
+    BatHashtbl.replace tbl s (cur+1)
 
-    let update2 : table -> string -> unit
-    = fun tbl s ->
-      if BatHashtbl.mem tbl s then update tbl s
-      else BatHashtbl.replace tbl s 0 
-    
-    let rec traverse : table -> node -> unit
-    = fun tbl node ->
-      match node with
-      | Node (s,lst) -> update tbl s;
-        List.iter (traverse tbl) lst
-      | Id id -> update tbl "Id"
-      | Const n -> update tbl "Const_Int"
-      | String st -> update tbl "Const_String"
-      | Bool b -> if b then update tbl "Const_True"
-                       else update tbl "Const_False"
-      (*
-      | Id id -> update2 tbl ("Id%"^id)
-      | Const n -> update2 tbl ("Const%"^(string_of_int n))
-      | String st -> update2 tbl ("String%"^st)
-      | Bool b -> update2 tbl ("Bool%"^(string_of_bool b))
-      *)
-      | Empty -> raise Emptyshouldnotbehere
-         
+  let rec traverse : table -> node -> unit
+  = fun tbl node ->
+    match node with
+    | LNode (l,n) -> traverse tbl n
+    | Node (s,lst) -> update tbl s;
+      List.iter (traverse tbl) lst
+    | Id id -> update tbl "Id"
+    | Const n -> update tbl "Const_Int"
+    | String st -> update tbl "Const_String"
+    | Bool b -> if b then update tbl "Const_True"
+                     else update tbl "Const_False"
+    | _ -> raise Emptyshouldnotbehere
 
-    let init_vector = [
-        ("Rec",0); ("No Rec",0); ("PUnit",0); ("PUnder",0); ("PInt",0);
-        ("PBool",0); ("PVar",0); ("PList",0); ("PCons",0); ("PTuple",0);
-        ("Pats",0); ("PCtor",0); ("TUnit",0); ("TInt",0); ("TString",0);
-        ("TBool",0);("TBase",0);("TList",0);("TTuple",0);("TArr",0);
-        ("TVar",0);("TCtor",0);("TExn",0);("BindUnder",0);("BindOne",0);
-        ("BindTuple",0);("ArgUnder",0);("ArgOne",0);("ArgTuple",0);
-        ("EUnit",0); ("EList",0); ("EVar",0); ("ECtor",0); ("ETuple",0); ("ADD",0);
-        ("SUB",0); ("MUL",0); ("DIV",0); ("MOD",0); ("MINUS",0);
-        ("OR",0); ("AND",0); ("LESS",0); ("LARGER",0); ("EQUAL",0);
-        ("NOTEQ",0); ("LESSEQ",0); ("LARGEREQ",0); ("AT",0); ("DOUBLECOLON",0);
-        ("STRCON",0); ("NOT",0); ("EApp",0); ("EFun",0); ("IF",0); ("ELet",0);
-        ("EBlock",0); ("EMatch",0); ("Raise",0); ("Binding",0); ("DLet",0); 
-        ("DBlock",0); ("Id",0); ("Const_Int",0); ("Const_String",0); ("Const_True",0); 
-        ("Const_False",0);
-    ]
+  let init_vector = [
+    ("Rec",0); ("No Rec",0); ("PUnit",0); ("PUnder",0); ("PInt",0);
+    ("PBool",0); ("PVar",0); ("PList",0); ("PCons",0); ("PTuple",0);
+    ("Pats",0); ("PCtor",0); ("TUnit",0); ("TInt",0); ("TString",0);
+    ("TBool",0);("TBase",0);("TList",0);("TTuple",0);("TArr",0);
+    ("TVar",0);("TCtor",0);("TExn",0);("BindUnder",0);("BindOne",0);
+    ("BindTuple",0);("ArgUnder",0);("ArgOne",0);("ArgTuple",0);
+    ("EUnit",0); ("EList",0); ("EVar",0); ("ECtor",0); ("ETuple",0); ("ADD",0);
+    ("SUB",0); ("MUL",0); ("DIV",0); ("MOD",0); ("MINUS",0);
+    ("OR",0); ("AND",0); ("LESS",0); ("LARGER",0); ("EQUAL",0);
+    ("NOTEQ",0); ("LESSEQ",0); ("LARGEREQ",0); ("AT",0); ("DOUBLECOLON",0);
+    ("STRCON",0); ("NOT",0); ("EApp",0); ("EFun",0); ("IF",0); ("ELet",0);
+    ("EBlock",0); ("EMatch",0); ("Raise",0); ("Binding",0); ("DLet",0); 
+    ("DBlock",0); ("Id",0); ("Const_Int",0); ("Const_String",0); ("Const_True",0); 
+    ("Const_False",0);
+  ]
 
-    let init_tbl : unit -> table
-    = fun x -> 
-      let tbl = BatHashtbl.create 100 in
-      let rec iter : table -> (string * int) list -> table 
-      = fun tbl lst ->
-        match lst with
-        | [] -> tbl
-        | (hd,count)::tl -> BatHashtbl.replace tbl hd count; iter tbl tl
-      in iter tbl init_vector 
+  let init_tbl : unit -> table
+  = fun x -> 
+    let tbl = BatHashtbl.create 100 in
+    let rec iter : table -> (string * int) list -> table 
+    = fun tbl lst ->
+      match lst with
+      | [] -> tbl
+      | (hd,count)::tl -> BatHashtbl.replace tbl hd count; iter tbl tl
+    in iter tbl init_vector 
+
 end
 
-    type t = (string*int) list
+type t = int list
+
+let ast_filter : prog -> N.node list
+= fun prog -> 
+  let flat = List.map N.decl_to_node prog in
+  List.filter (fun x -> x <> N.Empty) flat 
+
+let node_vectorize: N.node -> t
+= fun node -> 
+  let table = N.init_tbl () in N.traverse table node;
+  let fold h = BatHashtbl.fold (fun k v acc -> (k,v) :: acc) h [] in
+  let sorted = List.sort compare (fold table) in 
+  List.map (fun (k,v) -> v) sorted 
+
+let prog_vectorize: prog -> t
+= fun prog -> 
+  let ast = ast_filter prog in
+  let table = N.init_tbl () in List.iter (N.traverse table) ast;
+  let fold h = BatHashtbl.fold (fun k v acc -> (k,v) :: acc) h [] in
+  let sorted = List.sort compare (fold table) in 
+  List.map (fun (k,v) -> v) sorted 
+
+let rec funcs_vectorize: (string * lexp) list -> (string * t) list
+= fun lst -> 
+  match lst with
+  | [] -> []
+  | (f,lexp)::tl -> 
+    let vec = lexp |> N.exp_to_node |> node_vectorize in
+    (f, vec) :: (funcs_vectorize tl) 
+
+let calculate_distance : t -> t -> float
+= fun t1 t2 ->
+  let rec sum : int list -> int list -> int
+  = fun v1 v2 -> 
+    match v1,v2 with
+    | [],[] -> 0
+    | h::t, h'::t' -> (h-h')*(h-h') + sum t t' 
+    | _ -> raise (Failure "vector should have same dimension") in
+     sqrt (float_of_int(sum t1 t2))
+
+let ins_all_positions x l = 
+  let rec aux prev acc = function
+    | [] -> (prev @ [x]) :: acc |> List.rev
+    | hd::tl as l -> aux (prev @ [hd])((prev @ [x] @ l) :: acc) tl
+  in aux [] [] l
+
+let rec permutations = function
+  | [] -> []
+  | x::[] -> [[x]]
+  | x::xs -> List.fold_left (fun acc p -> acc @ ins_all_positions x p) [] (permutations xs)
+
+let gen_mapping : (string*t) list -> (string*t) list -> (string * t * string * t) list list
+= fun ts1 ts2 ->
+  let len1 = List.length ts1 in
+  let len2 = List.length ts2 in
+  if len1 = len2 then 
+    let perms = permutations ts2 in 
+    List.fold_left (fun acc y -> 
+      (List.map2 (fun (s,t) (s',t') -> (s,t,s',t')) ts1 y)::acc) [] perms
+
+  else raise (Failure "func map length must be same")
+
+    let rec gen_score_map : (string * t) list -> (string * t) list -> ((string * string) * float) list 
+    = fun ts1 ts2 ->
+     match ts1 with
+     | [] -> []
+     | (s,v)::t ->
+       let with_s = List.map (fun (s',v') -> let dist = calculate_distance v v' in 
+         (s,s'), dist) ts2 in with_s @ gen_score_map t ts2
     
-    let ast_flatten : prog -> N.node list
-    = fun prog -> 
-      let flat = List.map N.decl_to_node prog in
-      List.filter (fun x -> x <> N.Empty) flat 
+    let padding 
+    = fun ts1 ts2 ->
+      let len1 = List.length ts1 in
+      let len2 = List.length ts2 in
+      let empty_padding = List.map (fun (k,v) -> v) N.init_vector in
 
-    let vectorize: prog -> t
-    = fun prog -> 
-      let ast = ast_flatten prog in
-      let table = N.init_tbl () in
-      List.iter (N.traverse table) ast;
-      let fold h = BatHashtbl.fold (fun k v acc -> (k,v) :: acc) h [] in
-      let sorted = List.sort compare (fold table) in sorted
+      if len1 = len2 then ts1,ts2
+      else if len1 < len2 then 
+        let rec iter = fun acc count -> 
+          if count <> (len2-len1) then 
+            iter (("___padding" ^ string_of_int(count+1), empty_padding)::acc) 
+            (count+1) else acc in let ts1 = iter ts1 0 in 
+            ts1,ts2
+      else 
+        let rec iter = fun acc count ->
+          if count <> (len1-len2) then 
+            iter (("___padding"^string_of_int(count+1), empty_padding)::acc) 
+            (count+1) else acc in let ts2 = iter ts2 0 in 
+            ts1,ts2
 
-    let to_string: t -> string
-    = fun t ->
-      let int_vec = List.map (fun (k,v) -> v) t in
-      List.fold_left (fun acc e -> acc^(string_of_int e)^" ") "" int_vec  
-
-    let calculate_distance : t -> t -> float
-    = fun t1 t2 ->
-      let v1 = List.map (fun (k,v) -> v) t1 in
-      let v2 = List.map (fun (k,v) -> v) t2 in
-      let rec sum : int list -> int list -> int
-      = fun v1 v2 -> 
-        match v1,v2 with
-        | [],[] -> 0
-        | h::t, h'::t' -> (h-h')*(h-h') + sum t t' 
-        | _ -> raise (Failure "vector should have same dimension") in
-      sqrt (float_of_int(sum v1 v2))
-    (*
-    let topk_close : int -> t -> t list -> t list
-    = fun k sub cand ->
-      let distances = List.map (calculate_distance sub) cand in
-      cand
-    *)    
-
-    let print_list : t -> unit
-    = fun lst ->
-      (*let cnt = List.map (fun (_,x) -> x) lst in*)
-      let rec traverse = fun x -> 
-        match x with
-        | [] -> print_endline "end of list"
-        | (s,c)::tl -> print_endline (s^" "^string_of_int c); traverse tl in
-      traverse lst
-
-    let offline_parsing : string -> unit
-    = fun s -> ()
-
+    let calculate_mapping_distance : (string*t) list -> (string*t) list -> (string * string) list * float 
+    = fun ts1 ts2 ->
+      let ts1,ts2 = padding ts1 ts2 in
+      let all_func_mapping = gen_mapping ts1 ts2 in
+      let score_map = gen_score_map ts1 ts2 in
+      let calculate_func_score = List.fold_left (fun acc (s,t,s',t') -> 
+                                   let score = List.assoc (s,s') score_map in 
+                                   acc +. score) 0.0 in
+      let key_filter = (fun (s,t,s',t') -> s,s') in 
+      let min_mapping = List.fold_left (fun (min_map,min) cur_map -> 
+                          let cur_score = calculate_func_score cur_map in
+                          if min > cur_score then ((List.map key_filter cur_map), cur_score)
+                                             else (min_map, min)) 
+                          ([],max_float) all_func_mapping 
+      in min_mapping
+    
+    let search_solutions_by_program_match : int -> prog -> (string * prog) list -> (string * prog * float) list
+    = fun topk sub solutions ->
+      let vectorize = prog_vectorize in
+      let calculate = calculate_distance in
+      let v_sub = vectorize sub in
+      let topk_lst = List.map (fun (f, sol) -> (f, sol, (vectorize sol))) solutions |> 
+                     List.map (fun (f, sol, v_sol) -> (f, sol, (calculate v_sub v_sol))) |>
+                     List.sort (fun (_,_,dist) (_,_,dist') -> compare dist dist') |>
+                     BatList.take topk in
+      topk_lst
+    
+    let search_solutions_by_function_match : int -> prog -> (string * prog) list -> (string * prog * ((string * string) list * float)) list
+    = fun topk sub solutions ->
+      let vectorize = funcs_vectorize in
+      let calculate = calculate_mapping_distance in
+      let preproc = (fun x -> x |>  Extractor.extract_func_all |> vectorize) in
+      let v_sub = preproc sub in
+      let topk_lst = List.map (fun (f, sol) -> (f, sol, (preproc sol))) solutions |>
+                     List.map (fun (f ,sol, v_sol) -> (f, sol, (calculate v_sub v_sol))) |>
+                     List.sort (fun (_,_,(_,dist)) (_,_,(_,dist')) -> compare dist dist') |>
+                     BatList.take topk in
+      topk_lst
+    
+    let search_solutions = search_solutions_by_program_match
+    let search_solutions2 = search_solutions_by_function_match
 

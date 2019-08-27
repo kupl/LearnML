@@ -206,7 +206,8 @@ let rec update_var_comp : prog -> (label * exp) list -> (label * exp) BatSet.t
 		let (_, _, v_t, _) = Type.run pgm in
 		let vars = BatMap.foldi (fun x typ vars ->
 			match typ with
-			| TCtor _ | TArr _ -> vars
+            | TCtor _ -> vars
+			(*| TCtor _| TArr _-> vars*)
 			| _ -> x::vars
 		) (BatMap.find hole v_t) [] in
 		let result = subst_var_comp (l, e) vars in
@@ -268,9 +269,12 @@ let run : prog -> prog -> examples -> prog option
 	(* Repair Candidates *)
 	let start_time = Unix.gettimeofday () in
 	let (t1, t2) = (Cfg.S.run pgm, Cfg.S.run cpgm) in
+    (*
 	Print.print_header "Analysis1"; print_endline (Cfg.S.string_of_t t1);
   Print.print_header "Analysis2"; print_endline (Cfg.S.string_of_t t2);
+  *)
 	let repair_cand = get_repair_candidate (pgm, t1) (cpgm, t2) in
+    (*
 	Print.print_header "Repair candidates";
 	(*
 	List.iter (fun (l, e) -> 
@@ -278,19 +282,22 @@ let run : prog -> prog -> examples -> prog option
 		print_endline (Print.exp_to_string (l, e))
 	) repair_cand;
 	*)
+    *)
 	(* Update Candidate *)
 	let repair_cand = update_var_comp pgm repair_cand in
-	Print.print_header "Updated epair candidates";
+	Print.print_header "Updated Repair candidates";
 	(*
 	List.iter (fun (l, e) -> 
 		print_endline ("label : " ^ string_of_int l);
 		print_endline (Print.exp_to_string (l, e))
 	) repair_cand;
-	*)
+    *)
 	(* Replace & Checking *)
 	print_endline ("Size of repair Cand : " ^ string_of_int (BatSet.cardinal repair_cand));
 	let repair = List.find_opt (fun (l, e) -> 
 		let pgm' = List.map (fun decl -> subst_decl decl (l, e)) pgm in
+		print_endline ("label : " ^ string_of_int l);
+        print_endline (Print.exp_to_string (l, e));
 		(*Print.print_header "Repair Candidate"; Print.print_pgm pgm';*)
 		Eval.is_solution pgm' testcases
 	) (BatSet.to_list repair_cand) 

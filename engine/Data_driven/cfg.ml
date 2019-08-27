@@ -245,23 +245,24 @@ let log = ref (open_out "cfg.txt")
 	Input : An incorrect program pgm and a set of correct programs cpgms
 	Output : A correct program cpgm which is most similar to pgm
 *)
-let run : prog -> prog list -> prog option
+let run : prog -> (string*prog) list -> (string * prog option) list
 = fun pgm cpgms -> 
   let t = S.run pgm in
-  let results = List.map (fun cpgm -> (cpgm, S.run cpgm)) cpgms in
+  let results = List.map (fun (s,cpgm)-> (s,cpgm, S.run cpgm)) cpgms in
   
-  List.iter (fun (cpgm, t') ->
+  (*
+  List.iter (fun (s,cpgm, t') ->
     Printf.fprintf (!log) "------------Program-------------\n%s\n" (Print.program_to_string cpgm);
     Printf.fprintf (!log) "----------Analysis_Result-------\n%s\n" (S.string_of_t t')
   ) results;
-  
+  *)
   try 
-  	let cpgm,t' = List.find (fun (cpgm, t') -> 
+  	let matched = List.filter (fun (s,cpgm, t') -> 
       (*
       Print.print_header "Analysis1"; print_endline (S.string_of_t t);
       Print.print_header "Analysis2"; print_endline (S.string_of_t t');
       *)
       match_t t t'
     ) results in
-	 Some cpgm
-  with Not_found -> None
+    List.map (fun (s,cpgm,t') -> (s,Some cpgm)) matched     
+  with Not_found -> [("",None);]
