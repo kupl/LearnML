@@ -162,7 +162,7 @@ let topk = 2
 let fix_with_vectors2 : prog -> (string*prog) list -> examples -> unit
 = fun sub solutions testcases->
   let k = topk in
-  let topk_lst = Vector.search_solutions2 k sub solutions in
+  let topk_lst = Freq_vector.search_solutions2 k sub solutions in
 
   print_endline "@#$@#$@#$";
   Print.print_header "Submission"; Print.print_pgm sub;
@@ -180,7 +180,7 @@ let fix_with_vectors2 : prog -> (string*prog) list -> examples -> unit
 let fix_with_vectors : prog -> (string*prog) list -> examples -> unit
 = fun sub solutions testcases->
   let k = topk in
-  let topk_lst = Vector.search_solutions k sub solutions in
+  let topk_lst = Freq_vector.search_solutions k sub solutions in
 
   print_endline "@#$@#$@#$";
   Print.print_header "Submission"; Print.print_pgm sub;
@@ -296,7 +296,7 @@ let main () =
         let print_test : (string*prog) -> unit =
         begin
         fun (fname, prog) -> 
-          let vector = Vector.to_string (Vector.prog_vectorize prog) in
+          let vector = Freq_vector.to_string (Freq_vector.prog_vectorize prog) in
           Printf.fprintf (!log) "%s : %s\n" fname vector
         end 
         in List.iter print_test solutions_debug 
@@ -341,4 +341,4 @@ let main () =
     (*Arg.usage options usage_msg*)
 
 
-let _ = main ()
+let _ = main (); Pos_vector.init()
