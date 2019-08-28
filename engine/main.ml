@@ -341,4 +341,4 @@ let main () =
     (*Arg.usage options usage_msg*)
 
 
-let _ = main (); Pos_vector.init()
+let _ = main ()

@@ -5,17 +5,19 @@ open Type
 exception Invalid_Expression_Construct
 
 (* Normalize lang types -> node type
- *
+ * empty list means leaf node
  *)
 
 type node = 
   |LNode of label * node 
-  |Node of string * (node list)          
+  |Node of string * (node list)    
+  |Empty
+  (*
   |Id of string
   |Const of int
   |String of string 
   |Bool of bool 
-  |Empty 
+  |Empty *)
 
 let rec_to_node : bool -> node
 = fun b ->
@@ -28,14 +30,14 @@ let rec pat_to_node : pat -> node
   match x with
   | PUnit -> Node ("PUnit",[])
   | PUnder -> Node ("PUnder",[])
-  | PInt x -> Node ("PInt",[Const x])
-  | PBool b -> Node ("PBool",[Bool b])
-  | PVar x -> Node ("PVar", [Id x])
+  | PInt x -> Node ("PInt",[])
+  | PBool b -> Node ("PBool",[])
+  | PVar x -> Node ("PVar", [])
   | PList lst -> Node ("PList", List.map pat_to_node lst)
   | PCons lst -> Node ("PCons", List.map pat_to_node lst) 
   | PTuple lst -> Node ("PTuple", List.map pat_to_node lst) 
   | Pats lst -> Node ("Pats", List.map pat_to_node lst) 
-  | PCtor (x,lst) -> Node ("PCtor", (Id x)::(List.map pat_to_node lst))
+  | PCtor (x,lst) -> Node ("PCtor", (List.map pat_to_node lst))
     
 let rec type_to_node : typ -> node
 = fun t ->
@@ -44,12 +46,12 @@ let rec type_to_node : typ -> node
   | TInt -> Node ("TInt",[])
   | TString -> Node ("TString",[])
   | TBool -> Node ("TBool",[])
-  | TBase id -> Node ("TBase",[Id id])
+  | TBase id -> Node ("TBase",[])
   | TList t -> Node ("TList", [type_to_node t])
   | TTuple l -> if (l=[]) then type_to_node TUnit
                           else Node ("TTuple", List.map type_to_node l)
   | TArr (t1,t2) -> Node ("TArr", [type_to_node t1; type_to_node t2])
-  | TVar x -> Node ("TVar",[Id x])
+  | TVar x -> Node ("TVar",[])
   | TCtor (x,tl) -> Node ("TCtor", (type_to_node x)::(List.map type_to_node tl))
   | TExn -> Node ("TExn",[])
 
@@ -57,14 +59,14 @@ let rec let_to_node : let_bind -> node
 = fun bind ->
   match bind with 
   | BindUnder -> Node ("BindUnder", [])
-  | BindOne x -> Node ("BindOne", [Id x])
+  | BindOne x -> Node ("BindOne", [])
   | BindTuple xs -> Node ("BindTuple", List.map let_to_node xs)
 
 let rec arg_to_node : arg -> node
 = fun arg ->
   match arg with
   | ArgUnder typ -> Node ("ArgUnder", [type_to_node typ])
-  | ArgOne (x,typ) -> Node ("ArgOne", [Id x;type_to_node typ])
+  | ArgOne (x,typ) -> Node ("ArgOne", [type_to_node typ])
   | ArgTuple xs -> Node ("ArgTuple", List.map arg_to_node xs)
 
 let rec exp_to_node : lexp -> node 
@@ -73,13 +75,13 @@ let rec exp_to_node : lexp -> node
   = fun exp ->
   match exp with
   | EUnit -> Node ("EUnit", [])
-  | Const n -> Const n
-  | String id-> String id
-  | TRUE -> Bool true
-  | FALSE -> Bool false
+  | Const n -> Node ("Const_Int", [])
+  | String id-> Node ("Const_String", [])
+  | TRUE 
+  | FALSE -> Node("Const_Bool",[])
   | EList lst -> Node ("EList", List.map exp_to_node lst)
-  | EVar x -> Node ("EVar", [Id x]) 
-  | ECtor (x,lst) -> Node ("ECtor", Id (x)::(List.map exp_to_node lst))
+  | EVar x -> Node ("EVar", []) 
+  | ECtor (x,lst) -> Node ("ECtor", (List.map exp_to_node lst))
   | ETuple lst -> Node ("ETuple", List.map exp_to_node lst)
   | ADD (e1,e2) -> Node ("ADD", [exp_to_node e1;exp_to_node e2])
   | SUB (e1,e2) -> Node ("SUB", [exp_to_node e1;exp_to_node e2])

@@ -21,12 +21,7 @@ let rec traverse : (string, int) BatHashtbl.t -> node -> unit
   | LNode (l,n) -> traverse tbl n
   | Node (s,lst) -> update tbl s;
     List.iter (traverse tbl) lst
-  | Id id -> update tbl "Id"
-  | Const n -> update tbl "Const_Int"
-  | String st -> update tbl "Const_String"
-  | Bool b -> if b then update tbl "Const_True"
-                   else update tbl "Const_False"
-  | _ -> raise Emptyshouldnotbehere
+  | Empty -> raise Emptyshouldnotbehere
 
 let init_vector = List.sort compare [
   ("Rec",0); ("No Rec",0); ("PUnit",0); ("PUnder",0); ("PInt",0);
@@ -41,8 +36,7 @@ let init_vector = List.sort compare [
   ("NOTEQ",0); ("LESSEQ",0); ("LARGEREQ",0); ("AT",0); ("DOUBLECOLON",0);
   ("STRCON",0); ("NOT",0); ("EApp",0); ("EFun",0); ("IF",0); ("ELet",0);
   ("EBlock",0); ("EMatch",0); ("Raise",0); ("Binding",0); ("DLet",0); 
-  ("DBlock",0); ("Id",0); ("Const_Int",0); ("Const_String",0); ("Const_True",0); 
-  ("Const_False",0);
+  ("DBlock",0); ("Id",0); ("Const_Int",0); ("Const_String",0); ("Const_Bool",0);
 ]
 
 let init_tbl : unit -> (string, int) BatHashtbl.t
