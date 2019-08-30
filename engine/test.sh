@@ -34,4 +34,4 @@
 #wrong command! diff's entry func is grading
 
 #Data driven
-./main.native -submission ../benchmarks_incorrect/KoreaUniv_diff/18/sub8.ml -solutions ../benchmarks_correct/KoreaUniv_diff/ -testcases ../benchmarks_correct/KoreaUniv_diff/testcases
+./main.native -vector2 -submission ../benchmarks_incorrect/KoreaUniv_diff/18/sub8.ml -solutions ../benchmarks_correct/KoreaUniv_diff/ -testcases ../benchmarks_correct/KoreaUniv_diff/testcases -entry grading -grading ../benchmarks_correct/KoreaUniv_diff/grading.ml
