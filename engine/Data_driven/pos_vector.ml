@@ -1,6 +1,7 @@
 open Lang
 open BatVect
 open Node
+open Mapper
 
 exception Table_Update_Failure
 
@@ -11,16 +12,14 @@ type t = (int BatVect.t) list
 let init_vector = List.map (fun (s,num) -> 
     (s, BatVect.empty)) Fv.init_vector 
 
-(*Question: is Hashtable create size dependent to vector size*)
-let init_tbl : unit -> (string, int BatVect.t) BatHashtbl.t
-= fun x ->
-  let tbl = BatHashtbl.create 100 in
-  let rec iter : (string, int BatVect.t) BatHashtbl.t -> (string * int BatVect.t) list -> (string, int BatVect.t) BatHashtbl.t
-  = fun tbl lst ->
-    match lst with
-    | [] -> tbl
-    | (hd,vec)::tl -> BatHashtbl.replace tbl hd vec; iter tbl tl
-  in iter tbl init_vector 
+let init_tbl = BatHashtbl.of_list init_vector
+let gen_tbl () = BatHashtbl.copy init_tbl
+
+module Pos_map = 
+  Make_genmap(struct 
+    type t = int BatVect.t
+    let init_vector = init_vector
+  end)
 
 let rec node_height_cal : node -> node
 = fun node ->
@@ -54,9 +53,9 @@ let rec traverse : (string, int BatVect.t) BatHashtbl.t -> node -> unit
   
 let node_vectorize = node -> t 
 = fun node -> 
-  let tbl = init_tbl () in
+  let table = gen_tbl () in
   let hnode = node_height_cal in
-  let table = traverse tbl hnode in
+  let table = traverse table hnode in
   BatHashtbl.to_list table |> List.sort compare |> List.map (fun (k,v) -> v)
 
 let rec funcs_vectorize : (string * lexp) list -> (string * t) list
