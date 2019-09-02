@@ -1,28 +1,6 @@
 module FV = Freq_vector
 module PV = Pos_vector
 
-let ins_all_positions x l = 
-  let rec aux prev acc = function
-    | [] -> (prev @ [x]) :: acc |> List.rev
-    | hd::tl as l -> aux (prev @ [hd])((prev @ [x] @ l) :: acc) tl
-  in aux [] [] l
-
-let rec permutations = function
-  | [] -> []
-  | x::[] -> [[x]]
-  | x::xs -> List.fold_left (fun acc p -> acc @ ins_all_positions x p) [] (permutations xs)
-
-let gen_mapping : (string * 'a) list -> (string * 'a) list -> (string * 'a * string * 'a) list list
-= fun ts1 ts2 ->
-  let len1 = List.length ts1 in
-  let len2 = List.length ts2 in
-  if len1 = len2 then 
-    let perms = permutations ts2 in 
-    List.fold_left (fun acc y -> 
-      (List.map2 (fun (s,t) (s',t') -> (s,t,s',t')) ts1 y)::acc) [] perms
-  else 
-    raise (Failure "func map length must be same")
-
 let rec gen_score_map : 'a -> (string * 'a) list -> (string * 'a) list -> ((string * string) * float) list 
 = fun ts1 ts2 ->
   match ts1 with
@@ -31,27 +9,6 @@ let rec gen_score_map : 'a -> (string * 'a) list -> (string * 'a) list -> ((stri
     let with_s = List.map (fun (s',v') -> let dist = dist_func v v' in 
     (s,s'), dist) ts2 in with_s @ gen_score_map t ts2
     
-let padding : 'a -> (string * 'a) list -> (string * 'a) list -> (string * 'a) list * (string * 'a) list
-= fun ts1 ts2 ->
-  let len1 = List.length ts1 in
-  let len2 = List.length ts2 in
-  (*how do handle polymorphic init_vector?
-   * -> parameterize
-   * *)
-  let empty_padding = List.map (fun (k,v) -> v) init_vector in
-
-  if len1 = len2 then ts1,ts2 
-  else if len1 < len2 then 
-    let rec iter = fun acc count -> 
-    if count <> (len2-len1) then 
-      iter (("___padding" ^ string_of_int(count+1), empty_padding)::acc) 
-      (count+1) else acc in let ts1 = iter ts1 0 in ts1,ts2
-  else 
-    let rec iter = fun acc count ->
-    if count <> (len1-len2) then 
-      iter (("___padding"^string_of_int(count+1), empty_padding)::acc) 
-      (count+1) else acc in let ts2 = iter ts2 0 in ts1,ts2
-
 let calculate_mapping_distance : 'a ->  (string * 'a) list -> (string * 'a) list -> (string * string) list * float 
 = fun dist_func ts1 ts2 ->
   let ts1,ts2 = padding ts1 ts2 in
