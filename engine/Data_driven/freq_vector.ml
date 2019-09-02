@@ -19,8 +19,9 @@ let rec traverse : (string, int) BatHashtbl.t -> node -> unit
 = fun tbl node ->
   match node with
   | LNode (l,n) -> traverse tbl n
-  | Node (s,lst) -> update tbl s;
+  | Node (h,s,lst) -> update tbl s;
     List.iter (traverse tbl) lst
+  | Leaf -> ()
   | Empty -> raise Emptyshouldnotbehere
 
 let init_vector = List.sort compare [
@@ -57,27 +58,13 @@ let ast_filter : prog -> node list
 let node_vectorize: node -> t
 = fun node -> 
   let table = init_tbl () in traverse table node;
-  BatHashtbl.to_list table |> 
-  List.sort compare |>
-  List.map (fun (k,v) -> v)
-  (*
-  let fold h = BatHashtbl.fold (fun k v acc -> (k,v) :: acc) h [] in
-  let sorted = List.sort compare (fold table) in 
-  List.map (fun (k,v) -> v) sorted 
-  *)
+  BatHashtbl.to_list table |> List.sort compare |> List.map (fun (k,v) -> v)
 
 let prog_vectorize: prog -> t
 = fun prog -> 
   let ast = ast_filter prog in
   let table = init_tbl () in List.iter (traverse table) ast;
-  BatHashtbl.to_list table |>
-  List.sort compare |>
-  List.map (fun (k,v) -> v) 
-  (*
-  let fold h = BatHashtbl.fold (fun k v acc -> (k,v) :: acc) h [] in
-  let sorted = List.sort compare (fold table) in 
-  List.map (fun (k,v) -> v) sorted 
-  *)
+  BatHashtbl.to_list table |> List.sort compare |> List.map (fun (k,v) -> v) 
 
 let rec funcs_vectorize: (string * lexp) list -> (string * t) list
 = fun lst -> 
@@ -182,6 +169,7 @@ let search_solutions_by_function_match : int -> prog -> (string * prog) list -> 
                  List.sort (fun (_,_,(_,dist)) (_,_,(_,dist')) -> compare dist dist') |>
                  BatList.take topk in
   topk_lst
+
     
 let search_solutions = search_solutions_by_program_match
 let search_solutions2 = search_solutions_by_function_match
