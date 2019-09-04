@@ -4,7 +4,71 @@ open Util
 exception MatchError
 exception DeclError
 
-(* Get repair candidate : set of (label * exp) *)
+type repair_cand = (label * exp * Type.TEnv.t) (* error label, expected patch, type information *)
+
+module PreAnalysis = struct
+  
+  (* Compute all variable types at each program point *)
+	type t = Type.VariableType.t
+
+	let empty = Type.VariableType.empty
+	let extend = Type.VariableType.extend
+	let find = Type.VariableType.find
+	let print = Type.VariableType.print
+
+  let rec get_all_labels_exp : lexp -> int BatSet.t
+  = fun (l, exp) ->
+  	match exp with
+		| MINUS e | NOT e | EFun (_, e) | Raise e -> BatSet.add l (get_all_labels_exp e)
+		| EList es | ECtor (_, es) | ETuple es -> List.fold_left (fun labels e -> BatSet.union (get_all_labels_exp e) labels) (BatSet.singleton l) es
+		| ADD (e1, e2) | SUB (e1, e2) | MUL (e1, e2) | DIV (e1, e2) | MOD (e1, e2)
+		| OR (e1, e2) | AND (e1, e2) | EQUAL (e1, e2) | NOTEQ (e1, e2)
+	  | LESS (e1, e2) | LARGER (e1, e2)| LESSEQ (e1, e2) | LARGEREQ (e1, e2)
+	  | AT (e1, e2) | DOUBLECOLON (e1, e2) | STRCON (e1, e2) | EApp (e1, e2) 
+		| ELet (_, _, _, _, e1, e2) -> 
+			BatSet.singleton l 
+			|> BatSet.union (get_all_labels_exp e1)
+			|> BatSet.union (get_all_labels_exp e2)
+		| IF (e1, e2, e3) -> 
+			BatSet.singleton l 
+			|> BatSet.union (get_all_labels_exp e1)
+			|> BatSet.union (get_all_labels_exp e2)
+			|> BatSet.union (get_all_labels_exp e3)
+		| EMatch (e, bs) ->
+			let labels = List.fold_left (fun labels (p, e) -> BatSet.union labels (get_all_labels_exp e)) (BatSet.singleton l) bs in
+			BatSet.union labels (get_all_labels_exp e)
+		| EBlock (_, bs, e) ->
+			let labels = List.fold_left (fun labels (_, _, _, _, e) -> BatSet.union labels (get_all_labels_exp e)) (BatSet.singleton l) bs in
+			BatSet.union labels (get_all_labels_exp e)
+		| _ -> BatSet.singleton l
+  
+  let rec get_all_labels_decl : decl -> int BatSet.t
+  = fun decl ->
+  	match decl with
+  	| DLet (_, _, _, _, e) -> get_all_labels_exp e
+  	| DBlock (_, ds) -> List.fold_left (fun labels (_, _, _, _, e) -> BatSet.union labels (get_all_labels_exp e)) BatSet.empty ds
+  	| _ -> BatSet.empty
+
+  let rec get_all_labels : prog -> int BatSet.t
+  = fun pgm -> List.fold_left (fun labels decl -> BatSet.union labels (get_all_labels_decl decl)) BatSet.empty pgm
+
+  let run : prog -> t 
+  = fun pgm -> 
+  	let lables = get_all_labels pgm in
+  	BatSet.fold (fun l acc -> 
+			let pgm = Localize.gen_partial_pgm l pgm in
+			let hole = !hole_count in
+			let (_, _, v_t, _) = Type.run pgm in
+			let tenv = BatMap.filterv (fun typ ->
+				match typ with
+				| TCtor _ -> false
+				| _ -> true
+			) (BatMap.find hole v_t) in
+			extend l tenv acc
+  	) lables empty 
+end
+	
+(* Get repair candidate *)
 let rec match_pat : pat -> pat -> bool
 = fun p1 p2 ->
   match (p1, p2) with
@@ -16,35 +80,38 @@ let rec match_pat : pat -> pat -> bool
   | Pats ps1, Pats ps2 -> raise (Failure "Invalid pattern mathcing of two cfgs")
   | _ -> false
 
-let rec get_repair_candidate_exp : lexp -> lexp -> (label * exp) list
-= fun (l1, exp1) (l2, exp2) ->
+let rec get_repair_candidate_exp : PreAnalysis.t -> lexp -> lexp -> repair_cand list
+= fun t (l1, exp1) (l2, exp2) ->
 	match (exp1, exp2) with
 	(* Const and exceptional expresions *)
 	| SInt _, SInt _ | SStr _, SStr _ | EUnit, EUnit | Hole _, Hole _ | TRUE, TRUE | FALSE, FALSE | Raise _, Raise _ -> []
-	| Const n1, Const n2 -> if (n1 = n2) then [] else [(l1, exp2)]
-	| String s1, String s2 -> if (s1 = s2) then [] else [(l1, exp2)]
+	| Const n1, Const n2 -> if (n1 = n2) then [] else [(l1, exp2, PreAnalysis.find l2 t)]
+	| String s1, String s2 -> if (s1 = s2) then [] else [(l1, exp2, PreAnalysis.find l2 t)]
 	(* List *)
-	| EList es1, EList es2 | ETuple es1, ETuple es2 -> (try List.fold_left2 (fun acc e1 e2 -> (get_repair_candidate_exp e1 e2)@acc) [] es1 es2 with _ -> [(l1, exp2)])
-	| ECtor (x1, es1), ECtor (x2, es2) -> if x1 = x2 then (try List.fold_left2 (fun acc e1 e2 -> (get_repair_candidate_exp e1 e2)@acc) [] es1 es2 with _ -> [(l1, exp2)]) else [(l1, exp2)]
+	| EList es1, EList es2 | ETuple es1, ETuple es2 -> 
+		(try List.fold_left2 (fun acc e1 e2 -> (get_repair_candidate_exp t e1 e2)@acc) [] es1 es2 with _ -> [(l1, exp2, PreAnalysis.find l2 t)])
+	| ECtor (x1, es1), ECtor (x2, es2) -> 
+		if x1 = x2 then 
+			(try List.fold_left2 (fun acc e1 e2 -> (get_repair_candidate_exp t e1 e2)@acc) [] es1 es2 with _ -> [(l1, exp2, PreAnalysis.find l2 t)]) 
+		else [(l1, exp2, PreAnalysis.find l2 t)]
 	(* unary *)
-	| MINUS e1, MINUS e2 | NOT e1, NOT e2 | EFun (_, e1), EFun (_, e2) -> get_repair_candidate_exp e1 e2
-	(* non-sequntial binop *)
-	| ADD (e1, e2), ADD (e1', e2') | SUB (e1, e2), SUB (e1', e2') | MUL (e1, e2), MUL (e1', e2')| DIV (e1, e2), DIV (e1', e2') | MOD (e1, e2), MOD (e1', e2') 
-	| OR (e1, e2), OR (e1', e2') | AND (e1, e2), AND (e1', e2') | LESS (e1, e2), LESS (e1', e2') | LARGER (e1, e2), LARGER (e1', e2')
-	| LESSEQ (e1, e2), LESSEQ (e1', e2') | LARGEREQ (e1, e2), LARGEREQ (e1', e2') | EQUAL (e1, e2), EQUAL (e1', e2') | NOTEQ(e1, e2), NOTEQ (e1', e2') 
-	| AT (e1, e2), AT (e1', e2') | STRCON (e1, e2), STRCON (e1', e2') ->
-		(* Find minimul fix *)
-		let result1 = (get_repair_candidate_exp e1 e1')@(get_repair_candidate_exp e2 e2') in
-		let result2 = (get_repair_candidate_exp e1 e2')@(get_repair_candidate_exp e2 e1') in
-		if List.length result1 < List.length result2 then result1 else result2
+	| MINUS e1, MINUS e2 | NOT e1, NOT e2 | EFun (_, e1), EFun (_, e2) -> get_repair_candidate_exp t e1 e2
+	(* non-sequntial binop -> refine to find minimal set *)
+	| ADD (e1, e2), ADD (e1', e2') | MUL (e1, e2), MUL (e1', e2') | OR (e1, e2), OR (e1', e2') | AND (e1, e2), AND (e1', e2') 
+	| EQUAL (e1, e2), EQUAL (e1', e2') | NOTEQ(e1, e2), NOTEQ (e1', e2') -> 
+		(get_repair_candidate_exp t e1 e1')@(get_repair_candidate_exp t e2 e2')
  	(* sequntial binop *)
- 	| DOUBLECOLON (e1, e2), DOUBLECOLON (e1', e2') | EApp (e1, e2), EApp (e1', e2') -> (get_repair_candidate_exp e1 e1')@(get_repair_candidate_exp e2 e2')
+ 	| DIV (e1, e2), DIV (e1', e2') | MOD (e1, e2), MOD (e1', e2') | SUB (e1, e2), SUB (e1', e2') 
+ 	| LESS (e1, e2), LESS (e1', e2') | LARGER (e1, e2), LARGER (e1', e2') | LESSEQ (e1, e2), LESSEQ (e1', e2') | LARGEREQ (e1, e2), LARGEREQ (e1', e2') 
+ 	| AT (e1, e2), AT (e1', e2') | STRCON (e1, e2), STRCON (e1', e2')
+ 	| DOUBLECOLON (e1, e2), DOUBLECOLON (e1', e2') | EApp (e1, e2), EApp (e1', e2') -> 
+ 		(get_repair_candidate_exp t e1 e1')@(get_repair_candidate_exp t e2 e2')
  	(* binding *)
  	| ELet (_, _, _, _, e1, e2), ELet (_, _, _, _, e1', e2') -> [] (* TODO *)
  	| EBlock (_, bs1, e1), EBlock (_, bs2, e2) -> [] (* TODO *)
  	(* conditional *)
  	| EMatch (e1, bs1), EMatch (e2, bs2) ->
-		let rec get_repair_candidate_match : branch list -> branch list  -> (label * exp) list
+		let rec get_repair_candidate_match : branch list -> branch list  -> repair_cand list
 		= fun bs1 bs2 ->
 			match bs1, bs2 with
 			| [], [] -> []
@@ -52,22 +119,19 @@ let rec get_repair_candidate_exp : lexp -> lexp -> (label * exp) list
 				begin
 		      try
 		        let (p2, e2) = List.find (fun (p2, e2) -> match_pat p1 p2) bs2 in
-		        (get_repair_candidate_exp e1 e2)@(get_repair_candidate_match tl1 (List.remove_assoc p2 bs2))
+		        (get_repair_candidate_exp t e1 e2)@(get_repair_candidate_match tl1 (List.remove_assoc p2 bs2))
 		      with Not_found -> raise MatchError
 		    end
 			| _ -> raise MatchError
 		in
-		(try (get_repair_candidate_match bs1 bs2)@(get_repair_candidate_exp e1 e2) with MatchError -> [(l1, exp2)])
- 	| IF (e1, e2, e3), IF (e1', e2', e3') ->
- 		let result1 = (get_repair_candidate_exp e2 e2')@(get_repair_candidate_exp e3 e3') in
-		let result2 = (get_repair_candidate_exp e2 e3')@(get_repair_candidate_exp e3 e2') in
-		(get_repair_candidate_exp e1 e1')@(if List.length result1 < List.length result2 then result1 else result2)
- 	| _ -> [(l1, exp2)]
+		(try (get_repair_candidate_match bs1 bs2)@(get_repair_candidate_exp t e1 e2) with MatchError -> [(l1, exp2, PreAnalysis.find l2 t)])
+ 	| IF (e1, e2, e3), IF (e1', e2', e3') -> (get_repair_candidate_exp t e1 e1')@(get_repair_candidate_exp t e2 e2')@(get_repair_candidate_exp t e3 e3')
+ 	| _ -> [(l1, exp2, PreAnalysis.find l2 t)]
 
-let rec get_repair_candidate_decl : decl -> decl -> (label * exp) list
-= fun decl1 decl2 ->
+let rec get_repair_candidate_decl : PreAnalysis.t -> decl -> decl -> repair_cand list
+= fun t decl1 decl2 ->
 	match decl1, decl2 with
-	| DLet (_, _, _, _, e1), DLet (_, _, _, _, e2) -> get_repair_candidate_exp e1 e2
+	| DLet (_, _, _, _, e1), DLet (_, _, _, _, e2) -> get_repair_candidate_exp t e1 e2
 	| _ -> []
 
 let rec find_matched_decl : Cfg.S.cfg -> (prog * Cfg.S.t) -> decl 
@@ -86,8 +150,8 @@ let rec find_matched_decl : Cfg.S.cfg -> (prog * Cfg.S.t) -> decl
   | _::decls -> find_matched_decl cfg1 (decls, t)
   | _ -> raise DeclError
 	
-let rec get_repair_candidate : (prog * Cfg.S.t) -> (prog * Cfg.S.t) -> (label * exp) list
-= fun (decls1, t1) (decls2, t2) ->
+let rec get_repair_candidate : PreAnalysis.t -> (prog * Cfg.S.t) -> (prog * Cfg.S.t) -> repair_cand list
+= fun t (decls1, t1) (decls2, t2) ->
 	match decls1 with
 	| DLet (f, is_rec, args, typ, e)::decls -> 
     begin match f with
@@ -96,88 +160,94 @@ let rec get_repair_candidate : (prog * Cfg.S.t) -> (prog * Cfg.S.t) -> (label * 
     	begin 
     		try 
 	    		let matched_decl = find_matched_decl cfg1 (decls2, t2) in
-	    		get_repair_candidate_decl (DLet (BindOne f, is_rec, args, typ, e)) matched_decl
+	    		get_repair_candidate_decl t (DLet (BindOne f, is_rec, args, typ, e)) matched_decl
 	    	with DeclError -> []
 	    end
     | _ -> []
     end
   | DBlock (is_rec, bindings)::decls -> 
   	let decls1 = List.fold_left (fun decls binding -> (DLet binding)::decls) decls bindings in
-  	get_repair_candidate (decls1, t1) (decls2, t2)
-  | _::decls -> get_repair_candidate (decls, t1) (decls2, t2)
+  	get_repair_candidate t (decls1, t1) (decls2, t2)
+  | _::decls -> get_repair_candidate t (decls, t1) (decls2, t2)
   | _ -> []
 
 (* Repair *)
-let rec subst_var_comp : lexp -> id list -> (label * exp) BatSet.t
-= fun (l, exp) vars ->
+let rec subst_var_comp : Type.TEnv.t -> lexp -> (id * typ) list -> (label * exp) BatSet.t
+= fun tenv (l, exp) vars ->
 	let result = 
 		match exp with
-		| Raise e -> BatSet.map (fun e -> Raise e) (subst_var_comp e vars)
-		| EFun (arg, e) -> BatSet.map (fun e -> EFun (arg, e)) (subst_var_comp e vars)
-		| MINUS e -> BatSet.map (fun e -> MINUS e) (subst_var_comp e vars)
-		| NOT e -> BatSet.map (fun e -> NOT e) (subst_var_comp e vars)
+		| Raise e -> BatSet.map (fun e -> Raise e) (subst_var_comp tenv e vars)
+		| EFun (arg, e) -> BatSet.map (fun e -> EFun (arg, e)) (subst_var_comp tenv e vars)
+		| MINUS e -> BatSet.map (fun e -> MINUS e) (subst_var_comp tenv e vars)
+		| NOT e -> BatSet.map (fun e -> NOT e) (subst_var_comp tenv e vars)
 		| ADD (e1, e2) -> BatSet.fold (fun e1 acc ->
-				BatSet.fold (fun e2 acc -> BatSet.add (ADD (e1, e2)) acc) (subst_var_comp e2 vars) acc
-			) (subst_var_comp e1 vars) BatSet.empty
+				BatSet.fold (fun e2 acc -> BatSet.add (ADD (e1, e2)) acc) (subst_var_comp tenv e2 vars) acc
+			) (subst_var_comp tenv e1 vars) BatSet.empty
 		| SUB (e1, e2) -> BatSet.fold (fun e1 acc ->
-				BatSet.fold (fun e2 acc -> BatSet.add (SUB (e1, e2)) acc) (subst_var_comp e2 vars) acc
-			) (subst_var_comp e1 vars) BatSet.empty
+				BatSet.fold (fun e2 acc -> BatSet.add (SUB (e1, e2)) acc) (subst_var_comp tenv e2 vars) acc
+			) (subst_var_comp tenv e1 vars) BatSet.empty
 		| MUL (e1, e2) -> BatSet.fold (fun e1 acc ->
-				BatSet.fold (fun e2 acc -> BatSet.add (MUL (e1, e2)) acc) (subst_var_comp e2 vars) acc
-			) (subst_var_comp e1 vars) BatSet.empty
+				BatSet.fold (fun e2 acc -> BatSet.add (MUL (e1, e2)) acc) (subst_var_comp tenv e2 vars) acc
+			) (subst_var_comp tenv e1 vars) BatSet.empty
 		| DIV (e1, e2) -> BatSet.fold (fun e1 acc ->
-				BatSet.fold (fun e2 acc -> BatSet.add (DIV (e1, e2)) acc) (subst_var_comp e2 vars) acc
-			) (subst_var_comp e1 vars) BatSet.empty
+				BatSet.fold (fun e2 acc -> BatSet.add (DIV (e1, e2)) acc) (subst_var_comp tenv e2 vars) acc
+			) (subst_var_comp tenv e1 vars) BatSet.empty
 		| MOD (e1, e2) -> BatSet.fold (fun e1 acc ->
-				BatSet.fold (fun e2 acc -> BatSet.add (MOD (e1, e2)) acc) (subst_var_comp e2 vars) acc
-			) (subst_var_comp e1 vars) BatSet.empty
+				BatSet.fold (fun e2 acc -> BatSet.add (MOD (e1, e2)) acc) (subst_var_comp tenv e2 vars) acc
+			) (subst_var_comp tenv e1 vars) BatSet.empty
 		| OR (e1, e2) -> BatSet.fold (fun e1 acc ->
-				BatSet.fold (fun e2 acc -> BatSet.add (OR (e1, e2)) acc) (subst_var_comp e2 vars) acc
-			) (subst_var_comp e1 vars) BatSet.empty
+				BatSet.fold (fun e2 acc -> BatSet.add (OR (e1, e2)) acc) (subst_var_comp tenv e2 vars) acc
+			) (subst_var_comp tenv e1 vars) BatSet.empty
 		| AND (e1, e2) -> BatSet.fold (fun e1 acc ->
-				BatSet.fold (fun e2 acc -> BatSet.add (AND (e1, e2)) acc) (subst_var_comp e2 vars) acc
-			) (subst_var_comp e1 vars) BatSet.empty
+				BatSet.fold (fun e2 acc -> BatSet.add (AND (e1, e2)) acc) (subst_var_comp tenv e2 vars) acc
+			) (subst_var_comp tenv e1 vars) BatSet.empty
 		| LESS (e1, e2) -> BatSet.fold (fun e1 acc ->
-				BatSet.fold (fun e2 acc -> BatSet.add (LESS (e1, e2)) acc) (subst_var_comp e2 vars) acc
-			) (subst_var_comp e1 vars) BatSet.empty
+				BatSet.fold (fun e2 acc -> BatSet.add (LESS (e1, e2)) acc) (subst_var_comp tenv e2 vars) acc
+			) (subst_var_comp tenv e1 vars) BatSet.empty
 		| LESSEQ (e1, e2) -> BatSet.fold (fun e1 acc ->
-				BatSet.fold (fun e2 acc -> BatSet.add (LESSEQ (e1, e2)) acc) (subst_var_comp e2 vars) acc
-			) (subst_var_comp e1 vars) BatSet.empty
+				BatSet.fold (fun e2 acc -> BatSet.add (LESSEQ (e1, e2)) acc) (subst_var_comp tenv e2 vars) acc
+			) (subst_var_comp tenv e1 vars) BatSet.empty
 		| LARGER (e1, e2) -> BatSet.fold (fun e1 acc ->
-				BatSet.fold (fun e2 acc -> BatSet.add (LARGER (e1, e2)) acc) (subst_var_comp e2 vars) acc
-			) (subst_var_comp e1 vars) BatSet.empty
+				BatSet.fold (fun e2 acc -> BatSet.add (LARGER (e1, e2)) acc) (subst_var_comp tenv e2 vars) acc
+			) (subst_var_comp tenv e1 vars) BatSet.empty
 		| LARGEREQ (e1, e2) -> BatSet.fold (fun e1 acc ->
-				BatSet.fold (fun e2 acc -> BatSet.add (LARGEREQ (e1, e2)) acc) (subst_var_comp e2 vars) acc
-			) (subst_var_comp e1 vars) BatSet.empty
+				BatSet.fold (fun e2 acc -> BatSet.add (LARGEREQ (e1, e2)) acc) (subst_var_comp tenv e2 vars) acc
+			) (subst_var_comp tenv e1 vars) BatSet.empty
 		| EQUAL (e1, e2) -> BatSet.fold (fun e1 acc ->
-				BatSet.fold (fun e2 acc -> BatSet.add (EQUAL (e1, e2)) acc) (subst_var_comp e2 vars) acc
-			) (subst_var_comp e1 vars) BatSet.empty
+				BatSet.fold (fun e2 acc -> BatSet.add (EQUAL (e1, e2)) acc) (subst_var_comp tenv e2 vars) acc
+			) (subst_var_comp tenv e1 vars) BatSet.empty
 		| NOTEQ (e1, e2) -> BatSet.fold (fun e1 acc ->
-				BatSet.fold (fun e2 acc -> BatSet.add (NOTEQ (e1, e2)) acc) (subst_var_comp e2 vars) acc
-			) (subst_var_comp e1 vars) BatSet.empty
+				BatSet.fold (fun e2 acc -> BatSet.add (NOTEQ (e1, e2)) acc) (subst_var_comp tenv e2 vars) acc
+			) (subst_var_comp tenv e1 vars) BatSet.empty
 		| DOUBLECOLON (e1, e2) -> BatSet.fold (fun e1 acc ->
-				BatSet.fold (fun e2 acc -> BatSet.add (DOUBLECOLON (e1, e2)) acc) (subst_var_comp e2 vars) acc
-			) (subst_var_comp e1 vars) BatSet.empty
+				BatSet.fold (fun e2 acc -> BatSet.add (DOUBLECOLON (e1, e2)) acc) (subst_var_comp tenv e2 vars) acc
+			) (subst_var_comp tenv e1 vars) BatSet.empty
 		| AT (e1, e2) -> BatSet.fold (fun e1 acc ->
-				BatSet.fold (fun e2 acc -> BatSet.add (AT (e1, e2)) acc) (subst_var_comp e2 vars) acc
-			) (subst_var_comp e1 vars) BatSet.empty
+				BatSet.fold (fun e2 acc -> BatSet.add (AT (e1, e2)) acc) (subst_var_comp tenv e2 vars) acc
+			) (subst_var_comp tenv e1 vars) BatSet.empty
 		| STRCON (e1, e2) -> BatSet.fold (fun e1 acc ->
-				BatSet.fold (fun e2 acc -> BatSet.add (STRCON (e1, e2)) acc) (subst_var_comp e2 vars) acc
-			) (subst_var_comp e1 vars) BatSet.empty
+				BatSet.fold (fun e2 acc -> BatSet.add (STRCON (e1, e2)) acc) (subst_var_comp tenv e2 vars) acc
+			) (subst_var_comp tenv e1 vars) BatSet.empty
 		(* Call *)
 		| EApp (e1, e2) -> BatSet.fold (fun e2 acc ->
 				BatSet.add (EApp (e1, e2)) acc
-			) (subst_var_comp e2 vars) BatSet.empty
+			) (subst_var_comp tenv e2 vars) BatSet.empty
 		| EList es -> 
-			let es' = subst_var_comp_list es vars in
+			let es' = subst_var_comp_list tenv es vars in
 			BatSet.map (fun es -> EList es) es'
 		| ETuple es ->
-			let es' = subst_var_comp_list es vars in
+			let es' = subst_var_comp_list tenv es vars in
 			BatSet.map (fun es -> ETuple es) es'
 		| ECtor (x, es) ->
-			let es' = subst_var_comp_list es vars in
+			let es' = subst_var_comp_list tenv es vars in
 			BatSet.map (fun es -> ECtor (x, es)) es'
-		| EVar _ -> List.fold_left (fun acc x -> BatSet.add (EVar x) acc) BatSet.empty vars
+		| EVar y -> List.fold_left (fun acc (x, t2) -> 
+				let t1 = BatMap.find y tenv in
+				try 
+					let _ = Type.unify Type.Subst.empty (t1, t2) in
+					BatSet.add (EVar x) acc
+				with Type.TypeError -> acc
+			) BatSet.empty vars
 		(*
 		| IF (e1, e2, e3) -> IF (subst_var_comp e1 x, subst_var_comp e2 x, subst_var_comp e3 x)
 		| EMatch (e, bs) -> EMatch (subst_var_comp e x, List.map (fun (p, e) -> (p, subst_var_comp e x)) bs)
@@ -188,29 +258,28 @@ let rec subst_var_comp : lexp -> id list -> (label * exp) BatSet.t
 	in
 	BatSet.map (fun e -> (l, e)) result
 
-and subst_var_comp_list : lexp list -> id list -> ((label * exp) list) BatSet.t
-= fun es vars ->
+and subst_var_comp_list : Type.TEnv.t -> lexp list -> (id * typ) list -> ((label * exp) list) BatSet.t
+= fun tenv es vars ->
 	match es with
 	| [] -> BatSet.singleton []
 	| hd::tl -> 
-		let tl_result = subst_var_comp_list tl vars in
+		let tl_result = subst_var_comp_list tenv tl vars in
 		BatSet.fold (fun e acc -> 
 			BatSet.union acc (BatSet.map (fun es -> e::es) tl_result)
-		) (subst_var_comp hd vars) BatSet.empty
+		) (subst_var_comp tenv hd vars) BatSet.empty
 
-let rec update_var_comp : prog -> (label * exp) list -> (label * exp) BatSet.t
+let rec update_var_comp : prog -> repair_cand list -> (label * exp) BatSet.t
 = fun pgm candidates ->
-	List.fold_left (fun acc (l, e) -> 
+	List.fold_left (fun acc (l, e, tenv) -> 
 		let pgm = Localize.gen_partial_pgm l pgm in
 		let hole = !hole_count in
 		let (_, _, v_t, _) = Type.run pgm in
 		let vars = BatMap.foldi (fun x typ vars ->
 			match typ with
-            | TCtor _ -> vars
-			(*| TCtor _| TArr _-> vars*)
-			| _ -> x::vars
+			| TCtor _ -> vars
+			| typ -> (x, typ)::vars
 		) (BatMap.find hole v_t) [] in
-		let result = subst_var_comp (l, e) vars in
+		let result = subst_var_comp tenv (l, e) vars in
 		BatSet.union result acc
 	) BatSet.empty candidates
 
@@ -269,11 +338,11 @@ let run : prog -> prog -> examples -> prog option
 	(* Repair Candidates *)
 	let start_time = Unix.gettimeofday () in
 	let (t1, t2) = (Cfg.S.run pgm, Cfg.S.run cpgm) in
-    (*
+  (*
 	Print.print_header "Analysis1"; print_endline (Cfg.S.string_of_t t1);
   Print.print_header "Analysis2"; print_endline (Cfg.S.string_of_t t2);
   *)
-	let repair_cand = get_repair_candidate (pgm, t1) (cpgm, t2) in
+	let repair_cand = get_repair_candidate (Type.VariableType.empty) (pgm, t1) (cpgm, t2) in
     (*
 	Print.print_header "Repair candidates";
 	(*

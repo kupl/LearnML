@@ -170,7 +170,7 @@ let fix_with_vectors2 : prog -> (string*prog) list -> examples -> unit
   List.iter (fun (filename, sol,(map,dist)) ->
   print_endline "@#$@#$@#$";
   Print.print_header ("filename: "^filename); 
-  (*Print.print_header "solution"; Print.print_pgm sol;*)
+  Print.print_header "solution"; Print.print_pgm sol;
   Print.print_header ("distance with submission: "^(string_of_float dist));
   ignore (Vrepairer.run sub sol map testcases);
 

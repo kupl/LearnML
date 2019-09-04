@@ -168,6 +168,10 @@ end
 module VariableType = struct
   type t = (int,TEnv.t) BatMap.t
   let empty = BatMap.empty
+
+  let find : int -> t -> TEnv.t
+  = fun label t -> BatMap.find label t 
+  
   let extend : int -> TEnv.t -> t -> t
   = fun hole env varenv -> BatMap.add hole env varenv
 
