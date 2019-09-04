@@ -75,7 +75,7 @@ let fix_with_solution : prog -> prog -> examples -> unit
   | Some pgm' ->
     Print.print_header "result"; Print.print_pgm pgm';
     print_endline ("Total time :" ^ string_of_float (Sys.time() -. !Synthesize.start_time))
-(*
+
 let generate_testcases : prog -> prog -> examples
 = fun submission solution -> 
   (* type checking *)
@@ -157,12 +157,17 @@ let fix_without_testcases : prog -> prog -> unit
       print_header "Correction"; print_pgm pgm;
       print_endline ("Total Time : " ^ string_of_float !task_time)
     )
-*)
-let topk = 2
-let fix_with_vectors2 : prog -> (string*prog) list -> examples -> unit
+
+let topk = 1
+
+(*
+ * function_level 
+ * position_aware_vector
+ *)
+let fix_with_vectors3 : prog -> (string*prog) list -> examples -> unit
 = fun sub solutions testcases->
   let k = topk in
-  let topk_lst = Freq_vector.search_solutions2 k sub solutions in
+  let topk_lst = Pos_vector.search k sub solutions in
 
   print_endline "@#$@#$@#$";
   Print.print_header "Submission"; Print.print_pgm sub;
@@ -177,10 +182,37 @@ let fix_with_vectors2 : prog -> (string*prog) list -> examples -> unit
   print_endline "@#$@#$@#$";
   ) topk_lst
 
+
+(*
+ * function_level 
+ * frequency_vector
+ *)
+let fix_with_vectors2 : prog -> (string*prog) list -> examples -> unit
+= fun sub solutions testcases->
+  let k = topk in
+  let topk_lst = Freq_vector.search2 k sub solutions in
+
+  print_endline "@#$@#$@#$";
+  Print.print_header "Submission"; Print.print_pgm sub;
+
+  List.iter (fun (filename, sol,(map,dist)) ->
+  print_endline "@#$@#$@#$";
+  Print.print_header ("filename: "^filename); 
+  (*Print.print_header "solution"; Print.print_pgm sol;*)
+  Print.print_header ("distance with submission: "^(string_of_float dist));
+  ignore (Vrepairer.run sub sol map testcases);
+
+  print_endline "@#$@#$@#$";
+  ) topk_lst
+
+(*
+ * program_level
+ * frequency_vector
+ *)
 let fix_with_vectors : prog -> (string*prog) list -> examples -> unit
 = fun sub solutions testcases->
   let k = topk in
-  let topk_lst = Freq_vector.search_solutions k sub solutions in
+  let topk_lst = Freq_vector.search k sub solutions in
 
   print_endline "@#$@#$@#$";
   Print.print_header "Submission"; Print.print_pgm sub;
@@ -283,6 +315,13 @@ let main () =
       match submission, solutions_debug with 
       | Some sub, [] -> raise (Failure (!opt_solution_dirname ^" may not exist"))
       | Some sub, hd::tl -> fix_with_vectors2 sub solutions_debug testcases
+      | _ -> raise (Failure(!opt_submission_filename ^ " does not exist"))
+    end 
+  else if !opt_vector3 then 
+    begin 
+      match submission, solutions_debug with 
+      | Some sub, [] -> raise (Failure (!opt_solution_dirname ^" may not exist"))
+      | Some sub, hd::tl -> fix_with_vectors3 sub solutions_debug testcases
       | _ -> raise (Failure(!opt_submission_filename ^ " does not exist"))
     end 
     (*

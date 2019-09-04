@@ -18,6 +18,14 @@ type node =
   |Empty
 and height = int 
 
+let rec node_to_string : node -> string
+= fun n -> 
+  match n with
+  |LNode(l,n) -> node_to_string n
+  |Node(h,s,lst) -> " " ^ s ^ "\n" ^ if (lst = []) then "!empty node!" ^ s else List.fold_left (fun acc elem -> acc ^ (node_to_string elem)) "" lst
+  |Leaf -> "Leaf\n"
+  |Empty -> ""
+
 let uninit = max_int
 
 let rec_to_node : bool -> node
@@ -34,11 +42,21 @@ let rec pat_to_node : pat -> node
   | PInt x -> Node (uninit, "PInt",[Leaf])
   | PBool b -> Node (uninit, "PBool",[Leaf])
   | PVar x -> Node (uninit, "PVar", [Leaf])
-  | PList lst -> Node (uninit, "PList", List.map pat_to_node lst)
-  | PCons lst -> Node (uninit, "PCons", List.map pat_to_node lst) 
-  | PTuple lst -> Node (uninit, "PTuple", List.map pat_to_node lst) 
-  | Pats lst -> Node (uninit, "Pats", List.map pat_to_node lst) 
-  | PCtor (x,lst) -> Node (uninit, "PCtor", (List.map pat_to_node lst))
+  | PList lst -> let subnode = if (lst = []) then [Leaf]
+                 else List.map pat_to_node lst in 
+                 Node (uninit, "PList", subnode)
+  | PCons lst -> let subnode = if (lst = []) then [Leaf]
+                 else List.map pat_to_node lst in 
+                 Node (uninit, "PCons", subnode)
+  | PTuple lst -> let subnode = if (lst = []) then [Leaf]
+                  else List.map pat_to_node lst in 
+                  Node (uninit, "PTuple", subnode) 
+  | Pats lst -> let subnode = if (lst = []) then [Leaf]
+                else List.map pat_to_node lst
+                in Node (uninit, "Pats", subnode) 
+  | PCtor (x,lst) -> let subnode = if (lst = []) then [Leaf]
+                 else List.map pat_to_node lst
+                 in Node (uninit, "PCtor", subnode) 
     
 let rec type_to_node : typ -> node
 = fun t ->
@@ -80,7 +98,9 @@ let rec exp_to_node : lexp -> node
   | String id-> Node (uninit, "Const_String", [Leaf])
   | TRUE 
   | FALSE -> Node(uninit, "Const_Bool",[Leaf])
-  | EList lst -> Node (uninit, "EList", List.map exp_to_node lst)
+  | EList lst -> let subnode = if (lst = []) then [Leaf]
+                 else List.map exp_to_node lst in 
+                 Node (uninit, "EList", subnode)
   | EVar x -> Node (uninit, "EVar", [Leaf]) 
   | ECtor (x,lst) -> Node (uninit, "ECtor", (List.map exp_to_node lst))
   | ETuple lst -> Node (uninit, "ETuple", List.map exp_to_node lst)

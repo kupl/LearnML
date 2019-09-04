@@ -36,8 +36,10 @@ let run : prog -> prog -> (string*string) list -> examples -> prog option
 	BatSet.iter (fun (l, e) -> ()
 	) repair_cand;
     let repair = List.find_opt (fun (l,e) ->
-		(*print_endline ("label : " ^ string_of_int l);
-        print_endline (Print.exp_to_string (l, e));*)
+        
+		print_endline ("label : " ^ string_of_int l);
+        print_endline (Print.exp_to_string (l, e));
+        
         let pgm' = List.map(fun decl -> subst_decl decl (l,e)) pgm in
         (*Print.print_pgm pgm';*)
         Eval.is_solution pgm' testcases

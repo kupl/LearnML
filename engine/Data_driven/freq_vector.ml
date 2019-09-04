@@ -50,11 +50,6 @@ let rec traverse : (string, int) BatHashtbl.t -> node -> unit
   | Leaf -> ()
   | Empty -> raise Emptyshouldnotbehere
 
-let ast_filter : prog -> node list
-= fun prog -> 
-  let flat = List.map decl_to_node prog in
-  List.filter (fun x -> x <> Empty) flat 
-
 let node_vectorize: node -> t
 = fun node -> 
   let table = gen_tbl () in traverse table node;
@@ -62,8 +57,10 @@ let node_vectorize: node -> t
 
 let prog_vectorize: prog -> t
 = fun prog -> 
-  let ast = ast_filter prog in
-  let table = gen_tbl () in List.iter (traverse table) ast;
+  let ast = List.map decl_to_node prog |>
+            List.filter (fun x -> x <> Empty) in
+  let table = gen_tbl () in 
+  List.iter (traverse table) ast;
   BatHashtbl.to_list table |> List.sort compare |> List.map (fun (k,v) -> v) 
 
 let rec funcs_vectorize: (string * lexp) list -> (string * t) list
@@ -82,7 +79,7 @@ let calculate_distance : t -> t -> float
     | [],[] -> 0
     | h::t, h'::t' -> (h-h')*(h-h') + sum t t' 
     | _ -> raise (Failure "vector should have same dimension") in
-     sqrt (float_of_int(sum t1 t2))
+  sqrt (float_of_int(sum t1 t2))
 
 let rec gen_score_map : (string * t) list -> (string * t) list -> ((string * string) * float) list 
 = fun ts1 ts2 ->
@@ -104,7 +101,8 @@ let calculate_mapping_distance : (string*t) list -> (string*t) list -> (string *
   let min_mapping = List.fold_left (fun (min_map,min) cur_map -> 
                       let cur_score = calculate_func_score cur_map in
                       if min > cur_score then ((List.map key_filter cur_map), cur_score)
-                                         else (min_map, min)) ([],max_float) all_func_mapping 
+                      else (min_map, min)) 
+                    ([],max_float) all_func_mapping 
   in min_mapping
     
 let search_solutions_by_program_match : int -> prog -> (string * prog) list -> (string * prog * float) list 
@@ -130,6 +128,6 @@ let search_solutions_by_function_match : int -> prog -> (string * prog) list -> 
                  BatList.take topk in
   topk_lst
     
-let search_solutions = search_solutions_by_program_match
-let search_solutions2 = search_solutions_by_function_match
+let search = search_solutions_by_program_match
+let search2 = search_solutions_by_function_match
 
