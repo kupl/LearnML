@@ -1,0 +1,20 @@
+{
+  (Const 1,"x");[("x",1)] => 0;
+  (Var "x","y");[("x",1)] => 0;
+  (Var "y","x");[("y",1)] => 0;
+  (Power ("x",2),"y");[("x",5)] => 0;
+  (Sum [Const 0; Var "x"],"x");[("x",10)] => 1;
+  (Sum [Power ("x", 2); Times [Const 2; Var "x"]; Const 1], "x");[("x", 2)] => 6;
+  (Sum [Power ("x", 2); Power ("x", 2); Const 1], "x");[("x",3)] => 12;
+  (Sum [Power ("x", 2); Power ("x", 2); Const 1], "y");[("x",1)] => 0;
+  (Sum [Const 2; Power ("x",2); Power ("x",3)], "x");["x",2] => 16;
+  (Times [Power ("x", 3); Power ("y", 2)], "x");[("x", 10); ("y", 5)] => 7500;
+  (Sum [Times [Sum [Var "x"; Var "y"]; Times [Var "x"; Var "y"]]; Power ("x", 2)], "x");[("x", 3); ("y", 4)] => 46;
+  (Times [Times [Sum [Var "x"; Var "y"]; Var "x"]; Var "x"], "x");[("x", 2); ("y", 5)] =>  32;
+  (Times [Power ("x",2); Var "y"], "x");[("x", 3); ("y", 4)] => 24;
+  (Times [Const 2; Sum [Var "x"; Var "y"]; Power ("x", 3)], "x");[("x", 2); ("y", 1)] => 88;
+  (Times [Sum [Var "x"; Var "y"; Var "z"]; Power ("x", 2); Sum[Times [Const 3; Var "x"]; Var "z"]], "x");[("x", 2); ("y", 1); ("z", 1)] => 188;
+  (Times [Sum [Var "x"; Var "y"; Var "z"]; Power ("x", 2); Sum[Times [Const 3; Var "x"]; Var "z"]], "y");[("x", 1); ("y", 1); ("z", 1)] => 4;
+  (Times [Sum [Var "x";Const 1];Sum [Const 2;Const (-2)];Sum [Const 1]],"x");[("x",1)] =>0;    
+  (Times ([Var ("x"); Var ("x")]), "x") ;[("x", 1)] => 2;
+}
