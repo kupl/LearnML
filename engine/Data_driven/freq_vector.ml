@@ -91,19 +91,23 @@ let rec gen_score_map : (string * t) list -> (string * t) list -> ((string * str
 
 let calculate_mapping_distance : (string*t) list -> (string*t) list -> (string * string) list * float 
 = fun ts1 ts2 ->
-  let ts1,ts2 = Freq_map.padding ts1 ts2 in
-  let all_func_mapping = Freq_map.gen_mapping ts1 ts2 in
-  let score_map = gen_score_map ts1 ts2 in
-  let calculate_func_score = List.fold_left (fun acc (s,t,s',t') -> 
+  if (List.length ts1) = (List.length ts2) then 
+  begin
+    let ts1,ts2 = Freq_map.padding ts1 ts2 in
+    let all_func_mapping = Freq_map.gen_mapping ts1 ts2 in
+    let score_map = gen_score_map ts1 ts2 in
+    let calculate_func_score = List.fold_left (fun acc (s,t,s',t') -> 
                                let score = List.assoc (s,s') score_map in 
                                acc +. score) 0.0 in
-  let key_filter = (fun (s,t,s',t') -> s,s') in 
-  let min_mapping = List.fold_left (fun (min_map,min) cur_map -> 
+    let key_filter = (fun (s,t,s',t') -> s,s') in 
+    let min_mapping = List.fold_left (fun (min_map,min) cur_map -> 
                       let cur_score = calculate_func_score cur_map in
                       if min > cur_score then ((List.map key_filter cur_map), cur_score)
                       else (min_map, min)) 
                     ([],max_float) all_func_mapping 
-  in min_mapping
+    in min_mapping
+  end 
+  else ([],max_float)
     
 let search_solutions_by_program_match : int -> prog -> (string * prog) list -> (string * prog * float) list 
 = fun topk sub solutions ->

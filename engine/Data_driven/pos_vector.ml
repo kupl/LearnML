@@ -101,28 +101,30 @@ let rec gen_score_map : (string * t) list -> (string * t) list -> ((string * str
 
 let calculate_mapping_distance : (string*t) list -> (string*t) list -> (string * string) list * float 
 = fun ts1 ts2 ->
-  let ts1,ts2 = Pos_map.padding ts1 ts2 in
-  let all_func_mapping = Pos_map.gen_mapping ts1 ts2 in
-  let score_map = gen_score_map ts1 ts2 in
-  let calculate_func_score = List.fold_left (fun acc (s,t,s',t') -> 
+  if (List.length ts1) = (List.length ts2) then 
+  begin
+  (*let ts1,ts2 = Pos_map.padding ts1 ts2 in*)
+    let all_func_mapping = Pos_map.gen_mapping ts1 ts2 in
+    let score_map = gen_score_map ts1 ts2 in
+    let calculate_func_score = List.fold_left (fun acc (s,t,s',t') -> 
                                let score = List.assoc (s,s') score_map in 
                                acc +. score) 0.0 in
-  let key_filter = (fun (s,t,s',t') -> s,s') in 
-  let min_mapping = List.fold_left (fun (min_map,min) cur_map -> 
+    let key_filter = (fun (s,t,s',t') -> s,s') in 
+    let min_mapping = List.fold_left (fun (min_map,min) cur_map -> 
                       let cur_score = calculate_func_score cur_map in
                       if min > cur_score then ((List.map key_filter cur_map), cur_score)
                       else (min_map, min)) 
                     ([],max_float) all_func_mapping 
-  in min_mapping
+    in min_mapping
+  end 
+  else ([], max_float)
     
 let search_solutions_by_function_match : int -> prog -> (string * prog) list -> (string * prog * ((string * string) list * float)) list
 = fun topk sub solutions ->
-  let vectorize = funcs_vectorize in
-  let calculate = calculate_mapping_distance in
-  let preproc = (fun x -> x |>  Extractor.extract_func_all |> vectorize) in
+  let preproc = (fun x -> x |>  Extractor.extract_func_all |> funcs_vectorize) in
   let v_sub = preproc sub in
   let topk_lst = List.map (fun (f, sol) -> (f, sol, (preproc sol))) solutions |>
-                 List.map (fun (f ,sol, v_sol) -> (f, sol, (calculate v_sub v_sol))) |>
+                 List.map (fun (f ,sol, v_sol) -> (*print_endline f;*) (f, sol, (calculate_mapping_distance v_sub v_sol))) |>
                  List.sort (fun (_,_,(_,dist)) (_,_,(_,dist')) -> compare dist dist') |>
                  BatList.take topk in
   topk_lst
