@@ -32,6 +32,7 @@ let opt_localize = ref false
 let opt_test = ref false
 let opt_qcheck = ref false
 let opt_exp_cover = ref false
+let opt_json = ref ""
 
 (*For debugging*)
 let opt_tree = ref false
