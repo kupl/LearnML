@@ -102,7 +102,9 @@ let rec exp_to_node : lexp -> node
                  else List.map exp_to_node lst in 
                  Node (uninit, "EList", subnode)
   | EVar x -> Node (uninit, "EVar", [Leaf]) 
-  | ECtor (x,lst) -> Node (uninit, "ECtor", (List.map exp_to_node lst))
+  | ECtor (x,lst) -> let subnode = if (lst = []) then [Leaf]
+                     else List.map exp_to_node lst in
+                     Node (uninit, "ECtor", subnode)
   | ETuple lst -> Node (uninit, "ETuple", List.map exp_to_node lst)
   | ADD (e1,e2) -> Node (uninit, "ADD", [exp_to_node e1;exp_to_node e2])
   | SUB (e1,e2) -> Node (uninit, "SUB", [exp_to_node e1;exp_to_node e2])
