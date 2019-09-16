@@ -1,3 +1,4 @@
+(* type error 
 type var = string
 type lambda = V of var
            | P of var * lambda
@@ -17,4 +18,4 @@ let rec check lambda =
   match lambda with
   | V s -> false
   | _ -> (check lambda areal))
-
+*)

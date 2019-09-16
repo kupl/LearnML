@@ -1,3 +1,5 @@
+(* edited
+ * type error
 type lambda = V of var
            | P of var * lambda
            | C of lambda * lambda
@@ -21,4 +23,4 @@ let rec check_list((l : var list), id) : bool =
     | V(id) -> false
     | P(id, m) -> check_list(id::[], m)
     | C(m1, m2) -> check(m1) && check(m2);;
-    
+  *)  

@@ -10,8 +10,8 @@ let rec check : (string list)*lambda -> bool = fun (nlist,m) ->
  | P(n,m1) -> check(n::nlist,m1)
  | C(m1,m2) -> check(nlist,m1) && check(nlist,m2)
 
-let rec check : lambda -> bool = fun m ->
+let rec checklambda : lambda -> bool = fun m ->
  match m with
  | V(n) -> false
  | P(n,m1) -> check(n::[],m1)
- | C(m1,m2) -> check(m1) && check(m2)
+ | C(m1,m2) -> checklambda(m1) && checklambda(m2)

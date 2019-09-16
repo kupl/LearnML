@@ -23,4 +23,5 @@ let rec diff : aexp * string -> aexp
     
   
  
-diff(Sum [Power ("x",2);Times [Const 2;Var "x"];Const 1],"x");;
+(* edit
+ * diff(Sum [Power ("x",2);Times [Const 2;Var "x"];Const 1],"x");;*)
