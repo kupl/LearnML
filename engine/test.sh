@@ -29,11 +29,12 @@
 #./main.native -tree -submission ../benchmarks/All_lambda/15/sub68.ml
 #./main.native -vector -submission ../benchmarks/All_lambda/15/sub68.ml
 
-#Issue1: Not found(DONE!)
-#./main.native -run -submission ../benchmarks/KoreaUniv_diff/15/sub12.ml -testcases ../benchmarks/KoreaUniv_diff/testcases -entry diff
-#wrong command! diff's entry func is grading
-
+#run
+./main.native -run -submission ../benchmarks_correct/All_lambda/14/sub9.ml -testcases ../benchmarks_correct/All_lambda/testcases -entry check
 #Data driven
 ./main.native -vector3 -submission ../benchmarks_incorrect/KoreaUniv_diff/18/sub58.ml -solutions ../benchmarks_correct/KoreaUniv_diff/ -testcases ../benchmarks_correct/KoreaUniv_diff/testcases -entry grading -grading ../benchmarks_correct/KoreaUniv_diff/grading.ml
 ./main.native -vector3 -submission ../benchmarks_incorrect/All_lambda/k_15/sub15.ml -solutions ../benchmarks_correct/All_lambda -testcases ../benchmarks_correct/All_lambda/testcases -entry check
 ./main.native -vector3 -submission ../benchmarks_incorrect/All_diff/12/sub14.ml -solutions ../benchmarks_correct/All_diff/ -testcases ../benchmarks_correct/All_diff/testcases -entry grading -grading ../benchmarks_correct/All_diff/grading.ml
+
+#Data driven diff example
+./main.native -vector3 -submission ../benchmarks_incorrect/All_diff/15/sub41.ml -solutions ../benchmarks_correct/All_diff/ -testcases ../benchmarks_correct/All_diff/testcases -entry grading -grading ../benchmarks_correct/All_diff/grading.ml
