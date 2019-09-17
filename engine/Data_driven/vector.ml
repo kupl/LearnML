@@ -155,7 +155,7 @@ module N = struct
                      else update tbl "Const_False"
     | _ -> raise Emptyshouldnotbehere
 
-  let init_vector = [
+  let init_vector = List.sort compare [
     ("Rec",0); ("No Rec",0); ("PUnit",0); ("PUnder",0); ("PInt",0);
     ("PBool",0); ("PVar",0); ("PList",0); ("PCons",0); ("PTuple",0);
     ("Pats",0); ("PCtor",0); ("TUnit",0); ("TInt",0); ("TString",0);

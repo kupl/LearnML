@@ -9,6 +9,12 @@ function clean
 	exit 0
 }
 
+function debug 
+{
+    ocamlbuild -use-menhir $TARGET -use-ocamlfind -Is $INCLUDE_DIRS -tag 'debug'
+    exit 0
+}
+
 while [ $# -ne 0 ] && [ ! -z $1 ]; do
 	case $1 in
 		debug|clean|rebuild) "$1" ;;
