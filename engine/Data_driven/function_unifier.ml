@@ -108,7 +108,8 @@ module Comp = struct
 			| TCtor (name, ts) -> 
 				begin match ts with
 				| [] -> BatSet.add (0, ECtor (var, [])) set
-				| hd::tl -> BatSet.add (0, ECtor (var, [dummy_hole ()])) set
+				| (TTuple ts)::tl -> BatSet.add (0, ECtor (var, List.map (fun t -> dummy_hole ()) ts)) set
+				| _::tl -> BatSet.add (0, ECtor (var, [dummy_hole ()])) set
 				end
 			| _ -> set
 		) tenv comp
@@ -214,7 +215,7 @@ let rec type_directed : (hole * typ * Type.TEnv.t) -> state -> state option
     let ns = List.map (fun e -> extract_holenum e) es in
     let ts = List.map (fun _ -> fresh_tvar ()) ns in
     let (h_t, v_t, subst) = update_polymorphic (hole_typ, TTuple ts) (h_t, v_t, subst) in
-    (* let init = List.fold_left (fun acc hole -> BatSet.add hole acc) init in *)
+    (*let init = List.fold_left (fun acc hole -> BatSet.add hole acc) init ns in *)
     Some (update_state (List.map2 (fun n typ -> (n, typ)) ns ts) hole_env (lexp, h_t, v_t, subst, init))
   (* Ctor comp *)
 	| ECtor (x, es) ->
@@ -358,9 +359,14 @@ let rec refine_call : (id * typ) -> lexp
 			| _ -> gen_labeled_hole ()
 		in
 		(gen_label (), EApp (e1, e2))
-	| _ -> 
+	| t -> 
 		let e1 = (gen_label (), EVar f) in
-		(gen_label (), EApp (e1, gen_labeled_hole ()))	
+		let e2 =
+			match t with
+			| TTuple ts -> (gen_label (), ETuple (List.map (fun t -> gen_labeled_hole ()) ts))
+			| _ -> gen_labeled_hole ()
+		in
+		(gen_label (), EApp (e1, e2))	
 	
 let rec refine_exp : PreAnalysis.t -> Type.TEnv.t -> lexp -> lexp BatSet.t
 = fun pre func_map (l, exp) -> 
