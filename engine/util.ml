@@ -269,3 +269,33 @@ let rec time_action ~f:(f: unit -> 'a) : float * 'a =
   let res = f () in
   let t2  = Unix.gettimeofday () in
   (t2 -. t1, res)
+
+let rec join_tuple : 'a BatSet.t -> 'b BatSet.t -> ('a * 'b) BatSet.t
+= fun s1 s2 ->
+  BatSet.fold (fun e1 acc ->
+    BatSet.fold (fun e2 acc ->
+      BatSet.add (e1, e2) acc
+    ) s2 acc
+  ) s1 BatSet.empty
+
+let rec join_triple : 'a BatSet.t -> 'b BatSet.t -> 'c BatSet.t -> ('a * 'b * 'c) BatSet.t
+= fun s1 s2 s3 ->
+  BatSet.fold (fun e1 acc ->
+    BatSet.fold (fun e2 acc ->
+      BatSet.fold (fun e3 acc ->
+        BatSet.add (e1, e2, e3) acc
+      ) s3 acc
+    ) s2 acc
+  ) s1 BatSet.empty
+
+
+let rec join_list : ('a BatSet.t) list -> ('a list) BatSet.t
+= fun sets ->
+  match sets with
+  | [] -> BatSet.singleton []
+  | hd::tl -> 
+    BatSet.fold (fun lst acc -> 
+      BatSet.fold (fun e acc ->
+        BatSet.add (e::lst) acc 
+      ) hd acc
+    ) (join_list tl) BatSet.empty
