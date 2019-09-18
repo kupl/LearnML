@@ -101,14 +101,16 @@ module Comp = struct
 			| _ -> BatSet.add (0, EVar var) set
 		) tenv comp
 
-	let update_ctor_coponents : Type.TEnv.t -> components -> components
+	let update_ctor_components : Type.TEnv.t -> components -> components
 	= fun tenv comp ->
 		BatMap.foldi (fun var t set ->
 			match t with
 			| TCtor (name, ts) -> 
 				begin match ts with
 				| [] -> BatSet.add (0, ECtor (var, [])) set
-				| (TTuple ts)::tl -> BatSet.add (0, ECtor (var, List.map (fun t -> dummy_hole ()) ts)) set
+				| (TTuple ts)::tl -> 
+					let ctor_arg = (gen_label (), ETuple (List.map (fun t -> dummy_hole ()) ts)) in
+					BatSet.add (0, ECtor (var, [ctor_arg])) set
 				| _::tl -> BatSet.add (0, ECtor (var, [dummy_hole ()])) set
 				end
 			| _ -> set
@@ -289,7 +291,7 @@ let get_next_states : components -> Workset.work -> lexp -> Workset.work BatSet.
     end 
   in
   let comp = Comp.update_var_components hole_env comp in
-  let comp = if BatSet.mem n init then Comp.update_ctor_coponents hole_env comp else comp in
+  let comp = if BatSet.mem n init then Comp.update_ctor_components hole_env comp else comp in
   let comp = BatSet.map Comp.update_components comp in
   (* Transition *)
   let next_states = BatSet.fold (fun comp set -> 
@@ -494,11 +496,13 @@ let update_func_comp : PreAnalysis.t -> prog -> repair_cand BatSet.t -> repair_c
 				get_all_holes e
 				|> BatSet.map (fun hole -> extract_holenum hole) 
 			in
+			(*
 			let _ =
 				print_endline ("Exp : " ^ Print.exp_to_string e);
 				print_endline ("Holes : ");
 				BatSet.iter (fun hole -> print_endline (string_of_int hole)) init_holes
 			in
+			*)
 			Workset.add (e, h_t, v_t, subst, init_holes) workset
 		) result Workset.empty in
 		let result = 

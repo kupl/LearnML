@@ -31,10 +31,18 @@
 
 #run
 ./main.native -run -submission ../benchmarks_correct/All_lambda/14/sub9.ml -testcases ../benchmarks_correct/All_lambda/testcases -entry check
+
 #Data driven
 ./main.native -vector3 -submission ../benchmarks_incorrect/KoreaUniv_diff/18/sub58.ml -solutions ../benchmarks_correct/KoreaUniv_diff/ -testcases ../benchmarks_correct/KoreaUniv_diff/testcases -entry grading -grading ../benchmarks_correct/KoreaUniv_diff/grading.ml
 ./main.native -vector3 -submission ../benchmarks_incorrect/All_lambda/k_15/sub15.ml -solutions ../benchmarks_correct/All_lambda -testcases ../benchmarks_correct/All_lambda/testcases -entry check
 ./main.native -vector3 -submission ../benchmarks_incorrect/All_diff/12/sub14.ml -solutions ../benchmarks_correct/All_diff/ -testcases ../benchmarks_correct/All_diff/testcases -entry grading -grading ../benchmarks_correct/All_diff/grading.ml
+
+#labmda 
+./main.native -vector2 -submission ../tests/lambda1/sub.ml -solutions ../tests/lambda1/ -entry check -testcases ../benchmarks_correct/KoreaUniv_lambda/testcases
+
+#diff
+./main.native -vector2 -submission ../tests/diff1/sub.ml -solutions ../tests/diff1/ -entry grading -grading ../benchmarks_correct/KoreaUniv_diff/grading.ml -testcases ../benchmarks_correct/KoreaUniv_diff/testcases
+./main.native -vector2 -submission ../tests/diff2/sub.ml -solutions ../tests/diff2/ -entry grading -grading ../benchmarks_correct/KoreaUniv_diff/grading.ml -testcases ../benchmarks_correct/KoreaUniv_diff/testcases
 
 #Data driven diff example
 ./main.native -vector3 -submission ../benchmarks_incorrect/All_diff/15/sub41.ml -solutions ../benchmarks_correct/All_diff/ -testcases ../benchmarks_correct/All_diff/testcases -entry grading -grading ../benchmarks_correct/All_diff/grading.ml

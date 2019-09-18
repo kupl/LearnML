@@ -374,6 +374,9 @@ let rec subst_decl : decl -> repair_cand -> decl
     DBlock (is_rec, bindings) 
   | _ -> decl
 
+let rec subst_prog : prog -> repair_cand -> prog
+= fun pgm candidate -> List.map (fun decl -> subst_decl decl candidate) pgm
+
 (*
 	Input : An incorrect program pgm, a correct program cpgm, and a set of testcases testcases
 	Output : A repaired program pgm' satisfying all testcases
