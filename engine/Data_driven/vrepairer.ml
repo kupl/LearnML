@@ -1,10 +1,28 @@
 open Lang
 open Repairer
 
-
 module Workset = struct
   (* work = (applied, not applied) *)
   type work = (repair_cand BatSet.t * repair_cand BatSet.t)
+
+  let rec exp_cost : lexp -> int
+  = fun (_, exp) ->
+    match exp with
+    | MINUS e | NOT e | EFun (_, e) | Raise e -> 1 + exp_cost e
+    | EList es | ECtor (_, es) | ETuple es -> List.fold_left (fun acc e -> exp_cost e + acc) 1 es
+    | ADD (e1, e2) | SUB (e1, e2) | MUL (e1, e2) | DIV (e1, e2) | MOD (e1, e2)
+    | OR (e1, e2) | AND (e1, e2) | EQUAL (e1, e2) | NOTEQ (e1, e2)
+    | LESS (e1, e2) | LARGER (e1, e2)| LESSEQ (e1, e2) | LARGEREQ (e1, e2)
+    | AT (e1, e2) | DOUBLECOLON (e1, e2) | STRCON (e1, e2) | EApp (e1, e2) 
+    | ELet (_, _, _, _, e1, e2) -> 1 + (exp_cost e1) + (exp_cost e2)
+    | IF (e1, e2, e3) -> 1 + (exp_cost e1) + (exp_cost e2) + (exp_cost e3)
+    | EMatch (e, bs) -> 
+      let es = e::(List.map (fun (p, e) -> e) bs) in
+      List.fold_left (fun acc e -> exp_cost e + acc) 1 es
+    | EBlock (_, bs, e) -> 
+      let es = e::(List.map (fun (_, _, _, _, e) -> e) bs) in
+      List.fold_left (fun acc e -> exp_cost e + acc) 1 es
+    | _ -> 1
 
   let cost : repair_cand BatSet.t -> int
   = fun set -> BatSet.fold (fun (l, e) cost -> cost + (exp_cost e)) set 0
@@ -64,13 +82,6 @@ let test : prog -> unit
   let res = Extractor.extract_func_all pgm in
   let str = List.fold_left (fun acc (s,exp) -> acc ^ "\nFunc : " ^ s ^ "\n"^(Print.exp_to_string exp) ^"\n---------------------\n") "" res in print_endline str
 
-let compare_exp : lexp -> lexp -> int
-= fun e1 e2 ->
-  let (c1, c2) = (exp_cost e1, exp_cost e2) in
-  if c1 = c2 then 0 else
-  if c1 > c2 then 1
-  else -1
-
 let rec next : Workset.t -> Workset.work -> Workset.t
 = fun t (a, na) ->
   BatSet.fold (fun elem t -> Workset.add (BatSet.add elem a, BatSet.remove elem na) t) na t
@@ -115,7 +126,6 @@ let run : prog -> prog -> (string*string) list -> examples -> prog option
   BatSet.iter (fun (l, e) -> print_endline (string_of_int l ^ " : " ^ Print.exp_to_string e)) repair_cand;
   print_endline ("------------------------------");
   print_endline ("Size of repair Cand : " ^ string_of_int (BatSet.cardinal repair_cand));
-  let sorted_repair_cand = List.sort (fun (_, e1) (_, e2) -> compare_exp e1 e2) (BatSet.to_list repair_cand) in
   let repair = work pgm (Workset.init repair_cand) testcases in
   match repair with
   | Some pgm' ->
