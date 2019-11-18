@@ -228,7 +228,8 @@ let rec extract_decl : t -> decl -> t
 let extract_all : prog -> t
 = fun pgm ->
   let pgm' = T.run pgm in
-  List.fold_left (fun t decl -> extract_decl t decl) BatMap.empty pgm' 
+  let t = List.fold_left (fun t decl -> extract_decl t decl) BatMap.empty pgm' in
+  if BatMap.is_empty t then raise (Failure "Empty_norm") else t
 
 let print : t -> unit
 = fun t ->

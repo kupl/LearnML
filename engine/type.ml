@@ -443,10 +443,6 @@ and extract_tvar2 : id -> typ list -> bool
 
 let rec unify : Subst.t -> (typ * typ) -> Subst.t
 = fun subst (t1, t2) ->
-  (*
-  print_endline ("---------");
-  Subst.print subst;
-  *)
   if t1 = t2 then subst else
   match t1, t2 with
   | TList t1, TList t2 -> unify subst (t1, t2)
