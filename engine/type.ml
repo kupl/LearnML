@@ -115,7 +115,7 @@ module TEnv = struct
   let empty = BatMap.empty
   let extend : id * typ -> t ->t 
   = fun (x,t) tenv -> BatMap.add x t tenv
-  let find tenv x = BatMap.find x tenv
+  let find tenv x = try BatMap.find x tenv with Not_found -> raise (Failure (x ^ "Not found"))
   let rec print tenv = 
     BatMap.iter (fun id typ -> 
       print_endline(id^"|->"^(type_to_string typ))) tenv
@@ -171,7 +171,7 @@ module VariableType = struct
 
   let find : int -> t -> TEnv.t
   = fun label t -> BatMap.find label t 
-  
+
   let extend : int -> TEnv.t -> t -> t
   = fun hole env varenv -> BatMap.add hole env varenv
 
@@ -423,6 +423,11 @@ let rec gen_equations : HoleType.t -> VariableType.t -> TEnv.t -> lexp -> typ ->
   | Raise e ->
     gen_equations hole_typ var_typ tenv e TExn
 
+let rec print_eqn : typ_eqn -> unit
+= fun eqn -> 
+  print_endline "----------- Type Equation -----------";
+  List.iter (fun (t1, t2) -> print_endline (Print.type_to_string t1 ^ " := " ^ Print.type_to_string t2)) eqn
+
 (* Unification *)
 let rec extract_tvar : id -> typ -> bool
 = fun x t ->
@@ -438,6 +443,10 @@ and extract_tvar2 : id -> typ list -> bool
 
 let rec unify : Subst.t -> (typ * typ) -> Subst.t
 = fun subst (t1, t2) ->
+  (*
+  print_endline ("---------");
+  Subst.print subst;
+  *)
   if t1 = t2 then subst else
   match t1, t2 with
   | TList t1, TList t2 -> unify subst (t1, t2)
@@ -486,9 +495,9 @@ let rec type_decl : (TEnv.t * HoleType.t * VariableType.t * Subst.t) -> decl -> 
     in
     let ty = type_of_fun args typ in
     let (eqns, hole_typ, var_typ) = gen_equations hole_typ var_typ tenv exp ty in
-    let (subst, hole_typ, var_typ) = solve (eqns, hole_typ, var_typ) in
+    let (subst', hole_typ, var_typ) = solve (eqns, hole_typ, var_typ) in
     let ty = Subst.apply ty subst in
-    (let_binding tenv f ty, hole_typ, var_typ, subst)
+    (let_binding tenv f ty, hole_typ, var_typ, subst @ subst')
   | DBlock (is_rec, bindings) ->
     (* initialize tenv *)
     let tenv = 
@@ -509,13 +518,13 @@ let rec type_decl : (TEnv.t * HoleType.t * VariableType.t * Subst.t) -> decl -> 
     let (eqn, hole_typ, var_typ) = List.fold_left (fun (eqn, hole_typ, var_typ) (eqn', hole_typ', var_typ') -> 
       (eqn@eqn', BatMap.union hole_typ hole_typ', BatMap.union var_typ var_typ')
     ) ([], hole_typ, var_typ) results in 
-    let (subst, hole_typ, var_typ) = solve (eqn, hole_typ, var_typ) in
+    let (subst', hole_typ, var_typ) = solve (eqn, hole_typ, var_typ) in
     (* binding each decl with result *)
     let tenv = List.fold_left (fun tenv (f, is_rec, args, typ, exp) -> 
       let ty = type_of_fun args typ in
       let_binding tenv f (Subst.apply ty subst)
     ) tenv bindings in
-    (tenv, hole_typ, var_typ, subst)
+    (tenv, hole_typ, var_typ, subst @ subst')
   | TBlock decls -> List.fold_left (type_decl) (tenv, hole_typ, var_typ, subst) decls
 
 and ctors_to_env : TEnv.t -> typ -> ctor list -> TEnv.t
