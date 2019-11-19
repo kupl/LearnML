@@ -5,41 +5,41 @@ open Util
 (* Compute a minimal function mathcing of two normalized programs *)
 (******************************************************************)
 
-(* 'a list1 -> 'a list2 -> comp -> minum matching * unmatched elem *)
-let rec find_minimum_combination : 'a list -> 'a list -> ('a -> 'a -> int) -> ('a * 'a * int) list * 'a list 
-= fun lst1 lst2 comp ->
+(* 'a list1 -> 'a list2 -> comp1 -> comp2 -> minum matching * unmatched elem * score *)
+let rec find_minimum_combination : 'a list -> 'a list -> ('a -> int) -> ('a -> 'a -> int) -> ('a * 'a) list * 'a list * int
+= fun lst1 lst2 comp1 comp2 ->
   (* Need optimization *)
   let (l1, l2) = (List.length lst1, List.length lst2) in
   if l1 <= l2 then
-    let l2_sub = list_permutationk lst2 l1 in
-    let (cost, perm) = List.fold_left (fun (cost, perm) perm' -> 
-      let cost' = List.fold_left2 (fun acc e1 e2 -> acc + comp e1 e2) 0 lst1 perm' in
-      if cost' < cost || cost < 0 then (cost', perm') else (cost, perm)
-    ) (-1, []) l2_sub in
-    let l2_remain = list_sub lst2 perm in
-    (List.map2 (fun e1 e2 -> (e1, e2, comp e1 e2)) lst1 perm, l2_remain)
+    List.fold_left (fun (matches, unmatches, cost) cand -> 
+      let remain = list_sub lst2 cand in
+      let cost' = (List.fold_left2 (fun acc e1 e2 -> acc + comp2 e1 e2) 0 lst1 cand) + (List.fold_left (fun acc e -> comp1 e) 0 remain) in
+      if cost' < cost || cost < 0 then (List.map2 (fun e1 e2 -> (e1, e2)) lst1 cand, remain, cost') else (matches, unmatches, cost)
+    ) ([], [], -1) (list_permutationk lst2 l1)
   else
-    let l1_sub = list_permutationk lst1 l2 in
-    let (cost, perm) = List.fold_left (fun (cost, perm) perm' -> 
-      let cost' = List.fold_left2 (fun acc e1 e2 -> acc + comp e1 e2) 0 lst2 perm' in
-      if cost' < cost || cost < 0 then (cost', perm') else (cost, perm)
-    ) (-1, []) l1_sub in
-    let l1_remain = list_sub lst1 perm in
-    (List.map2 (fun e1 e2 -> (e1, e2, comp e1 e2)) perm lst2, l1_remain)
+    (* Redundant *)
+    List.fold_left (fun (matches, unmatches, cost) cand -> 
+      let remain = list_sub lst1 cand in
+      let cost' = (List.fold_left2 (fun acc e1 e2 -> acc + comp2 e1 e2) 0 lst2 cand) + (List.fold_left (fun acc e -> comp1 e) 0 remain) in
+      if cost' < cost || cost < 0 then (List.map2 (fun e1 e2 -> (e1, e2)) cand lst2, remain, cost') else (matches, unmatches, cost)
+    ) ([], [], -1) (list_permutationk lst1 l2)
 
-let rec find_all_combination : 'a list -> 'a list -> ('a -> 'a -> int) -> (('a * 'a * int) list * 'a list) list
-= fun lst1 lst2 comp ->
+
+let rec find_all_combination : 'a list -> 'a list -> ('a -> int) -> ('a -> 'a -> int) -> (('a * 'a) list * 'a list * int) list
+= fun lst1 lst2 comp1 comp2 ->
   let (l1, l2) = (List.length lst1, List.length lst2) in
   if l1 <= l2 then
-    let l2_sub = list_permutationk lst2 l1 in
-    List.fold_left (fun acc perm -> 
-      (List.map2 (fun e1 e2 -> (e1, e2, comp e1 e2)) lst1 perm, list_sub lst2 perm)::acc
-    ) [] l2_sub 
+    List.fold_left (fun acc cand -> 
+      let remain = list_sub lst2 cand in
+      let cost' = (List.fold_left2 (fun acc e1 e2 -> acc + comp2 e1 e2) 0 lst1 cand) + (List.fold_left (fun acc e -> comp1 e) 0 remain) in
+      (List.map2 (fun e1 e2 -> (e1, e2)) lst1 cand, remain, cost')::acc
+    ) [] (list_permutationk lst2 l1)
   else
-    let l1_sub = list_permutationk lst1 l2 in
-    List.fold_left (fun acc perm -> 
-      (List.map2 (fun e1 e2 -> (e1, e2, comp e1 e2)) perm lst2, list_sub lst1 perm)::acc
-    ) [] l1_sub 
+    List.fold_left (fun acc cand -> 
+      let remain = list_sub lst1 cand in
+      let cost' = (List.fold_left2 (fun acc e1 e2 -> acc + comp2 e1 e2) 0 lst2 cand) + (List.fold_left (fun acc e -> comp1 e) 0 remain) in
+      (List.map2 (fun e1 e2 -> (e1, e2)) cand lst2, remain, cost')::acc
+    ) [] (list_permutationk lst1 l2)
 
 (* Compute syntatic difference : work with the same strategy of template extraction *)
 let min : int -> int -> int
@@ -48,7 +48,7 @@ let min : int -> int -> int
 let rec exp_size : lexp -> int 
 = fun (l, exp) ->
   match exp with
-  | EList es | ECtor (_, es) | ETuple es -> 1 + List.fold_left (fun acc e -> acc + exp_size e) 1 es
+  | EList es | ECtor (_, es) | ETuple es -> 1 + List.fold_left (fun acc e -> acc + exp_size e) 0 es
   | MINUS e | NOT e | EFun (_, e) -> 1 + exp_size e
   | ADD (e1, e2) | SUB (e1, e2) | MUL (e1, e2) | DIV (e1, e2) | MOD (e1, e2)
   | OR (e1, e2) | AND (e1, e2) | LESS (e1, e2) | LARGER (e1, e2) | EQUAL (e1, e2) | NOTEQ (e1, e2)
@@ -63,12 +63,13 @@ let rec exp_size : lexp -> int
 let rec match_pat : pat -> pat -> bool
 = fun p1 p2 ->
   match (p1, p2) with
-  | PUnit, PUnit | PUnder, PUnder | PVar _, PVar _ -> true
+  | PUnit, PUnit -> true
   | PInt n1, PInt n2 -> n1 = n2
   | PBool b1, PBool b2 -> b1 = b2
   | PList ps1, PList ps2 | PTuple ps1, PTuple ps2 | PCons ps1, PCons ps2 -> (try List.for_all2 match_pat ps1 ps2 with _ -> false)
   | PCtor (x, ps1), PCtor (y, ps2) -> (x = y) && (try List.for_all2 match_pat ps1 ps2 with _ -> false)
   | Pats ps, _ | _, Pats ps -> raise (Failure "Nomalized programs do not have this pattern")
+  | PUnder, _ | _, PUnder | PVar _, _ | _, PVar _ -> true
   | _ -> false
 
 let rec edit_distance : lexp -> lexp -> int
@@ -88,7 +89,7 @@ let rec edit_distance : lexp -> lexp -> int
     end
   | ECtor (x1, es1), ECtor (x2, es2) when x1 = x2 ->
     begin 
-      try List.fold_left2 (fun acc e1 e2 -> acc + edit_distance e1 e2) 1 es1 es2 
+      try List.fold_left2 (fun acc e1 e2 -> acc + edit_distance e1 e2) 0 es1 es2 
       with _ -> exp_size exp1 + exp_size exp2 
     end
   (* Unary *)
@@ -97,9 +98,13 @@ let rec edit_distance : lexp -> lexp -> int
   | ADD (e1, e2), ADD (e1', e2') | MUL (e1, e2), MUL (e1', e2') | OR (e1, e2), OR (e1', e2') | AND (e1, e2), AND (e1', e2') 
   | EQUAL (e1, e2), EQUAL (e1', e2') | NOTEQ(e1, e2), NOTEQ (e1', e2') -> 
     (* TODO : generalized *)
+    let (_, _, d) = find_minimum_combination [e1; e2] [e1'; e2'] exp_size edit_distance in 
+    d
+    (*
     let d1 = edit_distance e1 e1' + edit_distance e2 e2' in
     let d2 = edit_distance e1 e2' + edit_distance e2 e1' in
-    min d1 d2
+    let d3 = min d1 d2 in  
+    *)
   (* Noncommutative binary *)
   | SUB (e1, e2), SUB (e1', e2') | DIV (e1, e2), DIV (e1', e2') | MOD (e1, e2), MOD (e1', e2') 
   | LESS (e1, e2), LESS (e1', e2') | LARGER (e1, e2), LARGER (e1', e2') 
@@ -107,11 +112,7 @@ let rec edit_distance : lexp -> lexp -> int
   | AT (e1, e2), AT (e1', e2') | DOUBLECOLON (e1, e2), DOUBLECOLON (e1', e2')| STRCON (e1, e2), STRCON (e1', e2') 
   | EApp (e1, e2), EApp (e1', e2') -> edit_distance e1 e1' + edit_distance e2 e2'
   (* Condition *)
-  | IF (e1, e2, e3), IF (e1', e2', e3') -> 
-    (* TODO : generalized *)
-    let d1 = edit_distance e2 e2' + edit_distance e3 e3' in
-    let d2 = edit_distance e2 e3' + edit_distance e3 e2' in
-    edit_distance e1 e1' + min d1 d2
+  | IF (e1, e2, e3), IF (e1', e2', e3') -> edit_distance e1 e1' + edit_distance e2 e2' + edit_distance e3 e3'
   | EMatch (e1, bs1), EMatch (e2, bs2) ->
     (* Distance between matched branches *)
     let (d1, unmatches) = List.fold_left (fun (d1, unmatches) (p, e) ->
@@ -121,24 +122,29 @@ let rec edit_distance : lexp -> lexp -> int
       with _ -> (d1 + exp_size e, unmatches)
     ) (0, bs2) bs1 in
     (* Distance of unmatches branches *)
-    let d2 = List.fold_left (fun acc (p, e) -> acc + (2 * exp_size e)) 0 unmatches in
+    let d2 = List.fold_left (fun acc (p, e) -> acc + exp_size e) 0 unmatches in
     edit_distance e1 e2 + d1 + d2
   (* Binding *)
   | ELet (_, _, _, _, e1, e2), ELet (_, _, _, _, e1', e2') -> edit_distance e1 e1' + edit_distance e2 e2'
   | EBlock (_, bs, e), EBlock (_, bs', e') ->
     let (es1, es2) = (List.map (fun (_, _, _, _, e) -> e) bs, List.map (fun (_, _, _, _, e) -> e) bs') in
-    let (matches, unmatches) = find_minimum_combination es1 es2 edit_distance in
-    edit_distance e e' + List.fold_left (fun acc (e1, e2, d) -> acc + d) 0 matches + List.fold_left (fun acc e -> acc + exp_size e) 0 unmatches
+    let (_, _, score) = find_minimum_combination es1 es2 exp_size edit_distance in
+    edit_distance e e' + score
   (* Syntatically different : edit dist = size of two exp *)
   | _ -> exp_size exp1 + exp_size exp2
+
+let measure_norm : (id * lexp) -> int
+= fun (f, e) -> exp_size e
 
 let compare_norms : (id * lexp) -> (id * lexp) -> int
 = fun (f1, e1) (f2, e2) -> edit_distance e1 e2
 
-let print : ((id * lexp) * (id * lexp) * int) BatSet.t * (id * lexp) BatSet.t -> unit
-= fun (matches, unmatches) ->
+
+let print : ((id * lexp) * (id * lexp)) BatSet.t * (id * lexp) BatSet.t * int -> unit
+= fun (matches, unmatches, score) ->
   print_endline ("------Match Informations------");
-  BatSet.iter (fun ((f1, e1), (f2, e2), score) -> 
+  BatSet.iter (fun ((f1, e1), (f2, e2)) -> 
+    let score = compare_norms (f1, e1) (f2, e2) in
     print_endline "===========================";
     print_endline (f1 ^ " <~> " ^ f2 ^ " : " ^ string_of_int score);
     print_endline (Print.exp_to_string e1);
@@ -149,24 +155,24 @@ let print : ((id * lexp) * (id * lexp) * int) BatSet.t * (id * lexp) BatSet.t ->
   print_endline ("------Unmatch Informations------");
   BatSet.iter (fun (f, e) -> 
     print_endline "===========================";
-    print_endline (f ^ " : ");
+    print_endline (f ^ " : " ^ string_of_int (exp_size e));
     print_endline (Print.exp_to_string e);
     print_endline "==========================="
-  ) unmatches
+  ) unmatches;
+  print_endline ("------Difference : " ^ string_of_int score ^ "------")
 
-let run : Extractor.t -> Extractor.t -> ((id * lexp) * (id * lexp) * int) BatSet.t * (id * lexp) BatSet.t
+let run : Extractor.t -> Extractor.t -> ((id * lexp) * (id * lexp)) BatSet.t * (id * lexp) BatSet.t * int
 = fun t1 t2 ->
   let (t1, t2) = (BatMap.bindings t1, BatMap.bindings t2) in
-  let (matches, unmatches) = find_minimum_combination t1 t2 compare_norms in
-  (list2set matches, list2set unmatches)
+  let (matches, unmatches, score) = find_minimum_combination t1 t2 measure_norm compare_norms in
+  (list2set matches, list2set unmatches, score)
 
 let run2 : Extractor.t -> Extractor.t -> unit
 = fun t1 t2 ->
   let (t1, t2) = (BatMap.bindings t1, BatMap.bindings t2) in
-  let r = List.map (fun (matches, unmatches) -> (list2set matches, list2set unmatches)) (find_all_combination t1 t2 compare_norms) in
-  List.iter (fun (matches, unmathces) ->
+  let r = List.map (fun (matches, unmatches, cost) -> (list2set matches, list2set unmatches, cost)) (find_all_combination t1 t2 measure_norm compare_norms) in
+  List.iter (fun comb ->
     print_endline "***********************";
-    print (matches, unmathces);
+    print comb;
     print_endline "***********************";
   ) r
-

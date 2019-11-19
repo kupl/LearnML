@@ -57,7 +57,6 @@ module T = struct
     List.map (fun decl -> subst_decl subst decl) pgm
 end 
 
-
 type t = (id, lexp) BatMap.t (* Normalized program P_N : function name -> function body *)
 
 let rec is_fun : typ -> bool
