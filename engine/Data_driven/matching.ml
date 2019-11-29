@@ -5,6 +5,8 @@ open Util
 (* Compute a minimal function mathcing of two normalized programs *)
 (******************************************************************)
 
+type matching_info = ((id * lexp) * (id * lexp)) BatSet.t * (id * lexp) BatSet.t * int
+
 (* 'a list1 -> 'a list2 -> comp1 -> comp2 -> minum matching * unmatched elem * score *)
 let rec find_minimum_combination : 'a list -> 'a list -> ('a -> int) -> ('a -> 'a -> int) -> ('a * 'a) list * 'a list * int
 = fun lst1 lst2 comp1 comp2 ->
@@ -139,8 +141,7 @@ let measure_norm : (id * lexp) -> int
 let compare_norms : (id * lexp) -> (id * lexp) -> int
 = fun (f1, e1) (f2, e2) -> edit_distance e1 e2
 
-
-let print : ((id * lexp) * (id * lexp)) BatSet.t * (id * lexp) BatSet.t * int -> unit
+let print : matching_info -> unit
 = fun (matches, unmatches, score) ->
   print_endline ("------Match Informations------");
   BatSet.iter (fun ((f1, e1), (f2, e2)) -> 
@@ -161,13 +162,13 @@ let print : ((id * lexp) * (id * lexp)) BatSet.t * (id * lexp) BatSet.t * int ->
   ) unmatches;
   print_endline ("------Difference : " ^ string_of_int score ^ "------")
 
-let run : Extractor.t -> Extractor.t -> ((id * lexp) * (id * lexp)) BatSet.t * (id * lexp) BatSet.t * int
+let run : Normalizer.t -> Normalizer.t -> matching_info
 = fun t1 t2 ->
   let (t1, t2) = (BatMap.bindings t1, BatMap.bindings t2) in
   let (matches, unmatches, score) = find_minimum_combination t1 t2 measure_norm compare_norms in
   (list2set matches, list2set unmatches, score)
 
-let run2 : Extractor.t -> Extractor.t -> unit
+let run2 : Normalizer.t -> Normalizer.t -> unit
 = fun t1 t2 ->
   let (t1, t2) = (BatMap.bindings t1, BatMap.bindings t2) in
   let r = List.map (fun (matches, unmatches, cost) -> (list2set matches, list2set unmatches, cost)) (find_all_combination t1 t2 measure_norm compare_norms) in

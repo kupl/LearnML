@@ -270,6 +270,64 @@ let rec time_action ~f:(f: unit -> 'a) : float * 'a =
   let t2  = Unix.gettimeofday () in
   (t2 -. t1, res)
 
+let rec list_remove1 : 'a -> 'a list -> 'a list 
+= fun e lst ->
+  match lst with
+  | [] -> raise (Failure "List.remove : not found")
+  | hd::tl -> if hd = e then tl else hd::(list_remove1 e tl)
+
+(* Refactoring required... *)
+let rec list_drop_first : 'a list -> 'a -> 'a list
+= fun lst e ->
+  match lst with
+  | [] -> []
+  | hd::tl -> if hd = e then tl else hd::(list_drop_first tl e)
+
+let rec list_sub : 'a list -> 'a list -> 'a list 
+= fun lst1 lst2 ->
+  match lst2 with
+  | [] -> lst1
+  | hd::tl -> list_sub (list_drop_first lst1 hd) tl 
+
+let rec list_combination : 'a list -> int -> ('a list) list
+= fun lst k ->
+  if k = 0 then [[]] else
+  match lst with
+  | [] -> raise (Failure "List.comb : empty list ")
+  | hd::tl -> 
+    if k = List.length lst then [lst]
+    else if k = 1 then List.map (fun e -> [e]) lst 
+    else (List.map (fun prev -> hd::prev) (list_combination tl (k-1))) @ (list_combination tl k)
+
+let rec insert_all_pos : 'a list -> 'a -> ('a list) list
+= fun lst e ->
+  let rec insert_kth_pos : 'a list -> 'a -> int -> 'a list
+  = fun lst e k ->
+    match lst with
+    | [] -> if k = 0 then [e] else raise (Failure "insert_kth_pos : invalid k")
+    | hd::tl -> if k = 0 then e::lst else hd::(insert_kth_pos tl e (k-1))
+  in
+  let rec iter : 'a list -> 'a -> int -> ('a list) list
+  = fun lst e n ->
+    match n with
+    | 0 -> [insert_kth_pos lst e 0]
+    | n -> if n > 0 then (iter lst e (n-1)) @ [(insert_kth_pos lst e n)] else raise (Failure "insert_all_pos : Invalid")
+  in
+  iter lst e (List.length lst)
+
+let rec list_permutation : 'a list -> ('a list) list 
+= fun lst ->
+  match lst with
+  | [] -> []
+  | [hd] -> [[hd]]
+  | hd::tl -> List.fold_left (fun acc perm -> insert_all_pos perm hd @ acc) [] (list_permutation tl)
+
+let rec list_permutationk : 'a list -> int -> ('a list) list
+= fun lst k ->
+  List.fold_left (fun acc comb -> 
+    acc @ list_permutation comb
+  ) [] (list_combination lst k)
+  
 let rec join_tuple : 'a BatSet.t -> 'b BatSet.t -> ('a * 'b) BatSet.t
 = fun s1 s2 ->
   BatSet.fold (fun e1 acc ->
@@ -288,7 +346,6 @@ let rec join_triple : 'a BatSet.t -> 'b BatSet.t -> 'c BatSet.t -> ('a * 'b * 'c
     ) s2 acc
   ) s1 BatSet.empty
 
-
 let rec join_list : ('a BatSet.t) list -> ('a list) BatSet.t
 = fun sets ->
   match sets with
@@ -299,3 +356,4 @@ let rec join_list : ('a BatSet.t) list -> ('a list) BatSet.t
         BatSet.add (e::lst) acc 
       ) hd acc
     ) (join_list tl) BatSet.empty
+ 
