@@ -1,5 +1,3 @@
-exception Failure of string
-
 type aexp =
 	| Const of int
 	| Var of string
@@ -19,8 +17,8 @@ let rec diff : aexp * string -> aexp
 	| Const n -> Const 0
 	| Var a -> if (a <> x) then Const 0 else Const 1
 	| Power (a, n) -> 
-		if n < 0 then raise (Failure "Invalid") 
-		else if (n = 0) || (a <> x) then Const 0
+		if n <0 then raise (Failure "Invalid") 
+		else if	(n = 0) || (a <> x) then Const 0
 		else Times [Const n; Power (a, n-1)]
 	| Times l ->
 		begin 

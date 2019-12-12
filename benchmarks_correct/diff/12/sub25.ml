@@ -37,8 +37,10 @@ let rec diff (aexp,str) =
       else Const 0
   | Times l -> diff_times(l,str)
   | Sum l -> diff_sum(l,str)
-
+(*
+ * modify **
 let aexp1 = Times((Var "a")::(Power("x",2))::[])
 let aexp2 = Times(Var "b"::Var "x"::[])
 let aexp3 = Var "c"
 let f1 = Sum(aexp1::aexp2::aexp3::[])
+*)
