@@ -64,7 +64,8 @@ let rec minimize aexp =
 		else if (List.length lst) = 1 then List.hd lst
 		else Sum (List.map minimize (minimize_sum lst))
 	| Times lst ->
-		if (contain_zero lst) then Const 0
+		if lst = [] then Const 0
+		else if (contain_zero lst) then Const 0
 		else if (List.length lst) = 1 then List.hd lst
 		else Times (List.map minimize (minimize_times lst))
 
