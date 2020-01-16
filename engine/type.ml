@@ -468,6 +468,13 @@ let rec unify : Subst.t -> (typ * typ) -> Subst.t
 and unify_list : Subst.t -> (typ list * typ list) -> Subst.t
 = fun subst (ts1, ts2) -> List.fold_left2 (fun subst t1 t2 -> unify subst (t1, t2)) subst ts1 ts2
 
+let rec check_typs : typ -> typ -> bool
+= fun t1 t2 -> 
+  try 
+    let _ = unify Subst.empty (t1, t2) in
+    true
+  with _ -> false 
+
 (* Generate Substitution, HoleType Table, VarType Table using Type equations *)
 let solve : (typ_eqn * HoleType.t * VariableType.t) -> (Subst.t * HoleType.t * VariableType.t)
 = fun (eqns, hole_typ, var_typ) ->
@@ -492,7 +499,7 @@ let rec type_decl : (TEnv.t * HoleType.t * VariableType.t * Subst.t) -> decl -> 
     let ty = type_of_fun args typ in
     let (eqns, hole_typ, var_typ) = gen_equations hole_typ var_typ tenv exp ty in
     let (subst', hole_typ, var_typ) = solve (eqns, hole_typ, var_typ) in
-    let ty = Subst.apply ty subst in
+    let ty = Subst.apply ty subst' in
     (let_binding tenv f ty, hole_typ, var_typ, subst @ subst')
   | DBlock (is_rec, bindings) ->
     (* initialize tenv *)
@@ -518,7 +525,7 @@ let rec type_decl : (TEnv.t * HoleType.t * VariableType.t * Subst.t) -> decl -> 
     (* binding each decl with result *)
     let tenv = List.fold_left (fun tenv (f, is_rec, args, typ, exp) -> 
       let ty = type_of_fun args typ in
-      let_binding tenv f (Subst.apply ty subst)
+      let_binding tenv f (Subst.apply ty subst')
     ) tenv bindings in
     (tenv, hole_typ, var_typ, subst @ subst')
   | TBlock decls -> List.fold_left (type_decl) (tenv, hole_typ, var_typ, subst) decls
