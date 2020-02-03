@@ -11,11 +11,11 @@ let check input =
 		[]	-> false
 		|a::l	-> if a = n then true else (is_in_area n l)
 	in
-	let rec check m lst =
+	let rec check2 m lst =
 		match m with
 		V n	-> (is_in_area n lst)
-		|P (n, x)	-> (check x (n::lst)) 
-		|C (l, r)	-> if (check l lst) then (check r lst) else false
+		|P (n, x)	-> (check2 x (n::lst)) 
+		|C (l, r)	-> if (check2 l lst) then (check2 r lst) else false
 	in
-	check input []
+	check2 input []
 

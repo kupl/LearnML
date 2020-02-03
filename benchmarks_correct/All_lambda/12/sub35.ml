@@ -7,10 +7,10 @@ let rec check m =
 	let is_in lst sta =
 		List.mem sta lst
 	in
-	let rec check m lst =
+	let rec check2 m lst =
 		match (m,lst) with
 		|(V a,lst) -> (is_in lst a)
-		|(P (a,b),lst) -> (check b (a::lst))
-		|(C (a,b),lst) -> (check a lst) && (check b lst)
+		|(P (a,b),lst) -> (check2 b (a::lst))
+		|(C (a,b),lst) -> (check2 a lst) && (check2 b lst)
 	in
-	check m []
+	check2 m []

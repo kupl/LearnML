@@ -6,10 +6,10 @@ type lambda = V of var
                   | C of lambda * lambda
 and var = string
 let check m =
-	let rec check (ms, l) =
+	let rec check2 (ms, l) =
 		match ms with
 		| V a -> List.mem a l
-		| P (a, b) -> check (b, a::l)
-		| C (a, b) -> check (a, l) && check (b, l)
+		| P (a, b) -> check2 (b, a::l)
+		| C (a, b) -> check2 (a, l) && check2 (b, l)
 	in
-	check (m, [])
+	check2 (m, [])

@@ -4,9 +4,9 @@ type lambda = V of var
 and var = string
 
 let check lambda =
-	let rec check m =
+	let rec check2 m =
 		match m with
 		| V x -> [x]
-		| P (x, y) -> List.filter (fun n -> not (x = n)) (check y)
-		| C (x, y) -> (check x) @ (check y)
-	in List.length (check lambda) = 0
+		| P (x, y) -> List.filter (fun n -> not (x = n)) (check2 y)
+		| C (x, y) -> (check2 x) @ (check2 y)
+	in List.length (check2 lambda) = 0

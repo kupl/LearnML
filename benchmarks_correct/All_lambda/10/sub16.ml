@@ -6,11 +6,11 @@ type lambda = V of var
 
 let check : lambda -> bool =
   fun lambda ->
-    let rec check : lambda -> var list -> bool =
+    let rec check2 : lambda -> var list -> bool =
       fun lambda -> fun env ->
         match lambda
         with V(n) -> (List.mem n env)
-          | P(n,m) -> (check m (n::env))
-          | C(m1,m2) -> ((check m1 env) && (check m2 env))
+          | P(n,m) -> (check2 m (n::env))
+          | C(m1,m2) -> ((check2 m1 env) && (check2 m2 env))
     in
-      (check lambda [])
+      (check2 lambda [])

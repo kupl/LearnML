@@ -10,10 +10,10 @@ let check met =
 		|h::t -> if h = n then true
 				else search n t
 	in
-	let rec check m lst = match m with
+	let rec check2 m lst = match m with
 		V n -> (search n lst)
-		|P (a,b) -> check b (a::lst)
-		|C (a,b) -> (check a lst)&&(check b lst)
+		|P (a,b) -> check2 b (a::lst)
+		|C (a,b) -> (check2 a lst)&&(check2 b lst)
 	in
-	check met []
+	check2 met []
 ;;

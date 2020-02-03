@@ -4,12 +4,12 @@ type lambda = V of var
 and var = string
 
 let check m =
-let rec check m pl = match m with
+let rec check2 m pl = match m with
 	  V n -> (List.mem n pl)
-	| P (n,m1) -> (check m1 (n::pl))
-	| C (m1,m2) -> (check m1 pl) && (check m2 pl)
+	| P (n,m1) -> (check2 m1 (n::pl))
+	| C (m1,m2) -> (check2 m1 pl) && (check2 m2 pl)
 in
-	(check m [])
+	(check2 m [])
 
 (**
 P("a", V "a")

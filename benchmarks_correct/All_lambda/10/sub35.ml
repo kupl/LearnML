@@ -8,7 +8,7 @@ and var = string
 let add_element x set =
 	x::set ;;
 
-let rec check x set =
+let rec check2 x set =
 	if (List.mem x set) then true else false;;
 
 
@@ -16,7 +16,7 @@ let rec check x set =
 let rec sub_check lambda set=
 	match lambda with
 	P (x, m) -> (sub_check m (add_element x set))
-	|V n -> (check n set)
+	|V n -> (check2 n set)
 	|C (m1, m2) -> (sub_check m1 set) && (sub_check m2 set) ;;
 	
 

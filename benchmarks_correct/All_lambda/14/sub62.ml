@@ -3,11 +3,11 @@ type lambda = V of var
 | C of lambda*lambda
 and var = string
 
-let rec check lambda lst =
+let rec check2 lambda lst =
   match lambda with
     | V(var) -> List.exists (fun x -> x=var) lst
-    | C(a,b) -> (check a lst)&&(check b lst)
-    | P(n,m) -> check m (n::lst)
+    | C(a,b) -> (check2 a lst)&&(check2 b lst)
+    | P(n,m) -> check2 m (n::lst)
 
 let check lambda =
   check lambda []

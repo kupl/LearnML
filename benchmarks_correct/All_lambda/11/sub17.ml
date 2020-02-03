@@ -13,11 +13,11 @@ let check m =
                 	| [] -> false
 	in
 
-	let rec check(m, lst)=
+	let rec check2(m, lst)=
 	        match m with
         	        | V a -> test(a, lst)
-	               	| P(a, met) -> check(met, a::lst)
-	                | C(m1, m2) -> (check(m1,lst) & check(m2,lst))
+	               	| P(a, met) -> check2(met, a::lst)
+	                | C(m1, m2) -> (check2(m1,lst) & check2(m2,lst))
 	in
 
-	check(m, [])
+	check2(m, [])

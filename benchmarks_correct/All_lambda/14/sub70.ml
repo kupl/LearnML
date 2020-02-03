@@ -3,14 +3,14 @@ type lambda = V of var
            | C of lambda * lambda
 and var = string
 
-let rec check mt arealist =
+let rec check2 mt arealist =
     match mt with
     | V str ->
             List.exists (fun x -> x=str) arealist
     | C (m1,m2) ->
-            (check m1 arealist) && (check m2 arealist)
+            (check2 m1 arealist) && (check2 m2 arealist)
     | P  (str, m) ->
-            check m (str::arealist)
+            check2 m (str::arealist)
 
 let check met =
-    check met []
+    check2 met []

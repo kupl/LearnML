@@ -12,11 +12,11 @@ let check = fun lambda ->
         | h::t -> if h = x then true
                   else contains(t, x)
     in
-    let rec check = fun (lambda, environ) ->
+    let rec check2 = fun (lambda, environ) ->
         match lambda with
         | V var -> contains(environ, var)
-        | P (var, lambda) -> check(lambda, var::environ)
-        | C (m1, m2) -> check(m1, environ) && check(m2, environ)
+        | P (var, lambda) -> check2(lambda, var::environ)
+        | C (m1, m2) -> check2(m1, environ) && check2(m2, environ)
     in
-    check(lambda, [])
+    check2(lambda, [])
 

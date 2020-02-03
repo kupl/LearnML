@@ -6,12 +6,12 @@ type lambda = V of var
 
 ;;
 
-let rec check (me, li) =
+let rec check2 (me, li) =
 	match me with
 		V n -> List.mem n li
-		| P (n, m) -> check (m, (n :: li))
-		| C (m1, m2) -> check (m1, li) && check (m2, li)
+		| P (n, m) -> check2 (m, (n :: li))
+		| C (m1, m2) -> check2 (m1, li) && check2 (m2, li)
 
-let check me = check (me, [])
+let check me = check2 (me, [])
 
 ;;	

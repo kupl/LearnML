@@ -4,10 +4,10 @@ type lambda = V of var
 and var = string
 
 let rec check((m:lambda)) =
-	let rec check ((ma:lambda), (li:var list))=
+	let rec check2 ((ma:lambda), (li:var list))=
 		match ma with
-		|P(st, k) -> check(k, st::li)
-		|C(me1, me2) -> check(me1, li) && check(me2, li)
+		|P(st, k) -> check2(k, st::li)
+		|C(me1, me2) -> check2(me1, li) && check2(me2, li)
 		|V(na) -> List.mem na li
 	in
-	check(m, [])
+	check2(m, [])

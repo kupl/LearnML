@@ -8,11 +8,11 @@ let rec exists (l, a) =
         | [] -> false
         | h::t -> exists (t, a) || (a = h)
 
-let rec _check a lambda = 
+let rec check2 a lambda = 
 	match lambda with
 	| V var -> exists (a, var)
-	| P (var, lambda) -> _check (var::a) lambda
-	| C (lambda1, lambda2) -> _check a lambda1 && _check a lambda2
+	| P (var, lambda) -> check2 (var::a) lambda
+	| C (lambda1, lambda2) -> check2 a lambda1 && check2 a lambda2
 
 let check = fun a ->
-         _check [] a;;
+         check2 [] a;;

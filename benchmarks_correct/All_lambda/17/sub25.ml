@@ -4,14 +4,14 @@ type lambda = V of var
 and var = string
 
 
-let rec check id = function
+let rec check2 id = function
 	| [] -> false
 	| hd::tl ->
 	  if hd=id then true
-	  else check(id)(tl)
+	  else check2(id)(tl)
 
 let rec foo areas = function
-	| V (id) -> check(id)(areas)
+	| V (id) -> check2(id)(areas)
 	| P (id, m) -> foo([id]@areas)(m)
 	| C (m1, m2) -> foo(areas)(m1) && foo(areas)(m2)
 
