@@ -7,6 +7,3 @@ let rec fold f l a =
 	| hd::tl -> f hd (fold f tl a)
 let rec max : int list -> int
 = fun lst -> fold (fun x y -> if x > y then x else y) lst (-9999999)
-
-let rec min : int list -> int
-= fun lst -> fold (fun x y -> if x < y then x else y) lst 9999999

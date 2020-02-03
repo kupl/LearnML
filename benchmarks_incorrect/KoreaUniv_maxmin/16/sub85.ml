@@ -8,6 +8,3 @@ match l with
 
 let rec max : int list -> int
 = fun lst -> fold (fun a b -> if (a > b) then a else b) lst 0;;
-
-let rec min : int list -> int
-= fun lst -> fold (fun a b -> if (a < b) then a else b) lst 0;;

@@ -9,7 +9,3 @@ let rec fold f l a =
 let rec max : int list -> int
 = fun lst ->
 	fold (fun x y -> if x >= y then x else y) lst (-999)
-
-let rec min : int list -> int
-= fun lst ->
-	fold (fun x y -> if x <= y then x else y) lst 999

@@ -8,6 +8,3 @@ let rec fold f l a =
 
 let max lst 
   = fold (fun x y -> (if x>y then x else y)) lst 0
-
-let min lst
-  = fold (fun x y -> (if x<y then x else y)) lst 100000000

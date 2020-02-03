@@ -9,8 +9,3 @@ match l with
 let rec max l =
 let a = -1073741824 in
 fold (fun x y -> if x>y then x else y) l a
-
-let rec min l =
-let a = 1073741824 in
-fold (fun x y -> if x<y then x else y) l a
-
