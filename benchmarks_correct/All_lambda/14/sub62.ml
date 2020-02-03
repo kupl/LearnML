@@ -10,4 +10,4 @@ let rec check2 lambda lst =
     | P(n,m) -> check2 m (n::lst)
 
 let check lambda =
-  check lambda []
+  check2 lambda []
