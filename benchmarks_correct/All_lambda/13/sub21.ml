@@ -16,6 +16,6 @@ let rec check2 mtr lst =
 	|C (m1,m2) -> (check2 m1 lst) && (check2 m2 lst)
 
 let check m =
-	check m []
+	check2 m []
 
 

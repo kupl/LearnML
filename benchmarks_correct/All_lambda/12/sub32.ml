@@ -10,4 +10,4 @@ let rec check m =
 		| P (n, m) -> check2 (n::l) m
 		| C (m1, m2) -> (check2 l m1) && (check2 l m2)
 	in
-check [] m
+check2 [] m

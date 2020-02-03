@@ -10,6 +10,6 @@ let rec check2(lambda, discovered) =
 	| C(m1,m2) -> check2(m1,discovered) && check2(m2,discovered)
 
 let check(lambda) = 
-	check(lambda, [])
+	check2(lambda, [])
 
 	
