@@ -9,4 +9,4 @@ let rec check2 lambda varlist =
 	| P (a, b) -> check2 b (a::varlist)
 	| C (a, b) -> (check2 a varlist) && (check2 b varlist)
 let check lambda =
-	check lambda []
+	check2 lambda []
