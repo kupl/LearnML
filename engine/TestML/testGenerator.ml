@@ -760,7 +760,7 @@ let rec return_counter_example : prog -> prog -> input -> example option
 let rec work : Workset.t -> components -> prog -> prog -> example option
 = fun workset comp pgm cpgm ->
 	iter := !iter +1;
-	if (Unix.gettimeofday()) -. (!start_time) > 120.0 then None
+	if (Unix.gettimeofday()) -. (!start_time) > 60.0 then None
 	(*
   else if (!iter mod 1000 = 0)
 	  then
