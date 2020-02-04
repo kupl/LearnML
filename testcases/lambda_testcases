@@ -1,0 +1,20 @@
+{
+	V "X" => false;
+	V "c" => false;
+	P("a", V "a") => true;
+	P("a", V "b") => false;
+	P("a", P("a", V "a")) => true;
+	C (V "a", V "b") => false;
+	P("a", P("b", C(V "a", V "b"))) => true;
+	P("a", C(V "a", P("b", V "a"))) => true;
+	P("a", P("b", C(V "a", V "c"))) => false; 
+	C (P ("a", P ("b", V "a")), P ("c", V "a")) => false;
+	C (P ("a", P ("b", V "c")), P ("x", P ("y", V "x"))) => false;
+	C (P ("a", C (V "a", P ("c", V "c"))), P ("b", C (P ("a", V "a"), V "b"))) => true;
+	P ("x", P ("y", C (V "y", V "y"))) => true;
+	P ("x", P ("y", P ("z", C (V "y", V "x")))) => true;
+	P ("x", C (V "y", P ("y", V "y"))) => false;
+	P ("x", P (("x", P (("x", V ("x")))))) => true;
+	P ("x", C (V "x", P ("y", P ("y", V "y")))) => true;
+	P ("x", C (P ("y", C (V "y", V "x")), V "x")) => true;
+}
