@@ -17,6 +17,9 @@ let rec fix f x =
     if x' = x then x' 
     else fix f x' 
 
+let keys : ('a, 'b) BatMap.t -> 'a BatSet.t
+= fun map -> BatMap.foldi (fun a b set -> BatSet.add a set) map BatSet.empty
+
 let rec decreasing : int list -> bool
 = fun lst ->
   match lst with
@@ -187,7 +190,6 @@ let partitions_rel (k:int) : choice list list =
   in
   List.map (mark_part [] 0) (range k |> List.rev)
 
-
 let rec combinations (l:'a list list) : 'a list list =
   match l with
   | [] -> []
@@ -244,8 +246,23 @@ let rec time_action ~f:(f: unit -> 'a) : float * 'a =
 let rec list_remove1 : 'a -> 'a list -> 'a list 
 = fun e lst ->
   match lst with
-  | [] -> raise (Failure "List.remove : not found")
+  | [] -> raise (Failure "List.remove1 : not found")
   | hd::tl -> if hd = e then tl else hd::(list_remove1 e tl)
+
+let rec list_remove : 'a -> 'a list -> 'a list
+= fun e lst ->
+  match lst with
+  | [] -> raise (Failure "List.remove : not found")
+  | hd::tl -> if hd = e then list_remove e tl else hd::(list_remove e tl)
+
+let rec list_uniq : 'a list -> 'a list
+= fun lst ->
+  match lst with
+  | [] -> []
+  | hd::tl -> hd::(list_remove hd (list_uniq tl))
+
+let rec list_append_uniq : 'a list -> 'a list -> 'a list
+= fun lst1 lst2 -> list_uniq (lst1@lst2)
 
 (* Refactoring required... *)
 let rec list_drop_first : 'a list -> 'a -> 'a list
@@ -298,7 +315,18 @@ let rec list_permutationk : 'a list -> int -> ('a list) list
   List.fold_left (fun acc comb -> 
     acc @ list_permutation comb
   ) [] (list_combination lst k)
-  
+
+let rec list_match : ('a -> 'a -> bool) -> 'a list -> 'a list -> ('a * 'a) list option 
+= fun pred lst1 lst2 ->
+  if List.length lst1 <> List.length lst2 then 
+    None (* If the number of cfgs of two programs is different fail to match *)
+  else
+    let matching_candidates = list_permutation lst2 in
+    try
+      let matched_cand = List.find (fun cand -> List.for_all2 pred lst1 cand) matching_candidates in
+      Some (List.combine lst1 matched_cand)
+    with Not_found -> None
+
 let rec join_tuple : 'a BatSet.t -> 'b BatSet.t -> ('a * 'b) BatSet.t
 = fun s1 s2 ->
   BatSet.fold (fun e1 acc ->
