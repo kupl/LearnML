@@ -208,50 +208,75 @@ let main () =
   else if !opt_dd then (* Data-driven FixML *)
     begin 
       match submission, solutions_debug with
-      | Some sub, hd::tl -> 
-        Print.print_header "Original";
-        Print.print_pgm sub;
-        let nb = Normalizer.normalize_all sub in
-        Print.print_header "Original - norm";
-        Normalizer.print nb;
-        let matching = List.map (fun (name, sol) -> 
-          let nc = Normalizer.normalize_all sol in
-          (name, sol, Matching.run nb nc)
-        ) solutions_debug
-        in
-        let sorted_matching = List.sort (fun (_, _, (_, _, s1)) (_, _, (_, _, s2)) -> 
-          if s1 = s2 then 0 else
-          if s1 > s2 then 1
-          else -1
-        ) matching
-        in
-        List.iter (fun (name, sol, (matches, unmatches, c)) ->
-          Print.print_header name;
-          Print.print_pgm sol;
-          let nc = Normalizer.normalize_all sol in
-          Print.print_header (name ^ " norm");
-          Normalizer.print nc;
-          Matching.print (matches, unmatches, c);
-          let temps = Extractor.run matches in
-          Print.print_header "Templates";
-          Extractor.print temps;
-          let temps = Complete.complete_var sub temps in
-          Print.print_header "Templates - V";
-          Extractor.print temps;
-          let temps = Complete.complete_func sub temps in
-          Print.print_header "Templates - F";
-          Extractor.print temps;
-          let patch = Repairer.run sub temps testcases in
-          match patch with
-          | None -> ()
-          | Some pgm' -> 
-            Print.print_header "Repair result"; Print.print_pgm pgm';
-            print_endline ("Time : " ^ string_of_float (Unix.gettimeofday() -. !(Repairer.start_time)));
-            exit 0; ()    
-        ) sorted_matching
+      | Some sub, sols -> 
+        (* Searching a closest solution (matching rate high) *)
+        let (score, (fname, sol)) = List.fold_left (fun (prev_score, prev_sol) (fname, sol) -> 
+          let matching = Matching2.run sub sol in
+          (* Matching2.print matching; *)
+          let score = Matching2.get_matching_score matching in
+          (* print_header ("Sol " ^ fname ^ " Score : " ^ string_of_int score); print_pgm2 sol; *)
+          if prev_score < score then (score, (fname, sol)) else (prev_score, prev_sol)
+        ) (-100, List.hd sols) sols in
+        print_header ("Submission"); print_pgm2 sub;
+        print_header ("Most Similar Sol " ^ fname ^ " Score : " ^ string_of_int score); print_pgm2 sol;
+        (* Callgraph Matching *)
+        let (g_sub, g_sol) = (CallGraph.run sub, CallGraph.run sol) in
+        Print.print_header "Call graph (sub)"; CallGraph.print_graph g_sub;
+        Print.print_header "Call graph (sol)"; CallGraph.print_graph g_sol;
+        let matching = Matching2.run sub sol in
+        Print.print_header "Matching Info"; Matching2.print matching;
+        (* Template *)
+        let temps = Extractor2.run sub sol in
+        (* print_header ("Templates"); print_endline (string_of_set Repair_template.string_of_template temps); *)
+        match Repairer2.run sub temps testcases with
+        | Some patch -> 
+          print_header "Patch"; print_pgm patch;
+          print_endline ("Time : " ^ string_of_float (Unix.gettimeofday() -. !(Repairer2.start_time)))
+        | None -> print_endline ("Fail to Repair")
       | _ -> raise (Failure "Submission or solutions are not provided")
     end
-  else 
-    Arg.usage options usage_msg
+  else if !opt_cfg then
+    begin 
+      match submission, solutions_debug with
+      | Some sub, cpgms -> 
+        let cfg = Cfg.extract_cfg sub in
+        Print.print_header "original"; Print.print_pgm sub;
+        Print.print_header "CFG"; Cfg.print cfg;
+        let all_matchings = List.fold_left (fun acc (file, cpgm) -> 
+          let cfg' = Cfg.extract_cfg cpgm in
+          Print.print_header ("Code of " ^ file); Print.print_pgm cpgm;
+          Print.print_header ("CFG of " ^ file); Cfg.print cfg';
+          match Cfg.match_t cfg cfg' with
+          | None -> acc
+          | Some matching -> (file, matching)::acc
+        ) [] cpgms
+        in
+        print_endline ("# of matched solutions : " ^ string_of_int (List.length all_matchings));
+        List.iter (fun (file, matching) -> 
+          print_endline file
+          (*
+          print_endline ("\n Matchign relations : \n");
+          Cfg.print_matching matching
+          *)
+        ) all_matchings;
+        ()
+      | _ -> raise (Failure "Submission or solutions are not provided")
+    end
+  else
+    (* Arg.usage options usage_msg *)
+    begin
+      match submission, solution with
+      | Some sub, Some sol ->
+        let (g_sub, g_sol) = (CallGraph.run sub, CallGraph.run sol) in
+        Print.print_header "Call graph (sub)"; CallGraph.print_graph g_sub;
+        Print.print_header "Call graph (sol)"; CallGraph.print_graph g_sol;
+        let matching = Matching2.run sub sol in
+        Print.print_header "Matching Info"; Matching2.print matching;
+        let (np_sub, np_sol) = (Normalizer.normalize_all sub, Normalizer.normalize_all sol) in
+        Print.print_header "Norm (sub)"; Normalizer.print np_sub;
+        Print.print_header "Norm (sol)"; Normalizer.print np_sol;
+        ()
+      | _ -> raise (Failure (!opt_submission_filename ^ " does not exist"))
+    end
 
 let _ = main ()

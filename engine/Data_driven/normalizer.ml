@@ -1,84 +1,104 @@
 open Lang
 open Type
 
-(******************************************************************)
-(* Extract all functions' bodies and construct a mapping relation *)
-(******************************************************************)
+(*********************************)
+(* Extract all functions' bodies *)
+(*********************************)
+module T = Type_annotate
 
-module T = struct
-  (* Preanalysis : type annotation for distingushing function type *)
+type t = (id, (arg list * typ * lexp)) BatMap.t (* Normalized program P_N : function name -> (input, output, body) *)
 
-  let rec subst_exp : Type.Subst.t -> lexp -> lexp
-  = fun subst (l, exp) ->
-    let exp = 
-      match exp with
-      | Raise e -> Raise (subst_exp subst e)
-      | EFun (arg, e) -> EFun (arg, subst_exp subst e)
-      | MINUS e -> MINUS (subst_exp subst e)
-      | NOT e -> NOT (subst_exp subst e)
-      | ADD (e1, e2) -> ADD (subst_exp subst e1, subst_exp subst e2)
-      | SUB (e1, e2) -> SUB (subst_exp subst e1, subst_exp subst e2)
-      | MUL (e1, e2) -> MUL (subst_exp subst e1, subst_exp subst e2)
-      | DIV (e1, e2) -> DIV (subst_exp subst e1, subst_exp subst e2)
-      | MOD (e1, e2) -> MOD (subst_exp subst e1, subst_exp subst e2)
-      | OR (e1, e2) -> OR (subst_exp subst e1, subst_exp subst e2)
-      | AND (e1, e2) -> AND (subst_exp subst e1, subst_exp subst e2)
-      | LESS (e1, e2) -> LESS (subst_exp subst e1, subst_exp subst e2)
-      | LESSEQ (e1, e2) -> LESSEQ (subst_exp subst e1, subst_exp subst e2)
-      | LARGER (e1, e2) -> LARGER (subst_exp subst e1, subst_exp subst e2)
-      | LARGEREQ (e1, e2) -> LARGEREQ (subst_exp subst e1, subst_exp subst e2)
-      | EQUAL (e1, e2) -> EQUAL (subst_exp subst e1, subst_exp subst e2)
-      | NOTEQ (e1, e2) -> NOTEQ (subst_exp subst e1, subst_exp subst e2)
-      | DOUBLECOLON (e1, e2) -> DOUBLECOLON (subst_exp subst e1, subst_exp subst e2)
-      | AT (e1, e2) -> AT (subst_exp subst e1, subst_exp subst e2)
-      | STRCON (e1, e2) -> STRCON (subst_exp subst e1, subst_exp subst e2)
-      | EApp (e1, e2) -> EApp (subst_exp subst e1, subst_exp subst e2)
-      | EList es -> EList (List.map (fun e -> subst_exp subst e) es)
-      | ETuple es -> ETuple (List.map (fun e -> subst_exp subst e) es)
-      | ECtor (x, es) -> ECtor (x, List.map (fun e -> subst_exp subst e) es)
-      | IF (e1, e2, e3) -> IF (subst_exp subst e1, subst_exp subst e2, subst_exp subst e3)
-      | EMatch (e, bs) -> EMatch (subst_exp subst e, List.map (fun (p, e) -> (p, subst_exp subst e)) bs)
-      | ELet (f, is_rec, args, typ, e1, e2) -> ELet (f, is_rec, args, Type.Subst.apply typ subst, subst_exp subst e1, subst_exp subst e2)
-      | EBlock (is_rec, bindings, e2) -> EBlock (is_rec, List.map (fun (f, is_rec, args, typ, e) -> (f, is_rec, args, Subst.apply typ subst, subst_exp subst e)) bindings, subst_exp subst e2)
-      | _ -> exp
-    in
-    (l, exp)
+let print : t -> unit
+= fun t ->
+  BatMap.iter (fun f (args, typ, e) -> 
+    print_endline (Print.decl_to_string (DLet (BindOne f, true, args, typ, e)) "")
+  ) t
 
-  let rec subst_decl : Type.Subst.t -> decl -> decl
-  = fun subst decl ->
-    match decl with
-    | DLet (f, is_rec, args, typ, e) -> DLet (f, is_rec, args, Type.Subst.apply typ subst, subst_exp subst e)
-    | DBlock (is_rec, bindings) -> DBlock (is_rec, List.map (fun (f, is_rec, args, typ, e) -> (f, is_rec, args, Type.Subst.apply typ subst, subst_exp subst e)) bindings)
-    | _ -> decl
+(* Preprocessing : convert all function definitions "f = fun x -> e" into "f (x) = e" form *)
+let rec get_output_typ : typ -> typ
+= fun typ ->
+  match typ with
+  | TArr (t1, t2) -> get_output_typ t2
+  | _ -> typ
 
-  let run : prog -> prog
-  = fun pgm ->
-    let (_, _, _, subst) = Type.run pgm in
-    List.map (fun decl -> subst_decl subst decl) pgm
-end 
+let rec preprocess_exp : lexp -> lexp 
+= fun (l, exp) ->
+  let exp = 
+    match exp with
+    | EList es -> EList (List.map (fun e -> preprocess_exp e) es)
+    | ECtor (x, es) -> ECtor (x, (List.map (fun e -> preprocess_exp e) es))
+    | ETuple es -> ETuple (List.map (fun e -> preprocess_exp e) es)
+    | EFun (arg, e) -> EFun (arg, preprocess_exp e)
+    | MINUS e -> MINUS (preprocess_exp e)
+    | NOT e -> NOT (preprocess_exp e)
+    | ADD (e1, e2) -> ADD (preprocess_exp e1, preprocess_exp e2)
+    | SUB (e1, e2) -> SUB (preprocess_exp e1, preprocess_exp e2)
+    | MUL (e1, e2) -> MUL (preprocess_exp e1, preprocess_exp e2)
+    | DIV (e1, e2) -> DIV (preprocess_exp e1, preprocess_exp e2)
+    | MOD (e1, e2) -> MOD (preprocess_exp e1, preprocess_exp e2)
+    | OR (e1, e2) -> OR (preprocess_exp e1, preprocess_exp e2)
+    | AND (e1, e2) -> AND (preprocess_exp e1, preprocess_exp e2) 
+    | LESS (e1, e2) -> LESS (preprocess_exp e1, preprocess_exp e2) 
+    | LARGER (e1, e2) -> LARGER (preprocess_exp e1, preprocess_exp e2) 
+    | LESSEQ (e1, e2) -> LESSEQ (preprocess_exp e1, preprocess_exp e2) 
+    | LARGEREQ (e1, e2) -> LARGEREQ (preprocess_exp e1, preprocess_exp e2)
+    | EQUAL (e1, e2) -> EQUAL (preprocess_exp e1, preprocess_exp e2)
+    | NOTEQ (e1, e2) -> NOTEQ (preprocess_exp e1, preprocess_exp e2)
+    | AT (e1, e2) -> AT (preprocess_exp e1, preprocess_exp e2) 
+    | DOUBLECOLON (e1, e2) -> DOUBLECOLON (preprocess_exp e1, preprocess_exp e2) 
+    | STRCON (e1, e2) -> STRCON (preprocess_exp e1, preprocess_exp e2) 
+    | EApp (e1, e2) -> EApp (preprocess_exp e1, preprocess_exp e2)
+    | ELet (f, is_rec, args, typ, e1, e2) ->
+      let (f, is_rec, args, typ, e1) = preprocess_binding (f, is_rec, args, typ, e1) in
+      ELet (f, is_rec, args, typ, e1, preprocess_exp e2)
+    | EBlock (is_rec, ds, e) -> EBlock (is_rec, List.map (fun binding -> preprocess_binding binding) ds, preprocess_exp e)
+    | EMatch (e, bs) -> EMatch (preprocess_exp e, List.map (fun (p, e) -> (p, preprocess_exp e)) bs)
+    | IF (e1, e2, e3) -> IF (preprocess_exp e1, preprocess_exp e2, preprocess_exp e3)
+    | _ -> exp 
+  in
+  (l, exp)
 
-type t = (id, lexp) BatMap.t (* Normalized program P_N : function name -> function body *)
+and preprocess_binding : binding -> binding
+= fun (f, is_rec, args, typ, e) ->
+  let (args', e') = extract_func (preprocess_exp e) in
+  (f, is_rec, args@args', get_output_typ typ, e')
+
+and extract_func : lexp -> arg list * lexp
+= fun (l, exp) ->
+  match exp with
+  | EFun (arg, e) -> 
+    let (args, e) = extract_func e in
+    (arg::args, e)
+  | ELet (f, is_rec, args, typ, e1, e2) ->
+    let (f, is_rec, args, typ, e1) = preprocess_binding (f, is_rec, args, typ, e1) in
+    let (args', e2) = extract_func e2 in
+    (args', (l, ELet (f, is_rec, args, typ, e1, e2)))
+  | EBlock (is_rec, ds, e) -> 
+    let ds = List.map (fun binding -> preprocess_binding binding) ds in
+    let (args, e) = extract_func e in
+    (args, (l, EBlock (is_rec, ds, e)))
+  | _ -> ([], (l, exp))
+
+let rec preprocess_decl : decl -> decl 
+= fun decl ->
+  match decl with
+  | DLet binding -> DLet (preprocess_binding binding)
+  | DBlock (is_rec, bindings) -> DBlock (is_rec, List.map (fun binding -> preprocess_binding binding) bindings)
+  | _ -> decl
+
+let preprocess : prog -> prog
+= fun pgm -> List.map (fun decl -> preprocess_decl decl) pgm
 
 let rec is_fun : typ -> bool
 = fun typ ->
   match typ with
+  (*
   | TList t -> is_fun t
   | TTuple ts -> List.exists is_fun ts
   | TCtor (t, ts) -> List.exists is_fun (t::ts)
+  *)
   | TArr _ -> true
   | _ -> false
-
-let rec flatten_branch : branch list -> branch list
-= fun bs ->
-  match bs with
-  | [] -> []
-  | (p, e)::bs -> 
-    begin match p with
-    | Pats ps -> 
-      let flat_bs = (List.map (fun p -> (p, e)) ps) in
-      (flatten_branch flat_bs)@(flatten_branch bs)
-    | _ -> (p, e)::(flatten_branch bs)
-    end
 
 let rec normalize : t -> lexp -> t * lexp
 = fun t (l, exp) -> 
@@ -152,13 +172,15 @@ let rec normalize : t -> lexp -> t * lexp
   | ECtor (x, es) ->
     let (t, es) = normalize_list t es in
     (t, (l, ECtor (x, es)))
-  | EFun (arg, e) -> normalize t e 
+  | EFun (arg, e) -> 
+    let (t, e) = normalize t e in
+    (t, (l, EFun (arg, e)))
   | ELet (f, is_rec, args, typ, e1, e2) ->
     let (t, e1) = normalize t e1 in
     if args <> [] || is_fun typ then 
       begin match f with
       | BindOne f -> 
-        let (t, e2) = normalize (BatMap.add f e1 t) e2 in
+        let (t, e2) = normalize (BatMap.add f (args, typ, e1) t) e2 in
         (t, e2)
       | _ -> raise (Failure "Extract error : invalid function format")
       end
@@ -171,7 +193,7 @@ let rec normalize : t -> lexp -> t * lexp
         begin match f with
         | BindOne f -> 
           let (t, e) = normalize t e in
-          (BatMap.add f e t, ds)
+          (BatMap.add f (args, typ, e) t, ds)
         | _ -> raise (Failure "Extract error : invalid function format")
         end
       else 
@@ -181,7 +203,6 @@ let rec normalize : t -> lexp -> t * lexp
     let (t, e) = normalize t e in
     if ds = [] then (t, e) else (t, (l, EBlock (is_rec, List.rev ds, e)))
   | EMatch (e, bs) ->
-    let bs = flatten_branch bs in 
     let (t, e) = normalize t e in
     let (t, bs) = List.fold_left (fun (t, bs) (p, e) ->
       let (t, e) = normalize t e in
@@ -217,7 +238,7 @@ let rec normalize_decl : t -> decl -> t
     let (t, e) = normalize t e in
     if args <> [] || is_fun typ then 
       begin match f with
-      | BindOne f -> BatMap.add f e t
+      | BindOne f -> BatMap.add f (args, typ, e) t
       | _ -> raise (Failure "Extract error : invalid function format")
       end
     else t
@@ -226,14 +247,13 @@ let rec normalize_decl : t -> decl -> t
 
 let normalize_all : prog -> t
 = fun pgm ->
-  let pgm' = T.run pgm in
+  let pgm' = 
+    T.run pgm 
+    |> preprocess
+  in
   let t = List.fold_left (fun t decl -> normalize_decl t decl) BatMap.empty pgm' in
+  let _ = 
+    Print.print_header "Norm";
+    print t 
+  in
   if BatMap.is_empty t then raise (Failure "Empty_norm") else t
-
-let print : t -> unit
-= fun t ->
-  BatMap.iter (fun f e -> 
-    print_endline ("---------------------");
-    print_endline ("Functoin name : " ^ f);
-    print_endline (Print.exp_to_string e)
-  ) t

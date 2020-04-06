@@ -483,23 +483,25 @@ let complete_var : prog -> repair_template BatSet.t -> repair_template BatSet.t
 = fun pgm temps ->
 	let comp = BatSet.empty in (* using only var components *)
 	BatSet.fold (fun (l, exp) acc ->
-		(* Complete template *)
-		let initial_workset = BatSet.fold (fun (l, exp) workset -> 
-			let pgm' = subst_pgm pgm (l, exp) in
-			let (_, h_t, v_t, subst) = Type.run pgm' in
-			let v_t = BatMap.map (fun tenv -> 
-				BatMap.filterv (fun typ ->
-					match typ with
-					| TArr _ -> false
-					| _ -> true
-				) tenv
-			) v_t 
-			in
-			(* add initial state *)
-			Workset.add (exp, h_t, v_t, subst, BatSet.empty, find_app exp) workset
-		) (BatSet.singleton (l, exp)) Workset.empty in
-		let result = BatSet.map (fun exp -> (l, exp)) (work initial_workset comp) in
-		BatSet.union result acc
+		try 
+			(* Complete template *)
+			let initial_workset = BatSet.fold (fun (l, exp) workset -> 
+				let pgm' = subst_pgm pgm (l, exp) in
+				let (_, h_t, v_t, subst) = Type.run pgm' in
+				let v_t = BatMap.map (fun tenv -> 
+					BatMap.filterv (fun typ ->
+						match typ with
+						| TArr _ -> false
+						| _ -> true
+					) tenv
+				) v_t 
+				in
+				(* add initial state *)
+				Workset.add (exp, h_t, v_t, subst, BatSet.empty, find_app exp) workset
+			) (BatSet.singleton (l, exp)) Workset.empty in
+			let result = BatSet.map (fun exp -> (l, exp)) (work initial_workset comp) in
+			BatSet.union result acc
+		with _ -> (* Unavailable repair templates (e.g., type error) *) acc
 	) temps BatSet.empty
 
 let complete_func : prog -> repair_template BatSet.t -> repair_template BatSet.t
