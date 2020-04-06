@@ -22,7 +22,6 @@ type typ =
   | TArr of typ * typ (*fun t1->t2->t3...*)
   | TVar of id (* type variable *)
   | TExn
-  [@@deriving compare]
 
 type ctor = id * typ list
 
@@ -38,7 +37,6 @@ type pat =
   | PTuple of pat list
   | Pats of pat list
   | PCtor of id * pat list
-  [@@deriving compare]
 
 (* Program *)
 type let_bind =
@@ -62,8 +60,6 @@ type decl =
 and lexp = label * exp											 
 and exp =
   (* Const *)
-  | SInt of int 
-  | SStr of int
   | EUnit
   | Const of int
   | TRUE
@@ -101,9 +97,12 @@ and exp =
   | EBlock of bool * binding list * lexp (* let x1 = e1 and x2 = e2 and ... xn = en in e' | let rec f1 x1 = e1 and f2 x2 = e2 ... fn xn = en in e' *)
   | EMatch of lexp * branch list                     (* match e with bs *)
   | IF of lexp * lexp * lexp
-  (*List operation*)
-  | Hole of int
+  (* Exception *)
   | Raise of lexp
+  (* Special *)
+  | Hole of int
+  | SInt of int 
+  | SStr of int
 and branch = pat * lexp   
 and binding = (let_bind * bool * arg list * typ * lexp) (* f [rec] x1,x2 :t = e => must divide LET & LETREC later *)
 
@@ -142,6 +141,8 @@ let gen_const : unit -> int
 let label_count = ref 0
 let gen_label : unit -> label
 = fun () -> label_count:=!label_count+1; (!label_count)
+let get_label : lexp -> label
+= fun (l, e) -> l
 
 let gen_labeled_hole : unit -> lexp
 = fun () -> (gen_label(),gen_hole())
@@ -247,3 +248,18 @@ let cost_decl : decl -> int -> int
 
 let cost : prog -> int
 = fun decls ->  list_fold cost_decl decls 0
+
+(* Size of AST *)
+let rec exp_size : lexp -> int 
+= fun (l, exp) ->
+  match exp with
+  | EList es | ECtor (_, es) | ETuple es -> 1 + List.fold_left (fun acc e -> acc + exp_size e) 0 es
+  | MINUS e | NOT e | EFun (_, e) -> 1 + exp_size e
+  | ADD (e1, e2) | SUB (e1, e2) | MUL (e1, e2) | DIV (e1, e2) | MOD (e1, e2)
+  | OR (e1, e2) | AND (e1, e2) | LESS (e1, e2) | LARGER (e1, e2) | EQUAL (e1, e2) | NOTEQ (e1, e2)
+  | LESSEQ (e1, e2) | LARGEREQ (e1, e2) | AT (e1, e2) | DOUBLECOLON (e1, e2) | STRCON (e1, e2)
+  | EApp (e1, e2) | ELet (_, _, _, _, e1, e2) -> 1 + exp_size e1 + exp_size e2
+  | EBlock (_, ds, e2) -> 1 + exp_size e2 + List.fold_left (fun acc (f, is_rec, args, typ, e) -> acc + exp_size e) 0 ds
+  | EMatch (e, bs) -> 1 + exp_size e + List.fold_left (fun acc (p, e) -> acc + exp_size e) 0 bs
+  | IF (e1, e2, e3) -> 1 + exp_size e1 + exp_size e2 + exp_size e3
+  | _ -> 1

@@ -115,7 +115,7 @@ module TEnv = struct
   let empty = BatMap.empty
   let extend : id * typ -> t ->t 
   = fun (x,t) tenv -> BatMap.add x t tenv
-  let find tenv x = try BatMap.find x tenv with Not_found -> raise (Failure (x ^ "Not found"))
+  let find tenv x = try BatMap.find x tenv with Not_found -> raise (Failure (x ^ "Not found!"))
   let rec print tenv = 
     BatMap.iter (fun id typ -> 
       print_endline(id^"|->"^(type_to_string typ))) tenv

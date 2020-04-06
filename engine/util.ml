@@ -17,9 +17,6 @@ let rec fix f x =
     if x' = x then x' 
     else fix f x' 
 
-let keys : ('a, 'b) BatMap.t -> 'a BatSet.t
-= fun map -> BatMap.foldi (fun a b set -> BatSet.add a set) map BatSet.empty
-
 let rec decreasing : int list -> bool
 = fun lst ->
   match lst with
@@ -252,7 +249,7 @@ let rec list_remove1 : 'a -> 'a list -> 'a list
 let rec list_remove : 'a -> 'a list -> 'a list
 = fun e lst ->
   match lst with
-  | [] -> raise (Failure "List.remove : not found")
+  | [] -> []
   | hd::tl -> if hd = e then list_remove e tl else hd::(list_remove e tl)
 
 let rec list_uniq : 'a list -> 'a list
@@ -326,6 +323,19 @@ let rec list_match : ('a -> 'a -> bool) -> 'a list -> 'a list -> ('a * 'a) list 
       let matched_cand = List.find (fun cand -> List.for_all2 pred lst1 cand) matching_candidates in
       Some (List.combine lst1 matched_cand)
     with Not_found -> None
+
+(* Set operation *)
+let rec find_first_set : ('a -> bool) -> 'a BatSet.t -> 'a
+= fun pred set ->
+  if BatSet.is_empty set then 
+    raise (Failure "Not found : Set.find_first")
+  else
+    let (candidate, remains) = BatSet.pop set in
+    if pred candidate then candidate else find_first_set pred remains
+
+(* Map operation *)
+let keys : ('a, 'b) BatMap.t -> 'a BatSet.t
+= fun map -> BatMap.foldi (fun a b set -> BatSet.add a set) map BatSet.empty
 
 let rec join_tuple : 'a BatSet.t -> 'b BatSet.t -> ('a * 'b) BatSet.t
 = fun s1 s2 ->

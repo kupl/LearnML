@@ -5,26 +5,22 @@ open Symbol_lang
 (******** Format **********)
 let link_by_sep sep s acc = if acc = "" then s else acc ^ sep ^ s
 
-let string_of_list ?(first="[") ?(last="]") ?(sep=",") : ('a -> string)
-  -> ('a list) -> string
+let string_of_list ?(first="[") ?(last="]") ?(sep=",") : ('a -> string) -> ('a list) -> string
 = fun string_of_v list ->
   let add_string_of_v v acc = link_by_sep sep (string_of_v v) acc in
   first ^ list_fold add_string_of_v list "" ^ last
 
-let string_of_array ?(first="{") ?(last="}") ?(sep=",") : ('a -> string)
-  -> ('a list) -> string
+let string_of_array ?(first="{") ?(last="}") ?(sep=",") : ('a -> string) -> ('a list) -> string
 = fun string_of_v list ->
   let add_string_of_v v acc = link_by_sep sep (string_of_v v) acc in
   first ^ list_fold add_string_of_v list "" ^ last
 
-let string_of_set ?(first="{") ?(last="}") ?(sep=",") : ('a -> string)
-  -> ('a BatSet.t) -> string
+let string_of_set ?(first="{") ?(last="}") ?(sep=",") : ('a -> string) -> ('a BatSet.t) -> string
 = fun string_of_v set ->
   let add_string_of_v v acc = link_by_sep sep (string_of_v v) acc in
   first ^ BatSet.fold add_string_of_v set "" ^ last
 
-let string_of_map ?(first="{") ?(last="}") ?(sep=",\n") : ('a -> string)
-  -> ('b -> string) -> (('a, 'b) BatMap.t) -> string
+let string_of_map ?(first="{") ?(last="}") ?(sep=",\n") : ('a -> string) -> ('b -> string) -> (('a, 'b) BatMap.t) -> string
 = fun string_of_k string_of_v map ->
   let add_string_of_k_v k v acc =
     let str = string_of_k k ^ " -> " ^ string_of_v v in
@@ -238,7 +234,6 @@ let program_to_string : prog -> string
 = fun prog -> list_fold decl_to_string prog ""
 
 (* Labeled version printer *)
-
 let rec lexp_to_string : lexp -> string
 = fun (l, exp) ->
   "(" ^ (string_of_int l) ^ ", " ^
@@ -302,7 +297,7 @@ let rec lexp_to_string : lexp -> string
     "\n (match " ^ lexp_to_string e ^ " with " ^ 
     (list_fold (fun (p,e) r -> r ^ "\n|" ^ pat_to_string p ^ " -> " ^ 
     lexp_to_string e) lst "") ^ ")"
-  |Hole n -> "?"
+  |Hole n -> "? (" ^ string_of_int n ^ ")"
   |Raise e -> "raise "^lexp_to_string e
   ^ ")"
 

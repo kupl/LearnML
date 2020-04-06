@@ -5,6 +5,7 @@ open Util
 let count = ref 0
 let infinite_count = ref 0
 let start_time = ref 0.0
+let timeout = ref 0.2
 
 let trace_set = ref []
 let trace_option = ref false
@@ -157,7 +158,7 @@ let rec value_equality : value -> value -> bool
 let rec eval : env -> lexp -> value
 = fun env (l,e) ->
   let _ = if !trace_option then trace_set := l::(!trace_set) in
-  if (Unix.gettimeofday() -. !start_time >0.2) then 
+  if (Unix.gettimeofday() -. !start_time > !timeout) then 
     let _ = (infinite_count:=!(infinite_count)+1) in
     raise TimeoutError
   else

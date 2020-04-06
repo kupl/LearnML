@@ -41,20 +41,7 @@ let rec subst_exp : Type.Subst.t -> lexp -> lexp
     | ETuple es -> ETuple (List.map (fun e -> subst_exp subst e) es)
     | ECtor (x, es) -> ECtor (x, List.map (fun e -> subst_exp subst e) es)
     | IF (e1, e2, e3) -> IF (subst_exp subst e1, subst_exp subst e2, subst_exp subst e3)
-    | EMatch (e, bs) -> 
-      let rec flatten_branch : branch list -> branch list
-      = fun bs ->
-        match bs with
-        | [] -> []
-        | (p, e)::bs -> 
-          begin match p with
-          | Pats ps -> 
-            let flat_bs = (List.map (fun p -> (p, e)) ps) in
-            (flatten_branch flat_bs)@(flatten_branch bs)
-          | _ -> (p, e)::(flatten_branch bs)
-          end
-      in
-      EMatch (subst_exp subst e, List.map (fun (p, e) -> (p, subst_exp subst e)) (flatten_branch bs))
+    | EMatch (e, bs) -> EMatch (subst_exp subst e, List.map (fun (p, e) -> (p, subst_exp subst e)) bs)
     | ELet (f, is_rec, args, typ, e1, e2) -> ELet (f, is_rec, subst_args subst args, Type.Subst.apply typ subst, subst_exp subst e1, subst_exp subst e2)
     | EBlock (is_rec, bindings, e2) -> EBlock (is_rec, List.map (fun (f, is_rec, args, typ, e) -> (f, is_rec, subst_args subst args, Type.Subst.apply typ subst, subst_exp subst e)) bindings, subst_exp subst e2)
     | _ -> exp

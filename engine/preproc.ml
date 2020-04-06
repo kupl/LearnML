@@ -25,6 +25,9 @@ let parse_file : string -> examples * prog
 let read_prog : string -> prog option
 = fun filename -> if Sys.file_exists filename then Some (snd (parse_file filename)) else None 
 
+let read_prog_debug : string -> (string * prog) option
+= fun filename -> if Sys.file_exists filename then Some (filename, snd (parse_file filename)) else None 
+
 (* Read set of programs from directory *)
 let dir_contents : string -> string list
 = fun dir ->
