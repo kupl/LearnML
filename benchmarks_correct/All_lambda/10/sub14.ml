@@ -2,7 +2,7 @@ exception Error of string
 type lambda = V of var | P of var * lambda | C of lambda * lambda
 	and var = string
 
-let rec env_checker : lambda -> string list -> bool =
+let rec env_checker : lambda -> string list -> bool
 = fun mymet myls ->
 			(match mymet with
 				V sta -> if (List.mem sta myls) then true else false
