@@ -17,4 +17,6 @@
 	P ("x", P (("x", P (("x", V ("x")))))) => true;
 	P ("x", C (V "x", P ("y", P ("y", V "y")))) => true;
 	P ("x", C (P ("y", C (V "y", V "x")), V "x")) => true;
+	P ("y", P ("x", C (V "z", V "y"))) => false;
+	P ("x", C (V "y", V "x")) => false;
 }
