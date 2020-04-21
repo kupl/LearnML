@@ -1,5 +1,5 @@
 type var = string
- type lambda = Var of var
+ type lambda = V of var
  | P of var * lambda
  | C of lambda * lambda
 
