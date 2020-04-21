@@ -3,30 +3,30 @@
  * 2008-11744 Jongwook Choi 				*)
 
 type formula =
-	  TRUE
-	| FALSE
-	| NOT of formula
-	| ANDALSO of formula * formula
-	| ORELSE of formula * formula
-	| IMPLY of formula * formula
-	| LESS of expr * expr
-and expr = 
-	  NUM of int
-	| PLUS of expr * expr
-	| MINUS of expr * expr
+	  True
+	| False
+	| Not of formula
+	| AndAlso of formula * formula
+	| OrElse of formula * formula
+	| Imply of formula * formula
+	| Equal of exp * exp
+and exp = 
+	  Num of int
+	| Plus of exp * exp
+	| Minus of exp * exp
 
 let rec eval f = 
-	let rec evalexpr e = match e with
-	  NUM q -> q
-	| PLUS (f, g) -> (evalexpr f) + (evalexpr g)
-	| MINUS (f, g) -> (evalexpr f) - (evalexpr g)
+	let rec evalexp e = match e with
+	  Num q -> q
+	| Plus (f, g) -> (evalexp f) + (evalexp g)
+	| Minus (f, g) -> (evalexp f) - (evalexp g)
 	in
 	match f with
-	  TRUE -> true
-	| FALSE -> false
-	| NOT f' -> (not (eval f')) 
-	| ANDALSO (f', g') -> (eval f') && (eval g')
-	| ORELSE (f', g') -> (eval f') || (eval g')
-	| IMPLY (f', g') -> (not (eval f')) || (eval g')
-	| LESS (e1, e2) -> (evalexpr e1) < (evalexpr e2)
+	  True -> true
+	| False -> false
+	| Not f' -> (not (eval f')) 
+	| AndAlso (f', g') -> (eval f') && (eval g')
+	| OrElse (f', g') -> (eval f') || (eval g')
+	| Imply (f', g') -> (not (eval f')) || (eval g')
+	| Equal (e1, e2) -> (evalexp e1) = (evalexp e2)
 

@@ -1,26 +1,26 @@
-type formula = TRUE
-            | FALSE
-            | NOT of formula
-            | ANDALSO of formula * formula
-            | ORELSE of formula * formula
-            | IMPLY of formula * formula
-            | LESS of expr * expr
-and expr = NUM of int
-        | PLUS of expr * expr
-        | MINUS of expr * expr
+type formula = True
+            | False
+            | Not of formula
+            | AndAlso of formula * formula
+            | OrElse of formula * formula
+            | Imply of formula * formula
+            | Equal of exp * exp
+and exp = Num of int
+        | Plus of exp * exp
+        | Minus of exp * exp
 
-let rec eeval expr =
-    match expr with
-    | NUM x -> x
-    | PLUS (x,y) -> (eeval x)+(eeval y)
-    | MINUS (x,y) -> (eeval x)-(eeval y)
+let rec eeval exp =
+    match exp with
+    | Num x -> x
+    | Plus (x,y) -> (eeval x)+(eeval y)
+    | Minus (x,y) -> (eeval x)-(eeval y)
 
 let rec eval formula =
     match formula with
-    | TRUE -> true
-    | FALSE -> false
-    | NOT x -> not(eval(x))
-    | ANDALSO (x,y) -> eval(x)&&eval(y)
-    | ORELSE (x,y) -> eval(x)||eval(y)
-    | IMPLY (x,y) -> not(eval(x))||eval(y)
-    | LESS (x,y) -> (eeval x)<(eeval y)
+    | True -> true
+    | False -> false
+    | Not x -> not(eval(x))
+    | AndAlso (x,y) -> eval(x)&&eval(y)
+    | OrElse (x,y) -> eval(x)||eval(y)
+    | Imply (x,y) -> not(eval(x))||eval(y)
+    | Equal (x,y) -> (eeval x)=(eeval y)

@@ -1,31 +1,31 @@
-type formula = TRUE
-  | FALSE
-  | NOT of formula
-  | ANDALSO of formula * formula
-  | ORELSE of formula * formula
-  | IMPLY of formula * formula
-  | LESS of expr * expr
-and expr = NUM of int
-  | PLUS of expr * expr
-  | MINUS of expr * expr
+type formula = True
+  | False
+  | Not of formula
+  | AndAlso of formula * formula
+  | OrElse of formula * formula
+  | Imply of formula * formula
+  | Equal of exp * exp
+and exp = Num of int
+  | Plus of exp * exp
+  | Minus of exp * exp
 
-let rec expreval : expr -> int = fun e ->
+let rec expeval : exp -> int = fun e ->
   match e with
-  | NUM ex -> ex
-  | PLUS(ex, ey) -> expreval(ex)+expreval(ey)
-  | MINUS(ex, ey) -> expreval(ex)-expreval(ey)
+  | Num ex -> ex
+  | Plus(ex, ey) -> expeval(ex)+expeval(ey)
+  | Minus(ex, ey) -> expeval(ex)-expeval(ey)
 
 let rec eval : formula -> bool = fun f ->
   match f with
-  | TRUE -> true
-  | FALSE -> false
-  | NOT(fx) -> if eval(fx) then false else true
-  | ANDALSO(fx, fy) -> eval(fx) && eval(fy)
-  | ORELSE(fx, fy) -> eval(fx) || eval(fy)
-  | IMPLY(fx, fy) -> (match eval(fx) with
+  | True -> true
+  | False -> false
+  | Not(fx) -> if eval(fx) then false else true
+  | AndAlso(fx, fy) -> eval(fx) && eval(fy)
+  | OrElse(fx, fy) -> eval(fx) || eval(fy)
+  | Imply(fx, fy) -> (match eval(fx) with
     | true -> if eval(fy) then true else false
     | false -> true)
-  | LESS(ex, ey) -> expreval(ex) < expreval(ey)
+  | Equal(ex, ey) -> expeval(ex) = expeval(ey)
 
 (* TESTING FIELD BELOW *)
 

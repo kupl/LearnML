@@ -1,26 +1,26 @@
-type formula = TRUE
-	|FALSE
-	|NOT of formula
-	|ANDALSO of formula*formula
-	|ORELSE of formula*formula
-	|IMPLY of formula*formula
-	|LESS of expr*expr
-and expr= NUM of int
-	|PLUS of expr*expr
-	|MINUS of expr*expr
+type formula = True
+	|False
+	|Not of formula
+	|AndAlso of formula*formula
+	|OrElse of formula*formula
+	|Imply of formula*formula
+	|Equal of exp*exp
+and exp= Num of int
+	|Plus of exp*exp
+	|Minus of exp*exp
 
-let rec getexpr inpt =
+let rec getexp inpt =
         match inpt with
-        | NUM(form) -> form
-        | PLUS(form, lat) -> getexpr form + getexpr lat
-        | MINUS(form, lat) -> getexpr form - getexpr lat
+        | Num(form) -> form
+        | Plus(form, lat) -> getexp form + getexp lat
+        | Minus(form, lat) -> getexp form - getexp lat
 
 let rec eval input = 
 	match input  with
-	| TRUE -> true
-	| FALSE -> false
-	| NOT(inpt) -> eval inpt
-	| ANDALSO(form, lat) -> eval form && eval lat
-	| ORELSE(form, lat) -> eval form || eval lat
-	| IMPLY(form, lat) -> not (eval form) || eval lat
-	| LESS(form , lat) -> getexpr form < getexpr lat
+	| True -> true
+	| False -> false
+	| Not(inpt) -> eval inpt
+	| AndAlso(form, lat) -> eval form && eval lat
+	| OrElse(form, lat) -> eval form || eval lat
+	| Imply(form, lat) -> not (eval form) || eval lat
+	| Equal(form , lat) -> getexp form = getexp lat

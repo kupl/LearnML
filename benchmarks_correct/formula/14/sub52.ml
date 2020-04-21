@@ -2,31 +2,31 @@
  * Homework 1 - Exercise 2
  * CSE / 2012-13456 / Gao, Chengbin *)
 
-type formula = TRUE
-             | FALSE
-             | NOT of formula
-             | ANDALSO of formula * formula
-             | ORELSE of formula * formula
-             | IMPLY of formula * formula
-             | LESS of expr * expr
+type formula = True
+             | False
+             | Not of formula
+             | AndAlso of formula * formula
+             | OrElse of formula * formula
+             | Imply of formula * formula
+             | Equal of exp * exp
 
-and expr = NUM of int
-         | PLUS of expr * expr
-         | MINUS of expr * expr
+and exp = Num of int
+         | Plus of exp * exp
+         | Minus of exp * exp
 
 let rec eval f =
     match f with
-    | TRUE -> true
-    | FALSE -> false
-    | NOT(a) -> not (eval a)
-    | ANDALSO(a, b) -> eval a && eval b
-    | ORELSE(a, b) -> eval a || eval b
-    | IMPLY(a, b) -> (not (eval a)) || eval b
-    | LESS(x, y) -> cal x < cal y
+    | True -> true
+    | False -> false
+    | Not(a) -> not (eval a)
+    | AndAlso(a, b) -> eval a && eval b
+    | OrElse(a, b) -> eval a || eval b
+    | Imply(a, b) -> (not (eval a)) || eval b
+    | Equal(x, y) -> cal x = cal y
 
-and cal expr =
-    match expr with
-    | NUM(i) -> i
-    | PLUS(x, y) -> cal x + cal y
-    | MINUS(x, y) -> cal x - cal y
+and cal exp =
+    match exp with
+    | Num(i) -> i
+    | Plus(x, y) -> cal x + cal y
+    | Minus(x, y) -> cal x - cal y
 

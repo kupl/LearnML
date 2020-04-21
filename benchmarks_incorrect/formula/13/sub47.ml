@@ -1,32 +1,32 @@
-type formula = TRUE
-| FALSE
-| NOT of formula
-| ANDALSO of formula * formula
-| ORELSE of formula * formula
-| IMPLY of formula * formula
-| LESS of expr * expr
-and expr = NUM of int
-| PLUS of expr * expr
-| MINUS of expr * expr
+type formula = True
+| False
+| Not of formula
+| AndAlso of formula * formula
+| OrElse of formula * formula
+| Imply of formula * formula
+| Equal of exp * exp
+and exp = Num of int
+| Plus of exp * exp
+| Minus of exp * exp
 
 let rec calc ex =
   match ex with
-    NUM f -> f
-  | PLUS (a, b) -> calc a + calc b
-  | MINUS (a, b) -> calc a - calc b
+    Num f -> f
+  | Plus (a, b) -> calc a + calc b
+  | Minus (a, b) -> calc a - calc b
 
 
 let rec eval e =
   match e with
-    NOT x -> (fun x -> if (x == TRUE) then false else true) x
-  | ANDALSO(a,b) -> if (a == FALSE) then false else if (b == FALSE) then false else true
-  | ORELSE(a,b) -> if (a == TRUE) then true else if (b == TRUE) then true else false
-  | IMPLY(a,b) -> if ((a == FALSE) && (b == TRUE)) then false else true
-  | LESS(a, b)-> calc(a)<calc(b)  (* returns true if exp of left side is smaller than right one *)
-  | FALSE -> false
-  | TRUE -> true
+    Not x -> (fun x -> if (x == True) then false else true) x
+  | AndAlso(a,b) -> if (a == False) then false else if (b == False) then false else true
+  | OrElse(a,b) -> if (a == True) then true else if (b == True) then true else false
+  | Imply(a,b) -> if ((a == False) && (b == True)) then false else true
+  | Equal(a, b)-> calc(a)=calc(b)  (* returns true if exp of left side is smaller than right one *)
+  | False -> false
+  | True -> true
 
 
 (*
-let _ = if (eval( LESS( NUM(5), PLUS(NUM(10),NUM(2)) ) ) == false) then print_string("test")
+let _ = if (eval( Equal( Num(5), Plus(Num(10),Num(2)) ) ) == false) then print_string("test")
 *)

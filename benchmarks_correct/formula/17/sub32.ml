@@ -1,33 +1,33 @@
 (* 2012-11230 Kim sangmin *)
 
-type formula = TRUE
-			 | FALSE
-			 | NOT of formula
-			 | ANDALSO of formula * formula
-			 | ORELSE of formula * formula
-			 | IMPLY of formula * formula
-			 | LESS of expr * expr
-and expr = NUM of int
-		 | PLUS of expr * expr
-		 | MINUS of expr * expr
+type formula = True
+			 | False
+			 | Not of formula
+			 | AndAlso of formula * formula
+			 | OrElse of formula * formula
+			 | Imply of formula * formula
+			 | Equal of exp * exp
+and exp = Num of int
+		 | Plus of exp * exp
+		 | Minus of exp * exp
 
 let rec eval : formula -> bool = fun form ->
-	let rec eval_expr : expr -> int = fun exp ->
+	let rec eval_exp : exp -> int = fun exp ->
 		match exp with
-		| NUM i -> i
-		| PLUS(i,j) -> eval_expr(i)+eval_expr(j)
-		| MINUS(i,j) -> eval_expr(i)-eval_expr(j)
+		| Num i -> i
+		| Plus(i,j) -> eval_exp(i)+eval_exp(j)
+		| Minus(i,j) -> eval_exp(i)-eval_exp(j)
 	in
 	match form with
-	| TRUE -> true
-	| FALSE -> false
-	| NOT i -> not(eval(i))
-	| ANDALSO(i,j) -> eval(i) && eval(j)
-	| ORELSE(i,j) -> eval(i) || eval(j)
-	| IMPLY(i,j) ->	if(not(eval(i))) then true
+	| True -> true
+	| False -> false
+	| Not i -> not(eval(i))
+	| AndAlso(i,j) -> eval(i) && eval(j)
+	| OrElse(i,j) -> eval(i) || eval(j)
+	| Imply(i,j) ->	if(not(eval(i))) then true
 					else if(eval(j)) then true
 					else false
-	| LESS(i,j) -> if(eval_expr(i) < eval_expr(j)) then true
+	| Equal(i,j) -> if(eval_exp(i) = eval_exp(j)) then true
 				   else false
 
 

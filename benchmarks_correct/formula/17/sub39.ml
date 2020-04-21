@@ -1,34 +1,34 @@
-type formula = 	TRUE
-		| FALSE
-		| NOT of formula
-		| ANDALSO of formula * formula
-		| ORELSE of formula * formula
-		| IMPLY of formula * formula
-		| LESS of expr * expr
+type formula = 	True
+		| False
+		| Not of formula
+		| AndAlso of formula * formula
+		| OrElse of formula * formula
+		| Imply of formula * formula
+		| Equal of exp * exp
 
-and expr = NUM of int
-	| PLUS of expr * expr
-	| MINUS of expr * expr
+and exp = Num of int
+	| Plus of exp * exp
+	| Minus of exp * exp
 (*
-let rec calc (e: expr) : int
+let rec calc (e: exp) : int
 	match e with
-	| NUM n -> n
-	| PLUS (e1, e2) -> calc(e1) + calc(e2)
-	| MINUS of (e1, e2) -> calc(e1) - calc(e2)
+	| Num n -> n
+	| Plus (e1, e2) -> calc(e1) + calc(e2)
+	| Minus of (e1, e2) -> calc(e1) - calc(e2)
 *)
 
 let rec eval (f: formula) : bool =
 	match f with
-	| TRUE -> true
-	| FALSE -> false
-	| NOT fn -> not(eval fn)
-	| ANDALSO (f1, f2) -> (eval f1) && (eval f2)
-	| ORELSE (f1, f2) -> (eval f1) || (eval f2)
-	| IMPLY (f1, f2) -> not(eval f1) || (eval f2)
-	| LESS (e1, e2) -> 
-		let rec calc (e: expr) : int =
+	| True -> true
+	| False -> false
+	| Not fn -> not(eval fn)
+	| AndAlso (f1, f2) -> (eval f1) && (eval f2)
+	| OrElse (f1, f2) -> (eval f1) || (eval f2)
+	| Imply (f1, f2) -> not(eval f1) || (eval f2)
+	| Equal (e1, e2) -> 
+		let rec calc (e: exp) : int =
 			match e with
-			| NUM n -> n
-			| PLUS (e1, e2) -> (calc e1) + (calc e2)
-			| MINUS (e1, e2) -> (calc e1) - (calc e2) in
-		if (calc e1) < (calc e2) then true else false
+			| Num n -> n
+			| Plus (e1, e2) -> (calc e1) + (calc e2)
+			| Minus (e1, e2) -> (calc e1) - (calc e2) in
+		if (calc e1) = (calc e2) then true else false

@@ -1,32 +1,32 @@
 type formula =
-    | TRUE
-    | FALSE
-    | NOT of formula
-    | ANDALSO of formula * formula
-    | ORELSE of formula * formula
-    | IMPLY of formula * formula
-    | LESS of expr * expr
-and expr =
-    | NUM of int
-    | PLUS of expr * expr
-    | MINUS of expr * expr;;
+    | True
+    | False
+    | Not of formula
+    | AndAlso of formula * formula
+    | OrElse of formula * formula
+    | Imply of formula * formula
+    | Equal of exp * exp
+and exp =
+    | Num of int
+    | Plus of exp * exp
+    | Minus of exp * exp;;
 
-let rec calc_expr (e: expr) : int =
+let rec calc_exp (e: exp) : int =
     match e with
-    | NUM(i) -> i
-    | PLUS(ex1, ex2) -> ((calc_expr ex1) + (calc_expr ex2))
-    | MINUS(ex1, ex2) -> ((calc_expr ex1) - (calc_expr ex2));;
+    | Num(i) -> i
+    | Plus(ex1, ex2) -> ((calc_exp ex1) + (calc_exp ex2))
+    | Minus(ex1, ex2) -> ((calc_exp ex1) - (calc_exp ex2));;
 
 let rec eval (f: formula) : bool =
     match f with
-    | TRUE -> true
-    | FALSE -> false
-    | NOT(g) -> if eval g then false else true
-    | ANDALSO(g, h) -> let ge = eval g and he = eval h in
+    | True -> true
+    | False -> false
+    | Not(g) -> if eval g then false else true
+    | AndAlso(g, h) -> let ge = eval g and he = eval h in
     if ge && he then true else false
-    | ORELSE(g, h) -> let ge = eval g and he = eval h in
+    | OrElse(g, h) -> let ge = eval g and he = eval h in
     if ge || he then true else false
-    | IMPLY(g, h) -> let ge = eval g and he = eval h in
+    | Imply(g, h) -> let ge = eval g and he = eval h in
     if ge && (not he) then false else true
-    | LESS(e1, e2) -> let ev1 = calc_expr e1 and ev2 = calc_expr e2 in
-    if ev1 < ev2 then true else false;;
+    | Equal(e1, e2) -> let ev1 = calc_exp e1 and ev2 = calc_exp e2 in
+    if ev1 = ev2 then true else false;;

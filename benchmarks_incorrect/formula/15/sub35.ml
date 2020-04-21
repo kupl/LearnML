@@ -1,70 +1,70 @@
 (* define the type *)
 
 type formula =
-	  TRUE
-	| FALSE
-	| NOT of formula
-	| ANDALSO of formula * formula 
-	| ORELSE of formula * formula 
-	| IMPLY of formula * formula
-	| LESS of expr * expr
+	  True
+	| False
+	| Not of formula
+	| AndAlso of formula * formula 
+	| OrElse of formula * formula 
+	| Imply of formula * formula
+	| Equal of exp * exp
 
-and expr = 
-	  NUM of int
-	| PLUS of expr * expr
-	| MINUS of expr * expr
+and exp = 
+	  Num of int
+	| Plus of exp * exp
+	| Minus of exp * exp
 
 	
 			
 (* define the operator *)
 
-let rec expr_to_int e =
+let rec exp_to_int e =
 	match e with
-		  NUM i -> i
-		| PLUS (e1, e2) -> (expr_to_int e1) + (expr_to_int e2)
-		| MINUS (e1, e2) -> (expr_to_int e1) - (expr_to_int e2)
+		  Num i -> i
+		| Plus (e1, e2) -> (exp_to_int e1) + (exp_to_int e2)
+		| Minus (e1, e2) -> (exp_to_int e1) - (exp_to_int e2)
 
 let less_cmd (e1, e2) =
-	if (expr_to_int e1) < (expr_to_int e2) then TRUE
-	else FALSE
+	if (exp_to_int e1) = (exp_to_int e2) then True
+	else False
 		
 let and_also_cmd (f1, f2) = 
-	(* If both expressions evaluate to True, result is True. *)
+	(* If both expessions evaluate to True, result is True. *)
 	match (f1, f2) with
-		  (TRUE, TRUE) -> TRUE
-		| _ -> FALSE
+		  (True, True) -> True
+		| _ -> False
 
 let or_else_cmd (f1, f2) =
-	(* If either or both expressions evaluate to True, result is True.*)
+	(* If either or both expessions evaluate to True, result is True.*)
 	match (f1, f2) with
-		  (FALSE, FALSE) -> FALSE
-		| _ -> TRUE
+		  (False, False) -> False
+		| _ -> True
 		
 let imply_cmd (f1, f2) = 
 	match (f1, f2) with
-		  (TRUE, FALSE) -> FALSE
-		| _ -> TRUE
+		  (True, False) -> False
+		| _ -> True
 
 let rec not_cmd f =
 	match f with
-		  TRUE -> FALSE
-		| FALSE -> TRUE
-		| NOT innerF -> innerF
-		| ANDALSO (f1, f2) -> not_cmd (and_also_cmd (f1, f2)) 
-		| ORELSE (f1, f2) -> not_cmd (or_else_cmd (f1, f2))
-		| IMPLY (f1, f2) -> not_cmd (imply_cmd (f1, f2))
-		| LESS (e1, e2) -> not_cmd (less_cmd (e1, e2))
+		  True -> False
+		| False -> True
+		| Not innerF -> innerF
+		| AndAlso (f1, f2) -> not_cmd (and_also_cmd (f1, f2)) 
+		| OrElse (f1, f2) -> not_cmd (or_else_cmd (f1, f2))
+		| Imply (f1, f2) -> not_cmd (imply_cmd (f1, f2))
+		| Equal (e1, e2) -> not_cmd (less_cmd (e1, e2))
 
 
 let rec formal_to_bool f =
 	match f with
-		  TRUE -> true
-		| FALSE -> false
-		| NOT innerF -> formal_to_bool (not_cmd f)
-		| ANDALSO (f1, f2) -> formal_to_bool (and_also_cmd (f1, f2))
-		| ORELSE (f1, f2) -> formal_to_bool (or_else_cmd (f1, f2))
-		| IMPLY (f1, f2) -> formal_to_bool (imply_cmd (f1, f2))
-		| LESS (e1, e2) -> formal_to_bool (less_cmd (e1, e2))
+		  True -> true
+		| False -> false
+		| Not innerF -> formal_to_bool (not_cmd f)
+		| AndAlso (f1, f2) -> formal_to_bool (and_also_cmd (f1, f2))
+		| OrElse (f1, f2) -> formal_to_bool (or_else_cmd (f1, f2))
+		| Imply (f1, f2) -> formal_to_bool (imply_cmd (f1, f2))
+		| Equal (e1, e2) -> formal_to_bool (less_cmd (e1, e2))
 
 
 
@@ -72,13 +72,13 @@ let rec formal_to_bool f =
 
 let eval f =
 	match f with
-		  TRUE -> true
-		| FALSE -> false
-		| NOT innerF -> formal_to_bool (not_cmd innerF)
-		| ANDALSO (f1, f2) -> formal_to_bool (and_also_cmd (f1, f2))
-		| ORELSE (f1, f2) -> formal_to_bool (or_else_cmd (f1, f2))
-		| IMPLY (f1, f2) -> formal_to_bool (imply_cmd (f1, f2))
-		| LESS (e1, e2) -> formal_to_bool (less_cmd (e1, e2))
+		  True -> true
+		| False -> false
+		| Not innerF -> formal_to_bool (not_cmd innerF)
+		| AndAlso (f1, f2) -> formal_to_bool (and_also_cmd (f1, f2))
+		| OrElse (f1, f2) -> formal_to_bool (or_else_cmd (f1, f2))
+		| Imply (f1, f2) -> formal_to_bool (imply_cmd (f1, f2))
+		| Equal (e1, e2) -> formal_to_bool (less_cmd (e1, e2))
 
 
 	

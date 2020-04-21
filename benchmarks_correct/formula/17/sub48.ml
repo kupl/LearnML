@@ -1,42 +1,42 @@
-type formula = TRUE
-| FALSE
-| NOT of formula
-| ANDALSO of formula * formula
-| ORELSE of formula * formula
-| IMPLY of formula * formula
-| LESS of expr * expr
-and expr = NUM of int
-| PLUS of expr * expr
-| MINUS of expr * expr
+type formula = True
+| False
+| Not of formula
+| AndAlso of formula * formula
+| OrElse of formula * formula
+| Imply of formula * formula
+| Equal of exp * exp
+and exp = Num of int
+| Plus of exp * exp
+| Minus of exp * exp
 
 let rec eval_number f =
 	match f with
-	| NUM f -> f
-	| PLUS(f1, f2) -> (eval_number f1)+(eval_number f2)
-	| MINUS(f1, f2) -> (eval_number f1)-(eval_number f2)
+	| Num f -> f
+	| Plus(f1, f2) -> (eval_number f1)+(eval_number f2)
+	| Minus(f1, f2) -> (eval_number f1)-(eval_number f2)
 	
 let rec eval_formula (f:formula) = 
 	match f with
-	| TRUE -> TRUE
-	| FALSE -> FALSE
-	| NOT TRUE -> FALSE
-	| NOT FALSE -> TRUE
-	| NOT (f1) -> eval_formula(NOT (eval_formula f1))
-	| ANDALSO(TRUE, TRUE) -> TRUE
-	| ANDALSO(FALSE, _) -> FALSE
-	| ANDALSO(_, FALSE) -> FALSE
-	| ANDALSO((f1), (f2)) -> eval_formula(ANDALSO((eval_formula f1), (eval_formula f2)))
-	| ORELSE(TRUE, _) -> TRUE
-	| ORELSE(_, TRUE) -> TRUE
-	| ORELSE(FALSE, FALSE) -> FALSE
-	| ORELSE((f1), (f2)) -> eval_formula(ORELSE((eval_formula f1), (eval_formula f2)))
-	| IMPLY(TRUE, TRUE) -> TRUE
-	| IMPLY(TRUE, FALSE) -> FALSE
-	| IMPLY(FALSE, _) -> TRUE
-	| IMPLY((f1), (f2)) -> eval_formula(IMPLY((eval_formula f1), (eval_formula f2)))
-    | LESS((f1), (f2)) -> if ((eval_number f1)< (eval_number f2)) then TRUE
-    									else FALSE
+	| True -> True
+	| False -> False
+	| Not True -> False
+	| Not False -> True
+	| Not (f1) -> eval_formula(Not (eval_formula f1))
+	| AndAlso(True, True) -> True
+	| AndAlso(False, _) -> False
+	| AndAlso(_, False) -> False
+	| AndAlso((f1), (f2)) -> eval_formula(AndAlso((eval_formula f1), (eval_formula f2)))
+	| OrElse(True, _) -> True
+	| OrElse(_, True) -> True
+	| OrElse(False, False) -> False
+	| OrElse((f1), (f2)) -> eval_formula(OrElse((eval_formula f1), (eval_formula f2)))
+	| Imply(True, True) -> True
+	| Imply(True, False) -> False
+	| Imply(False, _) -> True
+	| Imply((f1), (f2)) -> eval_formula(Imply((eval_formula f1), (eval_formula f2)))
+    | Equal((f1), (f2)) -> if ((eval_number f1)= (eval_number f2)) then True
+    									else False
 let eval (f:formula)=
-	if((eval_formula f) == TRUE) then true
+	if((eval_formula f) == True) then true
 	else false
 

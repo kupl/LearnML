@@ -1,48 +1,48 @@
-type formula = TRUE
-             | FALSE
-             | NOT of formula
-             | ANDALSO of formula * formula
-             | ORELSE of formula * formula
-             | IMPLY of formula * formula
-             | LESS of expr * expr
-and expr = NUM of int
-         | PLUS of expr * expr
-         | MINUS of expr * expr
+type formula = True
+             | False
+             | Not of formula
+             | AndAlso of formula * formula
+             | OrElse of formula * formula
+             | Imply of formula * formula
+             | Equal of exp * exp
+and exp = Num of int
+         | Plus of exp * exp
+         | Minus of exp * exp
 
-let rec value : expr -> int = fun a ->
+let rec value : exp -> int = fun a ->
   match a with
-  | NUM a -> a
-  | PLUS(a,b) -> value a + value b
-  | MINUS(a,b) -> value a - value b
+  | Num a -> a
+  | Plus(a,b) -> value a + value b
+  | Minus(a,b) -> value a - value b
 
 let eval : formula -> bool = fun f -> 
   match f with
-  | TRUE -> true
-  | FALSE -> false
-  | NOT a ->
+  | True -> true
+  | False -> false
+  | Not a ->
       (
-        if a=TRUE then false
+        if a=True then false
         else true
       )
-  | ANDALSO (a, b) ->
+  | AndAlso (a, b) ->
       (
-        if a=FALSE then false
-        else if b=FALSE then false
+        if a=False then false
+        else if b=False then false
         else true
       )
-  | ORELSE (a, b) ->
+  | OrElse (a, b) ->
       (
-        if a=TRUE then true
-        else if b=TRUE then true
+        if a=True then true
+        else if b=True then true
         else false
       )
-  | IMPLY (a, b) ->
+  | Imply (a, b) ->
       (
-        if a=FALSE then true
-        else if b=TRUE then true
+        if a=False then true
+        else if b=True then true
         else false
       )
-  | LESS (a,b) ->
-      (if value a < value b then true
+  | Equal (a,b) ->
+      (if value a = value b then true
        else false
       )

@@ -1,30 +1,30 @@
 
-type formula = TRUE
-			| FALSE
-			| NOT of formula
-			| ANDALSO of formula * formula
-			| ORELSE of formula * formula
-			| IMPLY of formula * formula
-			| LESS of expr * expr
-	and expr 	= NUM of int
-				| PLUS of expr * expr
-				| MINUS of expr * expr
+type formula = True
+			| False
+			| Not of formula
+			| AndAlso of formula * formula
+			| OrElse of formula * formula
+			| Imply of formula * formula
+			| Equal of exp * exp
+	and exp 	= Num of int
+				| Plus of exp * exp
+				| Minus of exp * exp
 
 ;;
-let rec expreval exp =
+let rec expeval exp =
 	match exp with
-		NUM n -> n
-		| PLUS (n1,n2) -> (expreval n1) + (expreval n2)
-		| MINUS (n1,n2) -> (expreval n1) - (expreval n2)
+		Num n -> n
+		| Plus (n1,n2) -> (expeval n1) + (expeval n2)
+		| Minus (n1,n2) -> (expeval n1) - (expeval n2)
 ;;
 let rec eval form =
 	match form with
-		TRUE -> true
-		| FALSE -> false
-		| NOT f -> if (eval f) then false else true
-		| ANDALSO (f1,f2) -> ((eval f1) && (eval f2))
-		| ORELSE (f1,f2) -> ((eval f1) || (eval f2))
-		| IMPLY (f1,f2) -> if (eval f1) && (eval f2) = false then false else true
-		| LESS (e1,e2) -> ((expreval e1) < (expreval e2))
+		True -> true
+		| False -> false
+		| Not f -> if (eval f) then false else true
+		| AndAlso (f1,f2) -> ((eval f1) && (eval f2))
+		| OrElse (f1,f2) -> ((eval f1) || (eval f2))
+		| Imply (f1,f2) -> if (eval f1) && (eval f2) = false then false else true
+		| Equal (e1,e2) -> ((expeval e1) = (expeval e2))
 ;;
 

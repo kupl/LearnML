@@ -1,27 +1,27 @@
- type formula = TRUE
-| FALSE
-| NOT of formula
-| ANDALSO of formula * formula| ORELSE of formula * formula
-| IMPLY of formula * formula
-| LESS of expr * expr
-and expr = NUM of int
-| PLUS of expr * expr
-| MINUS of expr * expr
+ type formula = True
+| False
+| Not of formula
+| AndAlso of formula * formula| OrElse of formula * formula
+| Imply of formula * formula
+| Equal of exp * exp
+and exp = Num of int
+| Plus of exp * exp
+| Minus of exp * exp
 
  let rec eval boo =
 	let rec oper x =
   		match x with
-  			|NUM p -> p
-  			|PLUS(x1,x2) -> (oper x1) + (oper x2)
-  			|MINUS(x1,x2) -> (oper x1) - (oper x2)
+  			|Num p -> p
+  			|Plus(x1,x2) -> (oper x1) + (oper x2)
+  			|Minus(x1,x2) -> (oper x1) - (oper x2)
   	in
   match boo with
-  		| TRUE -> true
-  		| FALSE -> false
-  		| NOT j -> not (eval j)
-  		| ANDALSO (j1,j2) -> (eval j1) && (eval j2)
-  		| ORELSE (j1,j2) -> (eval j1) || (eval j2)
-  		| IMPLY (j1,j2) -> (not (eval j1)) || (eval j2)
-  		| LESS (n1,n2) -> if (oper n1) < (oper n2) then true
+  		| True -> true
+  		| False -> false
+  		| Not j -> not (eval j)
+  		| AndAlso (j1,j2) -> (eval j1) && (eval j2)
+  		| OrElse (j1,j2) -> (eval j1) || (eval j2)
+  		| Imply (j1,j2) -> (not (eval j1)) || (eval j2)
+  		| Equal (n1,n2) -> if (oper n1) = (oper n2) then true
 					else false
 

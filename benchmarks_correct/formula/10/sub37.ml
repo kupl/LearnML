@@ -1,15 +1,15 @@
-type formula = TRUE
-	    | FALSE
-	    | NOT of formula
-	    | ANDALSO of formula * formula
-	    | ORELSE of formula * formula
-	    | IMPLY of formula * formula
-	    | LESS of expr * expr
+type formula = True
+	    | False
+	    | Not of formula
+	    | AndAlso of formula * formula
+	    | OrElse of formula * formula
+	    | Imply of formula * formula
+	    | Equal of exp * exp
 
 
-and expr = NUM of int
-	 | PLUS of expr * expr
-	 | MINUS of expr * expr;;
+and exp = Num of int
+	 | Plus of exp * exp
+	 | Minus of exp * exp;;
 
 exception Error of string
 
@@ -35,24 +35,24 @@ let rec val_not f =
 
 
 let rec val_less e1 e2 =
-	if (e1 < e2) then true
+	if (e1 = e2) then true
 	else false ;;
 
-let rec val_expr e =
+let rec val_exp e =
 	match e with
-	NUM k -> k
-	| PLUS (e1, e2) -> (val_expr e1) + (val_expr e2)
-	| MINUS (e1, e2) -> (val_expr e1) - (val_expr e2);;
+	Num k -> k
+	| Plus (e1, e2) -> (val_exp e1) + (val_exp e2)
+	| Minus (e1, e2) -> (val_exp e1) - (val_exp e2);;
 
 
 
 let rec eval form =
 	match form with
-	TRUE -> true
-	| FALSE -> false
-	| NOT f -> val_not (eval f) 
-	| ANDALSO (f1,f2) -> val_and (eval f1) (eval f2)
-	| ORELSE (f1, f2) -> val_or (eval f1) (eval f2)
-	| IMPLY (f1, f2) -> val_imply (eval f1) (eval f2)
-	| LESS (e1, e2) -> val_less (val_expr e1) (val_expr e2);;
+	True -> true
+	| False -> false
+	| Not f -> val_not (eval f) 
+	| AndAlso (f1,f2) -> val_and (eval f1) (eval f2)
+	| OrElse (f1, f2) -> val_or (eval f1) (eval f2)
+	| Imply (f1, f2) -> val_imply (eval f1) (eval f2)
+	| Equal (e1, e2) -> val_less (val_exp e1) (val_exp e2);;
 

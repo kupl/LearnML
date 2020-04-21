@@ -1,49 +1,49 @@
-type formula = TRUE | FALSE | NOT of formula | ANDALSO of formula * formula
-             | ORELSE of formula * formula | IMPLY of formula * formula
-             | LESS of expr * expr
-and expr = NUM of int | PLUS of expr * expr | MINUS of expr * expr
+type formula = True | False | Not of formula | AndAlso of formula * formula
+             | OrElse of formula * formula | Imply of formula * formula
+             | Equal of exp * exp
+and exp = Num of int | Plus of exp * exp | Minus of exp * exp
 
-let rec expr_to_int (x: expr): int = 
+let rec exp_to_int (x: exp): int = 
   match x with
-  | NUM x -> x
-  | PLUS (a, b) -> (expr_to_int a)+(expr_to_int b)
-  | MINUS (a, b) -> (expr_to_int a)-(expr_to_int b)
+  | Num x -> x
+  | Plus (a, b) -> (exp_to_int a)+(exp_to_int b)
+  | Minus (a, b) -> (exp_to_int a)-(exp_to_int b)
 
-let eval_less ((x: int), (y: int)): bool = x < y
+let eval_less ((x: int), (y: int)): bool = x = y
 
 let rec bool_to_formula (b : bool): formula =
   match b with
-  | true -> TRUE
-  | false -> FALSE
+  | true -> True
+  | false -> False
 
 let rec eval (f : formula): bool = 
   match f with
-  | TRUE -> true
-  | FALSE -> false
-  | NOT a -> (match a with
-              | TRUE -> false
-              | FALSE -> true
-              | a -> eval (NOT (bool_to_formula (eval a)))
+  | True -> true
+  | False -> false
+  | Not a -> (match a with
+              | True -> false
+              | False -> true
+              | a -> eval (Not (bool_to_formula (eval a)))
              )
-  | ANDALSO (a, b) -> (match (a, b) with
-                      | (TRUE, TRUE) -> true
-                      | (TRUE, FALSE) -> false
-                      | (FALSE, TRUE) -> false
-                      | (FALSE, FALSE) -> false
-                      | (a, b) -> eval (ANDALSO (bool_to_formula (eval a), bool_to_formula (eval b)))
+  | AndAlso (a, b) -> (match (a, b) with
+                      | (True, True) -> true
+                      | (True, False) -> false
+                      | (False, True) -> false
+                      | (False, False) -> false
+                      | (a, b) -> eval (AndAlso (bool_to_formula (eval a), bool_to_formula (eval b)))
                       )
-  | ORELSE (a, b) -> (match (a, b) with
-                     | (TRUE, TRUE) -> true
-                     | (TRUE, FALSE) -> true
-                     | (FALSE, TRUE) -> true
-                     | (FALSE, FALSE) -> false
-                     | (a, b) -> eval (ORELSE (bool_to_formula (eval a), bool_to_formula (eval b)))
+  | OrElse (a, b) -> (match (a, b) with
+                     | (True, True) -> true
+                     | (True, False) -> true
+                     | (False, True) -> true
+                     | (False, False) -> false
+                     | (a, b) -> eval (OrElse (bool_to_formula (eval a), bool_to_formula (eval b)))
                      )
-  | IMPLY (a, b) -> (match (a, b) with
-                    | (TRUE, TRUE) -> true
-                    | (FALSE, TRUE) -> true
-                    | (TRUE, FALSE) -> false
-                    | (FALSE, FALSE) -> true
-                    | (a, b) -> eval (IMPLY (bool_to_formula (eval a), bool_to_formula (eval b)))
+  | Imply (a, b) -> (match (a, b) with
+                    | (True, True) -> true
+                    | (False, True) -> true
+                    | (True, False) -> false
+                    | (False, False) -> true
+                    | (a, b) -> eval (Imply (bool_to_formula (eval a), bool_to_formula (eval b)))
                     )
-  | LESS (c, d) -> eval_less (expr_to_int c, expr_to_int d)
+  | Equal (c, d) -> eval_less (exp_to_int c, exp_to_int d)

@@ -12,4 +12,7 @@
 	OrElse (True, True) => true;
 	OrElse (True, Not True) => true;
 	Equal (Num 1, Plus (Num 0, Num 1)) => true;
+	AndAlso ((True, Not (True))) => false;
+	OrElse ((False, Not (False))) => true;
+	Imply  (False, True) => true;
 }

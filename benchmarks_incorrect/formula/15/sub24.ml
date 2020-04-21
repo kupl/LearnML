@@ -1,35 +1,35 @@
 type formula =
-  | TRUE
-  | FALSE
-  | NOT of formula
-  | ANDALSO of formula * formula
-  | ORELSE of formula * formula
-  | IMPLY of formula * formula
-  | LESS of expr * expr
+  | True
+  | False
+  | Not of formula
+  | AndAlso of formula * formula
+  | OrElse of formula * formula
+  | Imply of formula * formula
+  | Equal of exp * exp
 
- and expr = NUM of int
-	  | PLUS of expr * expr
-	  | MINUS of expr * expr
+ and exp = Num of int
+	  | Plus of exp * exp
+	  | Minus of exp * exp
 
-let rec eval_expr (e: expr): int =
+let rec eval_exp (e: exp): int =
   match e with
-  | NUM(x) -> x
-  | PLUS(x, y) -> eval_expr x + eval_expr y
-  | MINUS(x, y) -> eval_expr x - eval_expr y
+  | Num(x) -> x
+  | Plus(x, y) -> eval_exp x + eval_exp y
+  | Minus(x, y) -> eval_exp x - eval_exp y
 
 let rec eval (f: formula): bool =
   match f with
-  | TRUE -> true
-  | FALSE -> false
-  | NOT(a) -> if a = TRUE then false else true
-  | ANDALSO(x, y) -> if x = TRUE && y = TRUE then true
+  | True -> true
+  | False -> false
+  | Not(a) -> if a = True then false else true
+  | AndAlso(x, y) -> if x = True && y = True then true
 		     else false
-  | ORELSE(x, y) -> if x = FALSE && y = FALSE then false
+  | OrElse(x, y) -> if x = False && y = False then false
 		    else true
-  | IMPLY(x, y) -> if x = FALSE && y = FALSE then true
-		   else if x = FALSE && y = TRUE then true
-		   else if x = TRUE && y = FALSE then false
+  | Imply(x, y) -> if x = False && y = False then true
+		   else if x = False && y = True then true
+		   else if x = True && y = False then false
 		   else true
-  | LESS(x, y) -> if(eval_expr x < eval_expr y) then true
+  | Equal(x, y) -> if(eval_exp x = eval_exp y) then true
 		  else false
 	  

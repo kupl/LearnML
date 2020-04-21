@@ -1,28 +1,28 @@
 (* 2009-11824 Jieun-Jeong HW1-5 *)
 
-type formula = TRUE
-	| FALSE
-	| NOT of formula
-	| ANDALSO of formula * formula
-	| ORELSE of formula * formula
-	| IMPLY of formula * formula
-	| LESS of expr * expr
-and expr = NUM of int
-	| PLUS of expr * expr
-	| MINUS of expr * expr
+type formula = True
+	| False
+	| Not of formula
+	| AndAlso of formula * formula
+	| OrElse of formula * formula
+	| Imply of formula * formula
+	| Equal of exp * exp
+and exp = Num of int
+	| Plus of exp * exp
+	| Minus of exp * exp
 
 let rec eval f =
 	let rec calc e =
 		match e with
-		NUM n		-> n
-		|PLUS (el, er)	-> (calc el) + (calc er)
-		|MINUS (el, er) -> (calc el) - (calc er)
+		Num n		-> n
+		|Plus (el, er)	-> (calc el) + (calc er)
+		|Minus (el, er) -> (calc el) - (calc er)
 	in
 	match f with
-	TRUE			-> true
-	|FALSE			-> false
-	|NOT f			-> if (eval f) then false else true
-	|ANDALSO (fl, fr)	-> (eval fl) && (eval fr)
-	|ORELSE (fl, fr)	-> (eval fl) || (eval fr)
-	|IMPLY (fl, fr)		-> (eval (NOT fl)) || (eval fr)
-	|LESS (el, er)		-> (calc el) < (calc er)	
+	True			-> true
+	|False			-> false
+	|Not f			-> if (eval f) then false else true
+	|AndAlso (fl, fr)	-> (eval fl) && (eval fr)
+	|OrElse (fl, fr)	-> (eval fl) || (eval fr)
+	|Imply (fl, fr)		-> (eval (Not fl)) || (eval fr)
+	|Equal (el, er)		-> (calc el) = (calc er)	

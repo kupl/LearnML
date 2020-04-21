@@ -1,24 +1,24 @@
-type formula = TRUE
-               | FALSE
-               | NOT of formula
-               | ANDALSO of formula * formula
-               | ORELSE of formula * formula
-               | IMPLY of formula * formula
-               | LESS of expr * expr
-and expr = NUM of int
-           | PLUS of expr * expr
-           | MINUS of expr * expr;;
+type formula = True
+               | False
+               | Not of formula
+               | AndAlso of formula * formula
+               | OrElse of formula * formula
+               | Imply of formula * formula
+               | Equal of exp * exp
+and exp = Num of int
+           | Plus of exp * exp
+           | Minus of exp * exp;;
 
-let rec eval_expr = function
-  | NUM a -> a
-  | PLUS (a, b) -> eval_expr a + eval_expr b
-  | MINUS (a, b) -> eval_expr a - eval_expr b;;
+let rec eval_exp = function
+  | Num a -> a
+  | Plus (a, b) -> eval_exp a + eval_exp b
+  | Minus (a, b) -> eval_exp a - eval_exp b;;
 
 let rec eval = function
-  | TRUE -> true
-  | FALSE -> false
-  | NOT a -> if (eval a) = true then false else true
-  | ANDALSO (a, b) -> if (eval a) = true && (eval b) = true then true else false
-  | ORELSE (a, b) -> if (eval a) = true || (eval b) = true then true else false
-  | IMPLY (a, b) -> if (eval a) = true && (eval b) = false then false else true
-  | LESS (a, b) -> if (eval_expr a) < (eval_expr b) then true else false;;
+  | True -> true
+  | False -> false
+  | Not a -> if (eval a) = true then false else true
+  | AndAlso (a, b) -> if (eval a) = true && (eval b) = true then true else false
+  | OrElse (a, b) -> if (eval a) = true || (eval b) = true then true else false
+  | Imply (a, b) -> if (eval a) = true && (eval b) = false then false else true
+  | Equal (a, b) -> if (eval_exp a) = (eval_exp b) then true else false;;

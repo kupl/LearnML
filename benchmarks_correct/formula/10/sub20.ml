@@ -1,26 +1,26 @@
 
 (*Ex5*)
-type formula = TRUE
-			  | FALSE
-			  | NOT of formula
-			  | ANDALSO of formula * formula
-			  | ORELSE of formula * formula
-			  | IMPLY of formula * formula
-			  | LESS of expr * expr
-    and expr = NUM of int
-			  | PLUS of expr * expr
-			  | MINUS of expr * expr
+type formula = True
+			  | False
+			  | Not of formula
+			  | AndAlso of formula * formula
+			  | OrElse of formula * formula
+			  | Imply of formula * formula
+			  | Equal of exp * exp
+    and exp = Num of int
+			  | Plus of exp * exp
+			  | Minus of exp * exp
 let rec eval : formula -> bool =
-	let rec evale : expr -> int =
-		fun ex -> match ex with NUM a -> a
-							|PLUS(a,b) -> evale(a) + evale(b)
-							|MINUS(a,b) -> evale(a) - evale(b)
+	let rec evale : exp -> int =
+		fun ex -> match ex with Num a -> a
+							|Plus(a,b) -> evale(a) + evale(b)
+							|Minus(a,b) -> evale(a) - evale(b)
 	in
-	fun ex -> match ex with TRUE -> true
-						|	FALSE -> false
-						|	NOT ex -> not(eval(ex))
-						|	ANDALSO (a,b) -> eval(a) & eval(b)
-						|	ORELSE (a,b) -> eval(a) || eval(b)
-						|	IMPLY (a,b) -> if eval(b) then true else
+	fun ex -> match ex with True -> true
+						|	False -> false
+						|	Not ex -> not(eval(ex))
+						|	AndAlso (a,b) -> eval(a) & eval(b)
+						|	OrElse (a,b) -> eval(a) || eval(b)
+						|	Imply (a,b) -> if eval(b) then true else
 											if eval(a) then false else true
-						|	LESS (a,b) -> evale(a) < evale(b)
+						|	Equal (a,b) -> evale(a) = evale(b)

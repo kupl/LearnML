@@ -1,48 +1,48 @@
 exception EvalError
 
-type expr = NUM of int
-          | PLUS of expr * expr
-          | MINUS of expr * expr
+type exp = Num of int
+          | Plus of exp * exp
+          | Minus of exp * exp
 
-type formula = TRUE
-             | FALSE
-             | NOT of formula
-             | ANDALSO of formula * formula
-             | ORELSE of formula * formula
-             | IMPLY of formula * formula
-             | LESS of expr * expr
+type formula = True
+             | False
+             | Not of formula
+             | AndAlso of formula * formula
+             | OrElse of formula * formula
+             | Imply of formula * formula
+             | Equal of exp * exp
 
 let rec eval: formula -> bool =
   fun f ->
-    let rec eval_expr: expr -> expr =
+    let rec eval_exp: exp -> exp =
       fun e ->
         match e with
-        | NUM n ->
-            NUM n
-        | PLUS (NUM n1, NUM n2) ->
-            NUM (n1 + n2)
-        | PLUS (e1, e2) ->
-            eval_expr (PLUS ((eval_expr e1), (eval_expr e2)))
-        | MINUS (NUM n1, NUM n2) ->
-            NUM (n1 - n2)
-        | MINUS (e1, e2) ->
-            eval_expr (MINUS ((eval_expr e1), (eval_expr e2))) in
+        | Num n ->
+            Num n
+        | Plus (Num n1, Num n2) ->
+            Num (n1 + n2)
+        | Plus (e1, e2) ->
+            eval_exp (Plus ((eval_exp e1), (eval_exp e2)))
+        | Minus (Num n1, Num n2) ->
+            Num (n1 - n2)
+        | Minus (e1, e2) ->
+            eval_exp (Minus ((eval_exp e1), (eval_exp e2))) in
     match f with
-    | TRUE ->
+    | True ->
         true
-    | FALSE ->
+    | False ->
         false
-    | NOT f1 ->
+    | Not f1 ->
         not (eval f1)
-    | ANDALSO (f1, f2) ->
+    | AndAlso (f1, f2) ->
         (eval f1) && (eval f2)
-    | ORELSE (f1, f2) ->
+    | OrElse (f1, f2) ->
         (eval f1) || (eval f2)
-    | IMPLY (f1, f2) ->
+    | Imply (f1, f2) ->
         (not (eval f1)) || (eval f2)
-    | LESS (e1, e2) ->
-        match ((eval_expr e1), (eval_expr e2)) with
-        | (NUM n1, NUM n2) ->
-            n1 < n2
+    | Equal (e1, e2) ->
+        match ((eval_exp e1), (eval_exp e2)) with
+        | (Num n1, Num n2) ->
+            n1 = n2
         | _ ->
             raise EvalError

@@ -1,70 +1,70 @@
 (*컴퓨터공학부 2010-11779 박진영 1.2*)
 exception Rec_exception
 
-type formula = TRUE
-| FALSE
-| NOT of formula
-| ANDALSO of formula * formula
-| ORELSE of formula * formula
-| IMPLY of formula * formula
-| LESS of expr * expr
-and expr = NUM of int
-| PLUS of expr * expr
-| MINUS of expr * expr
+type formula = True
+| False
+| Not of formula
+| AndAlso of formula * formula
+| OrElse of formula * formula
+| Imply of formula * formula
+| Equal of exp * exp
+and exp = Num of int
+| Plus of exp * exp
+| Minus of exp * exp
 
 let eval fm =
 
 let rec cal e =
 match e with
-| NUM i -> e
-| PLUS (e1, e2) -> 
+| Num i -> e
+| Plus (e1, e2) -> 
   (match (cal e1, cal e2) with
-  | (NUM i1, NUM i2) -> NUM (i1+i2)
+  | (Num i1, Num i2) -> Num (i1+i2)
   | _ -> raise Rec_exception
   ) 
-| MINUS (e1, e2) ->
+| Minus (e1, e2) ->
   (match (cal e1, cal e2) with
-  | (NUM i1, NUM i2) -> NUM (i1-i2)
+  | (Num i1, Num i2) -> Num (i1-i2)
   | _ -> raise Rec_exception
   ) 
 in
 
 let rec evalfunc fm =
 match fm with
-| TRUE -> TRUE
-| FALSE -> FALSE
-| NOT f -> 
+| True -> True
+| False -> False
+| Not f -> 
   ( match evalfunc f with
-  | TRUE -> FALSE
-  | FALSE -> TRUE
+  | True -> False
+  | False -> True
   | _ -> raise Rec_exception
   )
-| ANDALSO (f1, f2) ->
+| AndAlso (f1, f2) ->
   ( match (evalfunc f1, evalfunc f2) with
-  | (TRUE, TRUE) -> TRUE
-  | _ -> FALSE
+  | (True, True) -> True
+  | _ -> False
   )
-| ORELSE (f1, f2) ->
+| OrElse (f1, f2) ->
   ( match (evalfunc f1, evalfunc f2) with
-  | (FALSE, FALSE) -> FALSE
-  | _ -> TRUE
+  | (False, False) -> False
+  | _ -> True
   )
-| IMPLY (f1, f2) ->
+| Imply (f1, f2) ->
   ( match (evalfunc f1, evalfunc f2) with
-  | (TRUE, FALSE) -> FALSE
-  | _ -> TRUE
+  | (True, False) -> False
+  | _ -> True
   )
-| LESS (e1, e2) ->
+| Equal (e1, e2) ->
   (match (cal e1, cal e2) with
-  | (NUM i1, NUM i2) ->
-    ( if i1 < i2 then TRUE
-      else FALSE
+  | (Num i1, Num i2) ->
+    ( if i1 = i2 then True
+      else False
     )
   | _ -> raise Rec_exception
   )
 in
 
 match evalfunc fm with
-| TRUE -> true
-| FALSE -> false
+| True -> true
+| False -> false
 | _ -> raise Rec_exception

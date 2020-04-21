@@ -1,22 +1,22 @@
-type formula = TRUE | FALSE | NOT of formula | ANDALSO of formula * formula 
-| ORELSE of formula * formula
-| IMPLY of formula * formula | LESS of expr * expr
-and expr = NUM of int | PLUS of expr*expr | MINUS of expr * expr
+type formula = True | False | Not of formula | AndAlso of formula * formula 
+| OrElse of formula * formula
+| Imply of formula * formula | Equal of exp * exp
+and exp = Num of int | Plus of exp*exp | Minus of exp * exp
 
-let rec expToint (exp1 : expr) : int = 
+let rec expToint (exp1 : exp) : int = 
 match (exp1) with
-|(NUM in1) -> in1
-|(PLUS (in2,in3)) -> ((expToint in2)+(expToint in3))
-|(MINUS (in4, in5)) -> ((expToint in4)-(expToint in5))
+|(Num in1) -> in1
+|(Plus (in2,in3)) -> ((expToint in2)+(expToint in3))
+|(Minus (in4, in5)) -> ((expToint in4)-(expToint in5))
 
 
 
 let rec eval (form1 : formula) : bool = 
 match (form1) with
-|(TRUE) -> true
-|(FALSE) -> false
-|(NOT fo1) -> not (eval fo1) 
-|(ANDALSO (fo2,fo3)) -> (eval fo2) && (eval fo3) 
-|(ORELSE (fo4,fo5)) -> (eval fo4)||(eval fo5)
-|(IMPLY (fo6,fo7)) -> not ((eval fo6) && (not (eval fo7)))
-|(LESS (ex1,ex2)) -> (expToint ex1) < (expToint ex2)
+|(True) -> true
+|(False) -> false
+|(Not fo1) -> not (eval fo1) 
+|(AndAlso (fo2,fo3)) -> (eval fo2) && (eval fo3) 
+|(OrElse (fo4,fo5)) -> (eval fo4)||(eval fo5)
+|(Imply (fo6,fo7)) -> not ((eval fo6) && (not (eval fo7)))
+|(Equal (ex1,ex2)) -> (expToint ex1) = (expToint ex2)

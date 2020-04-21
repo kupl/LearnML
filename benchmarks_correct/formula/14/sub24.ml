@@ -1,13 +1,13 @@
-type formula  = TRUE 
-| FALSE 
-| NOT of formula 
-| ANDALSO of formula * formula 
-| ORELSE of formula * formula 
-| IMPLY of formula * formula 
-| LESS of expr * expr
-and expr = NUM of int 
-| PLUS of expr * expr 
-| MINUS of expr * expr
+type formula  = True 
+| False 
+| Not of formula 
+| AndAlso of formula * formula 
+| OrElse of formula * formula 
+| Imply of formula * formula 
+| Equal of exp * exp
+and exp = Num of int 
+| Plus of exp * exp 
+| Minus of exp * exp
 
 let rec eval fm =
   let imp a b =
@@ -17,15 +17,15 @@ let rec eval fm =
   in
   let rec exp ex =
     match ex with
-    |NUM a -> a
-    |PLUS (a, b) -> (exp a) + (exp b)
-    |MINUS (a, b) -> (exp a) - (exp b)
+    |Num a -> a
+    |Plus (a, b) -> (exp a) + (exp b)
+    |Minus (a, b) -> (exp a) - (exp b)
   in
   match fm with
-  |TRUE -> true
-  |FALSE -> false
-  |NOT a -> not (eval a)
-  |ANDALSO (a, b) -> (eval a) && (eval b)
-  |ORELSE (a, b) -> (eval a) || (eval b)
-  |IMPLY (a, b) -> (imp (eval a) (eval b))
-  |LESS (a, b) -> (exp a) < (exp b)
+  |True -> true
+  |False -> false
+  |Not a -> not (eval a)
+  |AndAlso (a, b) -> (eval a) && (eval b)
+  |OrElse (a, b) -> (eval a) || (eval b)
+  |Imply (a, b) -> (imp (eval a) (eval b))
+  |Equal (a, b) -> (exp a) = (exp b)

@@ -1,29 +1,29 @@
-type formula = TRUE
-	| FALSE
-	| NOT of formula
-	| ANDALSO of formula * formula
-	| ORELSE of formula * formula
-	| IMPLY of formula * formula
-	| LESS of expr * expr
+type formula = True
+	| False
+	| Not of formula
+	| AndAlso of formula * formula
+	| OrElse of formula * formula
+	| Imply of formula * formula
+	| Equal of exp * exp
 
-and expr = NUM of int
-	| PLUS of expr * expr
-	| MINUS of expr * expr
+and exp = Num of int
+	| Plus of exp * exp
+	| Minus of exp * exp
 
 let rec value exp =
 match exp with
-	| PLUS(a,b) -> (value a) + (value b)
-	| MINUS(a,b) -> (value a) - (value b)
-	| NUM n -> n
+	| Plus(a,b) -> (value a) + (value b)
+	| Minus(a,b) -> (value a) - (value b)
+	| Num n -> n
 
 let rec eval f =
 match f with
-	| TRUE -> true
-	| FALSE -> false
-	| ANDALSO(a,b) -> (eval a) && (eval b)
-	| ORELSE(a,b) -> (eval a) || (eval b)
-	| NOT a -> not (eval a)
-	| IMPLY(a,b) -> not (eval a) || (eval b)
-	| LESS(a,b) -> if (value a) < (value b) then true else false
+	| True -> true
+	| False -> false
+	| AndAlso(a,b) -> (eval a) && (eval b)
+	| OrElse(a,b) -> (eval a) || (eval b)
+	| Not a -> not (eval a)
+	| Imply(a,b) -> not (eval a) || (eval b)
+	| Equal(a,b) -> if (value a) = (value b) then true else false
 
 

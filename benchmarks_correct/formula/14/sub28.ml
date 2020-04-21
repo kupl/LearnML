@@ -1,40 +1,38 @@
-(*2011-11004 ³²À±¼® ¹®Á¦2*)
-
-type formula = TRUE
-	| FALSE
-	| NOT of formula
-	| ANDALSO of formula * formula
-	| ORELSE of formula * formula
-	| IMPLY of formula * formula
-	| LESS of expr * expr
-and expr = NUM of int
-	| PLUS of expr * expr
-	| MINUS of expr * expr
+type formula = True
+	| False
+	| Not of formula
+	| AndAlso of formula * formula
+	| OrElse of formula * formula
+	| Imply of formula * formula
+	| Equal of exp * exp
+and exp = Num of int
+	| Plus of exp * exp
+	| Minus of exp * exp
 
 let rec cal n =
 	match n with
-		NUM x -> x
-		|PLUS(x, y) -> cal x + cal y
-		|MINUS(x, y) -> cal x - cal y
+		Num x -> x
+		|Plus(x, y) -> cal x + cal y
+		|Minus(x, y) -> cal x - cal y
 
 
 let rec eval b =
 	match b with
-		TRUE -> true
-		| FALSE -> false
-		| NOT x -> 
+		True -> true
+		| False -> false
+		| Not x -> 
 			if eval x = true then false
 			else true
-		| ANDALSO (x, y) ->
+		| AndAlso (x, y) ->
 			if eval x = true && eval y = true then true
 			else false
-		| ORELSE (x, y) ->
+		| OrElse (x, y) ->
 			if eval x = true || eval y = true then true
 			else false
-		| IMPLY (x, y) ->
+		| Imply (x, y) ->
 			if eval x = true && eval y = false then false
 			else true
-		| LESS (x, y) ->
-			if cal x < cal y then true
+		| Equal (x, y) ->
+			if cal x = cal y then true
 			else false
 

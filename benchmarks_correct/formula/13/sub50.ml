@@ -1,27 +1,27 @@
-type formula = TRUE
-	| FALSE
-	| NOT of formula
-	| ANDALSO of formula * formula
-	| ORELSE of formula * formula
-	| IMPLY of formula * formula
-	| LESS of expr * expr
+type formula = True
+	| False
+	| Not of formula
+	| AndAlso of formula * formula
+	| OrElse of formula * formula
+	| Imply of formula * formula
+	| Equal of exp * exp
 
-and expr = NUM of int
-	| PLUS of expr * expr
-	| MINUS of expr * expr
+and exp = Num of int
+	| Plus of exp * exp
+	| Minus of exp * exp
 
 let rec cal e =
 	match e with
-	| NUM num -> num
-	| PLUS (lexpr, rexpr) -> (cal lexpr) + (cal rexpr)
-	| MINUS (lexpr, rexpr) -> (cal lexpr) - (cal rexpr)	
+	| Num num -> num
+	| Plus (lexp, rexp) -> (cal lexp) + (cal rexp)
+	| Minus (lexp, rexp) -> (cal lexp) - (cal rexp)	
 
 let rec eval f =
 	match f with
-	| TRUE -> true
-	| FALSE -> false
-	| NOT form -> not (eval form)
-	| ANDALSO (lform, rform) -> (eval lform) && (eval rform)
-	| ORELSE (lform, rform) -> (eval lform) || (eval rform)
-	| IMPLY (lform, rform) -> (not (eval lform)) || (eval rform)
-	| LESS (lexpr, rexpr) -> (cal lexpr) < (cal rexpr)
+	| True -> true
+	| False -> false
+	| Not form -> not (eval form)
+	| AndAlso (lform, rform) -> (eval lform) && (eval rform)
+	| OrElse (lform, rform) -> (eval lform) || (eval rform)
+	| Imply (lform, rform) -> (not (eval lform)) || (eval rform)
+	| Equal (lexp, rexp) -> (cal lexp) = (cal rexp)

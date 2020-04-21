@@ -4,47 +4,47 @@
  * Written by Dongho Kang 
  *)
 
-type formula = TRUE 
-| FALSE
-| NOT       of formula
-| ANDALSO   of formula * formula
-| ORELSE    of formula * formula
-| IMPLY     of formula * formula
-| LESS      of expr * expr
+type formula = True 
+| False
+| Not       of formula
+| AndAlso   of formula * formula
+| OrElse    of formula * formula
+| Imply     of formula * formula
+| Equal      of exp * exp
 
-and expr = NUM of int
-| PLUS  of expr * expr
-| MINUS of expr * expr
+and exp = Num of int
+| Plus  of exp * exp
+| Minus of exp * exp
 ;;
 
 let rec eval: formula -> bool = fun f ->
 
-    let rec ex_to_int: expr -> int = fun e -> (* sub-ftn for expr type *)
+    let rec ex_to_int: exp -> int = fun e -> (* sub-ftn for exp type *)
         match e with 
-    | NUM e -> e        (* if e is int *)
-    | PLUS (e1, e2) ->  (* if e is sum of e1 and e2 *)
+    | Num e -> e        (* if e is int *)
+    | Plus (e1, e2) ->  (* if e is sum of e1 and e2 *)
             ex_to_int e1 + ex_to_int e2
-    | MINUS (e1, e2) -> (* if e is diff of e1 and e2 *)
+    | Minus (e1, e2) -> (* if e is diff of e1 and e2 *)
             ex_to_int e1 - ex_to_int e2
-    in (* change expr to int *)
+    in (* change exp to int *)
 
     match f with 
-    | TRUE      -> true
-    | FALSE     -> false
-    | NOT f1   -> 
-            if eval f1 = true then false    (* NOT of true is false *)
-            else true                       (* NOT of false is true *)
-    | ANDALSO (f1, f2) ->
+    | True      -> true
+    | False     -> false
+    | Not f1   -> 
+            if eval f1 = true then false    (* Not of true is false *)
+            else true                       (* Not of false is true *)
+    | AndAlso (f1, f2) ->
             if eval f1 = true && eval f2 = true then true   (* true, true is true *)
             else false                                      (* otherwise false *)
-    | ORELSE (f1, f2) ->    
+    | OrElse (f1, f2) ->    
             if eval f1 = false && eval f2 = false then false(* false, false is false *)
             else true                                       (* otherwise true *)
-    | IMPLY (f1, f2) ->
+    | Imply (f1, f2) ->
             if eval f1 = false then true                    (* false, true / false is true *)
             else if eval f2 = true then true                (* true, true is true *)
             else false                                      (* true, false is false *)
-    | LESS (ex1, ex2) ->                                    
-            ex_to_int ex1 < ex_to_int ex2                   
+    | Equal (ex1, ex2) ->                                    
+            ex_to_int ex1 = ex_to_int ex2                   
 ;;
 

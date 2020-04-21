@@ -1,35 +1,35 @@
-(* let TRUE = true;; *)
-(* let FALSE = false;; *)
+(* let True = true;; *)
+(* let False = false;; *)
 
 type formula =
-  TRUE
-| FALSE
-| NOT of formula
-| ANDALSO of formula * formula
-| ORELSE of formula * formula
-| IMPLY of formula * formula
-| LESS of expr * expr
+  True
+| False
+| Not of formula
+| AndAlso of formula * formula
+| OrElse of formula * formula
+| Imply of formula * formula
+| Equal of exp * exp
 
-and expr =
-  NUM of int
-| PLUS of expr * expr
-| MINUS of expr * expr
+and exp =
+  Num of int
+| Plus of exp * exp
+| Minus of exp * exp
 
-let rec eval_expr e =
+let rec eval_exp e =
 match e with
-  NUM x -> x
-| PLUS (x, y) -> eval_expr (x) + eval_expr (y)
-| MINUS (x, y) -> eval_expr (x) - eval_expr (y)
+  Num x -> x
+| Plus (x, y) -> eval_exp (x) + eval_exp (y)
+| Minus (x, y) -> eval_exp (x) - eval_exp (y)
 ;;
 
 let rec eval_formula p =
 match p with
-  TRUE -> TRUE
-| FALSE -> FALSE
-| NOT x -> if eval_formula (x) == TRUE then FALSE else TRUE
-| ANDALSO (x, y) -> if eval_formula (x) == TRUE && eval_formula (y) == TRUE then TRUE else FALSE
-| IMPLY (x, y) -> if eval_formula (x) == FALSE then TRUE else eval_formula (y)
-| LESS (x, y) -> if eval_expr (x) < eval_expr (y) then TRUE else FALSE
+  True -> True
+| False -> False
+| Not x -> if eval_formula (x) == True then False else True
+| AndAlso (x, y) -> if eval_formula (x) == True && eval_formula (y) == True then True else False
+| Imply (x, y) -> if eval_formula (x) == False then True else eval_formula (y)
+| Equal (x, y) -> if eval_exp (x) = eval_exp (y) then True else False
 ;;
 
-let eval x = if eval_formula (x) == TRUE then true else false;;
+let eval x = if eval_formula (x) == True then true else false;;

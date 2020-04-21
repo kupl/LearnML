@@ -1,28 +1,28 @@
 (*Computer Science Engineering 2015-12683 Kim Jaein*)
-type formula = TRUE
-			 | FALSE
-			 | NOT of formula
-			 | ANDALSO of formula * formula
-			 | ORELSE of formula * formula
-			 | IMPLY of formula * formula
-			 | LESS of expr * expr
-and expr = NUM of int
-		 | PLUS of expr * expr
-		 | MINUS of expr * expr
+type formula = True
+			 | False
+			 | Not of formula
+			 | AndAlso of formula * formula
+			 | OrElse of formula * formula
+			 | Imply of formula * formula
+			 | Equal of exp * exp
+and exp = Num of int
+		 | Plus of exp * exp
+		 | Minus of exp * exp
 
-let rec toint (value:expr) = 
+let rec toint (value:exp) = 
 	match value with
-	|NUM i -> i
-	|PLUS (x, y) -> (toint x) + (toint y)
-	|MINUS (x, y) -> (toint x) - (toint y)
+	|Num i -> i
+	|Plus (x, y) -> (toint x) + (toint y)
+	|Minus (x, y) -> (toint x) - (toint y)
 
 let rec eval (value:formula) = 
 	match value with
-	|TRUE -> true
-	|FALSE -> false
-	|NOT negation -> not (eval negation)
-	|ANDALSO (a, b) -> (eval a) && (eval b)
-	|ORELSE (a, b) -> (eval a) || (eval b)
-	|IMPLY (a, b) -> (not (eval a)) || (eval b)
-	|LESS (a, b) -> (toint a) < (toint b)
+	|True -> true
+	|False -> false
+	|Not negation -> not (eval negation)
+	|AndAlso (a, b) -> (eval a) && (eval b)
+	|OrElse (a, b) -> (eval a) || (eval b)
+	|Imply (a, b) -> (not (eval a)) || (eval b)
+	|Equal (a, b) -> (toint a) = (toint b)
 

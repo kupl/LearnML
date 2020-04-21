@@ -1,42 +1,42 @@
-type formula = TRUE
-| FALSE
-| NOT of formula
-| ANDALSO of formula * formula
-| ORELSE of formula * formula
-| IMPLY of formula * formula
-| LESS of expr * expr
-and expr = NUM of int
-| PLUS of expr * expr
-| MINUS of expr * expr
+type formula = True
+| False
+| Not of formula
+| AndAlso of formula * formula
+| OrElse of formula * formula
+| Imply of formula * formula
+| Equal of exp * exp
+and exp = Num of int
+| Plus of exp * exp
+| Minus of exp * exp
 
 let rec eval : formula -> bool = fun x ->
   match x with
-  | TRUE -> true
-  | FALSE -> false
-  | NOT a ->
+  | True -> true
+  | False -> false
+  | Not a ->
     (match eval a with
     | true -> false
     | false -> true)
-  | ANDALSO (a , b) ->
+  | AndAlso (a , b) ->
     (match ( eval a , eval b) with
     | (true , true) -> true
     | (true , false) -> false
     | (false , _ ) -> false )
-  | ORELSE (a , b) ->
+  | OrElse (a , b) ->
     (match (eval a, eval b) with
     | (true , _) -> true
     | (false , true) -> true
     | (false , false) -> false)
-  | IMPLY (a,b) ->
+  | Imply (a,b) ->
     (match (eval a, eval b) with
     | (true , true) -> true
     | (true , false) -> false
     | (false , _ ) -> true)
-  | LESS (x , y) ->
-    let rec real : expr -> int = fun x ->
+  | Equal (x , y) ->
+    let rec real : exp -> int = fun x ->
       match x with 
-      | NUM i -> i
-      | PLUS (k,j) -> (real k) + (real j)
-      | MINUS (k,j) -> (real k) - (real j) in
-    if real x < real y then true
+      | Num i -> i
+      | Plus (k,j) -> (real k) + (real j)
+      | Minus (k,j) -> (real k) - (real j) in
+    if real x = real y then true
     else false

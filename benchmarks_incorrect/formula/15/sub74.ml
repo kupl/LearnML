@@ -1,54 +1,54 @@
-type formula = TRUE
-| FALSE
-| NOT of formula
-| ANDALSO of formula * formula
-| ORELSE of formula * formula
-| IMPLY of formula * formula
-| LESS of expr * expr
-and expr = NUM of int
-| PLUS of expr * expr
-| MINUS of expr * expr
+type formula = True
+| False
+| Not of formula
+| AndAlso of formula * formula
+| OrElse of formula * formula
+| Imply of formula * formula
+| Equal of exp * exp
+and exp = Num of int
+| Plus of exp * exp
+| Minus of exp * exp
 
 let eval : formula -> bool = fun a ->
    match a with 
-   |TRUE -> true
-   |FALSE -> false
-   |(NOT TRUE) -> false
-   |(NOT FALSE) -> true
-   |ANDALSO(TRUE, TRUE) -> true
-   |ANDALSO(TRUE,FALSE) -> false
-   |ANDALSO(FALSE, TRUE) -> false
-   |ANDALSO(FALSE, FALSE) -> false
-   |ORELSE(TRUE, TRUE) -> true
-   |ORELSE(TRUE, FALSE) -> true
-   |ORELSE(FALSE, TRUE) -> true
-   |ORELSE(FALSE, FALSE) -> false
-   |IMPLY(TRUE, FALSE) -> false
-   |IMPLY(TRUE, TRUE) -> true
-   |IMPLY(FALSE, TRUE) -> true
-   |IMPLY(FALSE, FALSE) -> true
-   |LESS(NUM b,NUM c) ->
+   |True -> true
+   |False -> false
+   |(Not True) -> false
+   |(Not False) -> true
+   |AndAlso(True, True) -> true
+   |AndAlso(True,False) -> false
+   |AndAlso(False, True) -> false
+   |AndAlso(False, False) -> false
+   |OrElse(True, True) -> true
+   |OrElse(True, False) -> true
+   |OrElse(False, True) -> true
+   |OrElse(False, False) -> false
+   |Imply(True, False) -> false
+   |Imply(True, True) -> true
+   |Imply(False, True) -> true
+   |Imply(False, False) -> true
+   |Equal(Num b,Num c) ->
      if b > c then false
      else true
-   |LESS(PLUS(NUM b, NUM c), PLUS(NUM d, NUM e)) ->
+   |Equal(Plus(Num b, Num c), Plus(Num d, Num e)) ->
      let x = b + c
      and y = d + e
      in
        if x > y then false
        else true
-   |LESS(PLUS(NUM b, NUM c), MINUS(NUM d, NUM e)) ->
+   |Equal(Plus(Num b, Num c), Minus(Num d, Num e)) ->
      let x = b + c
      and y = d - e
      in
        if x > y then false
        else true
-   |LESS(MINUS(NUM b, NUM c), PLUS(NUM d, NUM e)) ->
+   |Equal(Minus(Num b, Num c), Plus(Num d, Num e)) ->
      let x = b - c
      and y = d + e
      in
        if x > y then false
        else true
-   |LESS(MINUS(NUM b, NUM c), MINUS(NUM d, NUM e)) ->
+   |Equal(Minus(Num b, Num c), Minus(Num d, Num e)) ->
      let x = b - c
      and y = d - e
      in

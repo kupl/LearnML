@@ -1,42 +1,42 @@
 type formula = 
-  | TRUE
-  | FALSE
-  | NOT of formula
-  | ANDALSO of formula * formula
-  | ORELSE of formula * formula
-  | IMPLY of formula*formula
-  | LESS of expr* expr
-and expr=
-  | NUM of int
-  | PLUS of expr*expr
-  | MINUS of expr*expr
+  | True
+  | False
+  | Not of formula
+  | AndAlso of formula * formula
+  | OrElse of formula * formula
+  | Imply of formula*formula
+  | Equal of exp* exp
+and exp=
+  | Num of int
+  | Plus of exp*exp
+  | Minus of exp*exp
 
-let rec exp_to_int (e: expr): int=
+let rec exp_to_int (e: exp): int=
   match e with
-  | NUM i -> i
-  | PLUS (i1, i2) -> (exp_to_int i1)+ (exp_to_int i2)
-  | MINUS (i1, i2) -> (exp_to_int i1)- (exp_to_int i2)
+  | Num i -> i
+  | Plus (i1, i2) -> (exp_to_int i1)+ (exp_to_int i2)
+  | Minus (i1, i2) -> (exp_to_int i1)- (exp_to_int i2)
 
 
 let rec eval (fm: formula) : bool =
   match fm with
-  | TRUE -> true
-  | FALSE -> false
-  | NOT fm2 -> if (eval fm2) then false else true
-  | ANDALSO (fm1, fm2) ->
+  | True -> true
+  | False -> false
+  | Not fm2 -> if (eval fm2) then false else true
+  | AndAlso (fm1, fm2) ->
       if ((eval fm1) && (eval fm2) )
       then true
       else false
-  | ORELSE (fm1, fm2) ->
+  | OrElse (fm1, fm2) ->
       if ((eval fm1) || (eval fm2) )
       then true
       else false
-  | IMPLY (fm1, fm2) ->
+  | Imply (fm1, fm2) ->
       if (not (eval fm1) || (eval fm2))
       then true
       else false
-  | LESS (exp1, exp2) ->
-      if ((exp_to_int exp1) < (exp_to_int exp2))
+  | Equal (exp1, exp2) ->
+      if ((exp_to_int exp1) = (exp_to_int exp2))
       then true
       else false
 

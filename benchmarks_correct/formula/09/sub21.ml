@@ -4,61 +4,61 @@
  * Exercise 3
  *)
 
-type formula = TRUE
-	       | FALSE
-	       | NOT of formula
-	       | ANDALSO of formula * formula
-	       | ORELSE of formula * formula
-	       | IMPLY of formula * formula
-	       | LESS of expr * expr
+type formula = True
+	       | False
+	       | Not of formula
+	       | AndAlso of formula * formula
+	       | OrElse of formula * formula
+	       | Imply of formula * formula
+	       | Equal of exp * exp
 
-and expr = NUM of int
-	   | PLUS of expr * expr
-	   | MINUS of expr * expr
+and exp = Num of int
+	   | Plus of exp * exp
+	   | Minus of exp * exp
 
 
 let rec eval (formula:formula) =
-  let rec eval_expr (expr:expr) =
-    match expr with
-	NUM i -> i
-      | PLUS (e1, e2) -> eval_expr e1 + eval_expr e2
-      | MINUS (e1, e2) -> eval_expr e1 - eval_expr e2
+  let rec eval_exp (exp:exp) =
+    match exp with
+	Num i -> i
+      | Plus (e1, e2) -> eval_exp e1 + eval_exp e2
+      | Minus (e1, e2) -> eval_exp e1 - eval_exp e2
   in
     match formula with
-	TRUE -> true
-      | FALSE -> false
-      | NOT f -> not (eval f)
-      | ANDALSO (f1, f2) -> (eval f1) && (eval f2)
-      | ORELSE (f1, f2) -> (eval f1) || (eval f2)
-      | IMPLY (f1, f2) -> (not (eval f1)) || (eval f2)
-      | LESS (e1, e2) -> (eval_expr e1) < (eval_expr e2)
+	True -> true
+      | False -> false
+      | Not f -> not (eval f)
+      | AndAlso (f1, f2) -> (eval f1) && (eval f2)
+      | OrElse (f1, f2) -> (eval f1) || (eval f2)
+      | Imply (f1, f2) -> (not (eval f1)) || (eval f2)
+      | Equal (e1, e2) -> (eval_exp e1) = (eval_exp e2)
 
 (*
 ;;
-assert (eval TRUE = true);;
-assert (eval FALSE = false);;
+assert (eval True = true);;
+assert (eval False = false);;
 
-assert (eval (NOT TRUE) = false);;
-assert (eval (NOT FALSE) = true);;
+assert (eval (Not True) = false);;
+assert (eval (Not False) = true);;
 
-assert (eval (ANDALSO (TRUE, TRUE)) = true);;
-assert (eval (ANDALSO (FALSE, TRUE)) = false);;
-assert (eval (ANDALSO (TRUE, FALSE)) = false);;
-assert (eval (ANDALSO (FALSE, FALSE)) = false);;
+assert (eval (AndAlso (True, True)) = true);;
+assert (eval (AndAlso (False, True)) = false);;
+assert (eval (AndAlso (True, False)) = false);;
+assert (eval (AndAlso (False, False)) = false);;
 
-assert (eval (ORELSE (TRUE, TRUE)) = true);;
-assert (eval (ORELSE (FALSE, TRUE)) = true);;
-assert (eval (ORELSE (TRUE, FALSE)) = true);;
-assert (eval (ORELSE (FALSE, FALSE)) = false);;
+assert (eval (OrElse (True, True)) = true);;
+assert (eval (OrElse (False, True)) = true);;
+assert (eval (OrElse (True, False)) = true);;
+assert (eval (OrElse (False, False)) = false);;
 
-assert (eval (IMPLY (TRUE, TRUE)) = true);;
-assert (eval (IMPLY (FALSE, TRUE)) = true);;
-assert (eval (IMPLY (TRUE, FALSE)) = false);;
-assert (eval (IMPLY (FALSE, FALSE)) = true);;
+assert (eval (Imply (True, True)) = true);;
+assert (eval (Imply (False, True)) = true);;
+assert (eval (Imply (True, False)) = false);;
+assert (eval (Imply (False, False)) = true);;
 
-assert (eval_expr (NUM 3) = 3);;
-assert (eval_expr (PLUS (NUM 3, NUM 3)) = 6);;
-assert (eval_expr (MINUS (NUM 4, NUM 3)) = 1);;
+assert (eval_exp (Num 3) = 3);;
+assert (eval_exp (Plus (Num 3, Num 3)) = 6);;
+assert (eval_exp (Minus (Num 4, Num 3)) = 1);;
 
-assert (eval (LESS (NUM 2, (PLUS (MINUS (NUM 3, NUM 2), NUM 7)))) = true);;
+assert (eval (Equal (Num 2, (Plus (Minus (Num 3, Num 2), Num 7)))) = true);;
 *)

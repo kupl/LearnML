@@ -1,52 +1,50 @@
-(*hw1-5 컴퓨터 공학부 2008-11641 신희식*) 
-
-type formula = TRUE
-			| FALSE
-			| NOT of formula
-			| ANDALSO of formula * formula
-			| ORELSE of formula * formula
-			| IMPLY of formula * formula
-			| LESS of expr * expr
-and expr = NUM of int
-		| PLUS of expr * expr
-		| MINUS of expr * expr
+type formula = True
+			| False
+			| Not of formula
+			| AndAlso of formula * formula
+			| OrElse of formula * formula
+			| Imply of formula * formula
+			| Equal of exp * exp
+and exp = Num of int
+		| Plus of exp * exp
+		| Minus of exp * exp
 
 let rec eval form =
 	let rec cals exp =
 		match exp with
-		(NUM a) ->
+		(Num a) ->
 			a
-		|(PLUS (a,b)) ->
+		|(Plus (a,b)) ->
 			((cals a) + (cals b))
-		|(MINUS (a,b)) ->
+		|(Minus (a,b)) ->
 			((cals a) - (cals b))
 	in
 	match form with
-	TRUE -> 
+	True -> 
 		true
-	|FALSE -> 
+	|False -> 
 		false
-	|(NOT a) ->
+	|(Not a) ->
 		(not (eval a))
-	|(ANDALSO (a,b)) ->
+	|(AndAlso (a,b)) ->
 		(if (((eval a) = true) && ((eval b) = true)) then
 			true
 		else
 			false
 		)
-	|(ORELSE (a,b)) ->
+	|(OrElse (a,b)) ->
 		(if (((eval a) = true) || ((eval b) = true)) then
 		 	true
 		else
 			false
 		)
-	|(IMPLY (a,b)) ->
+	|(Imply (a,b)) ->
 		(if (((eval a) = false) || ((eval b) = true)) then
 		 	true
 		else
 			false
 		)
-	|(LESS (a,b)) ->
-		((cals a) < (cals b))
+	|(Equal (a,b)) ->
+		((cals a) = (cals b))
 
 

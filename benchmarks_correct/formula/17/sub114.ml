@@ -1,37 +1,37 @@
-type expr = NUM of int
-    | PLUS of expr * expr
-    | MINUS of expr * expr
+type exp = Num of int
+    | Plus of exp * exp
+    | Minus of exp * exp
 
-type formula = TRUE
-    | FALSE
-    | NOT of formula
-    | ANDALSO of formula * formula
-    | ORELSE of formula * formula
-    | IMPLY of formula * formula
-    | LESS of expr * expr
+type formula = True
+    | False
+    | Not of formula
+    | AndAlso of formula * formula
+    | OrElse of formula * formula
+    | Imply of formula * formula
+    | Equal of exp * exp
 
 let rec getnum e : int = 
     match e with
-    | NUM a -> a
-    | PLUS (a, b) -> (getnum a) + (getnum b)
-    | MINUS (a, b) -> (getnum a) - (getnum b)
+    | Num a -> a
+    | Plus (a, b) -> (getnum a) + (getnum b)
+    | Minus (a, b) -> (getnum a) - (getnum b)
 
 let rec eval f : bool =
     match f with
-    | TRUE -> true
-    | FALSE -> false
-    | NOT a -> not (eval a)
-    | ANDALSO (a, b) -> (eval a) && (eval b)
-    | ORELSE (a, b) -> (eval a) || (eval b)
-    | IMPLY (a,b) -> if((eval a = true)&& (eval b) = false) then false else true
-    | LESS (a, b) -> (getnum a) < (getnum b)
+    | True -> true
+    | False -> false
+    | Not a -> not (eval a)
+    | AndAlso (a, b) -> (eval a) && (eval b)
+    | OrElse (a, b) -> (eval a) || (eval b)
+    | Imply (a,b) -> if((eval a = true)&& (eval b) = false) then false else true
+    | Equal (a, b) -> (getnum a) = (getnum b)
 
-(*let a61 = eval TRUE
-let a62 = eval FALSE
-let a63 = eval (NOT TRUE)
-let a64 = eval (ANDALSO (TRUE, FALSE))
-let a65 = eval (ORELSE (TRUE, FALSE))
-let a66 = eval (LESS (PLUS(NUM 3, NUM 4), MINUS(NUM 7, NUM 8))) 
+(*let a61 = eval True
+let a62 = eval False
+let a63 = eval (Not True)
+let a64 = eval (AndAlso (True, False))
+let a65 = eval (OrElse (True, False))
+let a66 = eval (Equal (Plus(Num 3, Num 4), Minus(Num 7, Num 8))) 
 
 let _ = print_endline(string_of_bool a61)
 let _ = print_endline(string_of_bool a62)

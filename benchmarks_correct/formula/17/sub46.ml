@@ -1,50 +1,50 @@
-type formula = TRUE 
-             | FALSE 
-             | NOT of formula
-             | ANDALSO of formula * formula
-             | ORELSE of formula * formula
-             | IMPLY of formula * formula
-             | LESS of expr * expr
+type formula = True 
+             | False 
+             | Not of formula
+             | AndAlso of formula * formula
+             | OrElse of formula * formula
+             | Imply of formula * formula
+             | Equal of exp * exp
 
-and expr = NUM of int
-         | PLUS of expr * expr
-         | MINUS of expr * expr
+and exp = Num of int
+         | Plus of exp * exp
+         | Minus of exp * exp
 
-let rec calc (a : expr) : int =
+let rec calc (a : exp) : int =
 match a with
-  | NUM a -> a
-  | PLUS (b, c) -> (calc b) + (calc c)
-  | MINUS (b, c) -> (calc b) - (calc c)
+  | Num a -> a
+  | Plus (b, c) -> (calc b) + (calc c)
+  | Minus (b, c) -> (calc b) - (calc c)
 
 let rec eval (input : formula) : bool =
 match input with
-  | TRUE -> true
-  | FALSE -> false
-  | NOT a ->
+  | True -> true
+  | False -> false
+  | Not a ->
     (
       match eval a with
       | true -> false
       | false -> true
     )
-  | ANDALSO (a, b) ->
+  | AndAlso (a, b) ->
     (
       match eval a with
       | true -> eval b
       | false -> false
     )
-  | ORELSE (a, b) ->
+  | OrElse (a, b) ->
     (
       match eval a with
       | true -> true
       | false -> eval b
     )
-  | IMPLY (a, b) ->
+  | Imply (a, b) ->
     (
       match eval a with
       | true -> eval b
       | false -> true
     )
-  | LESS (c, d) ->
-      if (calc c) < (calc d) then true
+  | Equal (c, d) ->
+      if (calc c) = (calc d) then true
       else false
 
