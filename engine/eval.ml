@@ -394,6 +394,15 @@ let run : prog -> env
   BatMap.diff env init_env
 
 (* Utility functions *)
+let rec run_with_input : prog -> input -> env
+= fun pgm input ->
+  try
+    let res_var = "__res__" in
+    let pgm = pgm@(!grading_pgm) in
+    let pgm' = pgm @ [(DLet (BindOne res_var,false,[],fresh_tvar(),(appify (gen_label(), EVar !Options.opt_entry_func) input)))] in
+    run pgm'
+  with e -> raise e
+  
 let rec get_output : prog -> input -> value
 = fun pgm input ->
   try
