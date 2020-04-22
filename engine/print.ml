@@ -209,7 +209,7 @@ let rec decl_to_string : decl -> string -> string
     str ^ "type " ^ x ^ " = " ^ type_to_string typ ^ "\n"
   | DData (id,lst) -> 
     str ^ "type " ^ id ^ " =" ^ 
-    (list_fold (fun t r -> r ^ "\n|" ^ user_defined_type_to_string t) lst "") 
+    (list_fold (fun t r -> "\n|" ^ user_defined_type_to_string t ^ r) lst "")
     ^ "\n"
   | DLet (f, is_rec, args, typ, exp) -> 
     str ^ "\n" ^ "let " ^ (if is_rec then "rec " else "") ^
@@ -227,7 +227,7 @@ and type_decl_to_string : decl -> string
   | DEqn (x, typ) -> x ^ " = " ^ type_to_string typ ^ "\n"
   | DData (id,lst) -> 
     id ^ " =" ^ 
-    (list_fold (fun t r -> r ^ "\n|" ^ user_defined_type_to_string t) lst "") ^ "\n"
+    (list_fold (fun t r -> "\n|" ^ user_defined_type_to_string t ^ r) lst "") ^ "\n"
   | _ -> raise (Failure "Invalid type decl")
 
 let program_to_string : prog -> string
