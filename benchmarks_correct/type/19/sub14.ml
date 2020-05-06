@@ -101,7 +101,9 @@ let rec unify : typ -> typ -> subst -> subst
           if tv1 = tv2 then raise TypeError
           else subst_extend tv1 ty2 subst
       | _, _ -> subst_extend tv1 ty2 subst)
-  | (TyInt | TyBool | TyFun _), TyVar _ -> unify ty2 ty1 subst
+  | TyInt, TyVar _ -> unify ty2 ty1 subst
+  | TyBool, TyVar _ -> unify ty2 ty1 subst
+  | TyFun _, TyVar _ -> unify ty2 ty1 subst
   | TyFun (tv1, tv2), TyFun (tv1', tv2') ->
       let subst'= unify tv1 tv1' subst in
       let subst'' = unify (subst_apply tv2 subst') (subst_apply tv2' subst') subst' in
