@@ -1,0 +1,23 @@
+{
+	READ => TyInt;
+	DIV (ADD(CONST 1,CONST 3),CONST 0) => TyInt;
+	IF (ISZERO (CONST 10),CONST 1, READ) => TyInt;
+	IF (ISZERO (CONST 10),CONST 1,ISZERO (CONST 20)) => TypeError;
+	LET("x",READ,LET("y",ISZERO (VAR "x"),ADD (VAR "x",VAR "y"))) => TypeError;
+	LET("x",READ,IF(ISZERO(VAR "x"),ADD(VAR "x",CONST 1),IF(ISZERO(ADD(VAR "x",CONST 1)),VAR "x",CONST 0))) => TyInt;
+	PROC("x",PROC("y",ISZERO(VAR "x"))) => TyFun(TyInt,TyFun(TyVar "t0",TyBool));
+	PROC("f",PROC("x",ADD(CONST 1,CALL (VAR "f",VAR "x")))) => TyFun(TyFun(TyVar "t0",TyInt),TyFun(TyVar "t0",TyInt));
+	PROC("f",PROC("x",IF(CALL(VAR "f",VAR "x"),CONST 1,CONST 0))) => TyFun(TyFun(TyVar "t0",TyBool),TyFun(TyVar "t0",TyInt));
+	LETREC("f","x",PROC("y",IF(ISZERO (VAR "y"),CONST 1,CALL (VAR "f",VAR "y"))),CALL(CALL (VAR "f",CONST 1),CONST 0)) => TypeError;
+	LET("x",CONST 1,LETREC("f","x",IF(ISZERO (VAR "x"),CONST 1,CONST 2),VAR "x")) => TyInt;
+	LET("f",CONST 1,LETREC("f","x",PROC("y",ADD(VAR "y",CONST 1)),VAR "f")) => TyFun(TyVar "t0",TyFun(TyInt,TyInt));
+	LETREC("f","x",PROC("y",IF(ISZERO (VAR "x"),CONST 0,DIV(VAR "x",VAR "y"))),CALL(CALL(VAR "f",CONST 1),CONST 1)) => TyInt;
+	LET("f",PROC("y",VAR "y"),LET("g",CALL(VAR "f",CONST 1),LET("h",CALL(VAR "f",CONST 2),VAR "g"))) => TyInt;
+	LET("f",PROC("y",VAR "y"),LET("g",CALL(VAR "f",CONST 1),LET("h",CALL(VAR "f",ISZERO(CONST 0)),VAR "g"))) => TypeError;
+	LET("f",PROC("x",PROC("y",ADD(VAR "x",VAR "y"))),ADD(CALL (VAR "f",CONST 1),CONST 2)) => TypeError;
+	LET("x",CONST 1,LET("f",PROC("x",IF(VAR "x",CONST 1,CONST 2)),LET("g",PROC ("x",PROC("y",ADD(VAR "y",CONST 1))),CALL(VAR "g",CALL(VAR "f",ISZERO(CONST 0)))))) => TyFun(TyInt,TyInt);
+	LET("f",PROC("f",CALL(VAR "f",CONST 11)),LET("g",PROC("g",ADD(VAR "g",CONST 10)),PROC("c",ADD(CALL(VAR "f",VAR "g"),VAR "c")))) => TyFun(TyInt,TyInt);
+	LETREC("bin2dec","bin",PROC("depth",IF(ISZERO(VAR "bin"),CONST 0,LET("remainder",SUB(VAR "bin",MUL(DIV(VAR "bin",CONST 10),CONST 10)),ADD(MUL(VAR "remainder",VAR "depth"),CALL(CALL(VAR "bin2dec",DIV(VAR "bin",CONST 10)),MUL(VAR "depth",CONST 2)))))),VAR "bin2dec") => TyFun(TyInt,TyFun(TyInt,TyInt));
+	LET("modular",PROC("x",PROC("y",SUB(VAR "x",MUL(VAR "y",DIV(VAR "x",VAR "y"))))),CALL(VAR "modular",READ)) => TyFun(TyInt,TyInt);
+	LETREC("reverse","n",PROC("result",IF(VAR "n",VAR "result",LET("remainder",SUB(VAR "n",MUL(DIV(VAR "n",CONST 10),CONST 10)),CALL(CALL(VAR "reverse",DIV(VAR "n",CONST 10)),ADD(MUL(VAR "result",CONST 10),VAR "remainder"))))),CALL(CALL(VAR "reverse",READ),CONST 0)) => TypeError;
+}
