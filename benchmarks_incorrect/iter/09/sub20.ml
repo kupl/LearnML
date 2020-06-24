@@ -1,6 +1,3 @@
-(* C:\Documents and Settings\Administrator\πŸ≈¡ »≠∏È\pl_first_homework\Exercise2.ml *)
-
-(* Computer S&E/2007-15612/park sungjun*)
 (*Exercise 2*)
 exception Error of string 
 
