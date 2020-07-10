@@ -477,7 +477,7 @@ let rec partial_eval_decl : symbolic_env -> decl -> symbolic_env
 let partial_run : prog -> symbolic_env
 = fun decls -> 
   start_time:=Unix.gettimeofday();
-  let init_env = List.fold_left partial_eval_decl empty_env (!init_pgm) in
+  let init_env = List.fold_left partial_eval_decl empty_env (!library_pgm) in
   start_time:=Unix.gettimeofday();
   let env = List.fold_left partial_eval_decl init_env decls in
   BatMap.diff env init_env

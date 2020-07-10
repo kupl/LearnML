@@ -762,7 +762,7 @@ let rec work : Workset.t -> components -> prog -> prog -> example option
 	iter := !iter +1;
 	if (Unix.gettimeofday()) -. (!start_time) > 60.0 then None
 	(*
-  else if (!iter mod 1000 = 0)
+  	else if (!iter mod 1000 = 0)
 	  then
 		  begin
 			  print_endline ((Workset.workset_info workset) ^ (" Total elapsed : " ^ (string_of_float (Unix.gettimeofday() -. !start_time))));

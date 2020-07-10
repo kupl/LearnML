@@ -31,7 +31,7 @@ let preprocess : prog -> label BatSet.t
 
 
 (* Find counter exampels *)
-let run_pgm : prog -> example -> env
+let run_pgm : prog -> example -> env * mem
 = fun pgm (input, output) ->
   let res_var = "__res__" in
   let pgm = pgm@(!grading_pgm) in
@@ -41,7 +41,7 @@ let run_pgm : prog -> example -> env
 let rec is_counter_example : prog -> example -> bool
 = fun pgm (input, output) ->
   try
-    let env = run_pgm pgm (input,output) in
+    let (env, _) = run_pgm pgm (input,output) in
     let result = Lang.lookup_env "__res__" env in
     not (Eval.value_equality result output)
   with e -> true
@@ -52,7 +52,6 @@ let rec find_counter_examples : prog -> examples -> examples * examples
 (*****************************************************************)
 (*      generate holed program with suspicious expression        *)
 (*****************************************************************)
-
 let rec gen_partial_exp : label -> lexp -> lexp
 = fun label (l,exp) ->
   if l=label then (l,gen_hole())
@@ -117,7 +116,7 @@ let gen_partial_pgm : label -> prog -> prog
 let rec trace_info : prog -> examples -> (label, count) BatMap.t
 = fun pgm examples ->
   list_fold(fun example map ->
-  	let _ = try run_pgm pgm example with |_ -> empty_env in
+  	let _ = try run_pgm pgm example with |_ -> (empty_env, empty_mem) in
     let trace = list2set (!Eval.trace_set) in
     BatSet.fold(fun label map ->
       let count = BatMap.find_default 0 label map in

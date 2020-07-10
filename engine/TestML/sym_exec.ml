@@ -607,7 +607,7 @@ module Executor = struct
 	= fun pgm input ->
   	let pgm = pgm@(!grading_pgm) in
   	let _ = start_time := Unix.gettimeofday () in
-  	let init_env = List.fold_left (fun env decl -> sym_eval_decl env decl) empty_env (!init_pgm) in
+  	let init_env = List.fold_left (fun env decl -> sym_eval_decl env decl) empty_env (!library_pgm) in
   	let _ = start_time := Unix.gettimeofday () in
   	let env = List.fold_left (fun (env) decl -> sym_eval_decl env decl) init_env pgm in
   	let exp = appify (gen_label(), (EVar !Options.opt_entry_func)) input in

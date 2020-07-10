@@ -56,8 +56,6 @@ module Workset = struct
     " Explored : " ^ (string_of_int (BatSet.cardinal sset))
 end
 
-let debug = ref (open_out "debug.txt")
-
 let extract_holenum : lexp -> int 
 = fun e -> 
   match snd e with
@@ -520,7 +518,7 @@ let rec is_solution : prog -> examples -> bool
     let prog = prog@(!grading_pgm) in
     let prog' = prog @ [(DLet (BindOne res_var,false,[],fresh_tvar(),(appify (gen_label(), EVar !Options.opt_entry_func) inputs)))] in
     try
-      let env = Eval.run prog' in
+      let (env, _) = Eval.run prog' in
       let result = lookup_env res_var env in
       Eval.value_equality result output
     with
@@ -543,6 +541,7 @@ let rec work : Workset.t -> components -> examples -> prog option
 = fun workset exp_set examples->
   iter := !iter +1;
   if (Sys.time()) -. (!start_time) > 60.0 then None
+  (*
   else if (!iter mod 100 = 0)
     then
       begin
@@ -550,6 +549,7 @@ let rec work : Workset.t -> components -> examples -> prog option
         print_endline((Workset.workset_info workset) ^ (" Total elapsed : " ^ (string_of_float (Sys.time() -. !start_time))));
         work workset exp_set examples
       end
+  *)
   else
   match Workset.choose workset with
   | None -> None
@@ -557,7 +557,7 @@ let rec work : Workset.t -> components -> examples -> prog option
     if (Infinite.Static.run prog) then
       work remaining_workset exp_set examples
     else
-      let _ = fprintf (!debug) "%s\n" (Print.program_to_string prog) in
+      (*let _ = fprintf (!debug) "%s\n" (Print.program_to_string prog) in*)
       if is_closed prog then
         let _ = count := !count +1 in
         if is_solution prog examples then Some prog
