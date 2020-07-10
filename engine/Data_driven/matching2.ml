@@ -8,14 +8,16 @@ open CallGraph
 (* Compute a minimal function mathcing of two normalized programs *)
 (******************************************************************)
 
-(* sub -> sol matching, unmatchings in sol *)
-(* TODO unique matchign *)
-type matching_info = (id, id) BatMap.t * id BatSet.t
+(* sub -> sol matching, unmatchings in sub, unmatchings in sol *)
+type matching = (id, id) BatMap.t
+type matching_info = matching * id BatSet.t * id BatSet.t
 
 let print : matching_info -> unit
-= fun (matching, remaining_sol) ->
+= fun (matching, remaining_sub, remaining_sol) ->
   print_endline ("------Match Informations (submissoin)------");
   print_endline (string_of_map id id matching);
+  print_endline ("------Remainings in submission ------");
+  print_endline (string_of_set id remaining_sub);
   print_endline ("------Remainings in solution ------");
   print_endline (string_of_set id remaining_sol)
 
@@ -33,13 +35,13 @@ and check_arg : arg -> arg -> bool
   | _ -> false
 
 let rec get_matching_score : matching_info -> int 
-= fun (matching, remainings) ->
-  let matching_score = BatMap.cardinal matching in
-  let remaining_score = BatSet.cardinal remainings in
+= fun (matching, remaining_sub, remaining_sol) ->
+  let matching_score = (BatMap.cardinal matching) in
+  let remaining_score = (BatSet.cardinal remaining_sub) + (BatSet.cardinal remaining_sol) in
   matching_score - remaining_score
 
 (* Get solution functions which are already matched *)
-let rec get_range_of_matching : (id, id) BatMap.t -> id BatSet.t
+let rec get_range : (id, id) BatMap.t -> id BatSet.t
 = fun matching -> BatMap.fold (fun id acc -> BatSet.add id acc) matching BatSet.empty 
 
 (* TODO : deal mutually recursive case *)
@@ -79,48 +81,40 @@ let rec check_matching_caller : (id, id) BatMap.t -> graph -> graph -> id * id -
     let remainings = BatSet.union remainings_sub remainings_sol in
     not (BatSet.is_empty remainings)
 
-let rec compute_matching : (id, id) BatMap.t -> graph -> graph -> matching_info
+let rec compute_matching : matching -> graph -> graph -> matching_info
 = fun matching g_sub g_sol ->
-  (* Compute matching set based on the previous matching *)
-  let matching' = BatMap.foldi (fun f_sub (id_sub, args_sub, typ_sub, body_sub) matching -> 
-    let _ =
-      print_endline ("-------\nCurrent Matching : " ^ f_sub ^ "\n--------");
-      print (matching, BatMap.fold (fun f_sol remainings -> BatSet.remove f_sol remainings) matching (keys (get_node g_sol)))
+  (* worklist = functions in submission with no matching *)
+  let worklist = BatSet.filter (fun f_sub -> not (BatMap.mem f_sub matching)) (keys (get_node g_sub)) in
+  let matching' = BatSet.fold (fun f_sub matching -> 
+    (* target = functions in solution are not matched yet *)
+    let already_match = BatMap.fold (fun f_sol acc -> BatSet.add f_sol acc) matching BatSet.empty in
+    let targets = BatSet.filter (fun f_sol -> not (BatSet.mem f_sol already_match)) (keys (get_node g_sol)) in
+    (* Step1 : filtering functions whose types are equivalent with the submission's *)
+    let targets = BatSet.filter (fun f_sol -> 
+      let (args_sub, typ_sub) = (fun (_, args, typ, _) -> (args, typ)) (BatMap.find f_sub (get_node g_sub)) in
+      let (args_sol, typ_sol) = (fun (_, args, typ, _) -> (args, typ)) (BatMap.find f_sol (get_node g_sol)) in
+      check_typs typ_sub typ_sol && check_args args_sub args_sol
+    ) targets in
+    (* Step2 : filtering functions with the same call-relation *)
+    (*
+    let result = BatSet.filter (fun f_sol -> check_matching_caller matching g_sub g_sol (f_sub, f_sol)) result in
+    let _ = 
+      print_endline "Candidate2";
+      print_endline (Print.string_of_set id result)
     in
-    if BatMap.mem f_sub matching then
-      (* If the target funtion already has matching do not update *)
-      matching
+    *)  
+    (* Step3 : pick most similar(TODO) one *)
+    if not (BatSet.is_empty targets) then
+      let f_sol = BatSet.choose targets in
+      BatMap.add f_sub f_sol matching
     else 
-      let _ = print_endline "Here" in 
-      let matched = get_range_of_matching matching in
-      (* Step1 : filtering functions whose types are equivalent with the submission's *)
-      let result = BatMap.foldi (fun f_sol (id_sol, args_sol, typ_sol, body_sol) result ->
-        if BatSet.mem f_sol matched then
-          result 
-        else if check_typs typ_sub typ_sol && check_args (BatSet.to_list args_sub) (BatSet.to_list args_sol) then
-          BatSet.add f_sol result
-        else result
-      ) (get_node g_sol) BatSet.empty in
-      let _ = 
-        print_endline "Candidate1";
-        print_endline (Print.string_of_set id result)
-      in
-      (* Step2 : filtering functions with the same call-relation *)
-      let result = BatSet.filter (fun f_sol -> check_matching_caller matching g_sub g_sol (f_sub, f_sol)) result in
-      let _ = 
-        print_endline "Candidate2";
-        print_endline (Print.string_of_set id result)
-      in
-      (* Step3 (TODO) : pick most similar one *)
-      if not (BatSet.is_empty result) then
-        let matching_sol = BatSet.choose result in
-        BatMap.add f_sub matching_sol matching
-      else 
-        matching 
-  ) (get_node g_sub) matching in
+      matching 
+  ) worklist matching in
   if BatMap.equal (=) matching matching' then 
     (* If no matchings are found terminate the algorithm => since it scan all possible node there must be new matchings *)
-    (matching', BatMap.fold (fun f_sol remainings -> BatSet.remove f_sol remainings) matching' (keys (get_node g_sol)))
+    let remaining_sub = BatMap.foldi (fun f_sub _ remainings -> BatSet.remove f_sub remainings) matching' (keys (get_node g_sub)) in
+    let remaining_sol = BatMap.fold (fun f_sol remainings -> BatSet.remove f_sol remainings) matching' (keys (get_node g_sol)) in
+    (matching', remaining_sub, remaining_sol)
   else  
     (* If not, repeat again with the new matching informations *)
     compute_matching matching' g_sub g_sol
@@ -128,5 +122,11 @@ let rec compute_matching : (id, id) BatMap.t -> graph -> graph -> matching_info
 let run : prog -> prog -> matching_info
 = fun pgm cpgm ->
   let (g_sub, g_sol) = (CallGraph.run pgm, CallGraph.run cpgm) in
+  (*
+  let _ = 
+    Print.print_header "Sub graph"; print_graph g_sub;
+    Print.print_header "Sol graph"; print_graph g_sol
+  in
+  *)
   let (entry_sub, entry_sol) = (get_entry_name g_sub, get_entry_name g_sol) in
   compute_matching (BatMap.singleton entry_sub entry_sol) g_sub g_sol

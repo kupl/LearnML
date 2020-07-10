@@ -19,20 +19,20 @@ let except_handling : exn -> value -> unit
 = fun except output ->
   begin match except with
   |EExcept v ->
-    print_endline("Result : " ^ value_to_string v ^ " " ^
-                  "Expected: " ^ value_to_string output);
+    print_endline("Result : " ^ string_of_value v ^ " " ^
+                  "Expected: " ^ string_of_value output);
   |TimeoutError ->
     print_endline("Result : Timeout" ^ " " ^
-                  "Expected: " ^ value_to_string output);
+                  "Expected: " ^ string_of_value output);
   |Failure s ->
     print_endline("Result : Error "^ s ^ " " ^
-                  "Expected: " ^ value_to_string output);
+                  "Expected: " ^ string_of_value output);
   |EqualError -> 
     print_endline("Result : Equal Error" ^
-                  "Expected: " ^ value_to_string output);
+                  "Expected: " ^ string_of_value output);
   |_ ->
      print_endline("Result : Evaluation Error "^
-                  "Expected: " ^ value_to_string output);
+                  "Expected: " ^ string_of_value output);
   end
 
 let run_testcases : prog -> examples -> unit
@@ -40,10 +40,15 @@ let run_testcases : prog -> examples -> unit
   let score = List.fold_left (fun score (inputs, output) ->
     try
       let result_value = Eval.get_output prog inputs in
-        print_endline ("Result: " ^ value_to_string result_value ^ " " ^  
-                     "Expected: " ^ value_to_string output);
+        print_endline ("Result: " ^ string_of_value result_value ^ " " ^  
+                      "Expected: " ^ string_of_value output);
       if try (Eval.value_equality result_value output) with _ -> false then score+1 else score
-    with except -> except_handling except output; score
+    with 
+      | EExcept v -> 
+        print_endline ("Result: " ^ string_of_value v ^ " " ^  
+                      "Expected: " ^ string_of_value output);
+        if try (Eval.value_equality v output) with _ -> false then score+1 else score
+      | except -> except_handling except output; score
   ) 0 examples in
   print_endline("score : "^(string_of_int score))
 
@@ -160,9 +165,9 @@ let fix_without_testcases : prog -> prog -> unit
 
 let execute : prog -> unit
 = fun prog ->
-  let (tenv,_,_,_) = Type.run prog in
-  let env = Eval.run prog in
-  (print_REPL prog tenv env)
+  let (tenv,_,_,_) = Type2.run prog in
+  let (env, mem) = Eval.run prog in
+  (print_REPL prog tenv env mem)
 
 let main () = 
   (* Arg Parse *)
@@ -173,14 +178,15 @@ let main () =
   let solutions_debug = read_pgms_debug !opt_solution_dirname in
   let submission = read_prog !opt_submission_filename in
   let _ = 
-    init_pgm := read_external !opt_external_filename;
+    library_pgm := read_external !opt_external_filename;
     grading_pgm := read_external !opt_grading_filename
   in
   (* Main Procedure *)
   if !opt_run then (* Run testcase *)
     begin
       match submission with
-      | Some sub -> run_prog sub testcases
+      | Some sub -> 
+        print_header ("Submission"); print_pgm sub; run_prog sub testcases
       | _ -> raise (Failure (!opt_submission_filename ^ " does not exist"))
     end
   else if !opt_fix then (* FixML *)
@@ -196,7 +202,7 @@ let main () =
   else if !opt_execute then (* Execute Program *)
     begin 
       match submission with
-      | Some sub -> execute sub
+      | Some sub -> print_header ("Submission"); print_pgm sub; execute sub
       | _ -> raise (Failure "Submission file is not provided")
     end
   else if !opt_gentest then (* Counter Example Generation *)
@@ -208,31 +214,7 @@ let main () =
   else if !opt_dd then (* Data-driven FixML *)
     begin 
       match submission, solutions_debug with
-      | Some sub, sols -> 
-        (* Searching a closest solution (matching rate high) *)
-        let (score, (fname, sol)) = List.fold_left (fun (prev_score, prev_sol) (fname, sol) -> 
-          let matching = Matching2.run sub sol in
-          (* Matching2.print matching; *)
-          let score = Matching2.get_matching_score matching in
-          (* print_header ("Sol " ^ fname ^ " Score : " ^ string_of_int score); print_pgm2 sol; *)
-          if prev_score < score then (score, (fname, sol)) else (prev_score, prev_sol)
-        ) (-100, List.hd sols) sols in
-        print_header ("Submission"); print_pgm2 sub;
-        print_header ("Most Similar Sol " ^ fname ^ " Score : " ^ string_of_int score); print_pgm2 sol;
-        (* Callgraph Matching *)
-        let (g_sub, g_sol) = (CallGraph.run sub, CallGraph.run sol) in
-        Print.print_header "Call graph (sub)"; CallGraph.print_graph g_sub;
-        Print.print_header "Call graph (sol)"; CallGraph.print_graph g_sol;
-        let matching = Matching2.run sub sol in
-        Print.print_header "Matching Info"; Matching2.print matching;
-        (* Template *)
-        let temps = Extractor2.run sub sol in
-        (* print_header ("Templates"); print_endline (string_of_set Repair_template.string_of_template temps); *)
-        match Repairer2.run sub temps testcases with
-        | Some patch -> 
-          print_header "Patch"; print_pgm patch;
-          print_endline ("Time : " ^ string_of_float (Unix.gettimeofday() -. !(Repairer2.start_time)))
-        | None -> print_endline ("Fail to Repair")
+      | Some sub, sols -> ignore (Data_driven.run2 sub sols testcases)
       | _ -> raise (Failure "Submission or solutions are not provided")
     end
   else if !opt_cfg then
@@ -240,17 +222,23 @@ let main () =
       match submission, solutions_debug with
       | Some sub, cpgms -> 
         let cfg = Cfg.extract_cfg sub in
+        (*
         Print.print_header "original"; Print.print_pgm sub;
         Print.print_header "CFG"; Cfg.print cfg;
+        *)
         let all_matchings = List.fold_left (fun acc (file, cpgm) -> 
           let cfg' = Cfg.extract_cfg cpgm in
+          (*
           Print.print_header ("Code of " ^ file); Print.print_pgm cpgm;
           Print.print_header ("CFG of " ^ file); Cfg.print cfg';
+          *)
           match Cfg.match_t cfg cfg' with
           | None -> acc
           | Some matching -> (file, matching)::acc
         ) [] cpgms
         in
+        if List.length all_matchings = 0 then (print_endline "X") else (print_endline "O")
+        (*
         print_endline ("# of matched solutions : " ^ string_of_int (List.length all_matchings));
         List.iter (fun (file, matching) -> 
           print_endline file
@@ -259,23 +247,19 @@ let main () =
           Cfg.print_matching matching
           *)
         ) all_matchings;
-        ()
+        *)
       | _ -> raise (Failure "Submission or solutions are not provided")
     end
   else
     (* Arg.usage options usage_msg *)
     begin
-      match submission, solution with
-      | Some sub, Some sol ->
-        let (g_sub, g_sol) = (CallGraph.run sub, CallGraph.run sol) in
-        Print.print_header "Call graph (sub)"; CallGraph.print_graph g_sub;
-        Print.print_header "Call graph (sol)"; CallGraph.print_graph g_sol;
-        let matching = Matching2.run sub sol in
-        Print.print_header "Matching Info"; Matching2.print matching;
-        let (np_sub, np_sol) = (Normalizer.normalize_all sub, Normalizer.normalize_all sol) in
-        Print.print_header "Norm (sub)"; Normalizer.print np_sub;
-        Print.print_header "Norm (sol)"; Normalizer.print np_sol;
-        ()
+      match submission, solutions_debug with
+      | _, sols ->
+        List.iter (fun (fname, sol) -> 
+          Print.print_header ("Original (" ^ fname ^ ")"); Print.print_pgm sol;
+          let sol = Preprocessor.run sol in
+          Print.print_header ("Preprocessed (" ^ fname ^ ")"); Print.print_pgm sol
+        ) sols
       | _ -> raise (Failure (!opt_submission_filename ^ " does not exist"))
     end
 
