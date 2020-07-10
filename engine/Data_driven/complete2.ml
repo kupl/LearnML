@@ -7,7 +7,7 @@ open Repair_template
 (******************************)
 
 (*
-  state = exp * h_t * v_t * subst * (initial) * except
+  state = exp * h_t * v_t * subst
 *)
 type state = lexp * Type.HoleType.t * Type.VariableType.t * Type.Subst.t
 and hole = int
@@ -19,7 +19,7 @@ module Workset = struct
   module OrderedType = struct
     type t = work
     let compare (e1, _, _, _) (e2, _, _, _) =
-    let (c1, c2) = (exp_cost e1, exp_cost e2) in
+      let (c1, c2) = (exp_cost e1, exp_cost e2) in
       if c1=c2 then 0 else
       if c1>c2 then 1
       else -1
@@ -112,15 +112,6 @@ let rec update_polymorphic : (typ * typ) -> (Type.HoleType.t * Type.VariableType
   let v_t' = Type.VariableType.update subst' v_t in
   (h_t', v_t', subst')
 
-(* One-step Transition *)
-let rec update_state : (hole * typ) list -> Type.TEnv.t -> state -> state
-= fun ts hole_env (e, h_t, v_t, subst) ->
-  List.fold_left (fun (e, h_t, v_t, subst) (hole, typ) ->
-    let h_t = Type.HoleType.extend hole typ h_t in
-    let v_t = Type.VariableType.extend hole hole_env v_t in
-    (e, h_t, v_t, subst)
-  ) (e, h_t, v_t, subst) ts
-
 (* Type-directed Transition *)
 let rec type_directed : (hole * typ * Type.TEnv.t) -> state -> state option
 = fun (hole, hole_typ, hole_env) (lexp, h_t, v_t, subst) ->
@@ -160,7 +151,7 @@ and find_first_hole_list : lexp list-> lexp BatSet.t
     let set = find_first_hole hd in
     if (BatSet.is_empty set) then find_first_hole_list tl else set
 
-let get_next_states :  Workset.work -> lexp -> Workset.work BatSet.t
+let get_next_states : Workset.work -> lexp -> Workset.work BatSet.t
 = fun (e, h_t, v_t, subst) hole ->
   let n = extract_holenum hole in
   let hole_typ = BatMap.find n h_t in
@@ -212,3 +203,4 @@ let rec complete_template : Type.HoleType.t -> Type.VariableType.t -> Type.Subst
   match e_temp with
   | ModifyExp (l, e) -> BatSet.map (fun e -> ModifyExp (l, e)) (work (Workset.init (e, h_t, v_t, subst)))
   | InsertBranch (l, (p, e)) -> BatSet.map (fun e -> InsertBranch (l, (p, e))) (work (Workset.init (e, h_t, v_t, subst)))
+  | _ -> BatSet.singleton e_temp

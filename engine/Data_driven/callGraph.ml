@@ -1,103 +1,59 @@
 open Lang
 open Util
 open Print 
-
-module T = Type_annotate
+open Type 
 
 (***************************)
 (* Call_graph construction *)
 (***************************)
 
+exception PathError
 (* Assume that all identifiers are uniquely defined => kill is needless *)
+(* Node *)
 type func_id = int
-type node = (id, (func_id * arg BatSet.t * typ * lexp)) BatMap.t (* function name -> (parameter info, output type) *)
-type edge = (func_id * func_id, (label * ctx) BatSet.t) BatMap.t (* (caller, callee) -> (label, ctx) *)
-and ctx = lexp list (* path condition *)
-
+type node = (id, (func_id * arg list * typ * lexp)) BatMap.t (* function name -> (parameter info, output type, body) *)
+(* Edge *)
+type op = Add | Sub | Mul | Div | Mod
+type comb = And | Or
+type comp = Lt | Le | Gt | Ge 
+type eq = Eq | NEq 
+type path =
+  | Unit
+  | Int of int
+  | Bool of bool
+  | Str of string
+  | Aop of op * path * path
+  | Bop of comb * path  * path
+  | ABop of comp * path * path
+  | EQop of eq * path * path
+  | Strcon of path * path
+  | Append of path * path
+  | Concat of path * path
+  | Minus of path
+  | Not of path 
+  | App of path * path
+  | Tuple of path list
+  | Ctor of id * path list 
+  | List of path list * typ 
+  | Var of id * typ (* Symbol with name *)
+  | Symbol of int * typ (* unencodable path condition *)
+type edge = (func_id * func_id, ctx) BatMap.t (* (caller, callee) -> ctx *)
+and ctx = (label * path) BatSet.t (* ctx -> set of label * path *)
 (* G = (V, E, entry) *)
 type graph = node * edge * func_id
 
 type env = (id, func_id) BatMap.t (* Var -> func_id *)
 
-(* Preprocessing : convert all function definitions "f = fun x -> e" into "f (x) = e" form *)
-let rec get_output_typ : typ -> typ
-= fun typ ->
-  match typ with
-  | TArr (t1, t2) -> get_output_typ t2
-  | _ -> typ
-
-let rec preprocess_exp : lexp -> lexp 
-= fun (l, exp) ->
-  let exp = 
-    match exp with
-    | EList es -> EList (List.map (fun e -> preprocess_exp e) es)
-    | ECtor (x, es) -> ECtor (x, (List.map (fun e -> preprocess_exp e) es))
-    | ETuple es -> ETuple (List.map (fun e -> preprocess_exp e) es)
-    | EFun (arg, e) -> EFun (arg, preprocess_exp e)
-    | MINUS e -> MINUS (preprocess_exp e)
-    | NOT e -> NOT (preprocess_exp e)
-    | ADD (e1, e2) -> ADD (preprocess_exp e1, preprocess_exp e2)
-    | SUB (e1, e2) -> SUB (preprocess_exp e1, preprocess_exp e2)
-    | MUL (e1, e2) -> MUL (preprocess_exp e1, preprocess_exp e2)
-    | DIV (e1, e2) -> DIV (preprocess_exp e1, preprocess_exp e2)
-    | MOD (e1, e2) -> MOD (preprocess_exp e1, preprocess_exp e2)
-    | OR (e1, e2) -> OR (preprocess_exp e1, preprocess_exp e2)
-    | AND (e1, e2) -> AND (preprocess_exp e1, preprocess_exp e2) 
-    | LESS (e1, e2) -> LESS (preprocess_exp e1, preprocess_exp e2) 
-    | LARGER (e1, e2) -> LARGER (preprocess_exp e1, preprocess_exp e2) 
-    | LESSEQ (e1, e2) -> LESSEQ (preprocess_exp e1, preprocess_exp e2) 
-    | LARGEREQ (e1, e2) -> LARGEREQ (preprocess_exp e1, preprocess_exp e2)
-    | EQUAL (e1, e2) -> EQUAL (preprocess_exp e1, preprocess_exp e2)
-    | NOTEQ (e1, e2) -> NOTEQ (preprocess_exp e1, preprocess_exp e2)
-    | AT (e1, e2) -> AT (preprocess_exp e1, preprocess_exp e2) 
-    | DOUBLECOLON (e1, e2) -> DOUBLECOLON (preprocess_exp e1, preprocess_exp e2) 
-    | STRCON (e1, e2) -> STRCON (preprocess_exp e1, preprocess_exp e2) 
-    | EApp (e1, e2) -> EApp (preprocess_exp e1, preprocess_exp e2)
-    | ELet (f, is_rec, args, typ, e1, e2) ->
-      let (f, is_rec, args, typ, e1) = preprocess_binding (f, is_rec, args, typ, e1) in
-      ELet (f, is_rec, args, typ, e1, preprocess_exp e2)
-    | EBlock (is_rec, ds, e) -> EBlock (is_rec, List.map (fun binding -> preprocess_binding binding) ds, preprocess_exp e)
-    | EMatch (e, bs) -> EMatch (preprocess_exp e, List.map (fun (p, e) -> (p, preprocess_exp e)) bs)
-    | IF (e1, e2, e3) -> IF (preprocess_exp e1, preprocess_exp e2, preprocess_exp e3)
-    | _ -> exp 
-  in
-  (l, exp)
-
-and preprocess_binding : binding -> binding
-= fun (f, is_rec, args, typ, e) ->
-  let (args', e') = extract_func (preprocess_exp e) in
-  (f, is_rec, args@args', get_output_typ typ, e')
-
-and extract_func : lexp -> arg list * lexp
-= fun (l, exp) ->
-  match exp with
-  | EFun (arg, e) -> 
-    let (args, e) = extract_func e in
-    (arg::args, e)
-  | ELet (f, is_rec, args, typ, e1, e2) ->
-    let (f, is_rec, args, typ, e1) = preprocess_binding (f, is_rec, args, typ, e1) in
-    let (args', e2) = extract_func e2 in
-    (args', (l, ELet (f, is_rec, args, typ, e1, e2)))
-  | EBlock (is_rec, ds, e) -> 
-    let ds = List.map (fun binding -> preprocess_binding binding) ds in
-    let (args, e) = extract_func e in
-    (args, (l, EBlock (is_rec, ds, e)))
-  | _ -> ([], (l, exp))
-
-let rec preprocess_decl : decl -> decl 
-= fun decl ->
-  match decl with
-  | DLet binding -> DLet (preprocess_binding binding)
-  | DBlock (is_rec, bindings) -> DBlock (is_rec, List.map (fun binding -> preprocess_binding binding) bindings)
-  | _ -> decl
-
-let preprocess : prog -> prog
-= fun pgm -> List.map (fun decl -> preprocess_decl decl) pgm
-
 (* Utility functions *)
+let h_t = ref BatMap.empty 
+let v_t = ref BatMap.empty 
+
 let id_num = ref 0
 let fresh_id () = id_num := !id_num + 1; !id_num
 
+let symbol_num = ref 0
+let fresh_symbol () = symbol_num := !symbol_num + 1; !symbol_num
+  
 let get_node : graph -> node
 = fun (node, edge, entry) -> node 
 
@@ -107,21 +63,21 @@ let get_edge : graph -> edge
 let get_entry : graph -> func_id
 = fun (node, edge, entry) -> entry 
 
+let rec get_function_name : func_id -> graph -> id
+= fun id (node, edge, entry) -> let (name, _) = List.find (fun (name, (id', _, _, _)) -> id = id') (BatMap.bindings node) in name
+
 let rec get_reachable : func_id -> graph -> func_id BatSet.t
 = fun id (node, edge, entry) ->
   let rec iter reachable = 
     let reachable' = BatSet.fold (fun id acc -> 
       BatMap.foldi (fun (s, t) _ acc -> if s = id then BatSet.add t acc else acc) edge acc
-    ) reachable BatSet.empty in
+    ) reachable reachable in
     if BatSet.equal reachable reachable' then reachable' else iter reachable'
   in
   iter (BatSet.singleton id)
 
 let rec get_caller : func_id -> graph -> func_id BatSet.t
 = fun id (node, edge, entry) -> BatMap.foldi (fun (s, t) _ acc -> if t = id then BatSet.add s acc else acc) edge BatSet.empty
-
-let rec get_function_name : func_id -> graph -> id
-= fun id (node, edge, entry) -> let (name, _) = List.find (fun (name, (id', _, _, _)) -> id = id') (BatMap.bindings node) in name
 
 let rec get_entry_name : graph -> id
 = fun graph -> get_function_name (get_entry graph) graph
@@ -131,41 +87,73 @@ let rec get_caller_by_name : id -> graph -> id BatSet.t
   let (func_id, _, _, _) = BatMap.find id (get_node graph) in 
   BatSet.map (fun func_id -> get_function_name func_id graph) (get_caller func_id graph)
 
+let rec get_linked_edge : func_id -> graph -> edge 
+= fun id graph -> 
+  BatMap.filter (fun (s, t) ctx -> id = t && s <> t) (get_edge graph)
+
+let rec get_invoked_path : func_id -> graph -> path BatSet.t
+= fun id graph -> 
+  BatMap.foldi (fun (s, t) ctx acc -> 
+    if id = t && s <> t then BatSet.union acc (BatSet.map (fun (label, path) -> path) ctx) else acc
+  ) (get_edge graph) BatSet.empty
+
 (* To string *)
 let string_of_node : node -> string
 = fun node -> string_of_map ~sep:",\n\n" (fun x -> x) 
                             (fun (id, args, typ, body) -> "(" ^ string_of_int id ^ " : \n" ^ 
-                                                    "Input : " ^ string_of_set arg_to_string args ^ "\n" ^
+                                                    "Input : " ^ args_to_string args "" ^ "\n" ^
                                                     "Output : " ^ type_to_string typ ^ "\n" ^
                                                     "Body : " ^ Print.exp_to_string body
                             ) node
 
-let string_of_ctx : label * ctx -> string
-= fun (l, ctx) -> (string_of_int l) ^ " : " ^ (pp_list exp_to_string ctx)
+let rec string_of_path path = 
+  let string_of_op op =
+    match op with
+    | Add -> "+" | Sub -> "-" | Mul -> "*" | Div -> "/" | Mod -> "%"
+  in
+  let string_of_comb comb =
+    match comb with
+    | And -> "/\\" | Or -> "\\/"
+  in
+  let string_of_comp comp =
+    match comp with
+    | Lt -> "<" | Le -> "<=" | Gt -> ">" | Ge -> ">="
+  in
+  let string_of_eq eq =
+    match eq with
+    | Eq -> "=" | NEq -> "<>"
+  in
+  match path with
+  | Unit -> "()"
+  | Int n -> string_of_int n
+  | Bool b -> if b then "true" else "false"
+  | Str str -> str
+  | Aop (op, p1, p2) -> string_of_path p1 ^ string_of_op op ^ string_of_path p2
+  | Bop (comb, p1, p2) -> string_of_path p1 ^ string_of_comb comb ^ string_of_path p2
+  | ABop (comp, p1, p2) -> string_of_path p1 ^ string_of_comp comp ^ string_of_path p2
+  | EQop (eq, p1, p2) -> string_of_path p1 ^ string_of_eq eq ^ string_of_path p2
+  | Strcon (p1, p2) -> string_of_path p1 ^ "^" ^ string_of_path p2
+  | Append (p1, p2) -> string_of_path p1 ^ "@" ^ string_of_path p2
+  | Concat (p1, p2) -> string_of_path p1 ^ "::" ^ string_of_path p2
+  | Minus p -> "-(" ^ string_of_path p ^ ")" 
+  | Not p -> "not (" ^ string_of_path p ^ ")" 
+  | App (p1, p2) -> "(" ^ string_of_path p1 ^ " " ^ string_of_path p2 ^ ")"
+  | List (ps, typ) -> pp_list string_of_path ps ^ ":" ^ type_to_string typ
+  | Tuple ps -> pp_tuple string_of_path ps
+  | Ctor (c, ps) -> c ^ (if ps = [] then "" else " (" ^ string_of_path (List.hd ps) ^ ")") 
+  | Var (x, typ) -> x ^ ":" ^ type_to_string typ
+  | Symbol (n, typ) -> "?(" ^ string_of_int n ^ ")" ^ ":" ^ type_to_string typ
 
 let string_of_edge : edge -> string
 = fun edge -> 
   string_of_map (fun (s, t) -> "(" ^ string_of_int s ^ ", " ^ string_of_int t ^ ")") 
-                (fun ctxs -> "" (*string_of_set string_of_ctx ctxs*)) edge
+                (fun ctx -> "" (*string_of_set string_of_ctx ctxs*)) edge
 
 let print_graph : graph -> unit
 = fun (node, edge, func_id) ->
   print_endline ("Node : "); print_endline (string_of_node node);
   print_endline ("Edge : "); print_endline (string_of_edge edge);
   print_endline ("Starting : " ^ string_of_int func_id)
-
-(* Preprocessing *)
-let rec flatten_branch : branch list -> branch list
-= fun bs ->
-  match bs with
-  | [] -> []
-  | (p, e)::tl ->
-    begin match p with
-    | Pats ps -> 
-      let flat_bs = List.map (fun p -> (p, e)) ps in
-      (flatten_branch flat_bs)@(flatten_branch tl)
-    | _ -> (p, e)::(flatten_branch tl) 
-    end
     
 let rec is_fun : typ -> bool
 = fun typ ->
@@ -177,13 +165,13 @@ let rec is_fun : typ -> bool
   | _ -> false
 
 (* Input, output type *)
-let rec get_intput_args : arg list -> arg BatSet.t
-= fun args -> List.fold_left (fun args arg -> BatSet.add arg args) BatSet.empty args
+let rec get_input_args : arg list -> arg list
+= fun args -> args
 
-let rec extract_input_args : arg BatSet.t -> lexp -> arg BatSet.t
+let rec extract_input_args : arg list -> lexp -> arg list
 = fun args (l, exp) ->
   match exp with
-  | EFun (arg, e) -> extract_input_args (BatSet.add arg args) e
+  | EFun (arg, e) -> extract_input_args (args@[arg]) e
   | ELet (_, _, _, _, _, e) | EBlock (_, _, e) -> extract_input_args args e
   | _ -> args
 
@@ -215,43 +203,117 @@ let rec kill_env_by_pat : pat -> env -> env
   match p with
   | PUnit | PInt _ | PBool _ | PUnder -> env
   | PVar x -> kill_env x env
-  | PList ps | PCons ps | PTuple ps | PCtor (_, ps) -> List.fold_left (fun env p -> kill_env_by_pat p env) env ps
-  | _ -> raise (Failure ("Call graph : invalid patten (" ^ pat_to_string p))
+  | PList ps | PCons ps | PTuple ps | PCtor (_, ps) | Pats ps -> List.fold_left (fun env p -> kill_env_by_pat p env) env ps
 
-(* Bindings *)
-let rec bindings_to_exp : binding list -> lexp -> lexp
-= fun bindings e2 ->
-  match bindings with
-  | [] -> e2
-  | (f, is_rec, args, typ, e)::bs -> (gen_label (), ELet (f, is_rec, args, typ, e, bindings_to_exp bs e2))
+(* Path encoding *)
+let rec update_path : path -> path -> path
+= fun new_path path -> Bop (And, path, new_path)
 
-(* Pattern match *)
-let rec pat_to_exp : pat -> lexp
-= fun p ->
+let rec args_to_path : arg list -> path 
+= fun args -> 
+  (*
+  let rec flatten_args : arg list -> arg list 
+  = fun args ->
+    match args with
+    | [] -> []
+    | (ArgTuple args)::tl -> (flatten_args args)@(flatten_args tl)
+    | arg::tl -> arg::(flatten_args tl)
+  in
+  let paths = List.fold_left (fun acc arg ->
+    let new_path =
+      match arg with
+      | ArgUnder typ -> EQop (Eq, Var ("#arg" ^ string_of_int (List.length acc), typ), Symbol (fresh_symbol (), typ))
+      | ArgOne (x, typ) -> EQop (Eq, Var ("#arg" ^ string_of_int (List.length acc), typ), Var (x, typ))
+      | _ -> raise (Failure ("Call grpah: invalid arg (" ^ arg_to_string arg ^ ") while encoding  "))
+    in 
+    new_path::acc
+  ) [] (flatten_args args) in
+  let paths = List.rev paths in
+  List.fold_left (fun acc path -> update_path path acc) (List.hd paths) (List.tl paths)
+  *)
+  Bool true
+
+let rec pat_to_path : label -> pat -> typ -> path
+= fun l p typ ->
   match p with
-  | PUnit -> (gen_label (), EUnit)
-  | PInt n -> (gen_label (), Const n)
-  | PBool b -> (gen_label (), if b = true then TRUE else FALSE)
-  | PVar x -> (gen_label (), EVar x)
-  | PList ps -> (gen_label (), EList (List.map pat_to_exp ps))
-  | PCons [p] -> pat_to_exp p
-  | PCons (phd::ptl) -> (gen_label (), DOUBLECOLON (pat_to_exp phd, pat_to_exp (PCons ptl)))
-  | PTuple ps -> (gen_label (), ETuple (List.map pat_to_exp ps))
-  | PCtor (x, ps) -> (gen_label (), ECtor (x, List.map pat_to_exp ps))
-  | PUnder -> gen_labeled_hole () (* Encoding needed *)
-  | _ -> raise (Failure ("Call graph : invalid patten (" ^ pat_to_string p ^ ") to exp"))
+  | PUnit -> Unit
+  | PInt n -> Int n
+  | PBool b -> Bool b
+  | PVar x -> Var (x, BatMap.find x (BatMap.find l !v_t))
+  | PUnder -> Symbol (fresh_symbol (), typ)
+  | PList ps -> 
+    begin match typ with
+    | TList t -> List (List.map (fun p -> pat_to_path l p t) ps, TList t)
+    | _ -> raise (Failure ("Call grpah: invalid pat (" ^ pat_to_string p ^ ") while encoding path"))
+    end
+  | PCons [p]-> pat_to_path l p typ
+  | PCons (phd::ptl) ->
+    begin match typ with
+    | TList t -> Concat (pat_to_path l phd t, pat_to_path l (PCons ptl) (TList t))
+    | _ -> raise (Failure ("Call grpah: invalid pat (" ^ pat_to_string p ^ ") while encoding path"))
+    end
+  | PTuple ps -> 
+    begin match typ with
+    | TTuple ts -> Tuple (List.map2 (fun p t -> pat_to_path l p t) ps ts)
+    | _ -> raise (Failure ("Call grpah: invalid pat (" ^ pat_to_string p ^ ") while encoding path"))
+    end
+  | PCtor (c, ps) -> 
+    begin match BatMap.find c (BatMap.find l !v_t) with 
+    | TCtor (tname, ts) -> Ctor (c, List.map2 (fun p t -> pat_to_path l p t) ps ts)
+    | _ -> raise (Failure ("Call grpah: invalid pat (" ^ pat_to_string p ^ ") while encoding path"))
+    end
+  | _ -> raise (Failure ("Call grpah: invalid pat (" ^ pat_to_string p ^ ") while encoding path"))
 
-(* 
-  TODO : 
-  1. update context when binding a varaible?? 
-  2. generalize function definition with tuple?? 
-*)
+let rec binding_to_path : let_bind -> typ -> path 
+= fun binding typ ->
+  match binding with
+  | BindOne x -> Var (x, typ)
+  | BindTuple bs -> 
+    begin match typ with
+    | TTuple ts when List.length bs = List.length ts -> Tuple (List.map2 (fun b typ -> binding_to_path b typ) bs ts)
+    | _ -> raise (Failure ("Call grpah: invalid binding (" ^ let_to_string binding ^ ") while encoding path"))
+    end
+  | _ -> Symbol (fresh_symbol (), typ)
+
+let rec exp_to_path : lexp -> path
+= fun (l, exp) ->
+  match exp with 
+  | EUnit -> Unit
+  | Const n -> Int n
+  | TRUE -> Bool true 
+  | FALSE -> Bool false 
+  | String str -> Str str 
+  | EVar x -> Var (x, BatMap.find x (BatMap.find l !v_t))
+  | EList es -> List (List.map exp_to_path es, BatMap.find l !h_t)
+  | ETuple es -> Tuple (List.map exp_to_path es)
+  | ECtor (c, es) -> Ctor (c, List.map exp_to_path es)
+  | MINUS e -> Minus (exp_to_path e)
+  | NOT e -> Not (exp_to_path e)
+  | ADD (e1, e2) -> Aop (Add, exp_to_path e1, exp_to_path e2)
+  | SUB (e1, e2) -> Aop (Sub, exp_to_path e1, exp_to_path e2)
+  | MUL (e1, e2) -> Aop (Mul, exp_to_path e1, exp_to_path e2)
+  | DIV (e1, e2) -> Aop (Div, exp_to_path e1, exp_to_path e2)
+  | MOD (e1, e2) -> Aop (Mod, exp_to_path e1, exp_to_path e2)
+  | OR (e1, e2) -> Bop (Or, exp_to_path e1, exp_to_path e2)
+  | AND (e1, e2) -> Bop (And, exp_to_path e1, exp_to_path e2)
+  | LESS (e1, e2) -> ABop (Lt, exp_to_path e1, exp_to_path e2)
+  | LARGER (e1, e2) -> ABop (Gt, exp_to_path e1, exp_to_path e2)
+  | LESSEQ (e1, e2) -> ABop (Le, exp_to_path e1, exp_to_path e2)
+  | LARGEREQ (e1, e2) -> ABop (Ge, exp_to_path e1, exp_to_path e2)
+  | EQUAL (e1, e2) -> EQop (Eq, exp_to_path e1, exp_to_path e2)
+  | NOTEQ (e1, e2) -> EQop (NEq, exp_to_path e1, exp_to_path e2)
+  | AT (e1, e2) -> Append (exp_to_path e1, exp_to_path e2)
+  | DOUBLECOLON (e1, e2) -> Concat (exp_to_path e1, exp_to_path e2)
+  | STRCON (e1, e2) -> Strcon (exp_to_path e1, exp_to_path e2)
+  | EApp (e1, e2) -> (* App (exp_to_path e1, exp_to_path e2) *) Symbol (fresh_symbol (), BatMap.find l !h_t)
+  | EAssign _ | Raise _ | ERef _ | EDref _ | EFun _ | ELet _ | EBlock _ | EMatch _ | IF _ -> Symbol (fresh_symbol (), BatMap.find l !h_t)
+  | _ -> raise (Failure ("Call graph : invalid exp (" ^ exp_to_string (l, exp) ^ ") while encoding path"))
 
 (* Extract functions body by unrolling the nested function definition *)
 let rec extract_body : lexp -> lexp
 = fun (l, exp) ->
   match exp with 
-  | EUnit | Const _ | TRUE | FALSE | String _ | Raise _ | EVar _ -> (l, exp)
+  | EUnit | Const _ | TRUE | FALSE | String _ | EVar _ -> (l, exp)
   | EList es -> (l, EList (List.map (fun e -> extract_body e) es))
   | ECtor (x, es) -> (l, ECtor (x, List.map (fun e -> extract_body e) es))
   | ETuple es -> (l, ETuple (List.map (fun e -> extract_body e) es))
@@ -290,33 +352,38 @@ let rec extract_body : lexp -> lexp
     if ds = [] then extract_body e else (l, EBlock (is_rec, List.rev ds, extract_body e))
   | EMatch (e, bs) -> (l, EMatch (extract_body e, List.map (fun (p, e) -> (p, extract_body e)) bs))
   | IF (e1, e2, e3) -> (l, IF (extract_body e1, extract_body e2, extract_body e3))
+  | Raise e -> (l, Raise (extract_body e))
+  | ERef e -> (l, ERef (extract_body e))
+  | EDref e -> (l, EDref (extract_body e))
+  | EAssign (e1, e2) -> (l, EAssign (extract_body e1, extract_body e2))
   | _ -> raise (Failure ("Call graph-exttract : invalid exp (" ^ exp_to_string (l, exp)))
   
-let rec exp_to_cg : env -> func_id -> node * edge * ctx -> lexp -> node * edge
-= fun env id (node, edge, ctx) (l, exp) ->
+let rec exp_to_cg : env -> func_id -> node * edge * path -> lexp -> node * edge
+= fun env id (node, edge, path) (l, exp) ->
+  (* let _ = print_endline (lexp_to_string (l, exp)) in *)
   match exp with 
-  | EUnit | Const _ | TRUE | FALSE | String _ | Raise _ -> (node, edge)
+  | EUnit | Const _ | TRUE | FALSE | String _ -> (node, edge)
   | EVar x -> 
     (* if a variable x is a pre-defined function *)
     if BatMap.mem x env then 
       let id' = BatMap.find x env in
-      let ctx = List.rev ctx in
       (* make a call relation between (id, id') with an updated context *)
       if BatMap.mem (id, id') edge then
-        let new_ctx = BatSet.add (l, ctx) (BatMap.find (id, id') edge) in
+        let new_ctx = BatSet.add (l, path) (BatMap.find (id, id') edge) in
         (node, BatMap.add (id, id') new_ctx edge)
-      else (node, BatMap.add (id, id') (BatSet.singleton (l, ctx)) edge)  
+      else (node, BatMap.add (id, id') (BatSet.singleton (l, path)) edge)  
     else (node, edge)
-  | EList es | ECtor (_, es) | ETuple es -> List.fold_left (fun (node, edge) e -> exp_to_cg env id (node, edge, ctx) e) (node, edge) es
+  | EList es | ECtor (_, es) | ETuple es -> List.fold_left (fun (node, edge) e -> exp_to_cg env id (node, edge, path) e) (node, edge) es
   | EFun (arg, e) -> 
     let new_env = kill_env_by_arg arg env in
-    exp_to_cg new_env id (node, edge, ctx) e
-  | MINUS e | NOT e -> exp_to_cg env id (node, edge, ctx) e
+    exp_to_cg new_env id (node, edge, path) e
+  | MINUS e | NOT e | Raise e | ERef e | EDref e -> exp_to_cg env id (node, edge, path) e
   | ADD (e1, e2) | SUB (e1, e2) | MUL (e1, e2) | DIV (e1, e2) | MOD (e1, e2) 
   | OR (e1, e2) | AND (e1, e2) | LESS (e1, e2) | LARGER (e1, e2) | LESSEQ (e1, e2) | LARGEREQ (e1, e2) 
-  | EQUAL (e1, e2) | NOTEQ (e1, e2) | AT (e1, e2) | DOUBLECOLON (e1, e2) | STRCON (e1, e2) | EApp (e1, e2) ->
-    let (node, edge) = exp_to_cg env id (node, edge, ctx) e1 in
-    exp_to_cg env id (node, edge, ctx) e2
+  | EQUAL (e1, e2) | NOTEQ (e1, e2) | AT (e1, e2) | DOUBLECOLON (e1, e2) | STRCON (e1, e2) | EApp (e1, e2) 
+  | EAssign (e1, e2) ->
+    let (node, edge) = exp_to_cg env id (node, edge, path) e1 in
+    exp_to_cg env id (node, edge, path) e2
   | ELet (f, is_rec, args, typ, e1, e2) ->
     (* Kill environment *)
     let func_env = List.fold_left (fun env arg -> kill_env_by_arg arg env) env args in
@@ -326,15 +393,16 @@ let rec exp_to_cg : env -> func_id -> node * edge * ctx -> lexp -> node * edge
       | BindOne f -> 
         let new_id = fresh_id () in
         let func_env = if is_rec then BatMap.add f new_id func_env else func_env in
-        let new_node = (new_id, extract_input_args (get_intput_args args) e1, get_output_typ typ, extract_body e1) in
-        let node = if is_rec then BatMap.add f new_node node else node in (* ??? *)
-        let (node, edge) = exp_to_cg func_env new_id (node, edge, []) e1 in (* Init ctx and analize body expression *)
-        exp_to_cg (BatMap.add f new_id env) id (BatMap.add f new_node node, edge, ctx) e2
+        let new_node = (new_id, extract_input_args (get_input_args args) e1, get_output_typ typ, extract_body e1) in
+        let node = if is_rec then BatMap.add f new_node node else node in
+        let (node, edge) = exp_to_cg func_env new_id (node, edge, args_to_path args) e1 in (* Init ctx and analize body expression *)
+        exp_to_cg (BatMap.add f new_id env) id (BatMap.add f new_node node, edge, path) e2
       | _ -> raise (Failure "Call graph : invalid function definition")
     end
     else 
-      let (node, edge) = exp_to_cg func_env id (node, edge, ctx) e1 in
-      exp_to_cg (kill_env_by_binding f env) id (node, edge, ctx) e2
+      let (node, edge) = exp_to_cg func_env id (node, edge, path) e1 in
+      let new_path = EQop (Eq, binding_to_path f typ, exp_to_path (extract_body e1))  in
+      exp_to_cg (kill_env_by_binding f env) id (node, edge, update_path new_path path) e2
   | EBlock (is_rec, ds, e) ->
     (* Init env *)
     let (env, node) = List.fold_left (fun (env, node) (f, is_rec, args, typ, e) -> 
@@ -342,7 +410,7 @@ let rec exp_to_cg : env -> func_id -> node * edge * ctx -> lexp -> node * edge
         begin match f with
         | BindOne f -> 
           let new_id = fresh_id () in
-          let new_node = (new_id, extract_input_args (get_intput_args args) e, get_output_typ typ, extract_body e) in
+          let new_node = (new_id, extract_input_args (get_input_args args) e, get_output_typ typ, extract_body e) in
           (BatMap.add f new_id env, BatMap.add f new_node node)
         | _ -> raise (Failure "Call graph : invalid function definition")
         end
@@ -350,7 +418,7 @@ let rec exp_to_cg : env -> func_id -> node * edge * ctx -> lexp -> node * edge
         (kill_env_by_binding f env, node)
     ) (env, node) ds in
     (* Evaluate all bindings *)
-    let (node, edge) = List.fold_left (fun (node, edge) (f, is_rec, args, typ, e) -> 
+    let (node, edge, path) = List.fold_left (fun (node, edge, path) (f, is_rec, args, typ, e) -> 
       if (args <> [] || is_fun typ) then 
         begin match f with
         | BindOne f -> 
@@ -359,27 +427,33 @@ let rec exp_to_cg : env -> func_id -> node * edge * ctx -> lexp -> node * edge
             let new_id = BatMap.find f env in
             let func_env = if is_rec then env else BatMap.remove f env in
             let node = if is_rec then node else BatMap.remove f node in (* ??? *)
-            exp_to_cg func_env new_id (node, edge, []) e
+            let (node, edge) = exp_to_cg func_env new_id (node, edge, args_to_path args) e in
+            (node, edge, path)
           with _ -> failwith "Something are wrong...")
         | _ -> raise (Failure "Call graph : invalid function definition")
         end
-      else 
-        exp_to_cg env id (node, edge, ctx) e
-    ) (node, edge) ds in
-    exp_to_cg env id (node, edge, ctx) e
+      else
+        let new_path = EQop (Eq, binding_to_path f typ, exp_to_path (extract_body e))  in 
+        let path = update_path new_path path in
+        let (node, edge) = exp_to_cg env id (node, edge, path) e in
+        (node, edge, path)
+    ) (node, edge, path) ds in
+    exp_to_cg env id (node, edge, path) e
   | EMatch (e, bs) ->
-    let (node, edge) = exp_to_cg env id (node, edge, ctx) e in
-    let (node, edge, _) = List.fold_left (fun (node, edge, ctx) (p, e') ->  
+    let (node, edge) = exp_to_cg env id (node, edge, path) e in
+    let path_e = exp_to_path e in
+    let (node, edge, _) = List.fold_left (fun (node, edge, path) (p, e') ->  
       let env = kill_env_by_pat p env in
-      let new_ctx = ((gen_label (), EQUAL (pat_to_exp p, e)))::ctx in
-      let (node, edge) = exp_to_cg env id (node, edge, new_ctx) e' in
-      (node, edge, ((gen_label (), NOTEQ (pat_to_exp p, e))::ctx))
-    ) (node, edge, ctx) (flatten_branch bs) in
+      let path_p = pat_to_path (get_label e') p (BatMap.find (get_label e) !h_t) in
+      let (node, edge) = exp_to_cg env id (node, edge, update_path (EQop (Eq, path_e, path_p)) path) e' in
+      (node, edge, update_path (EQop (NEq, path_e, path_p)) path)
+    ) (node, edge, path) bs in
     (node, edge)
   | IF (e1, e2, e3) ->
-    let (node, edge) = exp_to_cg env id (node, edge, ctx) e1 in
-    let (node, edge) = exp_to_cg env id (node, edge, (e1::ctx)) e2 in
-    exp_to_cg env id (node, edge, ((gen_label (), NOT e1)::ctx)) e3
+    let (node, edge) = exp_to_cg env id (node, edge, path) e1 in
+    let new_path = exp_to_path e1 in
+    let (node, edge) = exp_to_cg env id (node, edge, update_path new_path path) e2 in
+    exp_to_cg env id (node, edge, update_path (Not new_path) path) e3
   | _ -> raise (Failure ("Call graph : invalid exp (" ^ exp_to_string (l, exp)))
 
 let rec decl_to_cg : env -> node * edge -> decl -> env * node * edge
@@ -394,13 +468,14 @@ let rec decl_to_cg : env -> node * edge -> decl -> env * node * edge
       | BindOne f -> 
         let new_id = fresh_id () in
         let func_env = if is_rec then BatMap.add f new_id func_env else func_env in
-        let new_node = (new_id, extract_input_args (get_intput_args args) e, get_output_typ typ, extract_body e) in
+        let new_node = (new_id, extract_input_args (get_input_args args) e, get_output_typ typ, extract_body e) in
         let node = if is_rec then BatMap.add f new_node node else node in (* ??? *)
-        let (node, edge) = exp_to_cg func_env new_id (node, edge, []) e in (* Init ctx *)
+        let (node, edge) = exp_to_cg func_env new_id (node, edge, args_to_path args) e in (* Init ctx *)
         (BatMap.add f new_id env, BatMap.add f new_node node, edge)
       | _ -> raise (Failure "Call graph : invalid function definition")
       end
     else 
+      (* Update path by global variable? *)
       (env, node, edge)
   | DBlock (is_rec, ds) -> 
     (* Init env *)
@@ -409,7 +484,7 @@ let rec decl_to_cg : env -> node * edge -> decl -> env * node * edge
         begin match f with
         | BindOne f -> 
           let new_id = fresh_id () in
-          let new_node = (new_id, extract_input_args (get_intput_args args) e, get_output_typ typ, extract_body e) in
+          let new_node = (new_id, extract_input_args (get_input_args args) e, get_output_typ typ, extract_body e) in
           (BatMap.add f new_id env, BatMap.add f new_node node)
         | _ -> raise (Failure "Call graph : invalid function definition")
         end
@@ -425,7 +500,7 @@ let rec decl_to_cg : env -> node * edge -> decl -> env * node * edge
           let new_id = BatMap.find f env in
           let func_env = if is_rec then env else BatMap.remove f env in
           let node = if is_rec then node else BatMap.remove f node in (* ??? *)
-          exp_to_cg func_env new_id (node, edge, []) e
+          exp_to_cg func_env new_id (node, edge, args_to_path args) e
         | _ -> raise (Failure "Call graph : invalid function definition")
         end
       else 
@@ -434,33 +509,49 @@ let rec decl_to_cg : env -> node * edge -> decl -> env * node * edge
     (env, node, edge)
   | _ -> (env, node, edge)
 
-(* Remove testing function from call-graph *)
-(*
-let remove_grading : graph -> graph -> graph
+(* Remove unreachable functions from call-graph => to use library codes *)
+let remove_unrechable : graph -> graph 
+= fun graph ->
+  let reachable_set = get_reachable (get_entry graph) graph in
+  let node = BatMap.filter (fun name (id, _, _, _) -> BatSet.mem id reachable_set) (get_node graph) in
+  let edge = BatMap.filter (fun (s, t) _ -> BatSet.mem s reachable_set && BatSet.mem t reachable_set) (get_edge graph) in
+  (node, edge, get_entry graph)
+
+(* Remove testing function & unreachable library codes from call-graph *)
+let post_process : graph -> graph -> graph
 = fun g_grading g_original ->
-  let names = BatMap.foldi (fun name (_, _, _) acc -> BatSet.add name acc) (get_node g_original) BatSet.empty in
-  let original_functions = BatMap.foldi (fun name (id, _, _) acc -> 
-    if BatSet.mem name names then BatMap.add name id acc else acc
-  ) (get_node g_grading) BatMap.empty in
-  g_original
-*)
+  let f_original = BatMap.foldi (fun name (_, _, _, _) acc -> BatSet.add name acc) (get_node g_original) BatSet.empty in
+  let new_entry = BatMap.foldi (fun name (id, _, _, _) entry -> 
+    if BatSet.mem name f_original then
+      if BatMap.exists (fun name' (id', _, _, _) -> 
+        not (BatSet.mem name' f_original) && BatMap.mem (id', id) (get_edge g_grading)) (get_node g_grading) 
+      then id else entry
+    else entry
+  ) (get_node g_grading) (-1) in
+  if new_entry = -1 then
+    remove_unrechable g_grading
+  else
+    remove_unrechable ((get_node g_grading), (get_edge g_grading), new_entry)
 
-(* Remove unreachable functions => to use library codes *)
-
+let update_type_info : prog -> unit
+= fun pgm ->
+  let (_, h_t', v_t', _) = Type2.run pgm in
+  h_t := h_t';
+  v_t := v_t'
 
 (* Extract call graph of a given program *)
-let run : prog -> graph
+let extract_graph : prog -> graph
 = fun pgm -> 
-  let pgm_with_grading = 
-    pgm@(!grading_pgm) 
-    |> preprocess
-    |> T.run
-  in
-  let pgm = 
-    pgm@(!grading_pgm) 
-    |> T.run
-    |> preprocess
-  in
+  (*
+  let pgm_with_grading = Preprocessor.run ((!library_pgm)@pgm@(!grading_pgm)) in
+  let _ = update_type_info pgm_with_grading in 
   let (env, node, edge) = List.fold_left (fun (env, node, edge) decl -> decl_to_cg env (node, edge) decl) (BatMap.empty, BatMap.empty, BatMap.empty) pgm_with_grading in
-  let (env, node, edge) = List.fold_left (fun (env, node, edge) decl -> decl_to_cg env (node, edge) decl) (BatMap.empty, BatMap.empty, BatMap.empty) pgm in
-  (node, edge, BatMap.find !Options.opt_entry_func env)
+  *)
+  let pgm = pgm in
+  let _ = update_type_info pgm in
+  let (env', node', edge') = List.fold_left (fun (env, node, edge) decl -> decl_to_cg env (node, edge) decl) (BatMap.empty, BatMap.empty, BatMap.empty) pgm in
+  (* let g_grading = (node, edge, BatMap.find !Options.opt_entry_func env) in *)
+  let g_original = (node', edge', -1) in
+  (* post_process g_grading g_original *)
+  g_original
+  

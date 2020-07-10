@@ -1,0 +1,117 @@
+../engine/main.native -cfg -solutions ../benchmarks_correct/formula -submission ../benchmarks_incorrect/formula/09/sub15.ml
+LOC : 25
+O
+../engine/main.native -cfg -solutions ../benchmarks_correct/formula -submission ../benchmarks_incorrect/formula/09/sub3.ml
+LOC : 42
+O
+../engine/main.native -cfg -solutions ../benchmarks_correct/formula -submission ../benchmarks_incorrect/formula/09/sub8.ml
+LOC : 22
+O
+../engine/main.native -cfg -solutions ../benchmarks_correct/formula -submission ../benchmarks_incorrect/formula/10/sub1.ml
+LOC : 35
+X
+../engine/main.native -cfg -solutions ../benchmarks_correct/formula -submission ../benchmarks_incorrect/formula/10/sub11.ml
+LOC : 28
+O
+../engine/main.native -cfg -solutions ../benchmarks_correct/formula -submission ../benchmarks_incorrect/formula/10/sub2.ml
+LOC : 35
+X
+../engine/main.native -cfg -solutions ../benchmarks_correct/formula -submission ../benchmarks_incorrect/formula/10/sub3.ml
+LOC : 35
+X
+../engine/main.native -cfg -solutions ../benchmarks_correct/formula -submission ../benchmarks_incorrect/formula/10/sub41.ml
+LOC : 27
+O
+../engine/main.native -cfg -solutions ../benchmarks_correct/formula -submission ../benchmarks_incorrect/formula/10/sub45.ml
+LOC : 29
+O
+../engine/main.native -cfg -solutions ../benchmarks_correct/formula -submission ../benchmarks_incorrect/formula/11/sub11.ml
+LOC : 45
+X
+../engine/main.native -cfg -solutions ../benchmarks_correct/formula -submission ../benchmarks_incorrect/formula/11/sub12.ml
+LOC : 45
+X
+../engine/main.native -cfg -solutions ../benchmarks_correct/formula -submission ../benchmarks_incorrect/formula/11/sub35.ml
+LOC : 22
+X
+../engine/main.native -cfg -solutions ../benchmarks_correct/formula -submission ../benchmarks_incorrect/formula/11/sub8.ml
+LOC : 26
+O
+../engine/main.native -cfg -solutions ../benchmarks_correct/formula -submission ../benchmarks_incorrect/formula/11/sub9.ml
+LOC : 26
+O
+../engine/main.native -cfg -solutions ../benchmarks_correct/formula -submission ../benchmarks_incorrect/formula/12/sub16.ml
+LOC : 30
+O
+../engine/main.native -cfg -solutions ../benchmarks_correct/formula -submission ../benchmarks_incorrect/formula/13/sub28.ml
+LOC : 26
+O
+../engine/main.native -cfg -solutions ../benchmarks_correct/formula -submission ../benchmarks_incorrect/formula/13/sub47.ml
+LOC : 32
+X
+../engine/main.native -cfg -solutions ../benchmarks_correct/formula -submission ../benchmarks_incorrect/formula/13/sub57.ml
+LOC : 26
+O
+../engine/main.native -cfg -solutions ../benchmarks_correct/formula -submission ../benchmarks_incorrect/formula/14/sub32.ml
+LOC : 31
+X
+../engine/main.native -cfg -solutions ../benchmarks_correct/formula -submission ../benchmarks_incorrect/formula/14/sub36.ml
+LOC : 35
+X
+../engine/main.native -cfg -solutions ../benchmarks_correct/formula -submission ../benchmarks_incorrect/formula/14/sub7.ml
+LOC : 33
+O
+../engine/main.native -cfg -solutions ../benchmarks_correct/formula -submission ../benchmarks_incorrect/formula/15/sub17.ml
+LOC : 30
+O
+../engine/main.native -cfg -solutions ../benchmarks_correct/formula -submission ../benchmarks_incorrect/formula/15/sub18.ml
+LOC : 30
+O
+../engine/main.native -cfg -solutions ../benchmarks_correct/formula -submission ../benchmarks_incorrect/formula/15/sub24.ml
+LOC : 35
+X
+../engine/main.native -cfg -solutions ../benchmarks_correct/formula -submission ../benchmarks_incorrect/formula/15/sub29.ml
+LOC : 42
+O
+../engine/main.native -cfg -solutions ../benchmarks_correct/formula -submission ../benchmarks_incorrect/formula/15/sub31.ml
+LOC : 32
+O
+../engine/main.native -cfg -solutions ../benchmarks_correct/formula -submission ../benchmarks_incorrect/formula/15/sub35.ml
+LOC : 84
+X
+../engine/main.native -cfg -solutions ../benchmarks_correct/formula -submission ../benchmarks_incorrect/formula/15/sub37.ml
+LOC : 27
+O
+../engine/main.native -cfg -solutions ../benchmarks_correct/formula -submission ../benchmarks_incorrect/formula/15/sub74.ml
+LOC : 57
+X
+../engine/main.native -cfg -solutions ../benchmarks_correct/formula -submission ../benchmarks_incorrect/formula/17/sub10.ml
+LOC : 113
+X
+../engine/main.native -cfg -solutions ../benchmarks_correct/formula -submission ../benchmarks_incorrect/formula/17/sub117.ml
+LOC : 78
+X
+../engine/main.native -cfg -solutions ../benchmarks_correct/formula -submission ../benchmarks_incorrect/formula/17/sub133.ml
+LOC : 30
+O
+../engine/main.native -cfg -solutions ../benchmarks_correct/formula -submission ../benchmarks_incorrect/formula/17/sub19.ml
+LOC : 29
+O
+../engine/main.native -cfg -solutions ../benchmarks_correct/formula -submission ../benchmarks_incorrect/formula/17/sub33.ml
+LOC : 78
+X
+../engine/main.native -cfg -solutions ../benchmarks_correct/formula -submission ../benchmarks_incorrect/formula/17/sub57.ml
+LOC : 48
+O
+../engine/main.native -cfg -solutions ../benchmarks_correct/formula -submission ../benchmarks_incorrect/formula/17/sub74.ml
+LOC : 31
+O
+../engine/main.native -cfg -solutions ../benchmarks_correct/formula -submission ../benchmarks_incorrect/formula/17/sub89.ml
+LOC : 64
+X
+../engine/main.native -cfg -solutions ../benchmarks_correct/formula -submission ../benchmarks_incorrect/formula/17/sub9.ml
+LOC : 113
+X
+../engine/main.native -cfg -solutions ../benchmarks_correct/formula -submission ../benchmarks_incorrect/formula/17/sub91.ml
+LOC : 36
+X

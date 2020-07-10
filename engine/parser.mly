@@ -32,6 +32,7 @@ let rec binding_args : arg list -> lexp -> lexp
 %token ELSE       (* else *)
 %token THEN       (* then *)
 %token NOT        (* not *)
+%token REF (* ref *)
 %token TRUE
 %token FALSE
 %token TBool
@@ -78,11 +79,13 @@ let rec binding_args : arg list -> lexp -> lexp
 %token LESSEQ     (* *)
 %token LARGEREQ   (* >= *) 
 %token NOTEQ      (* != or <> *)
+%token ASSIGN (* := *)
 
 %token AT         (* @ *)
 %token DOUBLECOLON(* :: *)
 %token STRCON     (* ^ *)
 %token IDENT      (* ' *)
+%token EXCLE  (* ! *)
 %token EOF
 
 %token LISTHD
@@ -107,14 +110,16 @@ let rec binding_args : arg list -> lexp -> lexp
 %token LISTASSOC
 %token STRINGCONCAT
 
-%left OR
-%left AND
+%right SEMI
+%right ASSIGN
+%right OR
+%right AND
 %left LESS LESSEQ LARGER LARGEREQ EQ NOTEQ
 %right AT STRCON
 %right DOUBLECOLON
 %left PLUS MINUS
 %left STAR DIVIDE MOD
-%right UNARY
+%nonassoc UNARY
 
 %start prog
 %type <Lang.examples * Lang.prog> prog
@@ -422,8 +427,12 @@ exp_op:
     { (gen_label(), DOUBLECOLON (e1, e2)) }
   | e1=exp_op STRCON e2 = exp_op
     { (gen_label(), STRCON (e1,e2)) }
+  | e1=exp_op ASSIGN e2=exp_op
+    { (gen_label (), EAssign (e1, e2)) }
   | RAISE e=exp_base
     { (gen_label(), Raise e) }
+  | REF e=exp_base
+    { (gen_label (), ERef e) }
   | e=exp_base es=exp_app_list (* funcion call or constant *)
     { appify e es }
   | c=UID e=exp_base
@@ -458,6 +467,8 @@ exp_base:
     { e }
   | BEGIN e=exp END
     { e }
+  | EXCLE e=exp_base
+    { (gen_label (), EDref e) }
   | HOLE
     { (gen_label(), Lang.gen_hole()) }
   | AHOLE  

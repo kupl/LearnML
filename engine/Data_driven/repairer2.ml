@@ -31,6 +31,7 @@ module Workset = struct
   = fun e_temp ->
     match e_temp with
     | ModifyExp (_, e) | InsertBranch (_, (_, e)) -> exp_cost e
+    | DeleteBranch (_, (_, e)) -> exp_cost e
 
   let cost : repair_template BatSet.t -> int
   = fun temp -> 
@@ -129,7 +130,7 @@ let rec check_redundant : prog -> exp_template -> bool
   | _ -> false
 
 (* Main Procedure *)
-let time_out = 60.0
+let time_out = 600.0
 let start_time = ref 0.0
 let debug = ref (open_out "log.txt")
 

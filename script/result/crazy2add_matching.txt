@@ -1,0 +1,12 @@
+../engine/main.native -cfg -solutions ../benchmarks_correct/crazy2add -submission ../benchmarks_incorrect/crazy2add/09/sub18.ml
+LOC : 20
+O
+../engine/main.native -cfg -solutions ../benchmarks_correct/crazy2add -submission ../benchmarks_incorrect/crazy2add/09/sub2.ml
+LOC : 56
+X
+../engine/main.native -cfg -solutions ../benchmarks_correct/crazy2add -submission ../benchmarks_incorrect/crazy2add/09/sub22.ml
+LOC : 86
+X
+../engine/main.native -cfg -solutions ../benchmarks_correct/crazy2add -submission ../benchmarks_incorrect/crazy2add/09/sub23.ml
+LOC : 20
+X

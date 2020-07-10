@@ -56,7 +56,7 @@ module Workset = struct
   = fun temps -> add (BatSet.empty, temps) empty
 end
 
-let time_out = 1800.0
+let time_out = 60.0
 let start_time = ref 0.0
 
 let rec next : Workset.t -> Workset.work -> Workset.t

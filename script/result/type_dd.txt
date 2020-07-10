@@ -1,0 +1,1227 @@
+Error occurs : ../engine/main.native -dd -submission ../benchmarks_incorrect/type/18/sub1.ml -solutions ../benchmarks_correct/type -entry grading -testcases ../testcases/type_testcases -grading ../benchmarks_incorrect/type/grading.mlError occurs : ../engine/main.native -dd -submission ../benchmarks_incorrect/type/18/sub16.ml -solutions ../benchmarks_correct/type -entry grading -testcases ../testcases/type_testcases -grading ../benchmarks_incorrect/type/grading.ml../engine/main.native -dd -submission ../benchmarks_incorrect/type/18/sub17.ml -solutions ../benchmarks_correct/type -entry grading -testcases ../testcases/type_testcases -grading ../benchmarks_incorrect/type/grading.ml
+-----------------------------
+Submission
+-----------------------------
+
+type program = exp
+and exp =
+|CONST of int
+|VAR of var
+|ADD of (exp * exp)
+|SUB of (exp * exp)
+|MUL of (exp * exp)
+|DIV of (exp * exp)
+|ISZERO of exp
+|READ
+|IF of (exp * exp * exp)
+|LET of (var * exp * exp)
+|LETREC of (var * var * exp * exp)
+|PROC of (var * exp)
+|CALL of (exp * exp)
+and var = string
+
+exception TypeError
+
+type typ =
+|TyInt
+|TyBool
+|TyFun of (typ * typ)
+|TyVar of tyvar
+and tyvar = string
+type typ_eqn = (typ * typ) list
+type tenv = (var -> typ)
+
+let tenv_empty  = 
+fun _ -> raise Failure ("Type Env is empty")
+
+let tenv_extend (x, t) tenv  = 
+fun y -> if (x = y) then t
+ else tenv (y)
+
+let tenv_find tenv x  = tenv (x)
+type subst = (tyvar * typ) list
+
+let subst_empty  = []
+
+let subst_find x subst  = __list_assoc__ (x) (subst)
+
+let rec subst_apply  : (typ -> (subst -> typ)) = 
+fun typ subst -> 
+ (match typ with 
+|TyInt -> TyInt
+|TyBool -> TyBool
+|TyFun (t1, t2) -> TyFun ((subst_apply (t1) (subst), subst_apply (t2) (subst)))
+|TyVar x -> if __list_exists__ (
+fun (y, typ) -> (x = y)) (subst) then subst_find (x) (subst)
+ else typ)
+
+let subst_extend tv ty subst  = ((tv, ty) :: __list_map__ (
+fun (x, t) -> (x, subst_apply (t) ([(tv, ty)]))) (subst))
+
+let tyvar_num  = ref 0
+
+let fresh_tyvar _  = 
+let _  = (tyvar_num := (!tyvar_num + 1))
+ in 
+TyVar (("t" ^ string_of_int (!tyvar_num)))
+
+let rec gen_equations  : (tenv -> (exp -> (typ -> typ_eqn))) = 
+fun tenv e ty -> 
+ (match e with 
+|CONST n -> [(ty, TyInt)]
+|VAR x -> [(ty, tenv_find (tenv) (x))]
+|LET (v, e1, b1) -> 
+let new_tv  = fresh_tyvar (())
+ in 
+
+ (match e1 with 
+|CONST n -> ((ty, new_tv) :: gen_equations (tenv_extend ((v, TyInt)) (tenv)) (b1) (new_tv))
+|_ -> [])
+|_ -> [])
+
+let solve  : (typ_eqn -> subst) = 
+fun eqns -> 
+let rec accumulator lst acc  = 
+ (match lst with 
+|[] -> acc
+|(TyVar v, ty)::tl -> accumulator (tl) (subst_extend (v) (ty) (acc)))
+ in 
+accumulator (eqns) ([])
+
+let typeof  : (exp -> typ) = 
+fun exp -> 
+let new_tv  = fresh_tyvar (())
+ in 
+
+let eqns  = gen_equations (tenv_empty) (exp) (new_tv)
+ in 
+
+let subst  = solve (eqns)
+ in 
+
+let ty  = subst_apply (new_tv) (subst)
+ in 
+ty
+
+-----------------------------
+Submission
+-----------------------------
+
+type program = exp
+and exp =
+|CALL of (exp * exp)
+|PROC of (var * exp)
+|LETREC of (var * var * exp * exp)
+|LET of (var * exp * exp)
+|IF of (exp * exp * exp)
+|READ
+|ISZERO of exp
+|DIV of (exp * exp)
+|MUL of (exp * exp)
+|SUB of (exp * exp)
+|ADD of (exp * exp)
+|VAR of var
+|CONST of int
+and var = string
+
+exception TypeError
+
+type typ =
+|TyVar of tyvar
+|TyFun of (typ * typ)
+|TyBool
+|TyInt
+and tyvar = string
+type typ_eqn = (typ * typ) list
+type tenv = (var -> typ)
+
+let tenv_empty  = (51147, 
+fun _ -> (51146, raise (51145, Failure ((51144, "Type Env is empty")
+
+let tenv_extend (x, t) tenv  = (51156, 
+fun y -> (51155, if (51150, ((51148, x = (51149, y) then (51151, t
+ else (51154, (51152, tenv ((51153, y)
+
+let tenv_find tenv x  = (51159, (51157, tenv ((51158, x)
+type subst = (tyvar * typ) list
+
+let subst_empty  = (51160, []
+
+let subst_find x subst  = (51165, (51164, (51161, __list_assoc__ ((51162, x) ((51163, subst)
+
+let rec subst_apply  : (typ -> (subst -> typ)) = (51198, 
+fun typ subst -> (51196, 
+ (match (51166, typ with 
+|TyInt -> (51167, TyInt
+|TyBool -> (51168, TyBool
+|TyFun (t1, t2) -> (51180, TyFun ((51179, ((51173, (51172, (51169, subst_apply ((51170, t1) ((51171, subst), (51178, (51177, (51174, subst_apply ((51175, t2) ((51176, subst)))
+|TyVar x -> (51195, if (51188, (51187, (51181, __list_exists__ ((51185, 
+fun (y, typ) -> (51184, ((51182, x = (51183, y)) ((51186, subst) then (51193, (51192, (51189, subst_find ((51190, x) ((51191, subst)
+ else (51194, typ)
+
+let subst_extend tv ty subst  = (51217, ((51201, ((51199, tv, (51200, ty) :: (51216, (51215, (51202, __list_map__ ((51213, 
+fun (x, t) -> (51212, ((51203, x, (51211, (51210, (51204, subst_apply ((51205, t) ((51209, [(51208, ((51206, tv, (51207, ty)]))) ((51214, subst))
+
+let tyvar_num  = (51219, ref 0
+
+let fresh_tyvar _  = (51233, 
+let _  = (51225, (tyvar_num := (!tyvar_num + 1)))
+ in 
+(51232, TyVar ((51231, ((51226, "t" ^ (51230, (51227, string_of_int ((51229, !tyvar_num)))
+
+let rec gen_equations  : (tenv -> (exp -> (typ -> typ_eqn))) = (51275, 
+fun tenv e ty -> (51272, 
+ (match (51234, e with 
+|CONST n -> (51238, [(51237, ((51235, ty, (51236, TyInt)]
+|VAR x -> (51246, [(51245, ((51239, ty, (51244, (51243, (51240, tenv_find ((51241, tenv) ((51242, x))]
+|LET (v, e1, b1) -> (51270, 
+let new_tv  = (51249, (51247, fresh_tyvar ((51248, ())
+ in 
+(51269, 
+ (match (51250, e1 with 
+|CONST n -> (51267, ((51253, ((51251, ty, (51252, new_tv) :: (51266, (51265, (51264, (51254, gen_equations ((51261, (51260, (51255, tenv_extend ((51258, ((51256, v, (51257, TyInt)) ((51259, tenv)) ((51262, b1) ((51263, new_tv))
+|_ -> (51268, [])
+|_ -> (51271, [])
+
+let solve  : (typ_eqn -> subst) = (51296, 
+fun eqns -> (51295, 
+let rec accumulator lst acc  = (51289, 
+ (match (51276, lst with 
+|[] -> (51277, acc
+|(TyVar v, ty)::tl -> (51288, (51287, (51278, accumulator ((51279, tl) ((51286, (51285, (51284, (51280, subst_extend ((51281, v) ((51282, ty) ((51283, acc)))
+ in 
+(51294, (51293, (51290, accumulator ((51291, eqns) ((51292, [])
+
+let typeof  : (exp -> typ) = (51320, 
+fun exp -> (51319, 
+let new_tv  = (51299, (51297, fresh_tyvar ((51298, ())
+ in 
+(51318, 
+let eqns  = (51306, (51305, (51304, (51300, gen_equations ((51301, tenv_empty) ((51302, exp) ((51303, new_tv)
+ in 
+(51317, 
+let subst  = (51309, (51307, solve ((51308, eqns)
+ in 
+(51316, 
+let ty  = (51314, (51313, (51310, subst_apply ((51311, new_tv) ((51312, subst)
+ in 
+(51315, ty
+
+-----------------------------
+Most Similar Sol ../benchmarks_correct/type/19/sub27.ml Score : 14
+-----------------------------
+
+type program = exp
+and exp =
+|CONST of int
+|VAR of var
+|ADD of (exp * exp)
+|SUB of (exp * exp)
+|MUL of (exp * exp)
+|DIV of (exp * exp)
+|ISZERO of exp
+|READ
+|IF of (exp * exp * exp)
+|LET of (var * exp * exp)
+|LETREC of (var * var * exp * exp)
+|PROC of (var * exp)
+|CALL of (exp * exp)
+and var = string
+
+exception TypeError
+
+type typ =
+|TyInt
+|TyBool
+|TyFun of (typ * typ)
+|TyVar of tyvar
+and tyvar = string
+type typ_eqn = (typ * typ) list
+type tenv = (var -> typ)
+
+let tenv_empty  = 
+fun _ -> raise Failure ("Type Env is empty")
+
+let tenv_extend (x, t) tenv  = 
+fun y -> if (x = y) then t
+ else tenv (y)
+
+let tenv_find tenv x  = tenv (x)
+type subst = (tyvar * typ) list
+
+let subst_empty  = []
+
+let subst_find x subst  = __list_assoc__ (x) (subst)
+
+let rec subst_apply  : (typ -> (subst -> typ)) = 
+fun typ subst -> 
+ (match typ with 
+|TyInt -> TyInt
+|TyBool -> TyBool
+|TyFun (t1, t2) -> TyFun ((subst_apply (t1) (subst), subst_apply (t2) (subst)))
+|TyVar x -> if __list_exists__ (
+fun (y, typ) -> (x = y)) (subst) then subst_find (x) (subst)
+ else typ)
+
+let subst_extend tv ty subst  = ((tv, ty) :: __list_map__ (
+fun (x, t) -> (x, subst_apply (t) ([(tv, ty)]))) (subst))
+
+let tyvar_num  = ref 0
+
+let fresh_tyvar _  = 
+let _  = (tyvar_num := (!tyvar_num + 1))
+ in 
+TyVar (("t" ^ string_of_int (!tyvar_num)))
+
+let rec gen_equations  : (tenv -> (exp -> (typ -> typ_eqn))) = 
+fun tenv e ty -> 
+ (match e with 
+|READ -> [(ty, TyVar ("READ"))]
+|CONST i -> [(ty, TyInt)]
+|VAR v -> [(ty, tenv_find (tenv) (v))]
+|ADD (e1, e2) -> (((ty, TyInt) :: gen_equations (tenv) (e1) (TyInt)) @ gen_equations (tenv) (e2) (TyInt))
+|SUB (e1, e2) -> (((ty, TyInt) :: gen_equations (tenv) (e1) (TyInt)) @ gen_equations (tenv) (e2) (TyInt))
+|MUL (e1, e2) -> (((ty, TyInt) :: gen_equations (tenv) (e1) (TyInt)) @ gen_equations (tenv) (e2) (TyInt))
+|DIV (e1, e2) -> (((ty, TyInt) :: gen_equations (tenv) (e1) (TyInt)) @ gen_equations (tenv) (e2) (TyInt))
+|ISZERO e -> ((ty, TyBool) :: gen_equations (tenv) (e) (TyInt))
+|IF (e1, e2, e3) -> (gen_equations (tenv) (e1) (TyBool) @ (gen_equations (tenv) (e2) (ty) @ gen_equations (tenv) (e3) (ty)))
+|LET (v, e1, e2) -> 
+let new_tv  = fresh_tyvar (())
+ in 
+(gen_equations (tenv) (e1) (new_tv) @ gen_equations (tenv_extend ((v, new_tv)) (tenv)) (e2) (ty))
+|LETREC (f, x, e1, e2) -> 
+let new_tv1  = fresh_tyvar (())
+ in 
+
+let new_tv2  = fresh_tyvar (())
+ in 
+(gen_equations (tenv_extend ((f, TyFun ((new_tv1, new_tv2)))) (tenv_extend ((x, new_tv1)) (tenv))) (e1) (new_tv2) @ gen_equations (tenv_extend ((f, TyFun ((new_tv1, new_tv2)))) (tenv)) (e2) (ty))
+|PROC (v, e) -> 
+let new_tv1  = fresh_tyvar (())
+ in 
+
+let new_tv2  = fresh_tyvar (())
+ in 
+((ty, TyFun ((new_tv1, new_tv2))) :: gen_equations (tenv_extend ((v, new_tv1)) (tenv)) (e) (new_tv2))
+|CALL (e1, e2) -> 
+let new_tv  = fresh_tyvar (())
+ in 
+(gen_equations (tenv) (e1) (TyFun ((new_tv, ty))) @ gen_equations (tenv) (e2) (new_tv)))
+
+let solve  : (typ_eqn -> subst) = 
+fun eqns -> 
+let rec hasVar v f  = 
+ (match f with 
+|TyFun (t1, t2) -> (hasVar (v) (t1) || hasVar (v) (t2))
+|TyVar v' -> if (v = v') then true
+ else false
+|_ -> false)
+ in 
+
+let rec solve_withsub eq subst  = 
+ (match eq with 
+|[] -> subst
+|(TyInt, TyInt)::tl -> solve_withsub (tl) (subst)
+|(TyBool, TyBool)::tl -> solve_withsub (tl) (subst)
+|(TyInt, TyVar v)::tl -> solve_withsub (((TyVar (v), TyInt) :: tl)) (subst)
+|(TyBool, TyVar v)::tl -> solve_withsub (((TyVar (v), TyBool) :: tl)) (subst)
+|(TyFun (t1, t2), TyVar v)::tl -> solve_withsub (((TyVar (v), TyFun ((t1, t2))) :: tl)) (subst)
+|(TyFun (t1, t2), TyFun (t3, t4))::tl -> solve_withsub (((t1, t3) :: ((t2, t4) :: tl))) (subst)
+|(TyVar v1, TyVar v2)::tl -> if (v1 = v2) then solve_withsub (tl) (subst)
+ else 
+let t1  = subst_apply (TyVar (v1)) (subst)
+ in 
+
+let t2  = subst_apply (TyVar (v2)) (subst)
+ in 
+
+ (match (t1, t2) with 
+|(TyVar v1', TyVar v2') -> solve_withsub (tl) (subst_extend (v1') (TyVar (v2')) (subst))
+|_ -> solve_withsub (((t1, t2) :: tl)) (subst))
+|(TyVar v, TyFun (t1, t2))::tl -> 
+let tv  = subst_apply (TyVar (v)) (subst)
+ in 
+
+let tf  = subst_apply (TyFun ((t1, t2))) (subst)
+ in 
+
+ (match (tv, tf) with 
+|(TyVar v', TyFun (t1', t2')) -> if hasVar (v') (tf) then raise TypeError
+ else solve_withsub (tl) (subst_extend (v') (TyFun ((t1', t2'))) (subst))
+|_ -> solve_withsub (((tv, tf) :: tl)) (subst))
+|(TyVar v, t)::tl -> 
+let ty  = subst_apply (TyVar (v)) (subst)
+ in 
+
+ (match ty with 
+|TyVar v' -> solve_withsub (tl) (subst_extend (v') (t) (subst))
+|_ -> solve_withsub (((ty, t) :: tl)) (subst))
+|_ -> raise TypeError)
+ in 
+solve_withsub (eqns) ([])
+
+let typeof  : (exp -> typ) = 
+fun exp -> 
+let new_tv  = fresh_tyvar (())
+ in 
+
+let eqns  = gen_equations (tenv_empty) (exp) (new_tv)
+ in 
+
+let subst  = solve (eqns)
+ in 
+
+let ty  = subst_apply (new_tv) (subst)
+ in 
+ty
+
+-----------------------------
+Call graph (sub)
+-----------------------------
+Node : 
+{__list_assoc__ -> (6297 : 
+Input : idx (l : (#137112 * #137114) list) 
+Output : #136917
+Body : 
+ (match l with 
+|[] -> raise Failure ("Not_found")
+|(a, b)::tl -> if (a = idx) then b
+ else __list_assoc__ (idx) (tl)),
+
+__list_exists__ -> (6279 : 
+Input : (pred : (#136936 -> bool)) (lst : #136936 list) 
+Output : bool
+Body : 
+ (match lst with 
+|[] -> false
+|hd::tl -> (pred (hd) || __list_exists__ (pred) (tl))),
+
+__list_map__ -> (6277 : 
+Input : (func : (#136915 -> #136917)) (lst : #136915 list) 
+Output : #136917 list
+Body : 
+ (match lst with 
+|[] -> []
+|hd::tl -> (func (hd) :: __list_map__ (func) (tl))),
+
+accumulator -> (6313 : 
+Input : (lst : (typ * typ) list) (acc : (string * typ) list) 
+Output : (string * typ) list
+Body : 
+ (match lst with 
+|[] -> acc
+|(TyVar v, ty)::tl -> accumulator (tl) (subst_extend (v) (ty) (acc))),
+
+fresh_tyvar -> (6310 : 
+Input : (_ : unit) 
+Output : typ
+Body : 
+let _  : unit = (tyvar_num := (!tyvar_num + 1))
+ in 
+TyVar (("t" ^ string_of_int (!tyvar_num))),
+
+gen_equations -> (6311 : 
+Input : (tenv : (string -> typ)) (e : exp) (ty : typ) 
+Output : typ_eqn
+Body : 
+ (match e with 
+|CONST n -> [(ty, TyInt)]
+|VAR x -> [(ty, tenv_find (tenv) (x))]
+|LET (v, e1, b1) -> 
+let new_tv  : typ = fresh_tyvar (())
+ in 
+
+ (match e1 with 
+|CONST n -> ((ty, new_tv) :: gen_equations (tenv_extend ((v, TyInt)) (tenv)) (b1) (new_tv))
+|_ -> [])
+|_ -> []),
+
+solve -> (6312 : 
+Input : (eqns : (typ * typ) list) 
+Output : subst
+Body : accumulator (eqns) ([]),
+
+string_of_int -> (6299 : 
+Input : (n : int) 
+Output : string
+Body : if (n < 0) then ("-" ^ string_of_int (-(n)))
+ else 
+ (match n with 
+|0 -> "0"
+|1 -> "1"
+|2 -> "2"
+|3 -> "3"
+|4 -> "4"
+|5 -> "5"
+|6 -> "6"
+|7 -> "7"
+|8 -> "8"
+|9 -> "9"
+|_ -> (string_of_int ((n / 10)) ^ string_of_int ((n mod 10)))),
+
+subst_apply -> (6308 : 
+Input : (typ : typ) (subst : (string * typ) list) 
+Output : typ
+Body : 
+ (match typ with 
+|TyInt -> TyInt
+|TyBool -> TyBool
+|TyFun (t1, t2) -> TyFun ((subst_apply (t1) (subst), subst_apply (t2) (subst)))
+|TyVar x -> if __list_exists__ (
+fun ((y : string), (typ : typ)) -> (x = y)) (subst) then subst_find (x) (subst)
+ else typ),
+
+subst_extend -> (6309 : 
+Input : (tv : string) (ty : typ) (subst : (string * typ) list) 
+Output : (string * typ) list
+Body : ((tv, ty) :: __list_map__ (
+fun ((x : string), (t : typ)) -> (x, subst_apply (t) ([(tv, ty)]))) (subst)),
+
+subst_find -> (6307 : 
+Input : (x : string) (subst : (#5926 * #137311) list) 
+Output : #137311
+Body : __list_assoc__ (x) (subst),
+
+tenv_empty -> (6304 : 
+Input : (_ : string) 
+Output : typ
+Body : raise Failure ("Type Env is empty"),
+
+tenv_extend -> (6305 : 
+Input : (x, (t : typ)) (tenv : (#5920 -> #5918)) (y : string) 
+Output : #5918
+Body : if (x = y) then t
+ else tenv (y),
+
+tenv_find -> (6306 : 
+Input : (tenv : (#5923 -> #5924)) (x : string) 
+Output : typ
+Body : tenv (x),
+
+typeof -> (6314 : 
+Input : (exp : exp) 
+Output : typ
+Body : 
+let new_tv  : typ = fresh_tyvar (())
+ in 
+
+let eqns  : (typ * typ) list = gen_equations (tenv_empty) (exp) (new_tv)
+ in 
+
+let subst  : (string * typ) list = solve (eqns)
+ in 
+
+let ty  : typ = subst_apply (new_tv) (subst)
+ in 
+ty}
+Edge : 
+{(6277, 6277) -> ,
+(6279, 6279) -> ,
+(6297, 6297) -> ,
+(6299, 6299) -> ,
+(6307, 6297) -> ,
+(6308, 6279) -> ,
+(6308, 6307) -> ,
+(6308, 6308) -> ,
+(6309, 6277) -> ,
+(6309, 6308) -> ,
+(6310, 6299) -> ,
+(6311, 6305) -> ,
+(6311, 6306) -> ,
+(6311, 6310) -> ,
+(6311, 6311) -> ,
+(6312, 6313) -> ,
+(6313, 6309) -> ,
+(6313, 6313) -> ,
+(6314, 6304) -> ,
+(6314, 6308) -> ,
+(6314, 6310) -> ,
+(6314, 6311) -> ,
+(6314, 6312) -> }
+Starting : 6314
+-----------------------------
+Call graph (sol)
+-----------------------------
+Node : 
+{__list_assoc__ -> (6236 : 
+Input : idx (l : (#135432 * #135434) list) 
+Output : #135237
+Body : 
+ (match l with 
+|[] -> raise Failure ("Not_found")
+|(a, b)::tl -> if (a = idx) then b
+ else __list_assoc__ (idx) (tl)),
+
+__list_exists__ -> (6218 : 
+Input : (pred : (#135256 -> bool)) (lst : #135256 list) 
+Output : bool
+Body : 
+ (match lst with 
+|[] -> false
+|hd::tl -> (pred (hd) || __list_exists__ (pred) (tl))),
+
+__list_map__ -> (6216 : 
+Input : (func : (#135235 -> #135237)) (lst : #135235 list) 
+Output : #135237 list
+Body : 
+ (match lst with 
+|[] -> []
+|hd::tl -> (func (hd) :: __list_map__ (func) (tl))),
+
+fresh_tyvar -> (6249 : 
+Input : (_ : unit) 
+Output : typ
+Body : 
+let _  : unit = (tyvar_num := (!tyvar_num + 1))
+ in 
+TyVar (("t" ^ string_of_int (!tyvar_num))),
+
+gen_equations -> (6250 : 
+Input : (tenv : (string -> typ)) (e : exp) (ty : typ) 
+Output : typ_eqn
+Body : 
+ (match e with 
+|READ -> [(ty, TyVar ("READ"))]
+|CONST i -> [(ty, TyInt)]
+|VAR v -> [(ty, tenv_find (tenv) (v))]
+|ADD (e1, e2) -> (((ty, TyInt) :: gen_equations (tenv) (e1) (TyInt)) @ gen_equations (tenv) (e2) (TyInt))
+|SUB (e1, e2) -> (((ty, TyInt) :: gen_equations (tenv) (e1) (TyInt)) @ gen_equations (tenv) (e2) (TyInt))
+|MUL (e1, e2) -> (((ty, TyInt) :: gen_equations (tenv) (e1) (TyInt)) @ gen_equations (tenv) (e2) (TyInt))
+|DIV (e1, e2) -> (((ty, TyInt) :: gen_equations (tenv) (e1) (TyInt)) @ gen_equations (tenv) (e2) (TyInt))
+|ISZERO e -> ((ty, TyBool) :: gen_equations (tenv) (e) (TyInt))
+|IF (e1, e2, e3) -> (gen_equations (tenv) (e1) (TyBool) @ (gen_equations (tenv) (e2) (ty) @ gen_equations (tenv) (e3) (ty)))
+|LET (v, e1, e2) -> 
+let new_tv  : typ = fresh_tyvar (())
+ in 
+(gen_equations (tenv) (e1) (new_tv) @ gen_equations (tenv_extend ((v, new_tv)) (tenv)) (e2) (ty))
+|LETREC (f, x, e1, e2) -> 
+let new_tv1  : typ = fresh_tyvar (())
+ in 
+
+let new_tv2  : typ = fresh_tyvar (())
+ in 
+(gen_equations (tenv_extend ((f, TyFun ((new_tv1, new_tv2)))) (tenv_extend ((x, new_tv1)) (tenv))) (e1) (new_tv2) @ gen_equations (tenv_extend ((f, TyFun ((new_tv1, new_tv2)))) (tenv)) (e2) (ty))
+|PROC (v, e) -> 
+let new_tv1  : typ = fresh_tyvar (())
+ in 
+
+let new_tv2  : typ = fresh_tyvar (())
+ in 
+((ty, TyFun ((new_tv1, new_tv2))) :: gen_equations (tenv_extend ((v, new_tv1)) (tenv)) (e) (new_tv2))
+|CALL (e1, e2) -> 
+let new_tv  : typ = fresh_tyvar (())
+ in 
+(gen_equations (tenv) (e1) (TyFun ((new_tv, ty))) @ gen_equations (tenv) (e2) (new_tv))),
+
+hasVar -> (6252 : 
+Input : (v : string) (f : typ) 
+Output : bool
+Body : 
+ (match f with 
+|TyFun (t1, t2) -> (hasVar (v) (t1) || hasVar (v) (t2))
+|TyVar v' -> if (v = v') then true
+ else false
+|_ -> false),
+
+solve -> (6251 : 
+Input : (eqns : (typ * typ) list) 
+Output : subst
+Body : solve_withsub (eqns) ([]),
+
+solve_withsub -> (6253 : 
+Input : (eq : (typ * typ) list) (subst : (string * typ) list) 
+Output : (string * typ) list
+Body : 
+ (match eq with 
+|[] -> subst
+|(TyInt, TyInt)::tl -> solve_withsub (tl) (subst)
+|(TyBool, TyBool)::tl -> solve_withsub (tl) (subst)
+|(TyInt, TyVar v)::tl -> solve_withsub (((TyVar (v), TyInt) :: tl)) (subst)
+|(TyBool, TyVar v)::tl -> solve_withsub (((TyVar (v), TyBool) :: tl)) (subst)
+|(TyFun (t1, t2), TyVar v)::tl -> solve_withsub (((TyVar (v), TyFun ((t1, t2))) :: tl)) (subst)
+|(TyFun (t1, t2), TyFun (t3, t4))::tl -> solve_withsub (((t1, t3) :: ((t2, t4) :: tl))) (subst)
+|(TyVar v1, TyVar v2)::tl -> if (v1 = v2) then solve_withsub (tl) (subst)
+ else 
+let t1  : typ = subst_apply (TyVar (v1)) (subst)
+ in 
+
+let t2  : typ = subst_apply (TyVar (v2)) (subst)
+ in 
+
+ (match (t1, t2) with 
+|(TyVar v1', TyVar v2') -> solve_withsub (tl) (subst_extend (v1') (TyVar (v2')) (subst))
+|_ -> solve_withsub (((t1, t2) :: tl)) (subst))
+|(TyVar v, TyFun (t1, t2))::tl -> 
+let tv  : typ = subst_apply (TyVar (v)) (subst)
+ in 
+
+let tf  : typ = subst_apply (TyFun ((t1, t2))) (subst)
+ in 
+
+ (match (tv, tf) with 
+|(TyVar v', TyFun (t1', t2')) -> if hasVar (v') (tf) then raise TypeError
+ else solve_withsub (tl) (subst_extend (v') (TyFun ((t1', t2'))) (subst))
+|_ -> solve_withsub (((tv, tf) :: tl)) (subst))
+|(TyVar v, t)::tl -> 
+let ty  : typ = subst_apply (TyVar (v)) (subst)
+ in 
+
+ (match ty with 
+|TyVar v' -> solve_withsub (tl) (subst_extend (v') (t) (subst))
+|_ -> solve_withsub (((ty, t) :: tl)) (subst))
+|_ -> raise TypeError),
+
+string_of_int -> (6238 : 
+Input : (n : int) 
+Output : string
+Body : if (n < 0) then ("-" ^ string_of_int (-(n)))
+ else 
+ (match n with 
+|0 -> "0"
+|1 -> "1"
+|2 -> "2"
+|3 -> "3"
+|4 -> "4"
+|5 -> "5"
+|6 -> "6"
+|7 -> "7"
+|8 -> "8"
+|9 -> "9"
+|_ -> (string_of_int ((n / 10)) ^ string_of_int ((n mod 10)))),
+
+subst_apply -> (6247 : 
+Input : (typ : typ) (subst : (string * typ) list) 
+Output : typ
+Body : 
+ (match typ with 
+|TyInt -> TyInt
+|TyBool -> TyBool
+|TyFun (t1, t2) -> TyFun ((subst_apply (t1) (subst), subst_apply (t2) (subst)))
+|TyVar x -> if __list_exists__ (
+fun ((y : string), (typ : typ)) -> (x = y)) (subst) then subst_find (x) (subst)
+ else typ),
+
+subst_extend -> (6248 : 
+Input : (tv : string) (ty : typ) (subst : (string * typ) list) 
+Output : (string * typ) list
+Body : ((tv, ty) :: __list_map__ (
+fun ((x : string), (t : typ)) -> (x, subst_apply (t) ([(tv, ty)]))) (subst)),
+
+subst_find -> (6246 : 
+Input : (x : string) (subst : (#5044 * #135631) list) 
+Output : #135631
+Body : __list_assoc__ (x) (subst),
+
+tenv_empty -> (6243 : 
+Input : (_ : string) 
+Output : typ
+Body : raise Failure ("Type Env is empty"),
+
+tenv_extend -> (6244 : 
+Input : (x, (t : typ)) (tenv : (#5038 -> #5036)) (y : string) 
+Output : #5036
+Body : if (x = y) then t
+ else tenv (y),
+
+tenv_find -> (6245 : 
+Input : (tenv : (#5041 -> #5042)) (x : string) 
+Output : typ
+Body : tenv (x),
+
+typeof -> (6254 : 
+Input : (exp : exp) 
+Output : typ
+Body : 
+let new_tv  : typ = fresh_tyvar (())
+ in 
+
+let eqns  : (typ * typ) list = gen_equations (tenv_empty) (exp) (new_tv)
+ in 
+
+let subst  : (string * typ) list = solve (eqns)
+ in 
+
+let ty  : typ = subst_apply (new_tv) (subst)
+ in 
+ty}
+Edge : 
+{(6216, 6216) -> ,
+(6218, 6218) -> ,
+(6236, 6236) -> ,
+(6238, 6238) -> ,
+(6246, 6236) -> ,
+(6247, 6218) -> ,
+(6247, 6246) -> ,
+(6247, 6247) -> ,
+(6248, 6216) -> ,
+(6248, 6247) -> ,
+(6249, 6238) -> ,
+(6250, 6244) -> ,
+(6250, 6245) -> ,
+(6250, 6249) -> ,
+(6250, 6250) -> ,
+(6251, 6253) -> ,
+(6252, 6252) -> ,
+(6253, 6247) -> ,
+(6253, 6248) -> ,
+(6253, 6252) -> ,
+(6253, 6253) -> ,
+(6254, 6243) -> ,
+(6254, 6247) -> ,
+(6254, 6249) -> ,
+(6254, 6250) -> ,
+(6254, 6251) -> }
+Starting : 6254
+-----------------------------
+Matching Info
+-----------------------------
+------Match Informations (submissoin)------
+{__list_assoc__ -> __list_assoc__,
+__list_exists__ -> __list_exists__,
+__list_map__ -> __list_map__,
+accumulator -> solve_withsub,
+fresh_tyvar -> fresh_tyvar,
+gen_equations -> gen_equations,
+solve -> solve,
+string_of_int -> string_of_int,
+subst_apply -> subst_apply,
+subst_extend -> subst_extend,
+subst_find -> subst_find,
+tenv_empty -> tenv_empty,
+tenv_extend -> tenv_extend,
+tenv_find -> tenv_find,
+typeof -> typeof}
+------Remainings in submission ------
+{}
+------Remainings in solution ------
+{hasVar}
+-----------------------------
+Templates
+-----------------------------
+{Exp : Modify (51148 : ?)
+
+Decls : 
+,Exp : Modify (51149 : ?)
+
+Decls : 
+,Exp : Modify (51151 : ?)
+
+Decls : 
+,Exp : Modify (51154 : ? (?))
+
+Decls : 
+,Exp : Modify (51159 : ? (?))
+
+Decls : 
+,Exp : Modify (51165 : ? (?) (?))
+
+Decls : 
+,Exp : Modify (51166 : ?)
+
+Decls : 
+,Exp : Modify (51173 : ? (?) (?))
+
+Decls : 
+,Exp : Modify (51178 : ? (?) (?))
+
+Decls : 
+,Exp : Modify (51188 : ? (
+fun ((y : string), (typ : typ)) -> (? = ?)) (?))
+
+Decls : 
+,Exp : Modify (51193 : ? (?) (?))
+
+Decls : 
+,Exp : Modify (51194 : ?)
+
+Decls : 
+,Exp : Modify (51199 : ?)
+
+Decls : 
+,Exp : Modify (51200 : ?)
+
+Decls : 
+,Exp : Modify (51216 : ? (
+fun ((x : string), (t : typ)) -> (?, ? (?) ([(?, ?)]))) (?))
+
+Decls : 
+,Exp : Modify (51233 : 
+let _  : unit = (tyvar_num := (!tyvar_num + 1))
+ in 
+TyVar (("t" ^ ? (!tyvar_num))))
+
+Decls : 
+,Exp : Modify (51234 : ?)
+
+Decls : 
+,Exp : Modify (51235 : ?)
+
+Decls : 
+,Exp : Modify (51239 : ?)
+
+Decls : 
+,Exp : Modify (51244 : ? (?) (?))
+
+Decls : 
+,Exp : Modify (51270 : 
+let new_tv  : typ = ? (())
+ in 
+(? (?) (?) (?) @ ? (? ((?, ?)) (?)) (?) (?)))
+
+Decls : 
+,Exp : Modify (51276 : ?)
+
+Decls : 
+,Exp : Modify (51277 : ?)
+
+Decls : 
+,Exp : Modify (51288 : 
+let ty  : typ = ? (TyVar (?)) (?)
+ in 
+
+ (match ? with 
+|TyVar v' -> ? (?) (? (?) (?) (?))
+|_ -> ? (((?, ?) :: ?)) (?)))
+
+Decls : 
+,Exp : Modify (51294 : ? (?) ([]))
+
+Decls : 
+
+let rec hasVar (v : string) (f : typ)  : bool = 
+ (match f with 
+|TyFun (t1, t2) -> (hasVar (v) (t1) || hasVar (v) (t2))
+|TyVar v' -> if (v = v') then true
+ else false
+|_ -> false)
+
+Callers : {accumulator}
+,Exp : Modify (51319 : 
+let new_tv  : typ = ? (())
+ in 
+
+let eqns  : (typ * typ) list = ? (?) (?) (?)
+ in 
+
+let subst  : (string * typ) list = ? (?)
+ in 
+
+let ty  : typ = ? (?) (?)
+ in 
+?)
+
+Decls : 
+
+let rec hasVar (v : string) (f : typ)  : bool = 
+ (match f with 
+|TyFun (t1, t2) -> (hasVar (v) (t1) || hasVar (v) (t2))
+|TyVar v' -> if (v = v') then true
+ else false
+|_ -> false)
+
+Callers : {accumulator}
+,Exp : Insert (ADD (e1, e2) -> (((?, TyInt) :: ? (?) (?) (TyInt)) @ ? (?) (?) (TyInt)) At label 51272
+
+Decls : 
+,Exp : Insert (CALL (e1, e2) -> 
+let new_tv  : typ = ? (())
+ in 
+(? (?) (?) (TyFun ((?, ?))) @ ? (?) (?) (?)) At label 51272
+
+Decls : 
+,Exp : Insert (DIV (e1, e2) -> (((?, TyInt) :: ? (?) (?) (TyInt)) @ ? (?) (?) (TyInt)) At label 51272
+
+Decls : 
+,Exp : Insert (IF (e1, e2, e3) -> (? (?) (?) (TyBool) @ (? (?) (?) (?) @ ? (?) (?) (?))) At label 51272
+
+Decls : 
+,Exp : Insert (ISZERO e -> ((?, TyBool) :: ? (?) (?) (TyInt)) At label 51272
+
+Decls : 
+,Exp : Insert (LETREC (f, x, e1, e2) -> 
+let new_tv1  : typ = ? (())
+ in 
+
+let new_tv2  : typ = ? (())
+ in 
+(? (? ((?, TyFun ((?, ?)))) (? ((?, ?)) (?))) (?) (?) @ ? (? ((?, TyFun ((?, ?)))) (?)) (?) (?)) At label 51272
+
+Decls : 
+,Exp : Insert (MUL (e1, e2) -> (((?, TyInt) :: ? (?) (?) (TyInt)) @ ? (?) (?) (TyInt)) At label 51272
+
+Decls : 
+,Exp : Insert (PROC (v, e) -> 
+let new_tv1  : typ = ? (())
+ in 
+
+let new_tv2  : typ = ? (())
+ in 
+((?, TyFun ((?, ?))) :: ? (? ((?, ?)) (?)) (?) (?)) At label 51272
+
+Decls : 
+,Exp : Insert (READ -> [(?, TyVar ("READ"))] At label 51272
+
+Decls : 
+,Exp : Insert (SUB (e1, e2) -> (((?, TyInt) :: ? (?) (?) (TyInt)) @ ? (?) (?) (TyInt)) At label 51272
+
+Decls : 
+,Exp : Insert (_ -> raise TypeError At label 51289
+
+Decls : 
+,Exp : Insert ((TyBool, TyBool)::tl -> ? (?) (?) At label 51289
+
+Decls : 
+,Exp : Insert ((TyBool, TyVar v)::tl -> ? (((TyVar (?), TyBool) :: ?)) (?) At label 51289
+
+Decls : 
+,Exp : Insert ((TyFun (t1, t2), TyFun (t3, t4))::tl -> ? (((?, ?) :: ((?, ?) :: ?))) (?) At label 51289
+
+Decls : 
+,Exp : Insert ((TyFun (t1, t2), TyVar v)::tl -> ? (((TyVar (?), TyFun ((?, ?))) :: ?)) (?) At label 51289
+
+Decls : 
+,Exp : Insert ((TyInt, TyInt)::tl -> ? (?) (?) At label 51289
+
+Decls : 
+,Exp : Insert ((TyInt, TyVar v)::tl -> ? (((TyVar (?), TyInt) :: ?)) (?) At label 51289
+
+Decls : 
+,Exp : Insert ((TyVar v, TyFun (t1, t2))::tl -> 
+let tv  : typ = ? (TyVar (?)) (?)
+ in 
+
+let tf  : typ = ? (TyFun ((?, ?))) (?)
+ in 
+
+ (match (?, ?) with 
+|(TyVar v', TyFun (t1', t2')) -> if ? (?) (?) then raise TypeError
+ else ? (?) (? (?) (TyFun ((?, ?))) (?))
+|_ -> ? (((?, ?) :: ?)) (?)) At label 51289
+
+Decls : 
+
+let rec hasVar (v : string) (f : typ)  : bool = 
+ (match f with 
+|TyFun (t1, t2) -> (hasVar (v) (t1) || hasVar (v) (t2))
+|TyVar v' -> if (v = v') then true
+ else false
+|_ -> false)
+
+Callers : {accumulator}
+,Exp : Insert ((TyVar v1, TyVar v2)::tl -> if (? = ?) then ? (?) (?)
+ else 
+let t1  : typ = ? (TyVar (?)) (?)
+ in 
+
+let t2  : typ = ? (TyVar (?)) (?)
+ in 
+
+ (match (?, ?) with 
+|(TyVar v1', TyVar v2') -> ? (?) (? (?) (TyVar (?)) (?))
+|_ -> ? (((?, ?) :: ?)) (?)) At label 51289
+
+Decls : 
+,Exp : Delete (_ -> [] At label 51272
+
+Decls : 
+}
+-----------------------------
+Templates
+-----------------------------
+{Exp : Modify (51165 : ? (?) (?))
+
+Decls : 
+,Exp : Modify (51166 : ?)
+
+Decls : 
+,Exp : Modify (51188 : ? (
+fun ((y : string), (typ : typ)) -> (? = ?)) (?))
+
+Decls : 
+,Exp : Modify (51193 : ? (?) (?))
+
+Decls : 
+,Exp : Modify (51194 : ?)
+
+Decls : 
+,Exp : Modify (51199 : ?)
+
+Decls : 
+,Exp : Modify (51200 : ?)
+
+Decls : 
+,Exp : Modify (51216 : ? (
+fun ((x : string), (t : typ)) -> (?, ? (?) ([(?, ?)]))) (?))
+
+Decls : 
+,Exp : Modify (51233 : 
+let _  : unit = (tyvar_num := (!tyvar_num + 1))
+ in 
+TyVar (("t" ^ ? (!tyvar_num))))
+
+Decls : 
+,Exp : Modify (51234 : ?)
+
+Decls : 
+,Exp : Modify (51270 : 
+let new_tv  : typ = ? (())
+ in 
+(? (?) (?) (?) @ ? (? ((?, ?)) (?)) (?) (?)))
+
+Decls : 
+,Exp : Modify (51276 : ?)
+
+Decls : 
+,Exp : Modify (51277 : ?)
+
+Decls : 
+,Exp : Modify (51288 : 
+let ty  : typ = ? (TyVar (?)) (?)
+ in 
+
+ (match ? with 
+|TyVar v' -> ? (?) (? (?) (?) (?))
+|_ -> ? (((?, ?) :: ?)) (?)))
+
+Decls : 
+,Exp : Modify (51294 : ? (?) ([]))
+
+Decls : 
+
+let rec hasVar (v : string) (f : typ)  : bool = 
+ (match f with 
+|TyFun (t1, t2) -> (hasVar (v) (t1) || hasVar (v) (t2))
+|TyVar v' -> if (v = v') then true
+ else false
+|_ -> false)
+
+Callers : {accumulator}
+,Exp : Modify (51319 : 
+let new_tv  : typ = ? (())
+ in 
+
+let eqns  : (typ * typ) list = ? (?) (?) (?)
+ in 
+
+let subst  : (string * typ) list = ? (?)
+ in 
+
+let ty  : typ = ? (?) (?)
+ in 
+?)
+
+Decls : 
+
+let rec hasVar (v : string) (f : typ)  : bool = 
+ (match f with 
+|TyFun (t1, t2) -> (hasVar (v) (t1) || hasVar (v) (t2))
+|TyVar v' -> if (v = v') then true
+ else false
+|_ -> false)
+
+Callers : {accumulator}
+,Exp : Insert (ADD (e1, e2) -> (((?, TyInt) :: ? (?) (?) (TyInt)) @ ? (?) (?) (TyInt)) At label 51272
+
+Decls : 
+,Exp : Insert (CALL (e1, e2) -> 
+let new_tv  : typ = ? (())
+ in 
+(? (?) (?) (TyFun ((?, ?))) @ ? (?) (?) (?)) At label 51272
+
+Decls : 
+,Exp : Insert (DIV (e1, e2) -> (((?, TyInt) :: ? (?) (?) (TyInt)) @ ? (?) (?) (TyInt)) At label 51272
+
+Decls : 
+,Exp : Insert (IF (e1, e2, e3) -> (? (?) (?) (TyBool) @ (? (?) (?) (?) @ ? (?) (?) (?))) At label 51272
+
+Decls : 
+,Exp : Insert (ISZERO e -> ((?, TyBool) :: ? (?) (?) (TyInt)) At label 51272
+
+Decls : 
+,Exp : Insert (LETREC (f, x, e1, e2) -> 
+let new_tv1  : typ = ? (())
+ in 
+
+let new_tv2  : typ = ? (())
+ in 
+(? (? ((?, TyFun ((?, ?)))) (? ((?, ?)) (?))) (?) (?) @ ? (? ((?, TyFun ((?, ?)))) (?)) (?) (?)) At label 51272
+
+Decls : 
+,Exp : Insert (MUL (e1, e2) -> (((?, TyInt) :: ? (?) (?) (TyInt)) @ ? (?) (?) (TyInt)) At label 51272
+
+Decls : 
+,Exp : Insert (PROC (v, e) -> 
+let new_tv1  : typ = ? (())
+ in 
+
+let new_tv2  : typ = ? (())
+ in 
+((?, TyFun ((?, ?))) :: ? (? ((?, ?)) (?)) (?) (?)) At label 51272
+
+Decls : 
+,Exp : Insert (READ -> [(?, TyVar ("READ"))] At label 51272
+
+Decls : 
+,Exp : Insert (SUB (e1, e2) -> (((?, TyInt) :: ? (?) (?) (TyInt)) @ ? (?) (?) (TyInt)) At label 51272
+
+Decls : 
+,Exp : Insert (_ -> raise TypeError At label 51289
+
+Decls : 
+,Exp : Insert ((TyBool, TyBool)::tl -> ? (?) (?) At label 51289
+
+Decls : 
+,Exp : Insert ((TyBool, TyVar v)::tl -> ? (((TyVar (?), TyBool) :: ?)) (?) At label 51289
+
+Decls : 
+,Exp : Insert ((TyFun (t1, t2), TyFun (t3, t4))::tl -> ? (((?, ?) :: ((?, ?) :: ?))) (?) At label 51289
+
+Decls : 
+,Exp : Insert ((TyFun (t1, t2), TyVar v)::tl -> ? (((TyVar (?), TyFun ((?, ?))) :: ?)) (?) At label 51289
+
+Decls : 
+,Exp : Insert ((TyInt, TyInt)::tl -> ? (?) (?) At label 51289
+
+Decls : 
+,Exp : Insert ((TyInt, TyVar v)::tl -> ? (((TyVar (?), TyInt) :: ?)) (?) At label 51289
+
+Decls : 
+,Exp : Insert ((TyVar v, TyFun (t1, t2))::tl -> 
+let tv  : typ = ? (TyVar (?)) (?)
+ in 
+
+let tf  : typ = ? (TyFun ((?, ?))) (?)
+ in 
+
+ (match (?, ?) with 
+|(TyVar v', TyFun (t1', t2')) -> if ? (?) (?) then raise TypeError
+ else ? (?) (? (?) (TyFun ((?, ?))) (?))
+|_ -> ? (((?, ?) :: ?)) (?)) At label 51289
+
+Decls : 
+
+let rec hasVar (v : string) (f : typ)  : bool = 
+ (match f with 
+|TyFun (t1, t2) -> (hasVar (v) (t1) || hasVar (v) (t2))
+|TyVar v' -> if (v = v') then true
+ else false
+|_ -> false)
+
+Callers : {accumulator}
+,Exp : Insert ((TyVar v1, TyVar v2)::tl -> if (? = ?) then ? (?) (?)
+ else 
+let t1  : typ = ? (TyVar (?)) (?)
+ in 
+
+let t2  : typ = ? (TyVar (?)) (?)
+ in 
+
+ (match (?, ?) with 
+|(TyVar v1', TyVar v2') -> ? (?) (? (?) (TyVar (?)) (?))
+|_ -> ? (((?, ?) :: ?)) (?)) At label 51289
+
+Decls : 
+,Exp : Delete (_ -> [] At label 51272
+
+Decls : 
+}

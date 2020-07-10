@@ -30,7 +30,9 @@ let reserved_words : (string * Parser.token) list =
   ; ("end", END)
   ; ("exception",EXCEPTION)
   ; ("raise",RAISE)
-  ; ("and",DEFAND)
+  ; ("and", DEFAND)
+  ; ("ref", REF)
+  (* Library *)
   ; ("List.hd",LISTHD)
   ; ("List.tl",LISTTL)
   ; ("List.map",LISTMAP)
@@ -52,12 +54,11 @@ let reserved_words : (string * Parser.token) list =
   ; ("List.find",LISTFIND)
   ; ("List.assoc", LISTASSOC)
   ; ("String.concat", STRINGCONCAT)
-  ; 
+  ;
   ]
 
 let symbols : (string * Parser.token) list =
-  [ ("?", HOLE)
-  ; ("=", EQ)
+  [ ("=", EQ)
   ; ("->", ARR)
   ; ("=>", FATARR)
   ; (",", COMMA)
@@ -87,7 +88,10 @@ let symbols : (string * Parser.token) list =
   ; ("@",AT)
   ; ("::",DOUBLECOLON)
   ; ("^",STRCON)
-  ; ("'",IDENT)
+  ; ("'", IDENT)
+  ; ("!", EXCLE)
+  ; (":=", ASSIGN)
+  ; ("?", HOLE)
   ; ("#S", SHOLE)
   ; ("#A", AHOLE)
   ]
@@ -119,18 +123,27 @@ let character  = uppercase | lowercase
 let digit      = ['0'-'9']
 
 rule token = parse
-  | eof   { EOF }
-  | digit+ { INT (int_of_string (lexeme lexbuf)) }
-  | "(*" {comments 0 lexbuf}
-  | '"' {STRING (create_string (Buffer.create 100) lexbuf)}
-  | whitespace+ | newline+    { token lexbuf }
-  | '_' (digit | character | ''' | '_')+    { create_token lexbuf }
-  | lowercase (digit | character | ''' | '_')*    { create_token lexbuf }
-  | uppercase (digit | character | ''' | '_')*    { UID (lexeme lexbuf) }
-  | uppercase (digit | character | ''' | '_')*('.')(digit | character | ''' | '_')* {create_external lexbuf}
+  | eof   
+    { EOF }
+  | digit+ 
+    { INT (int_of_string (lexeme lexbuf)) }
+  | "(*" 
+    {comments 0 lexbuf}
+  | '"' 
+    {STRING (create_string (Buffer.create 100) lexbuf)}
+  | whitespace+ | newline+    
+    { token lexbuf }
+  | '_' (digit | character | ''' | '_')+    
+    { create_token lexbuf }
+  | lowercase (digit | character | ''' | '_')*    
+    { create_token lexbuf }
+  | uppercase (digit | character | ''' | '_')*    
+    { UID (lexeme lexbuf) }
+  | uppercase (digit | character | ''' | '_')*('.')(digit | character | ''' | '_')* 
+    {create_external lexbuf}
   | '?' | "|>" | '=' | "->" | "=>" | '*' | ',' | ':' | ';' | '|' | '(' | ')' | '{' | '}' | '[' | ']' 
   | '_' | '+' | '-' | '/'| '%' | "||" | "&&" | "<" | ">" | "<=" | ">=" | "!=" | "<>" | "@"| "::" | "'" | "^" | "&" 
-  | "#S" | "#A"
+  | "!" | ":=" | "#S" | "#A"
     { create_symbol lexbuf }
   | _ as c { raise @@ Lexer_error ("Unexpected character: " ^ Char.escaped c) }
 

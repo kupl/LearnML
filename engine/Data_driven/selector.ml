@@ -1,217 +1,281 @@
 open Lang
 open Util
+open Print
 open Type
+open CallGraph
+open Path_score
 
-exception NotImplemented
+type patch_unit = id * typ * calling_ctx BatSet.t * lexp (* name * function typ, function body, calling context (path) *)
+and calling_ctx = (id * arg list) * path (* (depth1) calling ctx: caller function info * calling path *)
 
-module A = struct
-	
-	(* summary of function body *)
-	type summary = 
-        | E
-		| F of pat list	(* Flat match *)
-		| N of (pat * summary) list (* Nested match *)
+type unit_matching = (patch_unit, patch_unit) BatMap.t
+type unit_matching2 = (patch_unit, string * patch_unit) BatMap.t
 
-	(* Function = (function name, input types, output type, summary) *)
-	type t = (string * typ list * typ * summary) list
+let empty_matching = BatMap.empty
 
-	(* To string *)
-	let rec string_of_summary : summary -> string
-	= fun summary ->
-		"match {" ^
-		match summary with 
-        | E -> "Empty"
-		| F ps -> List.fold_left (fun acc p -> acc ^ Print.pat_to_string p ^ " | ") "" ps
-		| N summaries -> List.fold_left (fun acc (p, s) -> acc ^ Print.pat_to_string p ^ ":" ^ string_of_summary s ^ " | ") "" summaries
-		^ " }"
+let ctor_table = ref BatMap.empty 
 
-	let string_of_t : t -> string
-	= fun t ->
-		List.fold_left (fun acc (name, inputs, output, summary) -> 
-			acc ^ "(\n" ^
-			"Name : " ^ name ^ "\n" ^
-            "Input types : " ^ List.fold_left (fun acc typ -> acc ^ Print.type_to_string typ ^ ", ") "{" inputs ^ "}\n" ^
-			"Output type : " ^ Print.type_to_string output ^ "\n" ^
-			"Structure : \n" ^ string_of_summary summary ^ "\n)"
-		) "" t
+(* pp *)
+let string_of_paths paths = 
+  BatSet.fold (fun path acc -> 
+    if acc = "" then string_of_path path else acc ^ "\\/\n" ^ string_of_path path
+  ) paths ""
 
-    let lookup_type : id -> TEnv.t -> typ
-    = fun func_id tenv -> TEnv.find tenv func_id
-      
-    let rec explore_bind : binding list -> binding -> binding list
-    = fun acc b ->
-      let (_,_,_,_,e) = b in 
-      explore_exp (b::acc) e
-    
-    and explore_exp : binding list -> lexp -> binding list
-    = fun acc (_,exp) ->
-      match exp with 
-      | EApp (e1,e2) -> explore_exp [] e1 @ explore_exp [] e2 @ acc
-      | ELet (bind,b,arg,typ,e1,e2) -> explore_bind acc (bind,b,arg,typ,e1)
-      | EBlock (_,bs,_) -> List.fold_left explore_bind [] bs 
-      | IF (_,e1,e2) -> explore_exp [] e1 @ explore_exp [] e2 @ acc
-      | _ -> acc
+let string_of_ctx ((f, args), path) = 
+  "(" ^ f ^ "[" ^ (args_to_string args "") ^ "]" ^ "):" ^ string_of_path path 
 
-    let explore_decl : binding list -> decl -> binding list 
-    = fun acc decl->
-      match decl with
-      | DLet b -> (explore_bind [] b) @ acc
-      | DBlock (_, bs) -> (List.fold_left explore_bind [] bs) @ acc
-      | _ -> acc
+let string_of_ctxs ctxs = 
+  BatSet.fold (fun ctx acc -> 
+    if acc = "" then string_of_ctx ctx else acc ^ "\n" ^ string_of_ctx ctx
+  ) ctxs ""
 
-    let explore_prog : prog -> binding list
-    = fun decls -> List.fold_left explore_decl [] decls
-    
-    let extract_summary : binding -> (string * summary)
-    = fun (f,_,_,_,e) -> 
-      let rec get_pattern: lexp -> summary 
-      = fun (_,exp) -> 
-        match exp with
-        | EApp (e1,e2) -> ignore (get_pattern e1); get_pattern e2
-        | EFun (_,e) -> get_pattern e
-        | EMatch (_,br) -> let pat = List.map (fun (x,y) -> x) br in F (pat)
-        | IF(_,e1,e2) -> ignore (get_pattern e1); get_pattern e2;
-        | _ -> E
-      in 
-      let name = Print.let_to_string f in
-      let summary = get_pattern e in
-      (name, summary)
+let string_of_unit (name, typ, ctxs, body) =
+  "Typ : " ^ type_to_string typ ^ "\n" ^
+  "Calling_Ctx : " ^ string_of_ctxs ctxs ^ "\n" ^ 
+  "Body : " ^ exp_to_string body
 
-  (* 
-    Extract input and output types 
-    ex) (t1 * t2) -> (t3 -> t4) => [t1; t2; t3] * t4
-  *)
-  let rec extract_type : typ -> (typ list * typ)
-  = fun typ ->
-    match typ with
-    | TArr (t1, t2) ->
-      let ts1 = type_of_input t1 in
-      let (ts2, t) = extract_type t2 in
-      (ts1@ts2, t)
-    | t -> ([], t)
+let string_of_matching matching = 
+  BatMap.foldi (fun unit_sub unit_sol acc ->
+    let s = string_of_unit unit_sub ^ "\n => \n" ^ string_of_unit unit_sol in
+    if acc = "" then s else acc ^ "\n---------------------------\n" ^ s
+  ) matching ""
 
-  and type_of_input : typ -> typ list
-  = fun typ ->
-    match typ with
-    | TTuple ts -> List.fold_left (fun ts t -> (type_of_input t)@ts) [] ts
-    | t -> [t]
+let string_of_matching2 matching = 
+  BatMap.foldi (fun unit_sub (f_name, unit_sol) acc ->
+    let s = 
+      string_of_unit unit_sub ^ "\n => \n" ^ string_of_unit unit_sol ^
+      "\n" ^ "Solution : " ^ f_name
+    in
+    if acc = "" then s else acc ^ "\n---------------------------\n" ^ s
+  ) matching ""
 
-  (* Summarize a given program *)
-	let run : prog -> t
-	= fun pgm -> 
-      let (typ_env,_,_,_) = run pgm in
-      let func_list = explore_prog pgm in
-      let processing = List.map extract_summary func_list in
-      let summaries = List.map (fun (x,z) -> 
-        let (inputs, output) = extract_type (lookup_type x typ_env) in
-        (x, inputs, output, z)
-      ) processing 
-      in
-      summaries 
-end
+(* Compute syntactic difference *)
+let rec match_pat : pat -> pat -> bool
+= fun p1 p2 ->
+  match (p1, p2) with
+  | PInt n1, PInt n2 -> n1 = n2
+  | PBool b1, PBool b2 -> b1 = b2
+  | PList ps1, PList ps2 | PTuple ps1, PTuple ps2 | PCons ps1, PCons ps2 -> (try List.for_all2 match_pat ps1 ps2 with _ -> false)
+  | PCtor (x, ps1), PCtor (y, ps2) -> (x = y) && (try List.for_all2 match_pat ps1 ps2 with _ -> false)
+  | Pats ps, _ | _, Pats ps -> raise (Failure "Nomalized programs do not have this pattern")
+  | PUnit, PUnit | PUnder, PUnder | PVar _, PVar _ -> true
+  | _ -> false
 
-let rec remove_elem : ('a -> 'a -> bool) -> 'a -> 'a list -> 'a list
-= fun f e l -> 
-  match l with 
-  |[] -> []
-  |x::xs -> if (f e x) then xs else x :: remove_elem f e xs
+let rec edit_distance : lexp -> lexp -> int
+= fun exp1 exp2 ->
+  match (snd exp1, snd exp2) with
+  | SInt _, SInt _ | SStr _, SStr _ | Hole _, Hole _ -> 0
+  (* Constant *)
+  | EUnit, EUnit | TRUE, TRUE | FALSE, FALSE | EVar _, EVar _ -> 0
+  | Const n1, Const n2 when n1 = n2 -> 0
+  | String s1, String s2 when s1 = s2 -> 0
+  (* List *)
+  | EList es1, EList es2 | ETuple es1, ETuple es2 ->
+    begin 
+      try List.fold_left2 (fun acc e1 e2 -> acc + edit_distance e1 e2) 0 es1 es2 
+      with _ -> exp_size exp1 + exp_size exp2 
+    end
+  | ECtor (x1, es1), ECtor (x2, es2) when x1 = x2 ->
+    begin 
+      try List.fold_left2 (fun acc e1 e2 -> acc + edit_distance e1 e2) 0 es1 es2 
+      with _ -> exp_size exp1 + exp_size exp2 
+    end
+  (* Unary *)
+  | MINUS e1, MINUS e2 | NOT e1, NOT e2 | ERef e1, ERef e2 | EDref e1, EDref e2 | Raise e1, Raise e2 | EFun (_, e1), EFun (_, e2) -> edit_distance e1 e2
+  (* Binary *)
+  | ADD (e1, e2), ADD (e1', e2') | SUB (e1, e2), SUB (e1', e2') | MUL (e1, e2), MUL (e1', e2') | DIV (e1, e2), DIV (e1', e2') | MOD (e1, e2), MOD (e1', e2') 
+  | OR (e1, e2), OR (e1', e2') | AND (e1, e2), AND (e1', e2') | LESS (e1, e2), LESS (e1', e2') | LESSEQ (e1, e2), LESSEQ (e1', e2')
+  | LARGER (e1, e2), LARGER (e1', e2') | LARGEREQ (e1, e2), LARGEREQ (e1', e2') | EQUAL (e1, e2), EQUAL (e1', e2') | NOTEQ(e1, e2), NOTEQ (e1', e2') 
+  | DOUBLECOLON (e1, e2), DOUBLECOLON (e1', e2') | AT (e1, e2), AT (e1', e2') | STRCON (e1, e2), STRCON (e1', e2') | EAssign (e1, e2), EAssign (e1', e2') 
+  | EApp (e1, e2), EApp (e1', e2') | ELet (_, _, _, _, e1, e2), ELet (_, _, _, _, e1', e2') -> edit_distance e1 e1' + edit_distance e2 e2'
+  (* Condition *)
+  | IF (e1, e2, e3), IF (e1', e2', e3') -> edit_distance e1 e1' + edit_distance e2 e2' + edit_distance e3 e3'
+  | EMatch (e1, bs1), EMatch (e2, bs2) ->
+    (* Distance between matched branches *)
+    let (d1, unmatches) = List.fold_left (fun (d1, unmatches) (p, e) ->
+      try 
+        let (p', e') = List.find (fun (p', e') -> match_pat p p') unmatches in
+        (d1 + edit_distance e e', List.remove_assoc p' unmatches)
+      with _ -> (d1 + exp_size e, unmatches)
+    ) (0, bs2) bs1 in
+    (* Distance of unmatches branches *)
+    let d2 = List.fold_left (fun acc (p, e) -> acc + exp_size e) 0 unmatches in
+    edit_distance e1 e2 + d1 + d2
+  (* Binding block *)
+  | EBlock (_, bs1, e1), EBlock (_, bs2, e2) ->
+    let (es1, es2) = (List.map (fun (_, _, _, _, e) -> e) bs1, List.map (fun (_, _, _, _, e) -> e) bs2) in
+    begin 
+      try List.fold_left2 (fun acc e1 e2 -> acc + edit_distance e1 e2) (edit_distance e1 e2) es1 es2 
+      with _ -> (edit_distance e1 e2) + (List.fold_left (fun acc e -> exp_size e) 0 es1) + (List.fold_left (fun acc e -> exp_size e) 0 es2)
+    end
+  (* Syntatically different *)
+  | _ -> exp_size exp1 + exp_size exp2
 
-(*naive equivalence checking*)
-let rec list_equivalence : ('a -> 'a -> bool) -> 'a list -> 'a list -> bool
-= fun f s1 s2 -> 
-  match s1,s2 with 
-  | [],[] -> true 
-  | [],_  
-  |  _,[] -> false
-  | x::xs, y::ys -> 
-    let y'= (remove_elem f x (y::ys)) in
-    list_equivalence f xs y'
+let edit_distance_unit : patch_unit -> patch_unit -> int
+= fun (_, _, _, body1) (_, _, _, body2) -> edit_distance body1 body2
 
-let match_type : (typ list * typ) -> (typ list * typ) -> bool
-= fun (ts, t) (ts', t') ->
-  let rec range : int -> int -> int list
-  = fun s e ->
-    if s = e then [e]
-    else if s < e then s::(range (s+1) e)
-    else raise (Failure "Invalid range")
+(* Utility functions *)
+let get_typ args typ = 
+  let rec arg_to_typ arg =
+    match arg with
+    | ArgUnder typ | ArgOne (_, typ) -> typ 
+    | ArgTuple args -> TTuple (List.map arg_to_typ args)
   in
-  let rec insert_nth : 'a list -> 'a -> int -> 'a list
-  = fun lst e n ->
-    match lst with
-    | [] -> if n = 0 then [e] else raise (Failure "Insert in invalid index")
-    | hd::tl -> if n = 0 then e::lst else hd::(insert_nth tl e (n-1))
-  in
-  let rec permutation : 'a list -> ('a list) list
-  = fun lst ->
-    match lst with
-    | [] -> []
-    | [hd] -> [[hd]]
-    | hd::tl -> List.fold_left (fun acc lst -> 
-      let indices = range 0 (List.length lst) in
-      let results = List.fold_left (fun acc n -> (insert_nth lst hd n)::acc) [] indices in
-      List.fold_left (fun acc lst -> lst::acc) acc results  
-    ) [] (permutation tl)
-  in
-  if List.length ts = List.length ts' then
-    let ts = t::ts in
-    let comp_candidate = List.map (fun ts' -> t'::ts') (permutation ts') in
-    List.exists (fun ts' -> 
-      let eqns = List.fold_left2 (fun eqns t t' -> (t, t')::eqns) [] ts ts' in
-      try
-        let _ = List.fold_left (fun subst (t1, t2) -> unify subst ((Subst.apply t1 subst), Subst.apply t2 subst)) Subst.empty eqns in
-        print_endline ("Type Eqns : ");
-        List.iter (fun (t1, t2) -> print_endline (Print.type_to_string t1 ^ " = " ^ Print.type_to_string t2)) eqns;
-        true
-      with TypeError -> false
-    ) comp_candidate 
-  else false
+  List.fold_left (fun acc arg -> TArr (arg_to_typ arg, acc)) typ (List.rev args)
 
-let rec match_pattern
-= fun x y -> 
-  let rec is_match : pat -> pat -> bool
-  = fun p1 p2 ->
-    match p1,p2 with
-    | PUnit,PUnit -> true
-    | PUnder, PUnder -> true
-    | PInt _, PInt _ -> true
-    | PBool b1, PBool b2 -> b1=b2
-    | PVar _ , PVar _ -> true
-    | PList l1, PList l2  
-    | PCons l1, PCons l2 
-    | PTuple l1, PTuple l2
-    | Pats l1, Pats l2 -> list_equivalence is_match l1 l2
-    | PCtor (id1,l1), PCtor (id2,l2) -> if id1=id2 then list_equivalence is_match l1 l2 else false 
-    | _,_ -> false
-  in
-  match x,y with
-  | A.E, A.E -> true
-  | A.F l1, A.F l2 -> 
-    let sorted_l1 = List.sort compare l1 in
-    let sorted_l2 = List.sort compare l2 in
-    list_equivalence is_match sorted_l1 sorted_l2  
-  | A.N _ , A.N _ -> raise NotImplemented
-  | _,_ -> false 
-
-let match_summary 
-= fun (f,ts,t,s) (f',ts',t',s') ->
-  let pat_match = match_pattern s s' in
-  let typ_match = match_type (ts,t) (ts',t') in
-  typ_match && pat_match
-
-let match_program : A.t -> A.t -> bool
-= fun x y -> 
-  list_equivalence match_summary x y
+let get_patch_unit : graph -> patch_unit BatSet.t
+= fun cg ->
+  let nodes = get_node cg in
+  BatMap.foldi (fun name (id, args, typ, body) acc ->
+    let typ = get_typ args typ in
+    let edges = get_linked_edge id cg in
+    let ctxs = BatMap.foldi (fun (s, t) ctx acc -> 
+      let caller_f = get_function_name s cg in
+      let caller_args = (fun (id, args, typ, body) -> args) (BatMap.find caller_f nodes) in 
+      let calling_ctxs = BatSet.map (fun (l, path) -> ((caller_f, caller_args), path)) ctx in
+      BatSet.union calling_ctxs acc
+    ) edges BatSet.empty
+    in
+    BatSet.add (name, typ, ctxs, body) acc
+  ) nodes BatSet.empty
 
 (*
-	Input : An incorrect program pgm and a set of correct programs cpgms
-	Output : A correct program cpgm which is most similar to pgm
-*)
-let run : prog -> prog list -> prog
-= fun pgm cpgms -> 
-	let cpgm = List.hd cpgms in
-	cpgm
+let rec update_matching : unit_matching -> patch_unit BatSet.t -> patch_unit BatSet.t -> unit_matching
+= fun matching units_sub units_sol ->
+  BatSet.fold (fun (f_sub, typ_sub, path_sub, body_sub) matching ->
+    let unit_sub = (f_sub, typ_sub, path_sub, body_sub) in
+    (* Previous matching is also a candidate *)
+    let candidates = if BatMap.mem unit_sub matching then BatSet.add (BatMap.find unit_sub matching) units_sol else units_sol in
+    (* Find a solution functions whose type is the same with the type of the target function *)
+    let candidates = BatSet.filter (fun (f_sol, typ_sol, path_sol, body_sol) -> check_typs typ_sub typ_sol) candidates in
+    try
+      (* TODO : Pick solution functions whose path are the most simiar with the target function *)
+      (* Pick the most similar ones in candidates *)
+      let (candidate, remains) = BatSet.pop candidates in
+      let unit_sol = BatSet.fold (fun cur sol -> 
+        if edit_distance_unit unit_sub cur < edit_distance_unit unit_sub sol then cur else sol 
+      ) remains candidate in
+      BatMap.add unit_sub unit_sol matching
+    with Not_found -> matching (* There is no patch_unit matched with unit_sub *)
+  ) units_sub matching
 
-let get_summary : prog -> A.t
-= fun pgm -> 
-	let summary = A.run pgm in
-	summary
+let select_solutions : prog -> prog list -> unit_matching
+= fun pgm cpgms -> 
+  (* compute patch unit of submission *)
+  let units_sub = get_patch_unit (extract_graph pgm) in
+  List.fold_left (fun result cpgm ->
+    (* compute patch unit of solution *) 
+    let units_sol = get_patch_unit (extract_graph cpgm) in
+    (* Compute all possible matching *)
+    update_matching result units_sub units_sol
+  ) empty_matching cpgms
+*)
+
+let gen_vc : path -> path BatSet.t -> path
+= fun path_sub paths_sol ->
+  if BatSet.is_empty paths_sol then path_sub
+  else if BatSet.cardinal paths_sol = 1 then
+    Bop (And, path_sub, BatSet.choose paths_sol)
+  else
+    let (path_sol, paths_sol) = BatSet.pop paths_sol in
+    let path_sol = BatSet.fold (fun path_sol acc ->
+      Bop (Or, acc, path_sol)
+    ) paths_sol path_sol in
+    Bop (And, path_sub, path_sol)
+
+let rec arg_to_path : arg -> path
+= fun arg ->
+  match arg with
+  | ArgUnder typ -> Symbol (fresh_symbol (), typ)
+  | ArgOne (x, typ) -> Var (x, typ)
+  | ArgTuple args -> Tuple (List.map arg_to_path args)
+
+let rec match_arg : arg -> arg -> bool
+= fun arg1 arg2 ->
+  match arg1, arg2 with
+  | ArgUnder typ1, ArgUnder typ2 | ArgUnder typ1, ArgOne (_, typ2) 
+  | ArgOne (_, typ1), ArgUnder typ2 | ArgOne (_, typ1), ArgOne (_, typ2) -> 
+    Type.check_typs typ1 typ2 
+  | ArgTuple args1, ArgTuple args2 -> (try List.for_all2 match_arg args1 args2 with _ -> false)
+  | _ -> false
+
+let gen_vc : (arg list * path) -> (arg list * path) -> path
+= fun (args_sub, path_sub) (args_sol, path_sol) ->
+  try
+    List.fold_left2 (fun vc arg_sub arg_sol ->
+      if match_arg arg_sub arg_sol then
+        let new_path = EQop (Eq, arg_to_path arg_sub, arg_to_path arg_sol) in
+        (* let new_path = EQop (Eq, Tuple [Ctor ("Const", [Int 1]); Int 1], Tuple [Ctor ("Const", [Int 2]); Int 1]) in *)
+        (* let new_path = EQop (Eq, Tuple [Int 1; Int 1], Tuple [Int 1; Int 1]) in *)
+        (* let new_path = EQop (Eq, List ([Ctor ("Const", [Int 1]); Ctor ("Const", [Int 3])], TList (TBase "aexp")), List ([Ctor ("Const", [Int 1]); Ctor ("Const", [Int 3])], TList (TBase "aexp"))) in *)
+        (* let new_path  = EQop (Eq, Ctor ("Times", [List ([Ctor ("Const", [Int 1]); Ctor ("Const", [Int 2])], TList (TBase "aexp"))]), Ctor ("Times", [List ([Ctor ("Const", [Int 1]); Ctor ("Const", [Int 2])], TList (TBase "aexp"))])) in *)
+        Bop (And, new_path, vc)
+      else Bool false 
+    ) (Bop (And, path_sub, path_sol)) args_sub args_sol 
+  with _ -> Bool false 
+
+let rec update_matching2 : unit_matching2 -> patch_unit BatSet.t -> (id * patch_unit) BatSet.t -> unit_matching2
+= fun matching units_sub units_sol ->
+  BatSet.fold (fun (f_sub, typ_sub, ctxs_sub, body_sub) matching ->
+    let unit_sub = (f_sub, typ_sub, ctxs_sub, body_sub) in
+    (* Previous matching is also a candidate *)
+    let candidates = if BatMap.mem unit_sub matching then BatSet.add (BatMap.find unit_sub matching) units_sol else units_sol in
+    (* Find a solution functions whose type is the same with the type of the target function *)
+    let candidates = BatSet.filter (fun (f_name, (f_sol, typ_sol, ctxs_sol, body_sol)) -> check_typs typ_sub typ_sol) candidates in
+    (* Pick solution functions whose path are the most simiar with the target function *)
+    let (_, candidates) = BatSet.fold (fun (f_name, (f_sol, typ_sol, ctxs_sol, body_sol)) (score, candidates) ->
+      (* Compute path matching score*)
+      let score' = BatSet.fold (fun ((caller_sub, args_sub), path_sub) acc ->
+        let is_match = BatSet.exists (fun ((caller_sol, args_sol), path_sol) -> 
+          let vc = gen_vc (args_sub, path_sub) (args_sol, path_sol) in
+          let _ = print_endline (string_of_path vc) in
+          check_path !ctor_table vc
+        ) ctxs_sol in
+        if is_match then acc+1 else acc
+      ) ctxs_sub 0 in
+      (* Collecting the functions with the highest score *)
+      if score' = score then (score', BatSet.add (f_name, (f_sol, typ_sol, ctxs_sol, body_sol)) candidates)
+      else if score' > score then (score', BatSet.singleton (f_name, (f_sol, typ_sol, ctxs_sol, body_sol)))
+      else (score, candidates)
+    ) candidates (-1, BatSet.empty) in
+    if BatSet.is_empty candidates then
+      (* If there are no matched solutions, do not change the matching relation *)
+      matching
+    else
+      (* Pick the most similar ones in candidates *)
+      let (candidate, remains) = BatSet.pop candidates in
+      let unit_sol = BatSet.fold (fun cur sol -> 
+        if edit_distance_unit unit_sub (snd cur) < edit_distance_unit unit_sub (snd sol) then cur else sol 
+      ) remains candidate in
+      BatMap.add unit_sub unit_sol matching
+  ) units_sub matching
+
+let select_solutions2 : prog -> (string * prog) list -> unit_matching2
+= fun pgm cpgms -> 
+  (* compute patch unit of submission *)
+  let cg_sub = extract_graph pgm in
+  let units_sub = get_patch_unit cg_sub in
+  print_endline "Submission";
+  (* print_endline (string_of_set string_of_unit units_sub) *)
+  let ctor_table_sub = CtorTable.gen_ctor_table BatMap.empty pgm in
+  List.fold_left (fun result (f_name, cpgm) ->
+    (* compute patch unit of solution *) 
+    let units_sol = BatSet.map (fun unit_sol -> (f_name, unit_sol)) (get_patch_unit (extract_graph cpgm)) in
+    print_endline f_name;
+    (* print_endline (string_of_set (fun (s, u) -> string_of_unit u) units_sol)  *)
+    let _ = ctor_table := CtorTable.gen_ctor_table ctor_table_sub cpgm in
+    (* Compute all possible matching *)
+    let r = update_matching2 result units_sub units_sol in
+    Print.print_header ("Selection Result : " ^ f_name);
+    print_endline (string_of_matching2 r);
+    r
+  ) empty_matching cpgms 
+
+(*
+let check_vc pgm = 
+  let ctor_table = CtorTable.gen_ctor_table BatMap.empty pgm in
+  let vc = 
+    EQop (Eq, Tuple [Str "x"; Var ("x", TBase "lambda")], Tuple [Str "x"; Var ("y", TBase "lambda")])
+  in
+  check_path ctor_table vc
+*)

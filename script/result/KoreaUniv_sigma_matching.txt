@@ -1,0 +1,75 @@
+../engine/main.native -cfg -solutions ../benchmarks_correct/KoreaUniv_sigma -submission ../benchmarks_incorrect/KoreaUniv_sigma/15/sub15.ml
+LOC : 8
+O
+../engine/main.native -cfg -solutions ../benchmarks_correct/KoreaUniv_sigma -submission ../benchmarks_incorrect/KoreaUniv_sigma/15/sub22.ml
+LOC : 6
+O
+../engine/main.native -cfg -solutions ../benchmarks_correct/KoreaUniv_sigma -submission ../benchmarks_incorrect/KoreaUniv_sigma/15/sub28.ml
+LOC : 4
+O
+../engine/main.native -cfg -solutions ../benchmarks_correct/KoreaUniv_sigma -submission ../benchmarks_incorrect/KoreaUniv_sigma/15/sub38.ml
+LOC : 3
+O
+../engine/main.native -cfg -solutions ../benchmarks_correct/KoreaUniv_sigma -submission ../benchmarks_incorrect/KoreaUniv_sigma/15/sub39.ml
+LOC : 6
+X
+../engine/main.native -cfg -solutions ../benchmarks_correct/KoreaUniv_sigma -submission ../benchmarks_incorrect/KoreaUniv_sigma/15/sub43.ml
+LOC : 4
+O
+../engine/main.native -cfg -solutions ../benchmarks_correct/KoreaUniv_sigma -submission ../benchmarks_incorrect/KoreaUniv_sigma/15/sub47.ml
+LOC : 4
+O
+../engine/main.native -cfg -solutions ../benchmarks_correct/KoreaUniv_sigma -submission ../benchmarks_incorrect/KoreaUniv_sigma/15/sub50.ml
+LOC : 4
+O
+../engine/main.native -cfg -solutions ../benchmarks_correct/KoreaUniv_sigma -submission ../benchmarks_incorrect/KoreaUniv_sigma/16/sub100.ml
+LOC : 3
+X
+../engine/main.native -cfg -solutions ../benchmarks_correct/KoreaUniv_sigma -submission ../benchmarks_incorrect/KoreaUniv_sigma/16/sub109.ml
+LOC : 8
+X
+../engine/main.native -cfg -solutions ../benchmarks_correct/KoreaUniv_sigma -submission ../benchmarks_incorrect/KoreaUniv_sigma/16/sub110.ml
+LOC : 8
+O
+../engine/main.native -cfg -solutions ../benchmarks_correct/KoreaUniv_sigma -submission ../benchmarks_incorrect/KoreaUniv_sigma/16/sub123.ml
+LOC : 9
+X
+../engine/main.native -cfg -solutions ../benchmarks_correct/KoreaUniv_sigma -submission ../benchmarks_incorrect/KoreaUniv_sigma/16/sub128.ml
+LOC : 2
+X
+../engine/main.native -cfg -solutions ../benchmarks_correct/KoreaUniv_sigma -submission ../benchmarks_incorrect/KoreaUniv_sigma/16/sub131.ml
+LOC : 13
+O
+../engine/main.native -cfg -solutions ../benchmarks_correct/KoreaUniv_sigma -submission ../benchmarks_incorrect/KoreaUniv_sigma/16/sub133.ml
+LOC : 3
+O
+../engine/main.native -cfg -solutions ../benchmarks_correct/KoreaUniv_sigma -submission ../benchmarks_incorrect/KoreaUniv_sigma/16/sub16.ml
+LOC : 5
+O
+../engine/main.native -cfg -solutions ../benchmarks_correct/KoreaUniv_sigma -submission ../benchmarks_incorrect/KoreaUniv_sigma/16/sub20.ml
+LOC : 2
+X
+../engine/main.native -cfg -solutions ../benchmarks_correct/KoreaUniv_sigma -submission ../benchmarks_incorrect/KoreaUniv_sigma/16/sub28.ml
+LOC : 3
+O
+../engine/main.native -cfg -solutions ../benchmarks_correct/KoreaUniv_sigma -submission ../benchmarks_incorrect/KoreaUniv_sigma/16/sub41.ml
+LOC : 3
+X
+../engine/main.native -cfg -solutions ../benchmarks_correct/KoreaUniv_sigma -submission ../benchmarks_incorrect/KoreaUniv_sigma/16/sub42.ml
+LOC : 3
+X
+../engine/main.native -cfg -solutions ../benchmarks_correct/KoreaUniv_sigma -submission ../benchmarks_incorrect/KoreaUniv_sigma/16/sub46.ml
+LOC : 3
+X
+../engine/main.native -cfg -solutions ../benchmarks_correct/KoreaUniv_sigma -submission ../benchmarks_incorrect/KoreaUniv_sigma/16/sub47.ml
+LOC : 3
+X
+../engine/main.native -cfg -solutions ../benchmarks_correct/KoreaUniv_sigma -submission ../benchmarks_incorrect/KoreaUniv_sigma/16/sub54.ml
+LOC : 7
+O
+../engine/main.native -cfg -solutions ../benchmarks_correct/KoreaUniv_sigma -submission ../benchmarks_incorrect/KoreaUniv_sigma/16/sub71.ml
+LOC : 4
+X
+../engine/main.native -cfg -solutions ../benchmarks_correct/KoreaUniv_sigma -submission ../benchmarks_incorrect/KoreaUniv_sigma/16/sub8.ml
+LOC : 6
+X

@@ -1,0 +1,21 @@
+../engine/main.native -cfg -solutions ../benchmarks_correct/sigma -submission ../benchmarks_incorrect/sigma/09/sub16.ml
+LOC : 7
+O
+../engine/main.native -cfg -solutions ../benchmarks_correct/sigma -submission ../benchmarks_incorrect/sigma/09/sub2.ml
+LOC : 7
+O
+../engine/main.native -cfg -solutions ../benchmarks_correct/sigma -submission ../benchmarks_incorrect/sigma/10/sub34.ml
+LOC : 9
+O
+../engine/main.native -cfg -solutions ../benchmarks_correct/sigma -submission ../benchmarks_incorrect/sigma/11/sub4.ml
+LOC : 6
+X
+../engine/main.native -cfg -solutions ../benchmarks_correct/sigma -submission ../benchmarks_incorrect/sigma/13/sub1.ml
+LOC : 5
+X
+../engine/main.native -cfg -solutions ../benchmarks_correct/sigma -submission ../benchmarks_incorrect/sigma/13/sub13.ml
+LOC : 8
+O
+../engine/main.native -cfg -solutions ../benchmarks_correct/sigma -submission ../benchmarks_incorrect/sigma/15/sub84.ml
+LOC : 12
+X

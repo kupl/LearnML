@@ -6,6 +6,8 @@ open Print
 type exp_template = 
   | ModifyExp of label * lexp (* Modify (l, E) -> (l' E') *)
   | InsertBranch of label * branch (* Insert branch to label l *)
+  | DeleteBranch of label * branch (* Delete branch b at label l *)
+  | Explore of label (* Explore label l *)
   (*
   | InsertVar of (lexp * binding) (* Insert binding before (l, E) *)
   | RemoveBranch of branch (* Remove b *)
@@ -22,10 +24,23 @@ let merge_templates : repair_template BatSet.t -> exp_templates * required_funct
 	  (BatSet.add e_temp e_temps, BatMap.union d_temp d_temps)
 	) temps (BatSet.empty, BatMap.empty)
 
+let get_label : repair_template -> label 
+= fun (e_temp, d_temp) ->
+	match e_temp with
+	| ModifyExp (l, _) | InsertBranch (l, _) | DeleteBranch (l, _)
+  | Explore l -> l 
+
 (******************)
 (* Template apply *)
 (******************)
-
+let normalize_template : exp_template -> exp_template
+= fun e_temp ->
+	match e_temp with
+	| ModifyExp (l, e) -> ModifyExp (l, Normalize.normalize_exp e)
+  | InsertBranch (l, (p, e)) -> InsertBranch (l, (p, Normalize.normalize_exp e))
+  | DeleteBranch (l, (p, e)) -> DeleteBranch (l, (p, Normalize.normalize_exp e))
+  | _ -> e_temp
+  
 (* Modification *)
 let rec modify_exp : lexp -> label * lexp -> lexp
 = fun (l, exp) (l', exp') ->
@@ -77,11 +92,36 @@ let rec modify_pgm : prog -> label * lexp -> prog
 = fun pgm temp -> List.map (fun decl -> modify_decl decl temp) pgm
 
 (* Insertion *)
+let rec compare_pat : pat -> pat -> int
+= fun p1 p2 ->
+	match (p1, p2) with
+	| _, PVar _ | _, PUnder -> -1
+	| PInt n1, PInt n2 -> if n1 < n2 then -1 else 1
+  | PList ps1, PList ps2 | PTuple ps1, PTuple ps2 | PCons ps1, PCons ps2 -> compare_pat_list ps1 ps2
+  | PCtor (x, ps1), PCtor (y, ps2) -> if x = y then compare_pat_list ps1 ps2 else 1
+  | _ -> 1
+
+and compare_pat_list : pat list -> pat list -> int
+= fun ps1 ps2 ->
+	match (ps1, ps2) with
+	| [], [] -> 1
+	| [], ps2 -> -1 (* if ps1 is shorter *)
+	| ps1, [] -> 1 (* if ps1 is longer *)
+	| phd1::ptl1, phd2::ptl2 -> if (compare_pat phd1 phd2) < 0 then -1 else compare_pat_list ptl1 ptl2
+
+let rec insert_branch : branch -> branch list -> branch list
+= fun b bs ->
+	match bs with
+	| [] -> [b]
+	| hd::tl -> 
+		(* Insert branch before wild card (default case) *)
+		if compare_pat (fst b) (fst hd) < 0 then b::bs else hd::(insert_branch b tl) 
+
 let rec insert_branch_exp : lexp -> label * branch -> lexp
 = fun (l, exp) (l', b) ->
 	let exp =
 	  match exp with
-	  | EMatch (e, bs) -> if l = l' then EMatch (e, bs@[b]) else EMatch (insert_branch_exp e (l', b), List.map (fun (p, e) -> (p, insert_branch_exp e (l', b))) bs)
+	  | EMatch (e, bs) -> if l = l' then EMatch (e, insert_branch b bs) else EMatch (insert_branch_exp e (l', b), List.map (fun (p, e) -> (p, insert_branch_exp e (l', b))) bs)
 	  | Raise e -> Raise (insert_branch_exp e (l', b))
 	  | EFun (arg, e) -> EFun (arg, (insert_branch_exp e (l', b)))
 	  | MINUS e -> MINUS (insert_branch_exp e (l', b))
@@ -122,15 +162,75 @@ let rec insert_branch_decl : decl -> label * branch -> decl
 	  DBlock (is_rec, bindings) 
 	| _ -> decl
 
-let rec insert_branch : prog -> label * branch -> prog
+let rec insert_branch_pgm : prog -> label * branch -> prog
 = fun pgm temp -> List.map (fun decl -> insert_branch_decl decl temp) pgm 
+
+(* Deletion *)
+let rec delete_branch : branch -> branch list -> branch list
+= fun b bs ->
+	match bs with
+	| [] -> []
+	| hd::tl -> 
+		(* Insert branch before wild card (default case) *)
+		if b = hd then tl else hd::(delete_branch b tl) 
+
+let rec delete_branch_exp : lexp -> label * branch -> lexp
+= fun (l, exp) (l', b) ->
+	let exp =
+	  match exp with
+	  | EMatch (e, bs) -> if l = l' then EMatch (e, delete_branch b bs) else EMatch (delete_branch_exp e (l', b), List.map (fun (p, e) -> (p, delete_branch_exp e (l', b))) bs)
+	  | Raise e -> Raise (delete_branch_exp e (l', b))
+	  | EFun (arg, e) -> EFun (arg, (delete_branch_exp e (l', b)))
+	  | MINUS e -> MINUS (delete_branch_exp e (l', b))
+	  | NOT e -> NOT (delete_branch_exp e (l', b))
+	  | ADD (e1, e2) -> ADD (delete_branch_exp e1 (l', b), delete_branch_exp e2 (l', b))
+	  | SUB (e1, e2) -> SUB (delete_branch_exp e1 (l', b), delete_branch_exp e2 (l', b))
+	  | MUL (e1, e2) -> MUL (delete_branch_exp e1 (l', b), delete_branch_exp e2 (l', b))
+	  | DIV (e1, e2) -> DIV (delete_branch_exp e1 (l', b), delete_branch_exp e2 (l', b))
+	  | MOD (e1, e2) -> MOD (delete_branch_exp e1 (l', b), delete_branch_exp e2 (l', b))
+	  | OR (e1, e2) -> OR (delete_branch_exp e1 (l', b), delete_branch_exp e2 (l', b))
+	  | AND (e1, e2) -> AND (delete_branch_exp e1 (l', b), delete_branch_exp e2 (l', b))
+	  | LESS (e1, e2) -> LESS (delete_branch_exp e1 (l', b), delete_branch_exp e2 (l', b))
+	  | LESSEQ (e1, e2) -> LESSEQ (delete_branch_exp e1 (l', b), delete_branch_exp e2 (l', b))
+	  | LARGER (e1, e2) -> LARGER (delete_branch_exp e1 (l', b), delete_branch_exp e2 (l', b))
+	  | LARGEREQ (e1, e2) -> LARGEREQ (delete_branch_exp e1 (l', b), delete_branch_exp e2 (l', b))
+	  | EQUAL (e1, e2) -> EQUAL (delete_branch_exp e1 (l', b), delete_branch_exp e2 (l', b))
+	  | NOTEQ (e1, e2) -> NOTEQ (delete_branch_exp e1 (l', b), delete_branch_exp e2 (l', b))
+	  | DOUBLECOLON (e1, e2) -> DOUBLECOLON (delete_branch_exp e1 (l', b), delete_branch_exp e2 (l', b))
+	  | AT (e1, e2) -> AT (delete_branch_exp e1 (l', b), delete_branch_exp e2 (l', b))
+	  | STRCON (e1, e2) -> STRCON (delete_branch_exp e1 (l', b), delete_branch_exp e2 (l', b))
+	  | EApp (e1, e2) -> EApp (delete_branch_exp e1 (l', b), delete_branch_exp e2 (l', b))
+	  | EList es -> EList (List.map (fun e -> delete_branch_exp e (l', b)) es)
+	  | ETuple es -> ETuple (List.map (fun e -> delete_branch_exp e (l', b)) es)
+	  | ECtor (x, es) -> ECtor (x, List.map (fun e -> delete_branch_exp e (l', b)) es)
+	  | IF (e1, e2, e3) -> IF (delete_branch_exp e1 (l', b), delete_branch_exp e2 (l', b), delete_branch_exp e3 (l', b))
+	  | ELet (f, is_rec, args, typ, e1, e2) -> ELet (f, is_rec, args, typ, delete_branch_exp e1 (l', b), delete_branch_exp e2 (l', b))
+	  | EBlock (is_rec, bindings, e2) -> EBlock (is_rec, List.map (fun (f, is_rec, args, typ, e) -> (f, is_rec, args, typ, delete_branch_exp e (l', b))) bindings, delete_branch_exp e2 (l', b))
+	  | _ -> exp
+	in
+	(l, exp)
+
+let rec delete_branch_decl : decl -> label * branch -> decl
+= fun decl temp ->
+	match decl with
+	| DLet (f, is_rec, args, typ, e) -> DLet (f, is_rec, args, typ, delete_branch_exp e temp)
+	| DBlock (is_rec, bindings) ->
+	  let bindings = List.map (fun (f, is_rec, args, typ, e) -> (f, is_rec, args, typ, delete_branch_exp e temp)) bindings in
+	  DBlock (is_rec, bindings) 
+	| _ -> decl
+
+let rec delete_branch_pgm : prog -> label * branch -> prog
+= fun pgm temp -> List.map (fun decl -> delete_branch_decl decl temp) pgm 
 
 let rec apply_exp_temp : prog -> exp_template -> prog
 = fun pgm temp ->
 	match temp with
 	| ModifyExp (l, e) -> modify_pgm pgm (l, e)
-	| InsertBranch (l, b) -> insert_branch pgm (l, b)
+	| InsertBranch (l, b) -> insert_branch_pgm pgm (l, b)
+	| DeleteBranch (l, b) -> delete_branch_pgm pgm (l, b)
+	| _ -> pgm
 
+(* Insert new function *)
 let rec is_defined_decl : id -> decl -> bool
 = fun f decl -> 
 	match decl with
@@ -180,6 +280,8 @@ let string_of_exp_template : exp_template -> string
   match temp with
   | ModifyExp (l, e) -> "Modify (" ^ string_of_int l ^ " : " ^ exp_to_string e ^ ")" 
   | InsertBranch (l, (p, e)) -> "Insert (" ^ pat_to_string p ^ " -> " ^ exp_to_string e ^ " At label " ^ string_of_int l
+	| DeleteBranch (l, (p, e)) -> "Delete (" ^ pat_to_string p ^ " -> " ^ exp_to_string e ^ " At label " ^ string_of_int l
+	| Explore l -> "Explore label " ^ string_of_int l
 
 let string_of_required_function : required_function -> string 
 = fun d_temp -> 
