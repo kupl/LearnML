@@ -129,6 +129,7 @@ module Renaming = struct
   let update x v env = 
     r_env := BatMap.add v x !r_env; (* store update info *)
     BatMap.add x v env
+  let apply_env x env = try BatMap.find x env with _ -> x
 
   let count = ref 0
   let fresh_var () = count := !count + 1; "#v_" ^ (string_of_int !count)
@@ -195,7 +196,7 @@ module Renaming = struct
   = fun env (l, exp) ->
     let l = gen_label () in
     match exp with
-    | EVar x -> (l, EVar (try BatMap.find x env with _ -> x)) (* No renaming => library function *)
+    | EVar x -> (l, EVar (apply_env x env))
     | EUnit | Const _ | TRUE | FALSE | String _ -> (l, exp)
     | EFun (arg, e) -> 
       let (env, arg) = rename_arg env arg in
@@ -281,39 +282,65 @@ module Renaming = struct
     (!r_env, new_pgm)
 
   (* Renaming the program to orignial form *)
-  (*
+  let rec apply_arg : env -> arg -> arg
+  = fun env arg ->
+    match arg with
+    | ArgOne (x, typ) -> ArgOne (apply_env x env, typ)
+    | ArgTuple args -> ArgTuple (List.map (apply_arg env) args)
+    | _ -> arg
+
+  let rec apply_pat : env -> pat -> pat
+  = fun env pat ->
+    match pat with
+    | PVar x -> PVar (apply_env x env)
+    | PList ps -> PList (List.map (apply_pat env) ps)
+    | PTuple ps -> PTuple (List.map (apply_pat env) ps)
+    | PCtor (c, ps) -> PCtor (c, (List.map (apply_pat env) ps))
+    | PCons ps -> PCons (List.map (apply_pat env) ps)
+    | Pats ps -> Pats (List.map (apply_pat env) ps)
+    | _ -> pat
+
+  let rec apply_binding : env -> let_bind -> let_bind
+  = fun env binding ->
+    match binding with
+    | BindOne x -> BindOne (apply_env x env)
+    | BindTuple bs -> BindTuple (List.map (apply_binding env) bs)
+    | _ -> binding
+
+  let rec apply_exp : env -> lexp -> lexp 
+  = fun env (l, exp) ->
+    let l = gen_label () in
+    match exp with
+    | EVar x -> (l, EVar (apply_env x env))
+    | EUnit | Const _ | TRUE | FALSE | String _ -> (l, exp)
+    | EFun (arg, e) -> (l, EFun (apply_arg env arg, apply_exp env e))
+    | ERef e | EDref e | Raise e | MINUS e | NOT e -> (l, update_unary exp (apply_exp env e))
+    | ADD (e1, e2) | SUB (e1, e2) | MUL (e1, e2) | DIV (e1, e2) | MOD (e1, e2) 
+    | OR (e1, e2) | AND (e1, e2) | LESS (e1, e2) | LESSEQ (e1, e2) | LARGER (e1, e2) | LARGEREQ (e1, e2) 
+    | EQUAL (e1, e2) | NOTEQ (e1, e2) | DOUBLECOLON (e1, e2) | AT (e1, e2) | STRCON (e1, e2) | EApp (e1, e2) 
+    | EAssign (e1, e2) -> (l, update_binary exp (apply_exp env e1, apply_exp env e2))
+    | EList es -> (l, EList (List.map (apply_exp env) es))
+    | ETuple es -> (l, ETuple (List.map (apply_exp env) es))
+    | ECtor (x, es) -> (l, ECtor (x, List.map (apply_exp env) es))
+    | IF (e1, e2, e3) -> (l, IF (apply_exp env e1, apply_exp env e2, apply_exp env e3))
+    | EMatch (e, bs) -> (l, EMatch (apply_exp env e, List.map (fun (p, e) -> (apply_pat env p, apply_exp env e)) bs))
+    | ELet (f, is_rec, args, typ, e1, e2) -> (l, ELet (apply_binding env f, is_rec, List.map (apply_arg env) args, typ, apply_exp env e1, apply_exp env e2))
+    | EBlock (is_rec, ds, e) -> 
+      let ds = List.map (fun (f, is_rec, args, typ, e) -> (apply_binding env f, is_rec, List.map (apply_arg env) args, typ, apply_exp env e)) ds in
+      (l, EBlock (is_rec, ds, apply_exp env e))
+    | _ -> raise (Failure ("Renaming : invalid exp (" ^ Print.exp_to_string (l, exp)))
+
   let apply_decl : env -> decl -> decl
   = fun env decl ->
     match decl with
-    | DLet (f, is_rec, args, typ, e) -> 
-      let (t', f) = rename_binding (env, r_env) f in
-      let (t, args) = rename_arg_list (if is_rec then t' else (env, r_env)) args in
-      (t', DLet (f, is_rec, args, typ, rename_exp t e))
-    | DBlock (is_rec, bindings) -> 
-      if is_rec then 
-        (* Renaming function name first *)
-        let (t, bs) = List.fold_left (fun (t, bs) (f, is_rec, args, typ, e) ->
-          let (t, f) = rename_binding t f in
-          (t, bs@[(f, is_rec, args, typ, e)])
-        ) ((env, r_env), []) bindings in
-        (* Renaming each decl with renamed function *)
-        let bs = List.map (fun (f, is_rec, args, typ, e) -> 
-          let (t, args) = rename_arg_list t args in
-          (f, is_rec, args, typ, rename_exp t e)
-        ) bs in
-        (t, DBlock (is_rec, bs))
-      else 
-        let (t, bs) = List.fold_left (fun (t, bs) (f, is_rec, args, typ, e) ->
-          let (t, args) = rename_arg_list (if is_rec then t else (env, r_env)) args in
-          let (t', f) = rename_binding t f in            
-          (t', bs@[(f, is_rec, args, typ, rename_exp t e)])
-        ) ((env, r_env), []) bindings in
-        (t, DBlock (is_rec, bs))
+    | DLet (f, is_rec, args, typ, e) -> DLet (apply_binding env f, is_rec, List.map (apply_arg env) args, typ, apply_exp env e)
+    | DBlock (is_rec, ds) -> 
+      let ds = List.map (fun (f, is_rec, args, typ, e) -> (apply_binding env f, is_rec, List.map (apply_arg env) args, typ, apply_exp env e)) ds in 
+      DBlock (is_rec, ds)
     | _ -> decl
 
   let apply : env -> prog -> prog 
   = fun env pgm -> List.map (apply_decl env) pgm
-  *)
 end
 
 let run : prog -> prog

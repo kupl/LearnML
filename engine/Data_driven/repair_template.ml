@@ -8,10 +8,6 @@ type exp_template =
   | InsertBranch of label * branch (* Insert branch to label l *)
   | DeleteBranch of label * branch (* Delete branch b at label l *)
   | Explore of label (* Explore label l *)
-  (*
-  | InsertVar of (lexp * binding) (* Insert binding before (l, E) *)
-  | RemoveBranch of branch (* Remove b *)
-  *)
 and exp_templates = exp_template BatSet.t
 
 type required_function = (id, bool * arg list * typ * lexp * id BatSet.t) BatMap.t (* function id -> func info * caller functions *)

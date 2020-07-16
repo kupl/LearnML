@@ -53,10 +53,14 @@ let run2 : prog -> (string * prog) list -> examples -> prog
 		Print.print_header "Selection Result";
 		print_endline (string_of_matching2 select_result)
 	in
-	let select_result = BatMap.map (fun (f_name, summary) -> summary) select_result in
+	let select_result = BatMap.map (fun (f_name, summary, callees) -> (summary, callees)) select_result in
+	(* Template extraction *)
 	let repair_templates = Extractor.extract_templates select_result in
 	let _ =
 		Print.print_header "Extracted Templates";
 		print_endline (string_of_set string_of_template repair_templates)
-	in 
-	pgm
+	in
+	(* Patch generation *)
+	match Repairer.run pgm repair_templates testcases r_env with
+	| Some pgm' -> print_header "Result"; print_pgm pgm'; pgm'
+	| None -> print_endline "Fail to repair"; pgm

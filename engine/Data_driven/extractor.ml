@@ -56,30 +56,6 @@ module Label = struct
   = fun e_temps -> BatSet.fold (fun e_temp acc -> BatSet.union acc (get_label_template e_temp)) e_temps BatSet.empty
 end 
 
-module Localizer  = struct
-  (* Find counter exampels *)
-  let rec find_counter_examples : prog -> examples -> examples
-  = fun pgm examples -> List.filter (fun ex -> not (Eval.is_solution pgm [ex])) examples
-
-  (* gathering the trace information of negative testcases *)
-  let rec get_trace : prog -> examples -> label BatSet.t
-  = fun pgm examples ->
-    List.fold_left (fun acc (input, output) ->
-      Eval.trace_option := true;
-      let _ = try Eval.run_with_input pgm input with |_ -> (empty_env, empty_mem) in
-      Eval.trace_option := false;
-      let trace = BatSet.of_list (!Eval.trace_set) in
-      BatSet.union trace acc
-    ) BatSet.empty examples
-
-  (* remove patch templates which are not related to the error *)
-  let run : prog -> examples -> repair_template BatSet.t -> repair_template BatSet.t
-  = fun pgm examples temps ->
-    let counter_examples = find_counter_examples pgm examples in
-    let trace = get_trace pgm counter_examples in
-    BatSet.filter (fun temp -> BatSet.mem (get_label temp) trace) temps
-end 
-
 (* Exact pattern matching *)
 let rec match_pat : pat -> pat -> bool
 = fun p1 p2 ->
@@ -203,9 +179,13 @@ let rec get_decl_template : matching -> graph -> exp_template -> required_functi
 
 let extract_templates : unit_matching -> repair_template BatSet.t
 = fun matching ->
-  BatMap.foldi (fun (f_sub, typ_sub, ctx_sub, body_sub) (f_sol, typ_sol, ctx_sol, body_sol) acc ->
+  BatMap.foldi (fun unit_sub (unit_sol, callees) acc ->
+    let (body_sub, body_sol) = (get_body unit_sub, get_body unit_sol) in
     let temps = BatSet.map (fun e_temp -> make_hole_template e_temp) (get_template body_sub body_sol) in
-    let temps = BatSet.map (fun e_temp -> (e_temp, BatMap.empty)) temps in
+    let decls = BatSet.fold (fun (f_id, args, typ, _, body) acc -> 
+      BatMap.add f_id (true, args, typ, body, BatSet.singleton (get_id unit_sub)) acc
+    ) callees BatMap.empty in
+    let temps = BatSet.map (fun e_temp -> (e_temp, decls)) temps in
     BatSet.union acc temps
   ) matching BatSet.empty
   (*

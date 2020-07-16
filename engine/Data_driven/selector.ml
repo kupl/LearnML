@@ -5,15 +5,36 @@ open Type
 open CallGraph
 open Path_score
 
-type patch_unit = id * typ * calling_ctx BatSet.t * lexp (* name * function typ, function body, calling context (path) *)
-and calling_ctx = (id * arg list) * path (* (depth1) calling ctx: caller function info * calling path *)
+(* patch unit = name * args * output typ * calling context (path) * function body *)
+type patch_unit = id * arg list * typ * calling_ctx BatSet.t * lexp 
+(* (depth1) calling ctx: caller function info * calling path *)
+and calling_ctx = (id * arg list) * path 
+type patch_units = patch_unit BatSet.t
 
-type unit_matching = (patch_unit, patch_unit) BatMap.t
-type unit_matching2 = (patch_unit, string * patch_unit) BatMap.t
+(* 
+  Matching info
+  error function => solution function * callee funcions
+*)
+type unit_matching = (patch_unit, patch_unit * patch_unit BatSet.t) BatMap.t
+type unit_matching2 = (patch_unit, string * patch_unit * patch_unit BatSet.t) BatMap.t
 
 let empty_matching = BatMap.empty
 
 let ctor_table = ref BatMap.empty 
+
+(* Utility functions *)
+let get_id (id, args, typ, ctxs, body) = id 
+let get_args (id, args, typ, ctxs, body) = args
+let get_typ (id, args, typ, ctxs, body) = typ
+let get_ctxs (id, args, typ, ctxs, body) = ctxs
+let get_body (id, args, typ, ctxs, body) = body
+let get_func_typ (id, args, typ, ctxs, body) = 
+  let rec arg_to_typ arg =
+    match arg with
+    | ArgUnder typ | ArgOne (_, typ) -> typ 
+    | ArgTuple args -> TTuple (List.map arg_to_typ args)
+  in
+  List.fold_left (fun acc arg -> TArr (arg_to_typ arg, acc)) typ (List.rev args)
 
 (* pp *)
 let string_of_paths paths = 
@@ -29,10 +50,16 @@ let string_of_ctxs ctxs =
     if acc = "" then string_of_ctx ctx else acc ^ "\n" ^ string_of_ctx ctx
   ) ctxs ""
 
-let string_of_unit (name, typ, ctxs, body) =
-  "Typ : " ^ type_to_string typ ^ "\n" ^
-  "Calling_Ctx : " ^ string_of_ctxs ctxs ^ "\n" ^ 
-  "Body : " ^ exp_to_string body
+let string_of_unit patch_unit =
+  "Typ : " ^ type_to_string (get_func_typ patch_unit) ^ "\n" ^
+  "Calling_Ctx : " ^ string_of_ctxs (get_ctxs patch_unit) ^ "\n" ^ 
+  "Body : " ^ exp_to_string (get_body patch_unit)
+
+let string_of_callees callees =
+  BatSet.fold (fun callee_func acc -> 
+    let s = string_of_unit callee_func in
+    if acc = "" then s else acc ^ "\n---------------------------\n" ^ s
+  ) callees ""
 
 let string_of_matching matching = 
   BatMap.foldi (fun unit_sub unit_sol acc ->
@@ -41,9 +68,10 @@ let string_of_matching matching =
   ) matching ""
 
 let string_of_matching2 matching = 
-  BatMap.foldi (fun unit_sub (f_name, unit_sol) acc ->
+  BatMap.foldi (fun unit_sub (f_name, unit_sol, callees) acc ->
     let s = 
       string_of_unit unit_sub ^ "\n => \n" ^ string_of_unit unit_sol ^
+      "\n" ^ "-- Callee functions --\n" ^ string_of_callees callees ^
       "\n" ^ "Solution : " ^ f_name
     in
     if acc = "" then s else acc ^ "\n---------------------------\n" ^ s
@@ -112,22 +140,12 @@ let rec edit_distance : lexp -> lexp -> int
   | _ -> exp_size exp1 + exp_size exp2
 
 let edit_distance_unit : patch_unit -> patch_unit -> int
-= fun (_, _, _, body1) (_, _, _, body2) -> edit_distance body1 body2
+= fun unit1 unit2 -> edit_distance (get_body unit1) (get_body unit2)
 
-(* Utility functions *)
-let get_typ args typ = 
-  let rec arg_to_typ arg =
-    match arg with
-    | ArgUnder typ | ArgOne (_, typ) -> typ 
-    | ArgTuple args -> TTuple (List.map arg_to_typ args)
-  in
-  List.fold_left (fun acc arg -> TArr (arg_to_typ arg, acc)) typ (List.rev args)
-
-let get_patch_unit : graph -> patch_unit BatSet.t
+let get_patch_unit : graph -> patch_units
 = fun cg ->
   let nodes = get_node cg in
   BatMap.foldi (fun name (id, args, typ, body) acc ->
-    let typ = get_typ args typ in
     let edges = get_linked_edge id cg in
     let ctxs = BatMap.foldi (fun (s, t) ctx acc -> 
       let caller_f = get_function_name s cg in
@@ -136,40 +154,8 @@ let get_patch_unit : graph -> patch_unit BatSet.t
       BatSet.union calling_ctxs acc
     ) edges BatSet.empty
     in
-    BatSet.add (name, typ, ctxs, body) acc
+    BatSet.add (name, args, typ, ctxs, body) acc
   ) nodes BatSet.empty
-
-(*
-let rec update_matching : unit_matching -> patch_unit BatSet.t -> patch_unit BatSet.t -> unit_matching
-= fun matching units_sub units_sol ->
-  BatSet.fold (fun (f_sub, typ_sub, path_sub, body_sub) matching ->
-    let unit_sub = (f_sub, typ_sub, path_sub, body_sub) in
-    (* Previous matching is also a candidate *)
-    let candidates = if BatMap.mem unit_sub matching then BatSet.add (BatMap.find unit_sub matching) units_sol else units_sol in
-    (* Find a solution functions whose type is the same with the type of the target function *)
-    let candidates = BatSet.filter (fun (f_sol, typ_sol, path_sol, body_sol) -> check_typs typ_sub typ_sol) candidates in
-    try
-      (* TODO : Pick solution functions whose path are the most simiar with the target function *)
-      (* Pick the most similar ones in candidates *)
-      let (candidate, remains) = BatSet.pop candidates in
-      let unit_sol = BatSet.fold (fun cur sol -> 
-        if edit_distance_unit unit_sub cur < edit_distance_unit unit_sub sol then cur else sol 
-      ) remains candidate in
-      BatMap.add unit_sub unit_sol matching
-    with Not_found -> matching (* There is no patch_unit matched with unit_sub *)
-  ) units_sub matching
-
-let select_solutions : prog -> prog list -> unit_matching
-= fun pgm cpgms -> 
-  (* compute patch unit of submission *)
-  let units_sub = get_patch_unit (extract_graph pgm) in
-  List.fold_left (fun result cpgm ->
-    (* compute patch unit of solution *) 
-    let units_sol = get_patch_unit (extract_graph cpgm) in
-    (* Compute all possible matching *)
-    update_matching result units_sub units_sol
-  ) empty_matching cpgms
-*)
 
 let gen_vc : path -> path BatSet.t -> path
 = fun path_sub paths_sol ->
@@ -205,37 +191,34 @@ let gen_vc : (arg list * path) -> (arg list * path) -> path
     List.fold_left2 (fun vc arg_sub arg_sol ->
       if match_arg arg_sub arg_sol then
         let new_path = EQop (Eq, arg_to_path arg_sub, arg_to_path arg_sol) in
-        (* let new_path = EQop (Eq, Tuple [Ctor ("Const", [Int 1]); Int 1], Tuple [Ctor ("Const", [Int 2]); Int 1]) in *)
-        (* let new_path = EQop (Eq, Tuple [Int 1; Int 1], Tuple [Int 1; Int 1]) in *)
-        (* let new_path = EQop (Eq, List ([Ctor ("Const", [Int 1]); Ctor ("Const", [Int 3])], TList (TBase "aexp")), List ([Ctor ("Const", [Int 1]); Ctor ("Const", [Int 3])], TList (TBase "aexp"))) in *)
-        (* let new_path  = EQop (Eq, Ctor ("Times", [List ([Ctor ("Const", [Int 1]); Ctor ("Const", [Int 2])], TList (TBase "aexp"))]), Ctor ("Times", [List ([Ctor ("Const", [Int 1]); Ctor ("Const", [Int 2])], TList (TBase "aexp"))])) in *)
         Bop (And, new_path, vc)
       else Bool false 
     ) (Bop (And, path_sub, path_sol)) args_sub args_sol 
   with _ -> Bool false 
 
-let rec update_matching2 : unit_matching2 -> patch_unit BatSet.t -> (id * patch_unit) BatSet.t -> unit_matching2
-= fun matching units_sub units_sol ->
-  BatSet.fold (fun (f_sub, typ_sub, ctxs_sub, body_sub) matching ->
-    let unit_sub = (f_sub, typ_sub, ctxs_sub, body_sub) in
-    (* Previous matching is also a candidate *)
-    let candidates = if BatMap.mem unit_sub matching then BatSet.add (BatMap.find unit_sub matching) units_sol else units_sol in
+let rec find_local_matching2 : patch_units -> (id * prog) -> unit_matching2
+= fun units_sub (f_name, cpgm) ->
+  let cg_sol = extract_graph cpgm in
+  let units_sol = get_patch_unit cg_sol in
+  print_endline f_name;
+  let local_matching = BatSet.fold (fun unit_sub matching -> 
+    let typ_sub = get_func_typ unit_sub in
     (* Find a solution functions whose type is the same with the type of the target function *)
-    let candidates = BatSet.filter (fun (f_name, (f_sol, typ_sol, ctxs_sol, body_sol)) -> check_typs typ_sub typ_sol) candidates in
+    let candidates = BatSet.filter (fun unit_sol -> check_typs typ_sub (get_func_typ unit_sol)) units_sol in
     (* Pick solution functions whose path are the most simiar with the target function *)
-    let (_, candidates) = BatSet.fold (fun (f_name, (f_sol, typ_sol, ctxs_sol, body_sol)) (score, candidates) ->
+    let (_, candidates) = BatSet.fold (fun unit_sol (score, candidates) ->
       (* Compute path matching score*)
       let score' = BatSet.fold (fun ((caller_sub, args_sub), path_sub) acc ->
         let is_match = BatSet.exists (fun ((caller_sol, args_sol), path_sol) -> 
           let vc = gen_vc (args_sub, path_sub) (args_sol, path_sol) in
           let _ = print_endline (string_of_path vc) in
-          check_path !ctor_table vc
-        ) ctxs_sol in
+          not (check_path !ctor_table vc)
+        ) (get_ctxs unit_sol) in
         if is_match then acc+1 else acc
-      ) ctxs_sub 0 in
+      ) (get_ctxs unit_sub) 0 in
       (* Collecting the functions with the highest score *)
-      if score' = score then (score', BatSet.add (f_name, (f_sol, typ_sol, ctxs_sol, body_sol)) candidates)
-      else if score' > score then (score', BatSet.singleton (f_name, (f_sol, typ_sol, ctxs_sol, body_sol)))
+      if score' = score then (score', BatSet.add unit_sol candidates)
+      else if score' > score then (score', BatSet.singleton unit_sol)
       else (score, candidates)
     ) candidates (-1, BatSet.empty) in
     if BatSet.is_empty candidates then
@@ -244,11 +227,44 @@ let rec update_matching2 : unit_matching2 -> patch_unit BatSet.t -> (id * patch_
     else
       (* Pick the most similar ones in candidates *)
       let (candidate, remains) = BatSet.pop candidates in
-      let unit_sol = BatSet.fold (fun cur sol -> 
-        if edit_distance_unit unit_sub (snd cur) < edit_distance_unit unit_sub (snd sol) then cur else sol 
+      let unit_sol = BatSet.fold (fun cur acc -> 
+        if edit_distance_unit unit_sub cur < edit_distance_unit unit_sub acc then cur else acc 
       ) remains candidate in
-      BatMap.add unit_sub unit_sol matching
-  ) units_sub matching
+      BatMap.add unit_sub (f_name, unit_sol, BatSet.empty) matching
+  ) units_sub empty_matching in
+  (* Update calling information of unmatched functions *)
+  let unmatched_funcs = BatSet.filter (fun func -> 
+    not (BatMap.exists (fun unit_sub (f_name, unit_sol, callees) -> 
+          (get_id func) = (get_id unit_sol)
+        ) local_matching)
+  ) units_sol in 
+  BatSet.fold (fun func matching ->
+    let callers = BatSet.map (fun ((caller_id, _), _) -> caller_id) (get_ctxs func) in
+    BatMap.map (fun (f_name, unit_sol, callees) -> 
+      if BatSet.mem (get_id unit_sol) callers then 
+        (f_name, unit_sol, BatSet.add func callees)
+      else (f_name, unit_sol, callees)
+    ) matching
+  ) unmatched_funcs local_matching
+
+let rec update_matching2 : unit_matching2 -> unit_matching2 -> unit_matching2
+= fun global_matching local_matching ->
+  BatMap.foldi (fun unit_sub (f_name, unit_sol, callees) global ->
+    if BatMap.mem unit_sub global then
+      let (f_name', unit_sol', callee') = BatMap.find unit_sub global in
+      (* Compare path matching score*)
+      let score = 0 in
+      let score' = 0 in
+      (* Compare syntactic distance  *)
+      if score = score' then 
+        let d1 = edit_distance_unit unit_sub unit_sol in
+        let d2 = edit_distance_unit unit_sub unit_sol' in
+        if d1 < d2 then BatMap.add unit_sub (f_name, unit_sol, callees) global else global
+      else 
+        if score > score' then BatMap.add unit_sub (f_name, unit_sol, callees) global else global
+    else 
+      BatMap.add unit_sub (f_name, unit_sol, callees) global
+  ) local_matching global_matching
 
 let select_solutions2 : prog -> (string * prog) list -> unit_matching2
 = fun pgm cpgms -> 
@@ -258,24 +274,12 @@ let select_solutions2 : prog -> (string * prog) list -> unit_matching2
   print_endline "Submission";
   (* print_endline (string_of_set string_of_unit units_sub) *)
   let ctor_table_sub = CtorTable.gen_ctor_table BatMap.empty pgm in
-  List.fold_left (fun result (f_name, cpgm) ->
+  List.fold_left (fun acc (f_name, cpgm) ->
     (* compute patch unit of solution *) 
-    let units_sol = BatSet.map (fun unit_sol -> (f_name, unit_sol)) (get_patch_unit (extract_graph cpgm)) in
-    print_endline f_name;
-    (* print_endline (string_of_set (fun (s, u) -> string_of_unit u) units_sol)  *)
     let _ = ctor_table := CtorTable.gen_ctor_table ctor_table_sub cpgm in
-    (* Compute all possible matching *)
-    let r = update_matching2 result units_sub units_sol in
-    Print.print_header ("Selection Result : " ^ f_name);
-    print_endline (string_of_matching2 r);
+    (* Compute matching based with the current solution *)
+    let local_matching = find_local_matching2 units_sub (f_name, cpgm) in
+    (* Update global matching result *)
+    let r = update_matching2 acc local_matching in
     r
   ) empty_matching cpgms 
-
-(*
-let check_vc pgm = 
-  let ctor_table = CtorTable.gen_ctor_table BatMap.empty pgm in
-  let vc = 
-    EQop (Eq, Tuple [Str "x"; Var ("x", TBase "lambda")], Tuple [Str "x"; Var ("y", TBase "lambda")])
-  in
-  check_path ctor_table vc
-*)
