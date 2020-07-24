@@ -216,9 +216,14 @@ let gen_hole : unit -> exp
 = fun () -> hole_count:=!hole_count+1; Hole(!hole_count)
 
 let gen_labeled_hole : unit -> lexp
-= fun () -> (gen_label(),gen_hole())
+= fun () -> (gen_label(), gen_hole())
 
-let dummy_hole () = (0,Hole (0))
+let dummy_hole () = (0, Hole 0)
+
+(* Function hole *)
+let fhole_count = ref 0
+let gen_fhole () = fhole_count := !fhole_count - 1; Hole (!fhole_count)
+let gen_labeled_fhole () = (gen_label (), gen_fhole ())
 
 (* External functions *)
 let library_pgm : prog ref = ref []

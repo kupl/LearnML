@@ -121,36 +121,91 @@ let rec get_template : lexp -> lexp -> exp_template BatSet.t
   (* Syntatically different *)
   | _ -> BatSet.singleton (ModifyExp (l1, exp2))
 
- (* Replace special variables with holes *)
-let rec make_hole_exp : lexp -> lexp
-= fun (l, exp) ->
+(* Replace special variables with holes *)
+let rec make_hole_exp : Alias.D.analysis -> Alias.D.t -> lexp -> lexp BatSet.t
+= fun map t2 (l, exp) ->
   match exp with
-  (* Variable -> replaced with hole to represent an arbitrary variable *)
-  | EVar _ -> (l, gen_hole ())
-  (* Exception -> *)
-  | Raise e -> (l, Raise ((gen_label (), ECtor ("Failure", [gen_label (), String "Exception(Template)"]))))
-  | EUnit | Const _ | TRUE | FALSE | String _ -> (l, exp)
-  | EFun (arg, e) -> (l, EFun (arg, make_hole_exp e))
-  | ERef e | EDref e | MINUS e | NOT e -> (l, update_unary exp (make_hole_exp e))
+  (* Variable -> replace solution variable with the one in submission whose data flow is the same *)
+  | EVar x -> 
+    let d2 = BatMap.find x (BatMap.find l t2) in
+    let xs = BatMap.foldi (fun x1 d1 xs -> 
+      if Alias.D.compare d1 d2 then BatSet.add x1 xs else xs 
+    ) map BatSet.empty in
+    if BatSet.is_empty xs then 
+      (* if there are no variables whose data-flow is exactly match with the solution variable *)
+      BatSet.singleton (l, gen_hole ())
+    else 
+      BatSet.map (fun x -> (l, EVar x)) xs
+  (* Function call -> replace function with special hole which is filled with the call templates *)
+  | EApp (e1, e2) -> BatSet.singleton (l, gen_fhole ())
+  (* Exception *)
+  | Raise e -> 
+    let new_exception = (gen_label (), ECtor ("Failure", [gen_label (), String "Exception(Template)"])) in
+    BatSet.singleton (l, Raise new_exception)
+  | EUnit | Const _ | TRUE | FALSE | String _ -> BatSet.singleton (l, exp)
+  | EFun (arg, e) -> 
+    let es = make_hole_exp map t2 e in
+    BatSet.map (fun e -> (l, EFun (arg, e))) es
+  | ERef e | EDref e | MINUS e | NOT e -> 
+    let es = make_hole_exp map t2 e in
+    BatSet.map (fun e -> (l, update_unary exp e)) es
   | ADD (e1, e2) | SUB (e1, e2) | MUL (e1, e2) | DIV (e1, e2) | MOD (e1, e2) 
   | OR (e1, e2) | AND (e1, e2) | LESS (e1, e2) | LESSEQ (e1, e2) | LARGER (e1, e2) | LARGEREQ (e1, e2) 
-  | EQUAL (e1, e2) | NOTEQ (e1, e2) | DOUBLECOLON (e1, e2) | AT (e1, e2) | STRCON (e1, e2) | EApp (e1, e2) 
-  | EAssign (e1, e2) -> (l, update_binary exp (make_hole_exp e1, make_hole_exp e2))
-  | EList es -> (l, EList (List.map (make_hole_exp) es))
-  | ETuple es -> (l, ETuple (List.map (make_hole_exp) es))
-  | ECtor (x, es) -> (l, ECtor (x, List.map (make_hole_exp) es))
-  | IF (e1, e2, e3) -> (l, IF (make_hole_exp e1, make_hole_exp e2, make_hole_exp e3))
-  | EMatch (e, bs) -> (l, EMatch (make_hole_exp e, List.map (fun (p, e) -> (p, make_hole_exp e)) bs))
-  | ELet (f, is_rec, args, typ, e1, e2) -> (l, ELet (f, is_rec, args, typ, make_hole_exp e1, make_hole_exp e2))
-  | EBlock (is_rec, bindings, e2) -> (l, EBlock (is_rec, List.map (fun (f, is_rec, args, typ, e) -> (f, is_rec, args, typ, make_hole_exp e)) bindings, make_hole_exp e2))
+  | EQUAL (e1, e2) | NOTEQ (e1, e2) | DOUBLECOLON (e1, e2) | AT (e1, e2) | STRCON (e1, e2)
+  | EAssign (e1, e2) ->
+    let es = join_tuple (make_hole_exp map t2 e1) (make_hole_exp map t2 e2) in
+    BatSet.map (fun (e1, e2) -> (l, update_binary exp (e1, e2))) es 
+  | EList es -> 
+    let es = join_list (List.map (fun e -> make_hole_exp map t2 e) es) in
+    BatSet.map (fun es -> (l, EList es)) es
+  | ETuple es -> 
+    let es = join_list (List.map (fun e -> make_hole_exp map t2 e) es) in
+    BatSet.map (fun es -> (l, ETuple es)) es
+  | ECtor (x, es) -> 
+    let es = join_list (List.map (fun e -> make_hole_exp map t2 e) es) in
+    BatSet.map (fun es -> (l, ECtor (x, es))) es
+  | IF (e1, e2, e3) -> 
+    let es = join_triple (make_hole_exp map t2 e1) (make_hole_exp map t2 e2) (make_hole_exp map t2 e3) in
+    BatSet.map (fun (e1, e2, e3) -> (l, IF (e1, e2, e3))) es
+  | EMatch (e, bs) -> 
+    let es = make_hole_exp map t2 e in
+    let bs = join_list (
+      List.map (fun (p, e) -> 
+        BatSet.map (fun e -> (p, e)) (make_hole_exp map t2 e)
+      ) bs
+    ) in
+    BatSet.fold (fun e acc ->
+      BatSet.fold (fun bs acc ->
+        BatSet.add (l, EMatch (e, bs)) acc
+      ) bs acc 
+    ) es BatSet.empty
+  | ELet (f, is_rec, args, typ, e1, e2) -> 
+    let es = join_tuple (make_hole_exp map t2 e1) (make_hole_exp map t2 e2) in
+    BatSet.map (fun (e1, e2) -> (l, ELet (f, is_rec, args, typ, e1, e2))) es 
+  | EBlock (is_rec, bindings, e2) -> 
+    let ds = join_list (
+      List.map (fun (f, is_rec, args, typ, e) -> 
+        BatSet.map (fun e -> (f, is_rec, args, typ, e)) (make_hole_exp map t2 e)
+      ) bindings
+    ) in
+    let es = make_hole_exp map t2 e2 in 
+    BatSet.fold (fun ds acc ->
+      BatSet.fold (fun e acc ->
+        BatSet.add (l, EBlock (is_rec, ds, e)) acc
+      ) es acc
+    ) ds BatSet.empty
   | _ -> raise (Failure ("Extractor: invalid template (" ^ Print.exp_to_string (l, exp) ^ ")"))
 
-let rec make_hole_template : exp_template -> exp_template
-= fun e_temp ->
+let rec make_hole_template : Alias.D.t -> Alias.D.t -> exp_template -> exp_template BatSet.t
+= fun t1 t2 e_temp ->
   match e_temp with
-  | ModifyExp (l, e) -> ModifyExp (l, make_hole_exp e)
-  | InsertBranch (l, (p, e)) -> InsertBranch (l, (p, make_hole_exp e))
-  | _ -> e_temp
+  | ModifyExp (l, e) -> 
+    let es = make_hole_exp (BatMap.find l t1) t2 e in
+    BatSet.map (fun e -> ModifyExp (l, e)) es
+  | InsertBranch (l, (p, e)) -> 
+    let es = make_hole_exp (BatMap.find l t1) t2 e in
+    BatSet.map (fun e -> InsertBranch (l, (p, e))) es
+  | _ -> BatSet.singleton e_temp
 
 (* Obtaining related function with templates *)
 (*
@@ -177,14 +232,30 @@ let rec get_decl_template : matching -> graph -> exp_template -> required_functi
   ) (get_node g_sol) BatMap.empty
 *)
 
-let extract_templates : unit_matching -> repair_template BatSet.t
+let extract_templates : t -> repair_template BatSet.t
 = fun matching ->
   BatMap.foldi (fun unit_sub (unit_sol, callees) acc ->
+    let t1 = Alias.D.analysis_unit unit_sub in
+    let t2 = Alias.D.analysis_unit unit_sol in
+    let _ =
+      print_header "Submission function"; print_endline (string_of_unit unit_sub);
+      print_header "Solution function"; print_endline (string_of_unit unit_sol);
+      print_header "Submission Data-flow"; Alias.D.print t1;
+      print_header "Solution Data-flow"; Alias.D.print t2
+    in
     let (body_sub, body_sol) = (get_body unit_sub, get_body unit_sol) in
-    let temps = BatSet.map (fun e_temp -> make_hole_template e_temp) (get_template body_sub body_sol) in
+    let temps = get_template body_sub body_sol in 
+    let temps = BatSet.fold (fun e_temp acc -> 
+      let temps = make_hole_template t1 t2 e_temp in
+      BatSet.union acc temps
+    ) temps BatSet.empty in
+    (* TODO : function addtion *)
+    (*
     let decls = BatSet.fold (fun (f_id, args, typ, _, body) acc -> 
       BatMap.add f_id (true, args, typ, body, BatSet.singleton (get_id unit_sub)) acc
     ) callees BatMap.empty in
+    *)
+    let decls = BatMap.empty in
     let temps = BatSet.map (fun e_temp -> (e_temp, decls)) temps in
     BatSet.union acc temps
   ) matching BatSet.empty

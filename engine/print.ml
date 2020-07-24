@@ -216,7 +216,7 @@ let rec exp_to_string : lexp -> string
     "\n (match " ^ exp_to_string e ^ " with " ^ 
     (list_fold (fun (p,e) r -> r ^ "\n|" ^ pat_to_string p ^ " -> " ^ 
     exp_to_string e) lst "") ^ ")"
-  |Hole n -> "?"
+  |Hole n -> if n >= 0 then "?" else "<?>"
   |Raise e -> "raise "^exp_to_string e
   | ERef e -> "ref " ^ exp_to_string e
   | EDref e -> "!" ^ exp_to_string e

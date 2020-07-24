@@ -138,16 +138,15 @@ let rec next : Workset.t -> Workset.work -> Workset.t
 = fun t (a, na) ->
   BatSet.fold (fun elem t -> Workset.add (BatSet.add elem a, BatSet.remove elem na) t) na t
 
-let rec find_patch : prog -> (repair_template BatSet.t) BatSet.t -> examples -> (id, id) BatMap.t -> prog option
-= fun pgm candidates testcases r_env ->
+let rec find_patch : prog -> (repair_template BatSet.t) BatSet.t -> examples -> prog option
+= fun pgm candidates testcases ->
   if BatSet.is_empty candidates then None
   else 
     let (cand, remains) = BatSet.pop candidates in
     let pgm' = apply_templates pgm cand in  
-    let pgm' = Renaming.apply r_env pgm' in
     if (Infinite.Static.run pgm') || (Print.program_to_string pgm = Print.program_to_string pgm') && false then
       (* Simple pruning *)
-      find_patch pgm remains testcases r_env
+      find_patch pgm remains testcases
     else
       let _ = 
         let header = "------------------------\nPatch Candidate\n------------------------\n" in
@@ -159,38 +158,36 @@ let rec find_patch : prog -> (repair_template BatSet.t) BatSet.t -> examples -> 
         Print.print_header "Result"; Print.print_pgm pgm'
         *)
       in
-      if Eval.is_solution pgm' testcases then Some pgm' else find_patch pgm remains testcases r_env
+      if Eval.is_solution pgm' testcases then Some pgm' else find_patch pgm remains testcases
 
 (* Refactoring is needed *)
-let rec work : prog -> Workset.t -> examples -> (id, id) BatMap.t -> prog option
-= fun pgm workset testcases r_env ->
+let rec work : prog -> Workset.t -> examples -> prog option
+= fun pgm workset testcases ->
   if (Unix.gettimeofday()) -. (!start_time) > time_out then None
   else 
     match Workset.choose workset with
     | None -> None
     | Some ((a, na), remain) ->
-      (*
       let _ =
         print_header "Apply"; print_endline (string_of_templates a);
         print_header "Not-Apply"; print_endline (string_of_templates na)
       in
-      *)
       if not (BatSet.is_empty a) then 
         (try
           (* Get the type information, when all tempaltes are applied *)
           let pgm' = apply_templates pgm a in
           let (_, h_t, v_t, subst) = Type.run pgm' in
-          (*
           let _ = 
             print_header "Pgm'"; Print.print_pgm2 pgm';
+            (*
             print_header "HT";
             Type.HoleType.print h_t;
             print_header "VT";
             Type.VariableType.print v_t;
             print_header "SB";
             Type.Subst.print subst
+            *)
           in
-          *)
           (* Based on the type information complete each template *)
           let candidates = BatSet.fold (fun (e_temp, d_temp) candidates -> 
             let e_temps = Complete2.complete_template h_t v_t subst e_temp in
@@ -214,23 +211,23 @@ let rec work : prog -> Workset.t -> examples -> (id, id) BatMap.t -> prog option
           let candidates = BatSet.filter (fun cand -> 
             BatSet.for_all (fun (e_temp, d_temp) -> not (check_redundant pgm e_temp)) cand
           ) candidates in
-          begin match find_patch pgm candidates testcases r_env with
+          begin match find_patch pgm candidates testcases with
           | None ->
             let next = next remain (a, na) in
-            work pgm next testcases r_env
+            work pgm next testcases
           | patch -> patch
           end
         with Type.TypeError -> 
           let next = next remain (a, na) in
-          work pgm next testcases r_env)
+          work pgm next testcases)
       else
         let next = next remain (a, na) in
-        work pgm next testcases r_env
+        work pgm next testcases
 
-let run : prog -> repair_template BatSet.t -> examples -> (id, id) BatMap.t -> prog option
-= fun pgm temps testcases r_env ->
+let run : prog -> repair_template BatSet.t -> examples -> prog option
+= fun pgm temps testcases ->
   start_time := Unix.gettimeofday();
-  let repair = work pgm (Workset.init temps) testcases r_env in
+  let repair = work pgm (Workset.init temps) testcases in
   match repair with
   | Some pgm' -> Some pgm'
   | None -> None

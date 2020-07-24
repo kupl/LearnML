@@ -559,12 +559,3 @@ let run : prog -> (TEnv.t * HoleType.t * VariableType.t * Subst.t)
   let (init_env, _, _, subst) = List.fold_left type_decl (TEnv.empty, HoleType.empty, VariableType.empty, Subst.empty) (!library_pgm) in
   let (tenv, hole_typ, var_typ, subst) = List.fold_left type_decl (init_env, HoleType.empty, VariableType.empty, subst) decls in
   (BatMap.diff tenv init_env, hole_typ, BatMap.map (fun tenv -> BatMap.diff tenv init_env) var_typ, subst)
-
-let run2 : prog -> (TEnv.t * HoleType.t * VariableType.t * Subst.t)
-= fun decls -> 
-  let _ = start_time:=Sys.time() in
-  let decls = decls@(!grading_pgm) in
-  let decls = Converter.convert Converter.empty decls in
-  let (init_env, _, _, subst) = List.fold_left type_decl (TEnv.empty, HoleType.empty, VariableType.empty, Subst.empty) (!library_pgm) in
-  let (tenv, hole_typ, var_typ, subst) = List.fold_left type_decl (init_env, HoleType.empty, VariableType.empty, subst) decls in
-  (tenv, hole_typ, var_typ, subst)

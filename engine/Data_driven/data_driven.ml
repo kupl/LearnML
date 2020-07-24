@@ -35,11 +35,12 @@ let run2 : prog -> (string * prog) list -> examples -> prog
 	(* Preprocessing *)
 	library_pgm := Preprocessor.run (!library_pgm);
 	let pgm = Preprocessor.run pgm in 
-	let (r_env, pgm) = Preprocessor.Renaming.run pgm in
+	(* let (r_env, pgm) = Preprocessor.Renaming.run pgm in *)
+	let r_env = BatMap.empty in
 	print_header "Submission"; print_pgm2 pgm;
 	let cpgms = List.map (fun (f_name, cpgm) -> 
 		let cpgm = Preprocessor.run cpgm in
-		let cpgm = snd (Preprocessor.Renaming.run cpgm) in
+		(* let cpgm = snd (Preprocessor.Renaming.run cpgm) in *)
 		(f_name, cpgm)
 	) cpgms in
 	let _ =
@@ -48,10 +49,14 @@ let run2 : prog -> (string * prog) list -> examples -> prog
 		) cpgms
 	in
 	(* Selection *)
-	let select_result = select_solutions2 pgm cpgms in
+	let (select_result, call_temps) = select_solutions2 pgm cpgms in
 	let _ =
 		Print.print_header "Selection Result";
 		print_endline (string_of_matching2 select_result)
+	in
+	let _ =
+		Print.print_header "Call-templates";
+		print_endline (string_of_map (id) (string_of_set exp_to_string) call_temps)
 	in
 	let select_result = BatMap.map (fun (f_name, summary, callees) -> (summary, callees)) select_result in
 	(* Template extraction *)
@@ -61,6 +66,10 @@ let run2 : prog -> (string * prog) list -> examples -> prog
 		print_endline (string_of_set string_of_template repair_templates)
 	in
 	(* Patch generation *)
-	match Repairer.run pgm repair_templates testcases r_env with
+	(*
+	let pgm = Preprocessor.Renaming.apply r_env pgm in
+	match Repairer.run pgm repair_templates testcases with
 	| Some pgm' -> print_header "Result"; print_pgm pgm'; pgm'
 	| None -> print_endline "Fail to repair"; pgm
+	*)
+	pgm

@@ -194,7 +194,6 @@ module Renaming = struct
  
   let rec rename_exp : env -> lexp -> lexp
   = fun env (l, exp) ->
-    let l = gen_label () in
     match exp with
     | EVar x -> (l, EVar (apply_env x env))
     | EUnit | Const _ | TRUE | FALSE | String _ -> (l, exp)
@@ -309,7 +308,6 @@ module Renaming = struct
 
   let rec apply_exp : env -> lexp -> lexp 
   = fun env (l, exp) ->
-    let l = gen_label () in
     match exp with
     | EVar x -> (l, EVar (apply_env x env))
     | EUnit | Const _ | TRUE | FALSE | String _ -> (l, exp)
