@@ -144,10 +144,19 @@ let rec string_of_path path =
   | Var (x, typ) -> x ^ ":" ^ type_to_string typ
   | Symbol (n, typ) -> "?(" ^ string_of_int n ^ ")" ^ ":" ^ type_to_string typ
 
+let rec string_of_ctxs : ctx -> string
+= fun ctxs ->
+  BatSet.fold (fun (l, path) acc ->
+    if acc = "" then
+      string_of_int l ^ " : " ^ string_of_path path
+    else 
+      acc ^ "\n" ^ string_of_int l ^ " : " ^ string_of_path path
+  ) ctxs ""
+
 let string_of_edge : edge -> string
 = fun edge -> 
   string_of_map (fun (s, t) -> "(" ^ string_of_int s ^ ", " ^ string_of_int t ^ ")") 
-                (fun ctx -> "" (*string_of_set string_of_ctx ctxs*)) edge
+                string_of_ctxs edge
 
 let print_graph : graph -> unit
 = fun (node, edge, func_id) ->
@@ -238,7 +247,7 @@ let rec pat_to_path : label -> pat -> typ -> path
   match p with
   | PUnit -> Unit
   | PInt n -> Int n
-  | PBool b -> Bool b
+  | PBool b -> Bool b 
   | PVar x -> Var (x, BatMap.find x (BatMap.find l !v_t))
   | PUnder -> Symbol (fresh_symbol (), typ)
   | PList ps -> 
@@ -318,25 +327,11 @@ let rec extract_body : lexp -> lexp
   | ECtor (x, es) -> (l, ECtor (x, List.map (fun e -> extract_body e) es))
   | ETuple es -> (l, ETuple (List.map (fun e -> extract_body e) es))
   | EFun (arg, e) -> (l, EFun (arg, extract_body e))
-  | MINUS e -> (l, MINUS (extract_body e))
-  | NOT e -> (l, NOT (extract_body e))
-  | ADD (e1, e2) -> (l, ADD (extract_body e1, extract_body e2))
-  | SUB (e1, e2) -> (l, SUB (extract_body e1, extract_body e2))
-  | MUL (e1, e2) -> (l, MUL (extract_body e1, extract_body e2) )
-  | DIV (e1, e2) -> (l, DIV (extract_body e1, extract_body e2))
-  | MOD (e1, e2) -> (l, MOD (extract_body e1, extract_body e2))
-  | OR (e1, e2) -> (l, OR (extract_body e1, extract_body e2))
-  | AND (e1, e2) -> (l, AND (extract_body e1, extract_body e2))
-  | LESS (e1, e2) -> (l, LESS (extract_body e1, extract_body e2))
-  | LARGER (e1, e2) -> (l, LARGER (extract_body e1, extract_body e2))
-  | LESSEQ (e1, e2) -> (l, LESSEQ (extract_body e1, extract_body e2) )
-  | LARGEREQ (e1, e2) -> (l, LARGEREQ (extract_body e1, extract_body e2))
-  | EQUAL (e1, e2) -> (l, EQUAL (extract_body e1, extract_body e2))
-  | NOTEQ (e1, e2) -> (l, NOTEQ (extract_body e1, extract_body e2))
-  | AT (e1, e2) -> (l, AT (extract_body e1, extract_body e2))
-  | DOUBLECOLON (e1, e2) -> (l, DOUBLECOLON (extract_body e1, extract_body e2))
-  | STRCON (e1, e2) -> (l, STRCON (extract_body e1, extract_body e2))
-  | EApp (e1, e2) -> (l, EApp (extract_body e1, extract_body e2))
+  | MINUS e | NOT e | Raise e | ERef e | EDref e -> (l, update_unary exp (extract_body e))
+  | ADD (e1, e2) | SUB (e1, e2) | MUL (e1, e2) | DIV (e1, e2) | MOD (e1, e2) 
+  | OR (e1, e2) | AND (e1, e2) | LESS (e1, e2) | LARGER (e1, e2) | LESSEQ (e1, e2) 
+  | LARGEREQ (e1, e2) | EQUAL (e1, e2) | NOTEQ (e1, e2) | AT (e1, e2) | DOUBLECOLON (e1, e2) 
+  | STRCON (e1, e2) | EApp (e1, e2) | EAssign (e1, e2) -> (l, update_binary exp (extract_body e1, extract_body e2))
   | ELet (f, is_rec, args, typ, e1, e2) ->
     if (args <> [] || is_fun typ) then
       extract_body e2
@@ -352,10 +347,6 @@ let rec extract_body : lexp -> lexp
     if ds = [] then extract_body e else (l, EBlock (is_rec, List.rev ds, extract_body e))
   | EMatch (e, bs) -> (l, EMatch (extract_body e, List.map (fun (p, e) -> (p, extract_body e)) bs))
   | IF (e1, e2, e3) -> (l, IF (extract_body e1, extract_body e2, extract_body e3))
-  | Raise e -> (l, Raise (extract_body e))
-  | ERef e -> (l, ERef (extract_body e))
-  | EDref e -> (l, EDref (extract_body e))
-  | EAssign (e1, e2) -> (l, EAssign (extract_body e1, extract_body e2))
   | _ -> raise (Failure ("Call graph-exttract : invalid exp (" ^ exp_to_string (l, exp)))
   
 let rec exp_to_cg : env -> func_id -> node * edge * path -> lexp -> node * edge
@@ -539,6 +530,23 @@ let update_type_info : prog -> unit
   h_t := h_t';
   v_t := v_t'
 
+let rec remove_passing_edges : graph -> graph
+= fun (node, edges, entry) -> 
+  let edges' = BatMap.foldi (fun (s, t) ctxs acc ->
+    let passing_ctxs = BatSet.filter (fun (l, path) -> path = Bool true) ctxs in
+    if BatSet.is_empty passing_ctxs then
+      BatMap.add (s, t) ctxs acc 
+    else
+      let linked_edges = get_linked_edge s (node, edges, entry) in
+      let new_edges = BatMap.foldi (fun (s, _) ctxs acc ->
+        BatMap.add (s, t) ctxs acc
+      ) linked_edges BatMap.empty in
+      let ctxs' = BatSet.diff ctxs passing_ctxs in
+      BatMap.union new_edges (BatMap.add (s, t) ctxs' acc) 
+  ) edges BatMap.empty in
+  if BatMap.equal (fun ctxs ctxs' -> BatSet.equal ctxs ctxs') edges edges' then (node, edges, entry) 
+  else remove_passing_edges (node, edges', entry)
+
 (* Extract call graph of a given program *)
 let extract_graph : prog -> graph
 = fun pgm -> 
@@ -553,5 +561,5 @@ let extract_graph : prog -> graph
   (* let g_grading = (node, edge, BatMap.find !Options.opt_entry_func env) in *)
   let g_original = (node', edge', -1) in
   (* post_process g_grading g_original *)
-  g_original
+  remove_passing_edges g_original
   

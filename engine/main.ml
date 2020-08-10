@@ -171,6 +171,7 @@ let execute : prog -> unit
 
 let main () = 
   (* Arg Parse *)
+  let _ = print_endline ("z3 version : " ^ Z3.Version.to_string) in
   let _ = Arg.parse options (fun s->()) usage_msg in
   let testcases = read_testcases !opt_testcases_filename in
   let solution = read_prog !opt_solution_filename in
@@ -249,6 +250,20 @@ let main () =
         ) all_matchings;
         *)
       | _ -> raise (Failure "Submission or solutions are not provided")
+    end
+  else if !opt_preproc then
+    begin match submission with
+    | Some sub -> 
+      let normalized_sub = Preprocessor.run sub in
+      let renamed_sub = snd (Preprocessor.Renaming.run normalized_sub) in
+      let cg_sub = CallGraph.extract_graph renamed_sub in
+      let problem_path = get_problem_path !opt_submission_filename in
+      print_header ("Original (" ^ !opt_submission_filename ^ ")"); print_pgm sub;
+      print_header ("Normalized"); print_pgm normalized_sub;
+      print_header ("Renaming"); print_pgm normalized_sub;
+      print_header ("Callgraph"); CallGraph.print_graph cg_sub;
+      print_endline problem_path
+    | _ -> raise (Failure "Submission file is not provided")
     end
   else
     (* Arg.usage options usage_msg *)

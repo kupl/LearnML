@@ -32,7 +32,13 @@ let rec is_fun : typ -> bool
   | TTuple ts -> List.exists is_fun ts
   | TCtor (tname, ts) -> (is_fun tname) || (List.exists is_fun ts)
   | _ -> false
-  
+
+let rec get_output_typ : typ -> typ
+= fun typ ->
+  match typ with
+  | TArr (t1, t2) -> get_output_typ t2
+  | _ -> typ 
+
 type ctor = id * typ list
 (* Pattern *)
 type pat = 
@@ -371,3 +377,29 @@ let rec exp_size : lexp -> int
   | EMatch (e, bs) -> 1 + exp_size e + List.fold_left (fun acc (p, e) -> acc + exp_size e) 0 bs
   | IF (e1, e2, e3) -> 1 + exp_size e1 + exp_size e2 + exp_size e3
   | Hole _ | SInt _ | SStr _ -> 1
+
+(* Component update *)
+let rec update_component : lexp -> lexp
+= fun (l, exp)->
+  let l = gen_label () in
+  match exp with
+  | EUnit | Const _ | TRUE | FALSE | String _ | EVar _ -> (l, exp)
+  | EFun (arg, e) -> (gen_label (), EFun (arg, update_component e))
+  | ERef e | EDref e | Raise e | MINUS e | NOT e -> (l, update_unary exp (update_component e))
+  | ADD (e1, e2) | SUB (e1, e2) | MUL (e1, e2) | DIV (e1, e2) | MOD (e1, e2) 
+  | OR (e1, e2) | AND (e1, e2) | LESS (e1, e2) | LESSEQ (e1, e2) | LARGER (e1, e2) | LARGEREQ (e1, e2) 
+  | EQUAL (e1, e2) | NOTEQ (e1, e2) | DOUBLECOLON (e1, e2) | AT (e1, e2) | STRCON (e1, e2) | EApp (e1, e2) 
+  | EAssign (e1, e2) -> (l, update_binary exp (update_component e1, update_component e2))
+  | EList es -> (l, EList (List.map (fun e -> update_component e) es))
+  | ETuple es -> (l, ETuple (List.map (fun e -> update_component e) es))
+  | ECtor (x, es) -> (l, ECtor (x, List.map (fun e -> update_component e) es))
+  | IF (e1, e2, e3) -> (l, IF (update_component e1, update_component e2, update_component e3))
+  | EMatch (e, bs) -> 
+    let bs = List.map (fun (p, e) -> (p, update_component e)) bs in
+    (l, EMatch (update_component e, bs))
+  | ELet (f, is_rec, args, typ, e1, e2) -> (l, ELet (f, is_rec, args, typ, update_component e1, update_component e2))
+  | EBlock (is_rec, bindings, e2) -> 
+    let ds = List.map (fun (f, is_rec, args, typ, e) -> (f, is_rec, args, typ, update_component e)) bindings in
+    (l, EBlock (is_rec, ds, update_component e2))
+  | Hole _ -> (l, gen_hole ())
+  | SInt _ | SStr _ -> (l, exp)

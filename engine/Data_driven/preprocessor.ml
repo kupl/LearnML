@@ -57,7 +57,7 @@ module Decapsulation = struct
     | (p, e)::tl ->
       begin match p with
       | Pats ps -> 
-        let flat_bs = List.map (fun p -> (p, e)) ps in
+        let flat_bs = List.map (fun p -> (p, update_component e)) ps in
         (flatten_branch flat_bs)@(flatten_branch tl)
       | _ -> (p, e)::(flatten_branch tl) 
       end
@@ -326,6 +326,7 @@ module Renaming = struct
     | EBlock (is_rec, ds, e) -> 
       let ds = List.map (fun (f, is_rec, args, typ, e) -> (apply_binding env f, is_rec, List.map (apply_arg env) args, typ, apply_exp env e)) ds in
       (l, EBlock (is_rec, ds, apply_exp env e))
+    | Hole n -> (l, exp)
     | _ -> raise (Failure ("Renaming : invalid exp (" ^ Print.exp_to_string (l, exp)))
 
   let apply_decl : env -> decl -> decl

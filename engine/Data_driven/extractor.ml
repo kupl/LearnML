@@ -9,53 +9,6 @@ open Explore
 (*********************************************************)
 (* Extract repair template from the matching information *)
 (*********************************************************)
-module Label = struct
-  let rec get_labels_exp : lexp -> label BatSet.t
-  = fun (l, exp) ->
-    match exp with
-    | EList es | ECtor (_, es) | ETuple es -> 
-      List.fold_left (fun labels e -> BatSet.union labels (get_labels_exp e)) BatSet.empty es
-    | EFun (_, e) | MINUS e | NOT e -> BatSet.union (get_labels_exp e) (BatSet.singleton l)
-    | ADD (e1, e2) | SUB (e1, e2) | MUL (e1, e2) | DIV (e1, e2) | MOD (e1, e2) 
-    | OR (e1, e2) | AND (e1, e2) | LESS (e1, e2) | LARGER (e1, e2) | LESSEQ (e1, e2) | LARGEREQ (e1, e2) 
-    | EQUAL (e1, e2) | NOTEQ (e1, e2) | AT (e1, e2) | DOUBLECOLON (e1, e2) | STRCON (e1, e2) | EApp (e1, e2) 
-    | ELet (_, _, _, _, e1, e2) ->
-      BatSet.singleton l
-      |> BatSet.union (get_labels_exp e1)
-      |> BatSet.union (get_labels_exp e2)
-    | EBlock (_, ds, e) ->
-      let es = e::(List.map (fun (_, _, _, _, e) -> e) ds) in
-      List.fold_left (fun labels e -> BatSet.union labels (get_labels_exp e)) BatSet.empty es
-    | EMatch (e, bs) ->
-      let es = e::(List.map (fun (p, e) -> e) bs) in
-      List.fold_left (fun labels e -> BatSet.union labels (get_labels_exp e)) BatSet.empty es
-    | IF (e1, e2, e3) ->
-      BatSet.singleton l
-      |> BatSet.union (get_labels_exp e1)
-      |> BatSet.union (get_labels_exp e2)
-      |> BatSet.union (get_labels_exp e3)
-    | _ -> BatSet.singleton l
-
-  let get_labels_decl : decl -> label BatSet.t 
-  = fun decl ->
-    match decl with
-    | DLet (_, _, _, _, e) -> get_labels_exp e
-    | DBlock (_, ds) -> List.fold_left (fun labels (_, _, _, _, e) -> BatSet.union labels (get_labels_exp e)) BatSet.empty ds 
-    | _ -> BatSet.empty
-
-  let get_labels : prog -> label BatSet.t
-  = fun pgm -> List.fold_left (fun labels decl -> BatSet.union labels (get_labels_decl decl)) BatSet.empty pgm
-
-  let rec get_label_template : exp_template -> label BatSet.t
-  = fun e_temp ->
-    match e_temp with
-    | ModifyExp (_, e) | InsertBranch (_, (_, e)) -> get_labels_exp e
-    | DeleteBranch (_, _) -> BatSet.empty  
-
-  let rec get_label_templates : exp_templates -> label BatSet.t
-  = fun e_temps -> BatSet.fold (fun e_temp acc -> BatSet.union acc (get_label_template e_temp)) e_temps BatSet.empty
-end 
-
 (* Exact pattern matching *)
 let rec match_pat : pat -> pat -> bool
 = fun p1 p2 ->
@@ -122,12 +75,12 @@ let rec get_template : lexp -> lexp -> exp_template BatSet.t
   | _ -> BatSet.singleton (ModifyExp (l1, exp2))
 
 (* Replace special variables with holes *)
-let rec make_hole_exp : Alias.D.analysis -> Alias.D.t -> lexp -> lexp BatSet.t
+let rec replace_var_exp : Alias.D.analysis -> Alias.D.t -> lexp -> lexp BatSet.t
 = fun map t2 (l, exp) ->
   match exp with
   (* Variable -> replace solution variable with the one in submission whose data flow is the same *)
   | EVar x -> 
-    let d2 = BatMap.find x (BatMap.find l t2) in
+    let d2 = Alias.D.find_map x (BatMap.find l t2) in
     let xs = BatMap.foldi (fun x1 d1 xs -> 
       if Alias.D.compare d1 d2 then BatSet.add x1 xs else xs 
     ) map BatSet.empty in
@@ -136,42 +89,44 @@ let rec make_hole_exp : Alias.D.analysis -> Alias.D.t -> lexp -> lexp BatSet.t
       BatSet.singleton (l, gen_hole ())
     else 
       BatSet.map (fun x -> (l, EVar x)) xs
-  (* Function call -> replace function with special hole which is filled with the call templates *)
-  | EApp (e1, e2) -> BatSet.singleton (l, gen_fhole ())
+  (* Function call -> if it is invalid then replace it by special hole which is filled with the call templates *)
+  | EApp (e1, e2) -> (* BatSet.singleton (l, gen_fhole ()) *)
+    let es = join_tuple (replace_var_exp map t2 e1) (replace_var_exp map t2 e2) in
+    BatSet.map (fun (e1, e2) -> (l, update_binary exp (e1, e2))) es 
   (* Exception *)
   | Raise e -> 
     let new_exception = (gen_label (), ECtor ("Failure", [gen_label (), String "Exception(Template)"])) in
     BatSet.singleton (l, Raise new_exception)
   | EUnit | Const _ | TRUE | FALSE | String _ -> BatSet.singleton (l, exp)
   | EFun (arg, e) -> 
-    let es = make_hole_exp map t2 e in
+    let es = replace_var_exp map t2 e in
     BatSet.map (fun e -> (l, EFun (arg, e))) es
   | ERef e | EDref e | MINUS e | NOT e -> 
-    let es = make_hole_exp map t2 e in
+    let es = replace_var_exp map t2 e in
     BatSet.map (fun e -> (l, update_unary exp e)) es
   | ADD (e1, e2) | SUB (e1, e2) | MUL (e1, e2) | DIV (e1, e2) | MOD (e1, e2) 
   | OR (e1, e2) | AND (e1, e2) | LESS (e1, e2) | LESSEQ (e1, e2) | LARGER (e1, e2) | LARGEREQ (e1, e2) 
   | EQUAL (e1, e2) | NOTEQ (e1, e2) | DOUBLECOLON (e1, e2) | AT (e1, e2) | STRCON (e1, e2)
   | EAssign (e1, e2) ->
-    let es = join_tuple (make_hole_exp map t2 e1) (make_hole_exp map t2 e2) in
+    let es = join_tuple (replace_var_exp map t2 e1) (replace_var_exp map t2 e2) in
     BatSet.map (fun (e1, e2) -> (l, update_binary exp (e1, e2))) es 
   | EList es -> 
-    let es = join_list (List.map (fun e -> make_hole_exp map t2 e) es) in
+    let es = join_list (List.map (fun e -> replace_var_exp map t2 e) es) in
     BatSet.map (fun es -> (l, EList es)) es
   | ETuple es -> 
-    let es = join_list (List.map (fun e -> make_hole_exp map t2 e) es) in
+    let es = join_list (List.map (fun e -> replace_var_exp map t2 e) es) in
     BatSet.map (fun es -> (l, ETuple es)) es
   | ECtor (x, es) -> 
-    let es = join_list (List.map (fun e -> make_hole_exp map t2 e) es) in
+    let es = join_list (List.map (fun e -> replace_var_exp map t2 e) es) in
     BatSet.map (fun es -> (l, ECtor (x, es))) es
   | IF (e1, e2, e3) -> 
-    let es = join_triple (make_hole_exp map t2 e1) (make_hole_exp map t2 e2) (make_hole_exp map t2 e3) in
+    let es = join_triple (replace_var_exp map t2 e1) (replace_var_exp map t2 e2) (replace_var_exp map t2 e3) in
     BatSet.map (fun (e1, e2, e3) -> (l, IF (e1, e2, e3))) es
   | EMatch (e, bs) -> 
-    let es = make_hole_exp map t2 e in
+    let es = replace_var_exp map t2 e in
     let bs = join_list (
       List.map (fun (p, e) -> 
-        BatSet.map (fun e -> (p, e)) (make_hole_exp map t2 e)
+        BatSet.map (fun e -> (p, e)) (replace_var_exp map t2 e)
       ) bs
     ) in
     BatSet.fold (fun e acc ->
@@ -180,15 +135,15 @@ let rec make_hole_exp : Alias.D.analysis -> Alias.D.t -> lexp -> lexp BatSet.t
       ) bs acc 
     ) es BatSet.empty
   | ELet (f, is_rec, args, typ, e1, e2) -> 
-    let es = join_tuple (make_hole_exp map t2 e1) (make_hole_exp map t2 e2) in
+    let es = join_tuple (replace_var_exp map t2 e1) (replace_var_exp map t2 e2) in
     BatSet.map (fun (e1, e2) -> (l, ELet (f, is_rec, args, typ, e1, e2))) es 
   | EBlock (is_rec, bindings, e2) -> 
     let ds = join_list (
       List.map (fun (f, is_rec, args, typ, e) -> 
-        BatSet.map (fun e -> (f, is_rec, args, typ, e)) (make_hole_exp map t2 e)
+        BatSet.map (fun e -> (f, is_rec, args, typ, e)) (replace_var_exp map t2 e)
       ) bindings
     ) in
-    let es = make_hole_exp map t2 e2 in 
+    let es = replace_var_exp map t2 e2 in 
     BatSet.fold (fun ds acc ->
       BatSet.fold (fun e acc ->
         BatSet.add (l, EBlock (is_rec, ds, e)) acc
@@ -196,14 +151,14 @@ let rec make_hole_exp : Alias.D.analysis -> Alias.D.t -> lexp -> lexp BatSet.t
     ) ds BatSet.empty
   | _ -> raise (Failure ("Extractor: invalid template (" ^ Print.exp_to_string (l, exp) ^ ")"))
 
-let rec make_hole_template : Alias.D.t -> Alias.D.t -> exp_template -> exp_template BatSet.t
+let rec replace_var_template : Alias.D.t -> Alias.D.t -> exp_template -> exp_template BatSet.t
 = fun t1 t2 e_temp ->
   match e_temp with
   | ModifyExp (l, e) -> 
-    let es = make_hole_exp (BatMap.find l t1) t2 e in
+    let es = replace_var_exp (BatMap.find l t1) t2 e in
     BatSet.map (fun e -> ModifyExp (l, e)) es
   | InsertBranch (l, (p, e)) -> 
-    let es = make_hole_exp (BatMap.find l t1) t2 e in
+    let es = replace_var_exp (BatMap.find l t1) t2 e in
     BatSet.map (fun e -> InsertBranch (l, (p, e))) es
   | _ -> BatSet.singleton e_temp
 
@@ -237,16 +192,18 @@ let extract_templates : t -> repair_template BatSet.t
   BatMap.foldi (fun unit_sub (unit_sol, callees) acc ->
     let t1 = Alias.D.analysis_unit unit_sub in
     let t2 = Alias.D.analysis_unit unit_sol in
+    (*
     let _ =
       print_header "Submission function"; print_endline (string_of_unit unit_sub);
       print_header "Solution function"; print_endline (string_of_unit unit_sol);
       print_header "Submission Data-flow"; Alias.D.print t1;
       print_header "Solution Data-flow"; Alias.D.print t2
     in
+    *)
     let (body_sub, body_sol) = (get_body unit_sub, get_body unit_sol) in
     let temps = get_template body_sub body_sol in 
     let temps = BatSet.fold (fun e_temp acc -> 
-      let temps = make_hole_template t1 t2 e_temp in
+      let temps = replace_var_template t1 t2 e_temp in
       BatSet.union acc temps
     ) temps BatSet.empty in
     (* TODO : function addtion *)
@@ -259,37 +216,3 @@ let extract_templates : t -> repair_template BatSet.t
     let temps = BatSet.map (fun e_temp -> (e_temp, decls)) temps in
     BatSet.union acc temps
   ) matching BatSet.empty
-  (*
-  let (cg_sub, cg_sol) = (CallGraph.run sub, CallGraph.run sol) in
-  let (matching, remaining_sub, _) = Matching2.run sub sol in
-  let matching_sol = BatMap.foldi (fun f_sub f_sol acc -> BatMap.add f_sol f_sub acc) matching BatMap.empty in
-  (* let _ = Print.print_header "Matching Info (Sol)"; Matching2.print (Matching2.run sol sub) in *)
-  (* Find syntactic discrepancies based on the matching information *)
-  let temps = BatMap.foldi (fun sub sol acc -> 
-    let (_, _, _, body_sub) = BatMap.find sub (get_node cg_sub) in 
-    let (_, _, _, body_sol) = BatMap.find sol (get_node cg_sol) in
-    let e_temps = BatSet.map (fun e_temp -> make_hole_template e_temp) (get_template body_sub body_sol) in
-    let temps = BatSet.map (fun e_temp -> 
-      let related_functions = 
-        get_decl_template matching_sol cg_sol e_temp
-        |> BatMap.map (fun (is_rec, args, typ, e, callers) -> (is_rec, args, typ, e, BatSet.map (fun f_sol -> BatMap.find f_sol matching_sol) callers))
-      in
-      (e_temp, related_functions)
-    ) e_temps in 
-    BatSet.union acc temps  
-  ) matching BatSet.empty in
-  (* Try to explore which are not matched *)
-  let temps = BatSet.fold (fun f_sub acc ->
-    let (_, _, _, body_sub) = BatMap.find f_sub (get_node cg_sub) in 
-    let labels = Label.get_labels_exp body_sub in
-    (* BatSet.union acc (BatSet.map (fun l -> (Explore l, BatMap.empty)) labels) *)
-    BatSet.union acc (explore labels sub) 
-  ) remaining_sub temps in  
-  (* Remove template which fixs the library code or never be executed *)
-  let library_labels = Label.get_labels (!library_pgm) in
-  BatSet.filter (fun (e_temp, _) -> 
-    match e_temp with
-    | ModifyExp (l, _) | InsertBranch (l, _)
-    | DeleteBranch (l, _) | Explore l -> not (BatSet.mem l library_labels)
-  ) temps   
-  *) 

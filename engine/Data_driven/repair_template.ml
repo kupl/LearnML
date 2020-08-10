@@ -264,11 +264,26 @@ let rec apply_required_function : prog -> required_function -> prog
 	) d_temp (pgm, BatMap.empty) in
 	if BatMap.is_empty (BatMap.diff d_temp d_temp') then pgm' else apply_required_function pgm' d_temp'
 
+let rec apply_template : prog -> repair_template -> prog
+= fun pgm (e_temp, d_temp) ->
+	let pgm = apply_required_function pgm d_temp in
+	apply_exp_temp pgm e_temp
+
 let rec apply_templates : prog -> repair_template BatSet.t -> prog 
 = fun pgm temps ->
 	let (e_temps, d_temps) = merge_templates temps in
 	let pgm' = apply_required_function pgm d_temps in
 	BatSet.fold (fun e_temp pgm -> apply_exp_temp pgm e_temp) e_temps pgm'
+
+(* Redundant check *)
+let check_redundant_template : prog -> repair_template -> bool
+= fun pgm temp ->
+  let pgm' = apply_template pgm temp in
+  let _ = 
+  	print_header "Before"; print_endline (program_to_string pgm);
+  	print_header "After"; print_endline (program_to_string pgm')
+	in
+  (program_to_string pgm) = (program_to_string pgm')
 
 (* To string *)
 let string_of_exp_template : exp_template -> string

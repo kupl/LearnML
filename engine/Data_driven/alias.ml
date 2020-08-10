@@ -8,6 +8,8 @@ module D = struct
 	type t = (label, analysis) BatMap.t
 	and analysis = (id, data) BatMap.t
 	and data = 
+		(* Func *)
+		| Func of typ
 		(* Parameter *)
 		| Param of typ (* parameter with type *)
 		(* Decompose *)
@@ -30,6 +32,7 @@ module D = struct
 	let rec string_of_data : data -> string
 	= fun data ->
 		match data with
+		| Func typ -> "Func (" ^ type_to_string typ ^ ")"
 		| Param typ -> "Param (" ^ type_to_string typ ^ ")"
 		(* Decompose *)
 		| CtorElem (x, data) -> x ^ " of " ^ string_of_data data
@@ -61,7 +64,7 @@ module D = struct
 	let rec compare : data -> data -> bool
 	= fun d1 d2 ->
 		match (d1, d2) with
-		| Param t1, Param t2 -> Type.check_typs t1 t2
+		| Func t1, Func t2 | Param t1, Param t2 -> Type.check_typs t1 t2
 		| CtorElem (c1, d1), CtorElem (c2, d2) -> (c1 = c2) && (compare d1 d2)
 		| TupleElem (i1, d1), TupleElem (i2, d2) | ListElem (i1, d1), ListElem (i2, d2) -> (i1 = i2) && (compare d1 d2)
 		| Head d1, Head d2 | Tail d1, Tail d2 -> compare d1 d2
@@ -75,6 +78,9 @@ module D = struct
 		| _ -> false
 
 	(* Analysis data of given expression *)
+	let rec find_map : id -> analysis -> data
+	= fun x map -> (try BatMap.find x map with _ -> Top)
+
 	let rec gen_data : analysis -> lexp -> data
 	= fun map (l, exp) ->
 		match exp with
@@ -83,7 +89,7 @@ module D = struct
 		| TRUE -> Bool true
 		| FALSE -> Bool false 
 		| String s -> Str s 
-		| EVar x -> (try BatMap.find x map with _ -> Top)
+		| EVar x -> find_map x map
     | EFun (_, e) | ERef e | EDref e | Raise e -> Top
     | MINUS e ->
     	begin match gen_data map e with
@@ -205,6 +211,7 @@ module D = struct
 			map
 		| PUnit | PUnder | PInt _ | PBool _ -> map
 		| Pats ps -> List.fold_left (fun map p -> update_pat map p d) map ps
+		| PCons [] -> raise (Failure "Alias : invalid pat")
 
 	let rec update_binding : analysis -> let_bind -> data -> analysis 
 	= fun map binding d ->
@@ -275,5 +282,6 @@ module D = struct
 		| _ -> analysis_exp (update_args args map) (l, exp)
 
 	let rec analysis_unit : patch_unit -> t
-	= fun (f, args, typ, ctxs, body) -> analysis_exp (update_args args BatMap.empty) body
+	= fun (f, args, typ, ctxs, body) -> 
+		analysis_exp (update_args args (BatMap.singleton f (Func typ))) body
 end 

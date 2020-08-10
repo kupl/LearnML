@@ -26,6 +26,7 @@ let opt_generator = ref ""
 let opt_fix = ref false (* FixML *)
 let opt_gentest = ref false (* TestML *)
 let opt_dd = ref false (* Data-driven FixML *)
+let opt_preproc = ref false (* Preprocessing solution *)
 
 (* Other experiments *)
 let opt_run = ref false
@@ -46,6 +47,7 @@ let options =
     ("-fix", Arg.Set opt_fix, " Fix submission");
     ("-gentest", Arg.Set opt_gentest, " Generate testcases");
     ("-dd", Arg.Set opt_dd, " Fix submission using solutions");
+    ("-preproc", Arg.Set opt_preproc, " Conduct preprocessing");
     ("-run", Arg.Set opt_run, " Run submission");
     ("-execute",Arg.Set opt_execute, " Execute submission");
     ("-qcheck", Arg.Set opt_qcheck, " Qcheck testing");

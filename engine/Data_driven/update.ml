@@ -106,33 +106,6 @@ let extract_holenum : lexp -> hole
   | Hole n -> n
   | _ -> raise (Failure "Error during obtain hole number")
 
-(* Update polymorphic type variable t1 in Hole_Type, Var_Type, Subst to t2 *)
-let rec update_polymorphic : (typ * typ) -> (Type.HoleType.t * Type.VariableType.t * Type.Subst.t) -> (Type.HoleType.t * Type.VariableType.t * Type.Subst.t)
-= fun (t1, t2) (h_t, v_t, subst) ->
-  let subst' = Type.unify subst (Type.Subst.apply t1 subst, Type.Subst.apply t2 subst) in
-  let h_t' = Type.HoleType.update subst' h_t in
-  let v_t' = Type.VariableType.update subst' v_t in
-  (h_t', v_t', subst')
-
-let rec update_state : (hole * typ) list -> Type.TEnv.t -> state -> state
-= fun ts hole_env (e, h_t, v_t, subst) ->
-  List.fold_left (fun (e, h_t, v_t, subst) (hole, typ) ->
-    let h_t = Type.HoleType.extend hole typ h_t in
-    let v_t = Type.VariableType.extend hole hole_env v_t in
-    (e, h_t, v_t, subst)
-  ) (e, h_t, v_t, subst) ts
-
-(* Type-directed Transition *)
-let rec type_directed : (hole * typ * Type.TEnv.t) -> state -> state option
-= fun (hole, hole_typ, hole_env) (lexp, h_t, v_t, subst) ->
-  match snd lexp with
-  (* var comp *)
-  | EVar x ->
-    let var_typ = BatMap.find x hole_env in
-    let (h_t, v_t, subst) = update_polymorphic (hole_typ, var_typ) (h_t, v_t, subst) in
-    Some (lexp, h_t, v_t, subst)
-  | _ -> None
-
 (* Get a hole that appears at first, if the expression is closed returns empty set *)
 let rec find_first_hole : lexp -> lexp BatSet.t
 = fun (l, exp) ->
@@ -150,7 +123,7 @@ let rec find_first_hole : lexp -> lexp BatSet.t
     let es = e :: (List.map (fun (p, e) -> e) bs) in
     find_first_hole_list es
   | IF (e1, e2, e3) -> find_first_hole_list [e1; e2; e3]
-  | Hole n ->  BatSet.singleton (l, exp)
+  | Hole n -> if n < 0 then BatSet.singleton (l, exp) else BatSet.empty
   | _ -> BatSet.empty
 
 and find_first_hole_list : lexp list-> lexp BatSet.t
@@ -167,25 +140,15 @@ let get_next_states : call_templates -> Workset.work -> lexp -> Workset.work Bat
   let hole_typ = BatMap.find n h_t in
   let hole_env = BatMap.find n v_t in
   (* if the current hole is a special function call then use the call templates *)
-  let comps = BatMap.foldi (fun x t set -> 
-    match t with
-    | TCtor _ -> set
-    | _ -> BatSet.add (gen_label (), EVar x) set
-  ) hole_env BatSet.empty in
-  (* Transition *)
-  let next_states = BatSet.fold (fun comp set -> 
-    let new_state = 
-      try 
-        type_directed (n, hole_typ, hole_env) (comp, h_t, v_t, subst)
-      with _ -> None
-    in
-    match new_state with
-    |Some state -> BatSet.add state set
-    |None -> set
-  ) comps BatSet.empty in
-  (* Replace *)
-  BatSet.map (fun (e', h_t, v_t, subst)-> (replace_exp e (n, e'), BatMap.remove n h_t, BatMap.remove n v_t, subst)) next_states 
-
+  let next_states = BatMap.foldi (fun x t set -> 
+	  match t with
+	  | TArr (t1, t2) when (check_typs hole_typ (get_output_typ t)) ->
+	    BatSet.union (BatMap.find x call_temps) set
+	  | _ -> set
+	) hole_env BatSet.empty in
+	let next_states = BatSet.map update_component next_states in
+	BatSet.map (fun e' -> (replace_exp e (n, e'), BatMap.remove n h_t, BatMap.remove n v_t, subst)) next_states 
+ 
 let next : call_templates -> Workset.work -> Workset.work BatSet.t
 = fun call_temps (e, h_t, v_t, subst) ->
   let holes = find_first_hole e in
@@ -208,7 +171,7 @@ let rec work : call_templates -> Workset.t -> lexp BatSet.t
       let new_workset = BatSet.fold Workset.add nextstates remain in
       work call_temps new_workset
 
-let rec complete_template : call_templates -> Type.HoleType.t -> Type.VariableType.t -> Type.Subst.t -> exp_template -> exp_templates
+let rec update_call_templates : call_templates -> Type.HoleType.t -> Type.VariableType.t -> Type.Subst.t -> exp_template -> exp_templates
 = fun call_temps h_t v_t subst e_temp ->
   match e_temp with
   | ModifyExp (l, e) -> BatSet.map (fun e -> ModifyExp (l, e)) (work call_temps (Workset.init (e, h_t, v_t, subst)))

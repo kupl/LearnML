@@ -270,7 +270,7 @@ let rec gen_pat_equations : TEnv.t -> pat -> typ -> (TEnv.t * typ_eqn)
       ) (tenv, [ty, t_name]) ps ts
     | _ -> raise TypeError
     end
-  | PCons ps ->
+  | PCons ps -> 
     let t = fresh_tvar () in
     begin match ps with
     | [] -> raise (Failure "Pattern cons does not have args")

@@ -72,7 +72,7 @@ module Z3_Translator = struct
     | TInt -> int_sort ctx
     | TBool -> bool_sort ctx
     | TString -> string_sort ctx
-    | TBase x -> BatMap.find x map
+    | TBase x -> (try BatMap.find x map with Not_found -> Z3.Sort.mk_uninterpreted_s ctx ("Undef" ^ x)) (* Undefined *)
     | TList t -> 
       let sort = typ_to_sort map ctx t in
       list_sort ctx (sort_to_symbol sort) sort 
@@ -405,9 +405,9 @@ let check_path : CtorTable.t -> path -> bool
   let _ = Z3.Solver.add solver eqns in
   (* print_endline (Z3.Solver.to_string solver); *)
   match (Z3.Solver.check solver []) with
-  | UNSATISFIABLE -> print_endline ("UNSAT"); false
-  | UNKNOWN -> print_endline ("UNSAT"); false
-  | SATISFIABLE -> print_endline ("SAT"); true 
+  | UNSATISFIABLE -> (* print_endline ("UNSAT"); *) false
+  | UNKNOWN -> (* print_endline ("UNSAT"); *) false
+  | SATISFIABLE -> (* print_endline ("SAT"); *) true 
     (*
     (* There exists an counter example *)
     begin match Z3.Solver.get_model solver with

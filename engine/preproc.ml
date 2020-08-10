@@ -28,6 +28,11 @@ let read_prog : string -> prog option
 let read_prog_debug : string -> (string * prog) option
 = fun filename -> if Sys.file_exists filename then Some (filename, snd (parse_file filename)) else None 
 
+let get_problem_path : string -> string
+= fun filename ->
+  let matching_idx = Str.search_forward (Str.regexp "sub.*\.ml$") filename 0 in
+  String.sub filename 0 matching_idx
+  
 (* Read set of programs from directory *)
 let dir_contents : string -> string list
 = fun dir ->
@@ -54,7 +59,7 @@ let read_pgms : string -> prog list
     List.rev pgms
   else []
 
-let read_pgms_debug : string -> (string*prog) list
+let read_pgms_debug : string -> (string * prog) list
  = fun problem ->
    if Sys.file_exists problem then
      let dirs = dir_contents problem in
