@@ -1,0 +1,6 @@
+profile = ocamlformat
+let-binding-spacing = sparse
+margin = 100
+version = 0.15.0
+break-infix = fit-or-vertical
+break-sequences = true
