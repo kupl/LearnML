@@ -28,11 +28,6 @@ let read_prog : string -> prog option
 let read_prog_debug : string -> (string * prog) option
 = fun filename -> if Sys.file_exists filename then Some (filename, snd (parse_file filename)) else None 
 
-let get_problem_path : string -> string
-= fun filename ->
-  let matching_idx = Str.search_forward (Str.regexp "sub.*\.ml$") filename 0 in
-  String.sub filename 0 matching_idx
-  
 (* Read set of programs from directory *)
 let dir_contents : string -> string list
 = fun dir ->
@@ -85,3 +80,10 @@ let read_testcases : string -> examples
 (* Read external library *)
 let read_external : string -> prog 
 = fun filename -> if Sys.file_exists filename then snd (parse_file filename) else []
+
+(* Preprocessing *)
+let get_file_path : string -> string
+= fun filename ->
+  let start_idx = Str.search_backward (Str.regexp "benchmarks_correct") filename (String.length filename) in
+  let end_idx = Str.search_forward (Str.regexp "\.ml$") filename 0 in
+  String.sub filename (String.length "filename") end_idx
