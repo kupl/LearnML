@@ -1,5 +1,6 @@
 open Lang
 open Util
+open CallGraph 
 
 (*******************************************)
 (* Translate programs into identical forms *)
@@ -338,8 +339,30 @@ module Renaming = struct
       DBlock (is_rec, ds)
     | _ -> decl
 
-  let apply : env -> prog -> prog 
+  let apply_pgm : env -> prog -> prog 
   = fun env pgm -> List.map (apply_decl env) pgm
+
+  (* Call graph restoring *)
+  let rec apply_path : env -> path -> path
+  = fun env path ->
+    match path with 
+    | Aop (op, p1, p2) -> Aop (op, apply_path env p1, apply_path env p2)
+    | Bop (comb, p1, p2) -> Bop (comb, apply_path env p1, apply_path env p2)
+    | ABop (comp, p1, p2) -> ABop (comp, apply_path env p1, apply_path env p2)
+    | EQop (eq, p1, p2) -> EQop (eq, apply_path env p1, apply_path env p2)
+    | Strcon (p1, p2) -> Strcon (apply_path env p1, apply_path env p2)
+    | Append (p1, p2) -> Append (apply_path env p1, apply_path env p2)
+    | Concat (p1, p2) -> Concat (apply_path env p1, apply_path env p2)
+    | Minus p -> Minus (apply_path env p)
+    | Not p -> Not (apply_path env p)
+    | App (p1, p2) -> App (apply_path env p1, apply_path env p2)
+    | List (ps, typ) -> List (List.map (apply_path env) ps, typ)
+    | Tuple ps -> Tuple (List.map (apply_path env) ps)
+    | Ctor (c, ps) -> Ctor (c, List.map (apply_path env) ps)
+    | Var (x, typ) -> Var (apply_env x env, typ)
+    | _ -> path
+
+  (* Template restoring *)
 end
 
 let run : prog -> prog

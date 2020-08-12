@@ -279,10 +279,6 @@ let rec apply_templates : prog -> repair_template BatSet.t -> prog
 let check_redundant_template : prog -> repair_template -> bool
 = fun pgm temp ->
   let pgm' = apply_template pgm temp in
-  let _ = 
-  	print_header "Before"; print_endline (program_to_string pgm);
-  	print_header "After"; print_endline (program_to_string pgm')
-	in
   (program_to_string pgm) = (program_to_string pgm')
 
 (* To string *)

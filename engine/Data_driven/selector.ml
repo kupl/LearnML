@@ -86,9 +86,9 @@ let string_of_matching2 matching =
 (* Extracting patch unit throught the call graph *)
 let get_patch_unit : graph -> patch_units
 = fun cg ->
-  let nodes = get_node cg in
+  let nodes = get_nodes cg in
   BatMap.foldi (fun name (id, args, typ, body) acc ->
-    let edges = get_linked_edge id cg in
+    let edges = get_linked_edges id cg in
     let ctxs = BatMap.foldi (fun (s, t) ctx acc -> 
       let caller_f = get_function_name s cg in
       let caller_args = (fun (id, args, typ, body) -> args) (BatMap.find caller_f nodes) in 
@@ -273,8 +273,8 @@ let rec get_call_template_exp : lexp -> label -> lexp list -> lexp BatSet.t
 
 let get_call_template : graph -> id * id -> lexp BatSet.t
 = fun cg (f_sub, f_sol) ->
-  let nodes = get_node cg in
-  let edges = get_edge cg in
+  let nodes = get_nodes cg in
+  let edges = get_edges cg in
   let (t, _, _, _) = BatMap.find f_sol nodes in
   let caller_ids = get_caller t cg in 
   BatSet.fold (fun s acc ->
