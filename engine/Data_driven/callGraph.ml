@@ -5,7 +5,7 @@ open Type
 
 exception UndefinedNode
 
-(* Call-graph node : function *)
+(* Call-graph node *)
 type node_id = int
 type node = {
   id : node_id;
@@ -46,9 +46,7 @@ and comb = And | Or
 and comp = Lt | Gt | Le | Ge
 and eq = Eq | NEq
 
-type nodes = node BatSet.t
-type edges = edge BatSet.t
-type graph = { nodes : nodes; edges : edges }
+type graph = { nodes : node BatSet.t; edges : edge BatSet.t }
 
 (* To string *)
 let string_of_node node =
@@ -114,6 +112,9 @@ let fresh_id () = id_num := !id_num + 1; !id_num
 let symbol_num = ref 0
 let fresh_symbol () = symbol_num := !symbol_num + 1; !symbol_num
 
+let get_node_by_id : node_id -> graph -> node
+= fun id cg -> try List.find (fun node -> id = node.id) (BatSet.to_list cg.nodes) with Not_found -> raise UndefinedNode
+
 let get_node_by_name : id -> graph -> node
 = fun name cg -> try List.find (fun node -> name = node.name) (BatSet.to_list cg.nodes) with Not_found -> raise UndefinedNode
 
@@ -122,29 +123,6 @@ let update_node : node -> graph -> graph
 
 let update_edge : edge -> graph -> graph
 = fun edge cg -> { nodes = cg.nodes; edges = BatSet.add edge cg.edges }
-
-(*
-let rec get_function_name : node_id -> graph -> id
-= fun id (nodes, edges, entry) -> let (name, _) = List.find (fun (name, (id', _, _, _)) -> id = id') (BatMap.bindings nodes) in name
-
-let rec get_caller : node_id -> graph -> node_id BatSet.t
-= fun id (nodes, edges, entry) -> BatMap.foldi (fun (s, t) _ acc -> if t = id then BatSet.add s acc else acc) edges BatSet.empty
-
-let rec get_caller_by_name : id -> graph -> id BatSet.t
-= fun id graph ->
-  let (node_id, _, _, _) = BatMap.find id (get_nodes graph) in 
-  BatSet.map (fun node_id -> get_function_name node_id graph) (get_caller node_id graph)
-
-let rec get_linked_edges : node_id -> graph -> edges 
-= fun id graph -> 
-  BatMap.filter (fun (s, t) ctx -> id = t && s <> t) (get_edges graph)
-
-let rec get_invoked_path : node_id -> graph -> path BatSet.t
-= fun id graph -> 
-  BatMap.foldi (fun (s, t) ctx acc -> 
-    if id = t && s <> t then BatSet.union acc (BatSet.map (fun (label, path) -> path) ctx) else acc
-  ) (get_edges graph) BatSet.empty
-*)
 
 (* Path encoding *)
 let fresh_path = Bool true
@@ -182,6 +160,13 @@ let rec pat_to_path : label -> pat -> typ -> path
     | _ -> raise (Failure ("Call grpah: invalid pat (" ^ pat_to_string p ^ ") while encoding path"))
     end
   | _ -> raise (Failure ("Call grpah: invalid pat (" ^ pat_to_string p ^ ") while encoding path"))
+
+let rec arg_to_path : arg -> path
+= fun arg ->
+  match arg with
+  | ArgUnder typ -> Symbol (fresh_symbol (), typ)
+  | ArgOne (x, typ) -> Var (x, typ)
+  | ArgTuple args -> Tuple (List.map arg_to_path args)
 
 let rec binding_to_path : let_bind -> typ -> path 
 = fun binding typ ->
