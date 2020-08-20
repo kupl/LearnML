@@ -362,25 +362,6 @@ let rec decl_to_cg : graph -> decl -> graph
     ) cg ds
   | _ -> cg
 
-(*
-let rec remove_passing_edges : graph -> graph
-= fun (nodes, edges, entry) -> 
-  let edges' = BatMap.foldi (fun (s, t) ctxs acc ->
-    let passing_ctxs = BatSet.filter (fun (l, path) -> path = Bool true) ctxs in
-    if BatSet.is_empty passing_ctxs then
-      BatMap.add (s, t) ctxs acc 
-    else
-      let linked_edges = get_linked_edges s (nodes, edges, entry) in
-      let new_edges = BatMap.foldi (fun (s, _) ctxs acc ->
-        BatMap.add (s, t) ctxs acc
-      ) linked_edges BatMap.empty in
-      let ctxs' = BatSet.diff ctxs passing_ctxs in
-      BatMap.union new_edges (BatMap.add (s, t) ctxs' acc) 
-  ) edges BatMap.empty in
-  if BatMap.equal (fun ctxs ctxs' -> BatSet.equal ctxs ctxs') edges edges' then (nodes, edges, entry) 
-  else remove_passing_edges (nodes, edges', entry)
-*)
-
 (* Extract call graph of a given program *)
 let extract_graph : prog -> graph
 = fun pgm -> 
