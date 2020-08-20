@@ -3,101 +3,134 @@ open Util
 open Print
 open Type
 open CallGraph
-open Path_score
 
-(* patch unit = name * args * output typ * calling context (path) * function body *)
-type patch_unit = id * arg list * typ * calling_ctx BatSet.t * lexp 
-(* (depth1) calling ctx: caller function info * calling path *)
-and calling_ctx = (id * arg list) * path 
-type patch_units = patch_unit BatSet.t
+(* Function summary *)
+type summary = {
+  node : node; (* Call-graph node *)
+  incomming : calling_ctx BatSet.t; (* Incomming edge from other nodes *)
+  outgoing : calling_ctx BatSet.t  (* Outgoing edge to other nodes *)
+}
+(* Calling context : (args of caller, calling path of caller ) *)
+and calling_ctx = arg list * path
 
-(* 
-  Matching info
-  error function => solution function * callee funcions * use case (call template)
-*)
-type unit_matching = (patch_unit, patch_unit * patch_unit BatSet.t * lexp BatSet.t) BatMap.t
-type unit_matching2 = (patch_unit, string * patch_unit * patch_unit BatSet.t * lexp BatSet.t) BatMap.t
+type reference = {
+  source : string; (* Source file of reference function *)
+  summary : summary; (* Funciton summary for patch *)
+  usecase : lexp BatSet.t (* Use case of reference function *)
+}
 
-type t = (patch_unit, patch_unit * patch_unit BatSet.t) BatMap.t
-type t2 = (patch_unit, string * patch_unit * patch_unit BatSet.t) BatMap.t
+(* Matching *)
+type matching = (summary, reference) BatMap.t
 
 type call_templates = (id, lexp BatSet.t) BatMap.t
 
 let empty_matching = BatMap.empty
-
-let ctor_table = ref BatMap.empty 
-
-(* Utility functions *)
-let get_id (id, args, typ, ctxs, body) = id 
-let get_args (id, args, typ, ctxs, body) = args
-let get_typ (id, args, typ, ctxs, body) = typ
-let get_ctxs (id, args, typ, ctxs, body) = ctxs
-let get_body (id, args, typ, ctxs, body) = body
-let get_func_typ (id, args, typ, ctxs, body) = 
-  let rec arg_to_typ arg =
-    match arg with
-    | ArgUnder typ | ArgOne (_, typ) -> typ 
-    | ArgTuple args -> TTuple (List.map arg_to_typ args)
-  in
-  List.fold_left (fun acc arg -> TArr (arg_to_typ arg, acc)) typ (List.rev args)
-
+let ctor_table = ref BatMap.empty
 (* pp *)
-let string_of_paths paths = 
-  BatSet.fold (fun path acc -> 
-    if acc = "" then string_of_path path else acc ^ "\\/\n" ^ string_of_path path
-  ) paths ""
+let string_of_ctx (args, path) = "[" ^ (args_to_string args "") ^ "]:" ^ string_of_path path 
 
-let string_of_ctx ((f, args), path) = 
-  "(" ^ f ^ "[" ^ (args_to_string args "") ^ "]" ^ "):" ^ string_of_path path 
-
-let string_of_ctxs ctxs = 
-  BatSet.fold (fun ctx acc -> 
-    if acc = "" then string_of_ctx ctx else acc ^ "\n\\/\n" ^ string_of_ctx ctx
-  ) ctxs ""
-
-let string_of_unit patch_unit =
-  "Func : " ^ (get_id patch_unit) ^ "\n" ^
-  "Typ : " ^ type_to_string (get_func_typ patch_unit) ^ "\n" ^
-  "Calling_Ctx : " ^ string_of_ctxs (get_ctxs patch_unit) ^ "\n" ^ 
-  "Body : " ^ exp_to_string (get_body patch_unit)
-
-let string_of_callees callees =
-  BatSet.fold (fun callee_func acc -> 
-    let s = string_of_unit callee_func in
-    if acc = "" then s else acc ^ "\n---------------------------\n" ^ s
-  ) callees ""
+let string_of_summary summary = 
+  string_of_node summary.node ^ "\n" ^
+  "Incomming : " ^ string_of_set ~sep:",\n" string_of_ctx summary.incomming ^ "\n" ^
+  "Outgoing : " ^ string_of_set ~sep:",\n" string_of_ctx summary.outgoing ^ "\n" 
 
 let string_of_matching matching = 
-  BatMap.foldi (fun unit_sub unit_sol acc ->
-    let s = string_of_unit unit_sub ^ "\n => \n" ^ string_of_unit unit_sol in
-    if acc = "" then s else acc ^ "\n---------------------------\n" ^ s
-  ) matching ""
-
-let string_of_matching2 matching = 
-  BatMap.foldi (fun unit_sub (f_name, unit_sol, callees) acc ->
+  BatMap.foldi (fun target reference acc ->
     let s = 
-      string_of_unit unit_sub ^ "\n => \n" ^ string_of_unit unit_sol ^
-      "\n" ^ "-- Callee functions --\n" ^ string_of_callees callees ^
-      "\n" ^ "Solution : " ^ f_name
+      string_of_summary target ^ "\n => \n" ^ string_of_summary reference.summary ^
+      "\n" ^ "Source : " ^ reference.source
     in
     if acc = "" then s else acc ^ "\n---------------------------\n" ^ s
   ) matching ""
 
-(* Extracting patch unit throught the call graph *)
-let get_patch_unit : graph -> patch_units
+(* Get summary from the extracted call graph *)
+let rec get_incomming_edges : node_id -> graph -> calling_ctx BatSet.t
+= fun id cg ->
+  let calling_edges = BatSet.filter (fun edge -> id = edge.sink) cg.edges in
+  BatSet.fold (fun edge acc ->
+    if edge.ctx = fresh_path then
+      (* Apply tunneling *)
+      let callers_ctx = get_incomming_edges edge.src cg in
+      BatSet.union callers_ctx acc
+    else 
+      let node = get_node_by_id edge.src cg in
+      BatSet.add (node.args, edge.ctx) acc
+  ) calling_edges BatSet.empty
+
+let rec get_outgoing_edges : node_id -> graph -> calling_ctx BatSet.t
+= fun id cg ->
+  let invoked_edges = BatSet.filter (fun edge -> id = edge.src) cg.edges in
+  BatSet.fold (fun edge acc ->
+    let node = get_node_by_id edge.src cg in
+    BatSet.add (node.args, edge.ctx) acc
+  ) invoked_edges BatSet.empty
+
+let get_summaries : graph -> summary BatSet.t
 = fun cg ->
-  let nodes = get_nodes cg in
-  BatMap.foldi (fun name (id, args, typ, body) acc ->
-    let edges = get_linked_edges id cg in
-    let ctxs = BatMap.foldi (fun (s, t) ctx acc -> 
-      let caller_f = get_function_name s cg in
-      let caller_args = (fun (id, args, typ, body) -> args) (BatMap.find caller_f nodes) in 
-      let calling_ctxs = BatSet.map (fun (l, path) -> ((caller_f, caller_args), path)) ctx in
-      BatSet.union calling_ctxs acc
-    ) edges BatSet.empty
-    in
-    BatSet.add (name, args, typ, ctxs, body) acc
-  ) nodes BatSet.empty
+  BatSet.fold (fun node acc ->
+    let summary = {
+      node = node;
+      incomming = get_incomming_edges node.id cg;
+      outgoing = get_outgoing_edges node.id cg
+    } in
+    BatSet.add summary acc
+  ) cg.nodes BatSet.empty
+
+(* Get reference from the extracted call graph *)
+let rec get_usecase_exp : id -> lexp list -> lexp -> lexp BatSet.t 
+= fun target prev (l, exp) ->
+  match exp with
+  | EVar x -> 
+    if x = target then 
+      let usecase = List.fold_left (fun acc e -> (0, EApp (acc, e))) (l, exp) prev in
+      BatSet.singleton usecase
+    else BatSet.empty
+  | EApp (e1, e2) -> 
+    let es1 = get_usecase_exp target (e2::prev) e1 in
+    let es2 = get_usecase_exp target prev e2 in
+    BatSet.union es1 es2
+  | EUnit | Const _ | TRUE | FALSE | String _ -> BatSet.empty
+  | EFun (_, e) | ERef e | EDref e | Raise e | MINUS e | NOT e -> get_usecase_exp target prev e
+  | ADD (e1, e2) | SUB (e1, e2) | MUL (e1, e2) | DIV (e1, e2) | MOD (e1, e2) 
+  | OR (e1, e2) | AND (e1, e2) | LESS (e1, e2) | LESSEQ (e1, e2) | LARGER (e1, e2) | LARGEREQ (e1, e2) 
+  | EQUAL (e1, e2) | NOTEQ (e1, e2) | DOUBLECOLON (e1, e2) | AT (e1, e2) | STRCON (e1, e2)  
+  | EAssign (e1, e2) | ELet (_, _, _, _, e1, e2) ->
+    let es1 = get_usecase_exp target prev e1 in
+    let es2 = get_usecase_exp target prev e2 in
+    BatSet.union es1 es2
+  | EList es | ETuple es | ECtor (_, es) -> List.fold_left (fun acc e -> 
+      let es = get_usecase_exp target prev e in
+      BatSet.union es acc 
+    ) BatSet.empty es
+  | IF (e1, e2, e3) -> 
+    let es1 = get_usecase_exp target prev e1 in
+    let es2 = get_usecase_exp target prev e2 in
+    let es3 = get_usecase_exp target prev e3 in
+    BatSet.union es1 (BatSet.union es2 es3)
+  | EMatch (e, bs) -> List.fold_left (fun acc (p, e) ->
+      BatSet.union acc (get_usecase_exp target prev e)
+    ) (get_usecase_exp target prev e) bs 
+  | EBlock (is_rec, ds, e) -> List.fold_left (fun acc (_, _, _, _ , e) ->
+      BatSet.union acc (get_usecase_exp target prev e)
+    ) (get_usecase_exp target prev e) ds
+  | _ -> raise (Failure ("Call template : invalid exp (" ^ Print.exp_to_string (l, exp)))
+
+let get_usecase : summary -> graph -> lexp BatSet.t
+= fun summary cg ->
+  let target_node = summary.node in
+  let nodes = BatSet.filter (fun node -> 
+    BatSet.exists (fun edge -> edge.src = node.id && edge.sink = target_node.id) cg.edges
+  ) cg.nodes in
+  BatSet.fold (fun node acc ->
+    BatSet.union acc (get_usecase_exp target_node.name [] node.body)
+  ) nodes BatSet.empty 
+
+let get_references : string -> graph -> reference BatSet.t
+= fun source cg ->
+  BatSet.fold (fun summary acc ->
+    let referece = { source = source; summary = summary; usecase = get_usecase summary cg } in
+    BatSet.add referece acc
+  ) (get_summaries cg) BatSet.empty
 
 (* Compute syntactic difference *)
 let rec match_pat : pat -> pat -> bool
@@ -161,214 +194,88 @@ let rec edit_distance : lexp -> lexp -> int
   (* Syntatically different *)
   | _ -> exp_size exp1 + exp_size exp2
 
-let edit_distance_unit : patch_unit -> patch_unit -> int
-= fun unit1 unit2 -> edit_distance (get_body unit1) (get_body unit2)
-
 (* Path similarity *)
-let rec arg_to_path : arg -> path
-= fun arg ->
-  match arg with
-  | ArgUnder typ -> Symbol (fresh_symbol (), typ)
-  | ArgOne (x, typ) -> Var (x, typ)
-  | ArgTuple args -> Tuple (List.map arg_to_path args)
-
 let rec match_arg : arg -> arg -> bool
 = fun arg1 arg2 ->
   match arg1, arg2 with
   | ArgUnder typ1, ArgUnder typ2 | ArgUnder typ1, ArgOne (_, typ2) 
-  | ArgOne (_, typ1), ArgUnder typ2 | ArgOne (_, typ1), ArgOne (_, typ2) -> 
-    Type.check_typs typ1 typ2 
+  | ArgOne (_, typ1), ArgUnder typ2 | ArgOne (_, typ1), ArgOne (_, typ2) -> check_typs typ1 typ2 
   | ArgTuple args1, ArgTuple args2 -> (try List.for_all2 match_arg args1 args2 with _ -> false)
   | _ -> false
 
-let gen_vc : (arg list * path) -> (arg list * path) -> path
+let verify_ctx : calling_ctx -> calling_ctx -> bool
 = fun (args_sub, path_sub) (args_sol, path_sol) ->
   try
-    List.fold_left2 (fun vc arg_sub arg_sol ->
+    let vc = List.fold_left2 (fun vc arg_sub arg_sol ->
+      (* TODO : Fix solver engine and remove checking *)
       if match_arg arg_sub arg_sol then
         let new_path = EQop (Eq, arg_to_path arg_sub, arg_to_path arg_sol) in
         Bop (And, new_path, vc)
       else Bool false 
-    ) (Bop (And, path_sub, path_sol)) args_sub args_sol 
-  with _ -> Bool false 
+    ) (Bop (And, path_sub, path_sol)) args_sub args_sol in
+    Path_score.check_path !ctor_table vc
+  with _ -> false 
 
-let rec compute_path_score : calling_ctx BatSet.t -> calling_ctx BatSet.t -> int
+let rec compute_path_score : calling_ctx BatSet.t -> calling_ctx BatSet.t -> float
 = fun ctxs_sub ctxs_sol ->
-  (* Compute path matching score*)
-  BatSet.fold (fun ((caller_sub, args_sub), path_sub) acc ->
-    let is_match = BatSet.exists (fun ((caller_sol, args_sol), path_sol) -> 
-      let vc = gen_vc (args_sub, path_sub) (args_sol, path_sol) in
-      (*
-      let _ = 
-        print_endline ("Sub Ctx :" ^ string_of_ctx ((caller_sub, args_sub), path_sub));
-        print_endline ("Sol Ctx " ^ string_of_ctx ((caller_sol, args_sol), path_sol));
-      in
-      *)
-      check_path !ctor_table vc
-    ) ctxs_sol in
-    if is_match then acc+1 else acc-1
-  ) ctxs_sub 0
+  let total_num = (float_of_int (BatSet.cardinal ctxs_sub)) *. (float_of_int (BatSet.cardinal ctxs_sol)) in
+  let matching_num = BatSet.fold (fun ctx_sub acc ->
+    if BatSet.exists (fun ctx_sol -> verify_ctx ctx_sub ctx_sol) ctxs_sol then acc +. 1. else acc -. 1.
+  ) ctxs_sub 0. in
+  matching_num /. total_num
 
-(* Call template extraction *)
-let rec init_call_template : lexp -> id * id -> lexp
-= fun (l, exp) (f_sub, f_sol) ->
-  let l = 0 in
-  match exp with
-  | EUnit | Const _ | TRUE | FALSE | String _ -> (l, exp)
-  | EVar x -> if x = f_sol then (l, EVar f_sub) else dummy_hole ()
-  | EFun (arg, e) -> (l, EFun (arg, init_call_template e (f_sub, f_sol)))
-  | ERef e | EDref e | Raise e | MINUS e | NOT e -> (l, update_unary exp (init_call_template e (f_sub, f_sol)))
-  | ADD (e1, e2) | SUB (e1, e2) | MUL (e1, e2) | DIV (e1, e2) | MOD (e1, e2) 
-  | OR (e1, e2) | AND (e1, e2) | LESS (e1, e2) | LESSEQ (e1, e2) | LARGER (e1, e2) | LARGEREQ (e1, e2) 
-  | EQUAL (e1, e2) | NOTEQ (e1, e2) | DOUBLECOLON (e1, e2) | AT (e1, e2) | STRCON (e1, e2) | EApp (e1, e2) 
-  | EAssign (e1, e2) -> (l, update_binary exp (init_call_template e1 (f_sub, f_sol), init_call_template e2 (f_sub, f_sol)))
-  | EList es -> (l, EList (List.map (fun e -> init_call_template e (f_sub, f_sol)) es))
-  | ETuple es -> (l, ETuple (List.map (fun e -> init_call_template e (f_sub, f_sol)) es))
-  | ECtor (x, es) -> (l, ECtor (x, List.map (fun e -> init_call_template e (f_sub, f_sol)) es))
-  | IF (e1, e2, e3) -> (l, IF (init_call_template e1 (f_sub, f_sol), init_call_template e2 (f_sub, f_sol), init_call_template e3 (f_sub, f_sol)))
-  | EMatch (e, bs) -> 
-    let bs = List.map (fun (p, e) -> (p, init_call_template e (f_sub, f_sol))) bs in
-    (l, EMatch (init_call_template e (f_sub, f_sol), bs))
-  | ELet (f, is_rec, args, typ, e1, e2) -> (l, ELet (f, is_rec, args, typ, init_call_template e1 (f_sub, f_sol), init_call_template e2 (f_sub, f_sol)))
-  | EBlock (is_rec, ds, e) -> 
-    let ds = List.map (fun (f, is_rec, args, typ, e) -> (f, is_rec, args, typ, init_call_template e (f_sub, f_sol))) ds in
-    (l, EBlock (is_rec, ds, init_call_template e (f_sub, f_sol)))
-  | _ -> raise (Failure ("Call template initialization (" ^ Print.exp_to_string (l, exp)))
-
-let rec get_call_template_exp : lexp -> label -> lexp list -> lexp BatSet.t 
-= fun (l, exp) target prev ->
-  if l = target then 
-    BatSet.singleton (List.fold_left (fun acc e -> (0, EApp (acc, e))) (l, exp) prev)
-  else 
-    match exp with
-    | EApp (e1, e2) -> 
-      let es1 = get_call_template_exp e1 target (e2::prev) in
-      let es2 = get_call_template_exp e2 target prev in
-      BatSet.union es1 es2
-    | EUnit | Const _ | TRUE | FALSE | String _ | EVar _ -> BatSet.empty
-    | EFun (_, e) | ERef e | EDref e | Raise e | MINUS e | NOT e -> get_call_template_exp e target prev 
-    | ADD (e1, e2) | SUB (e1, e2) | MUL (e1, e2) | DIV (e1, e2) | MOD (e1, e2) 
-    | OR (e1, e2) | AND (e1, e2) | LESS (e1, e2) | LESSEQ (e1, e2) | LARGER (e1, e2) | LARGEREQ (e1, e2) 
-    | EQUAL (e1, e2) | NOTEQ (e1, e2) | DOUBLECOLON (e1, e2) | AT (e1, e2) | STRCON (e1, e2)  
-    | EAssign (e1, e2) | ELet (_, _, _, _, e1, e2) ->
-      let es1 = get_call_template_exp e1 target prev in
-      let es2 = get_call_template_exp e2 target prev in
-      BatSet.union es1 es2
-    | EList es | ETuple es | ECtor (_, es) -> List.fold_left (fun acc e -> 
-        let es = get_call_template_exp e target prev in
-        BatSet.union es acc 
-      ) BatSet.empty es
-    | IF (e1, e2, e3) -> 
-      let es1 = get_call_template_exp e1 target prev in
-      let es2 = get_call_template_exp e2 target prev in
-      let es3 = get_call_template_exp e3 target prev in
-      BatSet.union es1 (BatSet.union es2 es3)
-    | EMatch (e, bs) -> List.fold_left (fun acc (p, e) ->
-        BatSet.union acc (get_call_template_exp e target prev)
-      ) (get_call_template_exp e target prev) bs 
-    | EBlock (is_rec, ds, e) -> List.fold_left (fun acc (_, _, _, _ , e) ->
-        BatSet.union acc (get_call_template_exp e target prev)
-      ) (get_call_template_exp e target prev) ds
-    | _ -> raise (Failure ("Call template : invalid exp (" ^ Print.exp_to_string (l, exp)))
-
-let get_call_template : graph -> id * id -> lexp BatSet.t
-= fun cg (f_sub, f_sol) ->
-  let nodes = get_nodes cg in
-  let edges = get_edges cg in
-  let (t, _, _, _) = BatMap.find f_sol nodes in
-  let caller_ids = get_caller t cg in 
-  BatSet.fold (fun s acc ->
-    let (_, _, _, body) = BatMap.find (get_function_name s cg) nodes in
-    let ctxs = BatMap.find (s, t) edges in 
-    BatSet.fold (fun (l, path) acc -> 
-      let call_temps = get_call_template_exp body l [] in
-      let call_temps = BatSet.map (fun e -> init_call_template e (f_sub, f_sol)) call_temps in
-      BatSet.union acc call_temps
-    ) ctxs acc
-  ) caller_ids BatSet.empty 
-  
-(* Compute matching result *)
-let rec find_local_matching2 : patch_units -> (id * graph) -> unit_matching2
-= fun units_sub (f_name, cg_sol) ->
-  let units_sol = get_patch_unit cg_sol in
-  (* print_header ("CallGraph of (" ^ f_name ^ ")"); CallGraph.print_graph cg_sol; *)
-  (* Find a set of (f1, f2), a matching of two functions *)
-  let local_matching = BatSet.fold (fun unit_sub matching -> 
-    let typ_sub = get_func_typ unit_sub in
-    (* Find a solution functions whose type is the same with the type of the target function *)
-    let candidates = BatSet.filter (fun unit_sol -> check_typs typ_sub (get_func_typ unit_sol)) units_sol in
-    (* Pick solution functions whose path are the most simiar with the target function *)
-    let (_, candidates) = BatSet.fold (fun unit_sol (score, candidates) ->
-      let score' = compute_path_score (get_ctxs unit_sub) (get_ctxs unit_sol) in
-      (* Collecting the functions with the highest score *)
-      if score' = score then (score', BatSet.add unit_sol candidates)
-      else if score' > score then (score', BatSet.singleton unit_sol)
+(* Compute (local)matching result *)
+let rec find_matching : summary BatSet.t -> reference BatSet.t -> matching
+= fun summaries references ->
+  BatSet.fold (fun summary matching -> 
+    (* Find a solution functions whose type is the same with the type of the submission *)
+    let candidates = BatSet.filter (fun reference -> 
+      check_typs summary.node.typ reference.summary.node.typ
+    ) references in
+    (* Select solution functions with the minimal semantic distance *)
+    let (_, candidates) = BatSet.fold (fun reference (score, candidates) ->
+      let score' = compute_path_score summary.incomming reference.summary.incomming in
+      if score' > score then (score', BatSet.singleton reference)
+      else if score' = score then (score, BatSet.add reference candidates)
       else (score, candidates)
-    ) candidates (-1, BatSet.empty) in
+    ) candidates (0., BatSet.empty) in
     if BatSet.is_empty candidates then
       (* If there are no matched solutions, do not change the matching relation *)
       matching
     else
       (* Pick the most similar ones in candidates *)
       let (candidate, remains) = BatSet.pop candidates in
-      let unit_sol = BatSet.fold (fun cur acc -> 
-        if edit_distance_unit unit_sub cur < edit_distance_unit unit_sub acc then cur else acc 
+      let reference = BatSet.fold (fun cur acc -> 
+        let d1 = edit_distance summary.node.body cur.summary.node.body in
+        let d2 = edit_distance summary.node.body acc.summary.node.body in
+        if d1 < d2 then cur else acc 
       ) remains candidate in
-      let call_temps = get_call_template cg_sol (get_id unit_sub, get_id unit_sol) in
-      BatMap.add unit_sub (f_name, unit_sol, BatSet.empty, call_temps) matching
-  ) units_sub empty_matching in
-  (* Update calling information of unmatched functions *)
-  let unmatched_funcs = BatSet.filter (fun func -> 
-    not (BatMap.exists (fun unit_sub (f_name, unit_sol, callees, call_temps) -> 
-      (get_id func) = (get_id unit_sol)
-    ) local_matching)
-  ) units_sol in 
-  BatSet.fold (fun func matching ->
-    let callers = BatSet.map (fun ((caller_id, _), _) -> caller_id) (get_ctxs func) in
-    BatMap.map (fun (f_name, unit_sol, callees, call_temps) -> 
-      if BatSet.mem (get_id unit_sol) callers then 
-        (f_name, unit_sol, BatSet.add func callees, call_temps)
-      else 
-        (f_name, unit_sol, callees, call_temps)
-    ) matching
-  ) unmatched_funcs local_matching
-
+      BatMap.add summary reference matching
+  ) summaries empty_matching
+  
 (* TODO : need more fine graining *)
-let rec update_matching2 : unit_matching2 -> unit_matching2 -> unit_matching2
-= fun global_matching local_matching ->
-  BatMap.foldi (fun unit_sub (f_name, unit_sol, callees, call_temps) global ->
-    if BatMap.mem unit_sub global then
-      let (f_name', unit_sol', callee', call_temps') = BatMap.find unit_sub global in
-      (* Compare path similarity *)
-      let p1 = compute_path_score (get_ctxs unit_sub) (get_ctxs unit_sol) in
-      let p2 = compute_path_score (get_ctxs unit_sub) (get_ctxs unit_sol') in
-      if p1 > p2 && false then 
-        BatMap.add unit_sub (f_name, unit_sol, callees, call_temps) global 
+let rec update_matching : matching -> matching -> matching
+= fun global local ->
+  BatMap.foldi (fun summary reference global ->
+    if BatMap.mem summary global then
+      let reference' = BatMap.find summary global in
+      (* Compare semantic distance *)
+      let p1 = compute_path_score summary.incomming reference.summary.incomming in
+      let p2 = compute_path_score summary.incomming reference'.summary.incomming in
+      if p1 > p2 then BatMap.add summary reference global 
       else 
         (* Compare syntactic distance  *)
-        let d1 = edit_distance_unit unit_sub unit_sol in
-        let d2 = edit_distance_unit unit_sub unit_sol' in
-        if d1 < d2 then BatMap.add unit_sub (f_name, unit_sol, callees, call_temps) global else global
-    else 
-      BatMap.add unit_sub (f_name, unit_sol, callees, call_temps) global
-  ) local_matching global_matching
+        let d1 = edit_distance summary.node.body reference.summary.node.body in
+        let d2 = edit_distance summary.node.body reference'.summary.node.body in
+        if d1 < d2 then BatMap.add summary reference global else global
+    else BatMap.add summary reference global
+  ) local global
 
-let select_solutions2 : prog -> (string * graph) list -> (t2 * call_templates)
+let select_solutions : prog -> (string * graph) list -> matching
 = fun pgm cg_sols -> 
-  (* compute patch unit of submission *)
-  let cg_sub = extract_graph pgm in
-  let units_sub = get_patch_unit cg_sub in
-  (* print_header ("CallGraph of Submission"); CallGraph.print_graph cg_sub; *)
-  (* print_endline (string_of_set string_of_unit units_sub) *)
-  let _ = ctor_table := CtorTable.gen_ctor_table BatMap.empty pgm in
-  let matching_result = List.fold_left (fun acc (f_name, cg_sol) ->
-    (* print_endline ("Matching with (" ^ f_name ^ ")"); *)
-    (* Compute matching based with the current solution *)
-    let local_matching = find_local_matching2 units_sub (f_name, cg_sol) in
-    (* Update global matching result *)
-    let r = update_matching2 acc local_matching in
-    r
-  ) empty_matching cg_sols in
-  BatMap.foldi (fun unit_sub (f_name, unit_sol, callees, call_temps) (matching, c_temps) ->
-    (BatMap.add unit_sub (f_name, unit_sol, callees) matching, BatMap.add (get_id unit_sub) call_temps c_temps)
-  ) matching_result (BatMap.empty, BatMap.empty)
+  let summaries = get_summaries (extract_graph pgm) in
+  let _ = ctor_table := Path_score.CtorTable.gen_ctor_table BatMap.empty pgm in
+  List.fold_left (fun acc (f_name, cg_sol) ->
+    let matching = find_matching summaries (get_references f_name cg_sol) in
+    update_matching acc matching
+  ) empty_matching cg_sols 
