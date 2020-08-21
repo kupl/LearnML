@@ -5,15 +5,10 @@ open Symbol_lang
 (******** Format **********)
 let link_by_sep sep s acc = if acc = "" then s else acc ^ sep ^ s
 
-let string_of_list ?(first="[") ?(last="]") ?(sep=",") : ('a -> string) -> ('a list) -> string
-= fun string_of_v list ->
-  let add_string_of_v v acc = link_by_sep sep (string_of_v v) acc in
-  first ^ list_fold add_string_of_v list "" ^ last
-
-let string_of_array ?(first="{") ?(last="}") ?(sep=",") : ('a -> string) -> ('a list) -> string
-= fun string_of_v list ->
-  let add_string_of_v v acc = link_by_sep sep (string_of_v v) acc in
-  first ^ list_fold add_string_of_v list "" ^ last
+let string_of_list ?(first="[") ?(last="]") ?(sep=";") : ('a -> string) -> ('a list) -> string
+= fun string_of_v lst -> 
+  let add_string_of_v acc v = link_by_sep sep (string_of_v v) acc in
+  first ^ List.fold_left add_string_of_v "" lst ^ last
 
 let string_of_set ?(first="{") ?(last="}") ?(sep=",") : ('a -> string) -> ('a BatSet.t) -> string
 = fun string_of_v set ->
@@ -24,7 +19,8 @@ let string_of_map ?(first="{") ?(last="}") ?(sep=",\n") : ('a -> string) -> ('b 
 = fun string_of_k string_of_v map ->
   let add_string_of_k_v k v acc =
     let str = string_of_k k ^ " -> " ^ string_of_v v in
-    link_by_sep sep str acc in
+    link_by_sep sep str acc 
+  in
   if BatMap.is_empty map then "empty"
   else first ^ BatMap.foldi add_string_of_k_v map "" ^ last
 

@@ -24,21 +24,6 @@ type typ =
   | TRef of typ
   | TExn
 
-let rec is_fun : typ -> bool
-= fun typ ->
-  match typ with
-  | TArr _ -> true
-  | TList typ -> is_fun typ
-  | TTuple ts -> List.exists is_fun ts
-  | TCtor (tname, ts) -> (is_fun tname) || (List.exists is_fun ts)
-  | _ -> false
-
-let rec get_output_typ : typ -> typ
-= fun typ ->
-  match typ with
-  | TArr (t1, t2) -> get_output_typ t2
-  | _ -> typ 
-
 type ctor = id * typ list
 (* Pattern *)
 type pat = 
@@ -238,6 +223,30 @@ let grading_pgm : prog ref = ref []
 (* generate a fresh type variable *)
 let tvar_num = ref 0
 let fresh_tvar () = (tvar_num := !tvar_num + 1; (TVar ("#" ^ string_of_int !tvar_num)))
+
+let rec is_fun : typ -> bool
+= fun typ ->
+  match typ with
+  | TArr _ -> true
+  | TList typ -> is_fun typ
+  | TTuple ts -> List.exists is_fun ts
+  | TCtor (tname, ts) -> (is_fun tname) || (List.exists is_fun ts)
+  | _ -> false
+
+let rec get_func_typ : arg list -> typ -> typ
+= fun args typ ->
+  let rec arg_to_typ arg =
+    match arg with
+    | ArgUnder typ | ArgOne (_, typ) -> typ 
+    | ArgTuple args -> TTuple (List.map arg_to_typ args)
+  in
+  List.fold_left (fun acc arg -> TArr (arg_to_typ arg, acc)) typ (List.rev args)
+
+let rec get_output_typ : typ -> typ
+= fun typ ->
+  match typ with
+  | TArr (t1, t2) -> get_output_typ t2
+  | _ -> typ 
 
 (* function application *)
 let rec appify : lexp -> lexp list -> lexp

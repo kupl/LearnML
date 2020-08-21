@@ -22,8 +22,6 @@ type reference = {
 (* Matching *)
 type matching = (summary, reference) BatMap.t
 
-type call_templates = (id, lexp BatSet.t) BatMap.t
-
 let empty_matching = BatMap.empty
 let ctor_table = ref BatMap.empty
 (* pp *)
@@ -32,14 +30,16 @@ let string_of_ctx (args, path) = "[" ^ (args_to_string args "") ^ "]:" ^ string_
 let string_of_summary summary = 
   string_of_node summary.node ^ "\n" ^
   "Incomming : " ^ string_of_set ~sep:",\n" string_of_ctx summary.incomming ^ "\n" ^
-  "Outgoing : " ^ string_of_set ~sep:",\n" string_of_ctx summary.outgoing ^ "\n" 
+  "Outgoing : " ^ string_of_set ~sep:",\n" string_of_ctx summary.outgoing 
+
+let string_of_reference reference = 
+  string_of_summary reference.summary ^ "\n" ^
+  "Usecase : " ^ string_of_set exp_to_string reference.usecase ^ "\n" ^
+  "Source file : " ^ reference.source
 
 let string_of_matching matching = 
   BatMap.foldi (fun target reference acc ->
-    let s = 
-      string_of_summary target ^ "\n => \n" ^ string_of_summary reference.summary ^
-      "\n" ^ "Source : " ^ reference.source
-    in
+    let s = string_of_summary target ^ "\n => \n" ^ string_of_summary reference.summary in
     if acc = "" then s else acc ^ "\n---------------------------\n" ^ s
   ) matching ""
 
@@ -77,12 +77,32 @@ let get_summaries : graph -> summary BatSet.t
   ) cg.nodes BatSet.empty
 
 (* Get reference from the extracted call graph *)
+let rec replace_usecase : id -> lexp -> lexp
+= fun target (l, exp) ->
+  match exp with
+  | EVar x -> if x = target then (l, EVar x) else (l, gen_hole ())
+  | EUnit | Const _ | TRUE | FALSE | String _ -> (l, exp)
+  | EFun (arg, e) -> (l, EFun (arg, replace_usecase target e))
+  | ERef e | EDref e | Raise e | MINUS e | NOT e -> (l, update_unary exp (replace_usecase target e))
+  | ADD (e1, e2) | SUB (e1, e2) | MUL (e1, e2) | DIV (e1, e2) | MOD (e1, e2) 
+  | OR (e1, e2) | AND (e1, e2) | LESS (e1, e2) | LESSEQ (e1, e2) | LARGER (e1, e2) | LARGEREQ (e1, e2) 
+  | EQUAL (e1, e2) | NOTEQ (e1, e2) | DOUBLECOLON (e1, e2) | AT (e1, e2) | STRCON (e1, e2) | EApp (e1, e2) 
+  | EAssign (e1, e2) -> (l, update_binary exp (replace_usecase target e1, replace_usecase target e2))
+  | EList es -> (l, EList (List.map (fun e -> replace_usecase target e) es))
+  | ETuple es -> (l, ETuple (List.map (fun e -> replace_usecase target e) es))
+  | ECtor (x, es) -> (l, ECtor (x, List.map (fun e -> replace_usecase target e) es))
+  | IF (e1, e2, e3) -> (l, IF (replace_usecase target e1, replace_usecase target e2, replace_usecase target e3))
+  | EMatch (e, bs) -> (l, EMatch (replace_usecase target e, List.map (fun (p, e) -> (p, replace_usecase target e)) bs))
+  | ELet (f, is_rec, args, typ, e1, e2) -> (l, ELet (f, is_rec, args, typ, replace_usecase target e1, replace_usecase target e2))
+  | EBlock (is_rec, ds, e) -> (l, EBlock (is_rec, List.map (fun (f, is_rec, args, typ, e) -> (f, is_rec, args, typ, replace_usecase target e)) ds, replace_usecase target e))
+  | _ -> raise (Failure ("Usecase : invalid exp (" ^ Print.exp_to_string (l, exp)))
+
 let rec get_usecase_exp : id -> lexp list -> lexp -> lexp BatSet.t 
 = fun target prev (l, exp) ->
   match exp with
   | EVar x -> 
     if x = target then 
-      let usecase = List.fold_left (fun acc e -> (0, EApp (acc, e))) (l, exp) prev in
+      let usecase = List.fold_left (fun acc e -> (0, EApp (acc, replace_usecase target e))) (l, exp) prev in
       BatSet.singleton usecase
     else BatSet.empty
   | EApp (e1, e2) -> 
@@ -222,12 +242,16 @@ let rec compute_path_score : calling_ctx BatSet.t -> calling_ctx BatSet.t -> flo
   let matching_num = BatSet.fold (fun ctx_sub acc ->
     if BatSet.exists (fun ctx_sol -> verify_ctx ctx_sub ctx_sol) ctxs_sol then acc +. 1. else acc -. 1.
   ) ctxs_sub 0. in
-  matching_num /. total_num
+  let score = matching_num /. total_num in
+  print_endline (string_of_float score);
+  score
 
 (* Compute (local)matching result *)
 let rec find_matching : summary BatSet.t -> reference BatSet.t -> matching
 = fun summaries references ->
   BatSet.fold (fun summary matching -> 
+    print_endline ("Here");
+    print_endline (string_of_summary summary);
     (* Find a solution functions whose type is the same with the type of the submission *)
     let candidates = BatSet.filter (fun reference -> 
       check_typs summary.node.typ reference.summary.node.typ

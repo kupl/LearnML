@@ -3,7 +3,6 @@ open Util
 open Print
 open Preprocessor
 open Repair_template
-open Selector
 
 module Workset = struct
   (* work = (applied, not applied) *)

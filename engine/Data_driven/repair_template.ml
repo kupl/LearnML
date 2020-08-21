@@ -13,6 +13,7 @@ and exp_templates = exp_template BatSet.t
 type required_function = (id, bool * arg list * typ * lexp * id BatSet.t) BatMap.t (* function id -> func info * caller functions *)
 
 type repair_template = exp_template * required_function
+type call_templates = (id, lexp BatSet.t) BatMap.t
 
 let merge_templates : repair_template BatSet.t -> exp_templates * required_function
 = fun temps -> 

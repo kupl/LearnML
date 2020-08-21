@@ -252,8 +252,4 @@ let normalize_all : prog -> t
     |> preprocess
   in
   let t = List.fold_left (fun t decl -> normalize_decl t decl) BatMap.empty pgm' in
-  let _ = 
-    Print.print_header "Norm";
-    print t 
-  in
   if BatMap.is_empty t then raise (Failure "Empty_norm") else t

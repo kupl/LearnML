@@ -5,27 +5,32 @@ open Util
 (* Compute a minimal function mathcing of two normalized programs *)
 (******************************************************************)
 
-type matching_info = ((id * lexp) * (id * lexp)) BatSet.t * (id * lexp) BatSet.t * int
+type matching_info = ((id * (lexp * typ)) * (id * (lexp * typ))) BatSet.t * (id * (lexp * typ)) BatSet.t * int
 
-(* 'a list1 -> 'a list2 -> comp1 -> comp2 -> minum matching * unmatched elem * score *)
-let rec find_minimum_combination : 'a list -> 'a list -> ('a -> int) -> ('a -> 'a -> int) -> ('a * 'a) list * 'a list * int
+(* ?constraint -> 'a list1 -> 'a list2 -> comp1 -> comp2 -> minum matching * unmatched elem * score *)
+let rec find_minimum_combination ?(const = (fun e1 e2 -> true)) : 'a list -> 'a list -> ('a -> int) -> ('a -> 'a -> int) -> ('a * 'a) list * 'a list * int
 = fun lst1 lst2 comp1 comp2 ->
-  (* Need optimization *)
+  (* Need optimization & generalization *)
   let (l1, l2) = (List.length lst1, List.length lst2) in
   if l1 <= l2 then
     List.fold_left (fun (matches, unmatches, cost) cand -> 
-      let remain = list_sub lst2 cand in
-      let cost' = (List.fold_left2 (fun acc e1 e2 -> acc + comp2 e1 e2) 0 lst1 cand) + (List.fold_left (fun acc e -> comp1 e) 0 remain) in
-      if cost' < cost || cost < 0 then (List.map2 (fun e1 e2 -> (e1, e2)) lst1 cand, remain, cost') else (matches, unmatches, cost)
-    ) ([], [], -1) (list_permutationk lst2 l1)
+      if (List.for_all2 const lst1 cand) then
+        let remain = list_sub lst2 cand in
+        let cost' = (List.fold_left2 (fun acc e1 e2 -> acc + comp2 e1 e2) 0 lst1 cand) + (List.fold_left (fun acc e -> comp1 e) 0 remain) in
+        if cost' < cost || matches = [] then (List.map2 (fun e1 e2 -> (e1, e2)) lst1 cand, remain, cost') else (matches, unmatches, cost)
+      else 
+        (matches, unmatches, cost)
+    ) ([], [], 0) (list_permutationk lst2 l1)
   else
     (* Redundant *)
-    List.fold_left (fun (matches, unmatches, cost) cand -> 
-      let remain = list_sub lst1 cand in
-      let cost' = (List.fold_left2 (fun acc e1 e2 -> acc + comp2 e1 e2) 0 lst2 cand) + (List.fold_left (fun acc e -> comp1 e) 0 remain) in
-      if cost' < cost || cost < 0 then (List.map2 (fun e1 e2 -> (e1, e2)) cand lst2, remain, cost') else (matches, unmatches, cost)
-    ) ([], [], -1) (list_permutationk lst1 l2)
-
+    List.fold_left (fun (matches, unmatches, cost) cand ->
+      if (List.for_all2 const lst2 cand) then
+        let remain = list_sub lst1 cand in
+        let cost' = (List.fold_left2 (fun acc e1 e2 -> acc + comp2 e1 e2) 0 lst2 cand) + (List.fold_left (fun acc e -> comp1 e) 0 remain) in
+        if cost' < cost || matches = [] then (List.map2 (fun e1 e2 -> (e1, e2)) cand lst2, remain, cost') else (matches, unmatches, cost)
+      else 
+        (matches, unmatches, cost)
+    ) ([], [], 0) (list_permutationk lst1 l2)
 
 let rec find_all_combination : 'a list -> 'a list -> ('a -> int) -> ('a -> 'a -> int) -> (('a * 'a) list * 'a list * int) list
 = fun lst1 lst2 comp1 comp2 ->
@@ -46,20 +51,6 @@ let rec find_all_combination : 'a list -> 'a list -> ('a -> int) -> ('a -> 'a ->
 (* Compute syntatic difference : work with the same strategy of template extraction *)
 let min : int -> int -> int
 = fun n1 n2 -> if n1 < n2 then n1 else n2
-
-let rec exp_size : lexp -> int 
-= fun (l, exp) ->
-  match exp with
-  | EList es | ECtor (_, es) | ETuple es -> 1 + List.fold_left (fun acc e -> acc + exp_size e) 0 es
-  | MINUS e | NOT e | EFun (_, e) -> 1 + exp_size e
-  | ADD (e1, e2) | SUB (e1, e2) | MUL (e1, e2) | DIV (e1, e2) | MOD (e1, e2)
-  | OR (e1, e2) | AND (e1, e2) | LESS (e1, e2) | LARGER (e1, e2) | EQUAL (e1, e2) | NOTEQ (e1, e2)
-  | LESSEQ (e1, e2) | LARGEREQ (e1, e2) | AT (e1, e2) | DOUBLECOLON (e1, e2) | STRCON (e1, e2)
-  | EApp (e1, e2) | ELet (_, _, _, _, e1, e2) -> 1 + exp_size e1 + exp_size e2
-  | EBlock (_, ds, e2) -> 1 + exp_size e2 + List.fold_left (fun acc (f, is_rec, args, typ, e) -> acc + exp_size e) 0 ds
-  | EMatch (e, bs) -> 1 + exp_size e + List.fold_left (fun acc (p, e) -> acc + exp_size e) 0 bs
-  | IF (e1, e2, e3) -> 1 + exp_size e1 + exp_size e2 + exp_size e3
-  | _ -> 1
 
 (* Minimal edit distance *)
 let rec match_pat : pat -> pat -> bool
@@ -99,14 +90,8 @@ let rec edit_distance : lexp -> lexp -> int
   (* Commutative binary : compute minimal distance *)
   | ADD (e1, e2), ADD (e1', e2') | MUL (e1, e2), MUL (e1', e2') | OR (e1, e2), OR (e1', e2') | AND (e1, e2), AND (e1', e2') 
   | EQUAL (e1, e2), EQUAL (e1', e2') | NOTEQ(e1, e2), NOTEQ (e1', e2') -> 
-    (* TODO : generalized *)
     let (_, _, d) = find_minimum_combination [e1; e2] [e1'; e2'] exp_size edit_distance in 
     d
-    (*
-    let d1 = edit_distance e1 e1' + edit_distance e2 e2' in
-    let d2 = edit_distance e1 e2' + edit_distance e2 e1' in
-    let d3 = min d1 d2 in  
-    *)
   (* Noncommutative binary *)
   | SUB (e1, e2), SUB (e1', e2') | DIV (e1, e2), DIV (e1', e2') | MOD (e1, e2), MOD (e1', e2') 
   | LESS (e1, e2), LESS (e1', e2') | LARGER (e1, e2), LARGER (e1', e2') 
@@ -135,28 +120,31 @@ let rec edit_distance : lexp -> lexp -> int
   (* Syntatically different : edit dist = size of two exp *)
   | _ -> exp_size exp1 + exp_size exp2
 
-let measure_norm : (id * lexp) -> int
-= fun (f, e) -> exp_size e
+let measure_norm : (id * (lexp * typ)) -> int
+= fun (f, (e, typ)) -> exp_size e
 
-let compare_norms : (id * lexp) -> (id * lexp) -> int
-= fun (f1, e1) (f2, e2) -> edit_distance e1 e2
+let compare_norms : (id * (lexp * typ)) -> (id * (lexp * typ)) -> int
+= fun (f1, (e1, typ1)) (f2, (e2, typ2)) -> edit_distance e1 e2
+
+let constraint_norms : (id * (lexp * typ)) -> (id * (lexp * typ)) -> bool
+= fun (f1, (e1, typ1)) (f2, (e2, typ2)) -> Type.check_typs typ1 typ2
 
 let print : matching_info -> unit
 = fun (matches, unmatches, score) ->
   print_endline ("------Match Informations------");
-  BatSet.iter (fun ((f1, e1), (f2, e2)) -> 
-    let score = compare_norms (f1, e1) (f2, e2) in
+  BatSet.iter (fun ((f1, (e1, typ1)), (f2, (e2, typ2))) -> 
+    let score = compare_norms (f1, (e1, typ1)) (f2, (e2, typ2)) in
     print_endline "===========================";
-    print_endline (f1 ^ " <~> " ^ f2 ^ " : " ^ string_of_int score);
+    print_endline (f1 ^ "(" ^ Print.type_to_string typ1 ^ ")" ^ " <~> " ^ f2 ^ "(" ^ Print.type_to_string typ2 ^ ")" ^ " : " ^ string_of_int score);
     print_endline (Print.exp_to_string e1);
     print_endline "--------------------------";
     print_endline (Print.exp_to_string e2);
     print_endline "==========================="
   ) matches;
   print_endline ("------Unmatch Informations------");
-  BatSet.iter (fun (f, e) -> 
+  BatSet.iter (fun (f, (e, typ)) -> 
     print_endline "===========================";
-    print_endline (f ^ " : " ^ string_of_int (exp_size e));
+    print_endline (f ^ "(" ^ Print.type_to_string typ ^ ")" ^ " : " ^ string_of_int (exp_size e));
     print_endline (Print.exp_to_string e);
     print_endline "==========================="
   ) unmatches;
@@ -165,7 +153,7 @@ let print : matching_info -> unit
 let run : Normalizer.t -> Normalizer.t -> matching_info
 = fun t1 t2 ->
   let (t1, t2) = (BatMap.bindings t1, BatMap.bindings t2) in
-  let (matches, unmatches, score) = find_minimum_combination t1 t2 measure_norm compare_norms in
+  let (matches, unmatches, score) = find_minimum_combination ~const:constraint_norms t1 t2 measure_norm compare_norms in
   (list2set matches, list2set unmatches, score)
 
 let run2 : Normalizer.t -> Normalizer.t -> unit

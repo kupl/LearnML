@@ -55,7 +55,7 @@ module Z3_Translator = struct
   let counter = ref 0
   let new_counter () = (counter := !counter + 1); !counter
   (* context => if the formula is too hard to solve in 0.05 sec, fail to find a counter example *)
-  let new_ctx () = mk_context [("timeout", "50")]
+  let new_ctx () = mk_context [("timeout", "50"); ]
 
   (* sort *)
   let int_sort ctx = Z3.Arithmetic.Integer.mk_sort ctx
@@ -82,7 +82,7 @@ module Z3_Translator = struct
         fun acc sort -> if acc = "" then Z3.Sort.to_string sort else acc ^ "," ^ Z3.Sort.to_string sort
       ) "" sorts) in
       tuple_sort ctx tuple_name sorts
-    | TVar tx -> Z3.Sort.mk_uninterpreted_s ctx (tx^"(poly)") (* Polymorphic *)
+    | TVar tx -> Z3.Sort.mk_uninterpreted_s ctx "poly" (* Polymorphic *)
     | _ -> raise (Failure ("Invalid sort : " ^ Print.type_to_string typ)) 
 
   let rec has_ctor_name : typ -> string -> bool
@@ -391,11 +391,6 @@ end
 
 let check_path : CtorTable.t -> path -> bool
 = fun ctor_table path ->
-  (*
-  let _ =
-    Print.print_header "path"; print_endline (string_of_path path);
-  in
-  *)
   let ctx = Z3_Translator.new_ctx () in
   let ctor_map = Z3_Translator.init_ctor_map ctx ctor_table BatMap.empty in
   let ctor_map = Z3_Translator.apply_recursive_datatype ctx ctor_table ctor_map in

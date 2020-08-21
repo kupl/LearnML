@@ -81,9 +81,9 @@ let read_testcases : string -> examples
 let read_external : string -> prog 
 = fun filename -> if Sys.file_exists filename then snd (parse_file filename) else []
 
-(* Preprocessing *)
+(* Read / Write preprosecessed data *)
 let get_file_path : string -> string
 = fun filename ->
-  let start_idx = Str.search_backward (Str.regexp "benchmarks_correct") filename (String.length filename) in
   let end_idx = Str.search_forward (Str.regexp "\.ml$") filename 0 in
-  String.sub filename (String.length "filename") end_idx
+  Str.replace_first (Str.regexp "../benchmarks_correct") "" (String.sub filename 0 end_idx)
+

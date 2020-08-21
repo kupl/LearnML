@@ -90,11 +90,7 @@ let generate_testcases : prog -> prog -> examples
   match test_gen_result with
   | None -> 
     (* Test-case generation fail *)
-    let _ = 
-      print_endline ("Correct Code");
-      print_endline ("Num of Inputs : " ^ string_of_int (!TestGenerator.count));
-      print_endline ("Num of Crashes : " ^ string_of_int (!TestGenerator.num_of_crash))
-    in
+    let _ = print_endline ("Correct Code") in
     [] 
   | Some ex ->
     let examples = ex::[] in
@@ -102,8 +98,6 @@ let generate_testcases : prog -> prog -> examples
       print_header "original"; print_pgm submission;
       print_header "Generated examples"; print_examples examples;
       print_endline ("Counter-example Time : " ^ string_of_float test_time);
-      print_endline ("Num of Inputs : " ^ string_of_int (!TestGenerator.count));
-      print_endline ("Num of Crashes : " ^ string_of_int (!TestGenerator.num_of_crash))
     in
     [ex]
 
@@ -117,16 +111,11 @@ let fix_without_testcases : prog -> prog -> unit
   (* iteration *)
   let rec iter : prog -> prog -> prog -> examples -> (prog option * examples)
   = fun pgm cpgm candidate examples ->
-    let _ = 
-      print_header "Generated examples"; print_examples examples;
-      print_header "Repair candidate"; print_pgm candidate;
-    in
     let test_gen_result = TestGenerator.gen_counter_example candidate cpgm in
     let test_time = Unix.gettimeofday() -. !(TestGenerator.start_time) in 
     match test_gen_result with
     | None -> (Some candidate, examples) (* Test-case generation fail *)
     | Some ex ->
-      let _ = print_endline ("Counter-example Time : " ^ string_of_float test_time) in
       let examples = ex::examples in
       let ranked_pgm_set = Localize.localization pgm examples in
       let initial_set = BatSet.map(
@@ -140,12 +129,10 @@ let fix_without_testcases : prog -> prog -> unit
       match correction_result with
       | None -> (None, examples) (* Repair fail *)
       | Some pgm' -> 
-        (*
         let _ = 
           print_header "Generated examples"; print_examples examples;
           print_header "Repair candidate"; print_pgm candidate;
         in
-        *)
         iter pgm cpgm pgm' examples
   in
   match iter submission solution submission [] with
@@ -171,7 +158,6 @@ let execute : prog -> unit
 
 let main () = 
   (* Arg Parse *)
-  let _ = print_endline ("z3 version : " ^ Z3.Version.to_string) in
   let _ = Arg.parse options (fun s->()) usage_msg in
   let testcases = read_testcases !opt_testcases_filename in
   let solution = read_prog !opt_solution_filename in
@@ -254,15 +240,13 @@ let main () =
   else if !opt_preproc then
     begin match submission with
     | Some sub -> 
-      let normalized_sub = Preprocessor.run sub in
-      let renamed_sub = snd (Preprocessor.Renaming.run normalized_sub) in
-      let cg_sub = CallGraph.extract_graph renamed_sub in
-      let problem_path = get_problem_path !opt_submission_filename in
-      print_header ("Original (" ^ !opt_submission_filename ^ ")"); print_pgm sub;
-      print_header ("Normalized"); print_pgm normalized_sub;
-      print_header ("Renaming"); print_pgm normalized_sub;
-      print_header ("Callgraph"); CallGraph.print_graph cg_sub;
-      print_endline problem_path
+      let file_name = get_file_path !opt_submission_filename in
+      let save_path = "../preprocessed_data" ^ file_name in
+      Data_driven.save_data ~logging_flag:true sub save_path
+      (*
+      let cg = Data_driven.load_data !opt_submission_filename in
+      CallGraph.print_graph cg 
+      *)
     | _ -> raise (Failure "Submission file is not provided")
     end
   else
