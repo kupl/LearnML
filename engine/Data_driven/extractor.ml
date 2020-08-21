@@ -79,7 +79,8 @@ let rec replace_var_exp : Alias.alias_info -> lexp -> lexp BatSet.t
   match exp with
   (* Variable -> replace solution variable with the one in submission whose data flow is the same *)
   | EVar x -> 
-    let xs = BatSet.filter (fun y -> x = y) (BatSet.map fst (BatMap.find l alias_info)) in
+    let alias_set = BatMap.find l alias_info in
+    let xs = BatSet.map snd (BatSet.filter (fun (a, b) -> x = a) alias_set) in
     if BatSet.is_empty xs then 
       (* if there are no variables whose data-flow is exactly match with the solution variable *)
       BatSet.singleton (l, gen_hole ())
