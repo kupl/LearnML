@@ -10,11 +10,9 @@ open Extractor
 	Input : An incorrect program pgm, a set of correct programs cpgms, and a set of testcases testcases
 	Output : A repaired program pgm' satisfying all testcases
 *)
-
 (* Preprocess given submission *)
 let save_data ?(logging_flag=false) : prog -> string -> unit
-= fun pgm path -> ()
-(*
+= fun pgm path -> 
 	(* Extract call graph *)
   let (r_env, renamed_pgm) = Preprocessor.Renaming.run (Preprocessor.run pgm) in
   let cg = CallGraph.extract_graph renamed_pgm in
@@ -27,22 +25,19 @@ let save_data ?(logging_flag=false) : prog -> string -> unit
 	if logging_flag then 
 		let log_path = path ^ ".txt" in
   	let log_oc = open_out log_path in
-  	let nodes = BatMap.foldi (fun f (id, args, typ, body) acc->
-	    let f = Preprocessor.Renaming.apply_env f r_env in
-	    let args = List.map (Preprocessor.Renaming.apply_arg r_env) args in
-	    let body = Preprocessor.Renaming.apply_exp r_env body in
-	    BatMap.add f (id, args, typ, body) acc 
-	  ) (get_nodes cg) BatMap.empty in
-	  let edges = BatMap.map (fun ctxs ->
-	   	BatSet.map (fun (l, path) -> (l, Preprocessor.Renaming.apply_path r_env path)) ctxs
-	  ) (get_edges cg) in
-	  let log_str = 
-		  "Node : \n" ^ string_of_nodes nodes ^
-		  "\nEdge : \n" ^ string_of_edges edges 
-		in
+  	let nodes = BatSet.map (fun node ->
+  		{ id = node.id;
+  			name = Preprocessor.Renaming.apply_env node.name r_env;
+  			args = List.map (Preprocessor.Renaming.apply_arg r_env) node.args;
+  			typ = node.typ;
+  			body = Preprocessor.Renaming.apply_exp r_env node.body }
+	  ) cg.nodes in
+	  let edges = BatSet.map (fun edge ->
+	  	{ src = edge.src; sink = edge.sink; ctx = Preprocessor.Renaming.apply_path r_env edge.ctx }
+	  ) cg.edges in
+	  let log_str = string_of_graph { nodes = nodes; edges = edges } in
 		Printf.fprintf log_oc "%s" log_str;
   	close_out log_oc
-*)
 
 let load_data : string -> graph
 = fun file_path ->
@@ -62,11 +57,7 @@ let run2 : prog -> (string * prog) list -> examples -> prog
 	let pgm = Preprocessor.run pgm in 
 	let (r_env, pgm) = Preprocessor.Renaming.run pgm in
 	let cpgms = List.map (fun (f_name, cpgm) -> 
-		(* print_header ("Preprocessing : " ^ f_name); *)
-		(* print_pgm2 pgm; *)
-		let cpgm = Preprocessor.run cpgm in
-		let cpgm = snd (Preprocessor.Renaming.run cpgm) in
-		(f_name, CallGraph.extract_graph cpgm)
+		(f_name, load_data f_name)
 		(* (f_name, load_data f_name) *)
 	) cpgms in
 	let preprocessing_time = Unix.gettimeofday () -. preprocessing_time in
