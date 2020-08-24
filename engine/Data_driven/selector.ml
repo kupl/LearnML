@@ -236,14 +236,24 @@ let verify_ctx : calling_ctx -> calling_ctx -> bool
     Path_score.check_path !ctor_table vc
   with _ -> false 
 
-let rec compute_path_score : calling_ctx BatSet.t -> calling_ctx BatSet.t -> float
+let rec semantic_distance_ctx : calling_ctx BatSet.t -> calling_ctx BatSet.t -> float
 = fun ctxs_sub ctxs_sol ->
-  let total_num = (float_of_int (BatSet.cardinal ctxs_sub)) *. (float_of_int (BatSet.cardinal ctxs_sol)) in
-  let matching_num = BatSet.fold (fun ctx_sub acc ->
-    if BatSet.exists (fun ctx_sol -> verify_ctx ctx_sub ctx_sol) ctxs_sol then acc +. 0. else acc +. 1.
-  ) ctxs_sub 0. in
-  let score = if total_num = 0. then 0. else matching_num /. total_num in
-  score
+  if BatSet.cardinal ctxs_sub = 0 && BatSet.cardinal ctxs_sol = 0 then 0.
+  else if BatSet.cardinal ctxs_sub = 0 || BatSet.cardinal ctxs_sol = 0 then 1.
+  else
+    let total_num = (float_of_int (BatSet.cardinal ctxs_sub)) *. (float_of_int (BatSet.cardinal ctxs_sol)) in
+    let matching_num = BatSet.fold (fun ctx_sub acc ->
+      if BatSet.exists (fun ctx_sol -> verify_ctx ctx_sub ctx_sol) ctxs_sol then acc +. 0. else acc +. 1.
+    ) ctxs_sub 0. in
+    matching_num /. total_num
+
+let rec semantic_distance : summary -> summary -> float
+= fun summary_sub summary_sol ->
+  let (incomming_sub, incomming_sol) = (summary_sub.incomming, summary_sol.incomming) in
+  let incomming_distance = semantic_distance_ctx incomming_sub incomming_sol in
+  let (outgoing_sub, outgoing_sol) = (summary_sub.outgoing, summary_sol.outgoing) in
+  let outgoing_distance = semantic_distance_ctx outgoing_sub outgoing_sol in
+  incomming_distance +. outgoing_distance
 
 (* Compute (local)matching result *)
 let rec find_matching : summary BatSet.t -> reference BatSet.t -> matching
@@ -255,7 +265,7 @@ let rec find_matching : summary BatSet.t -> reference BatSet.t -> matching
     ) references in
     (* Select solution functions with the minimal semantic distance *)
     let (_, candidates) = BatSet.fold (fun reference (score, candidates) ->
-      let score' = compute_path_score summary.incomming reference.summary.incomming in
+      let score' = semantic_distance summary reference.summary in
       if score' < score then (score', BatSet.singleton reference)
       else if score' = score then (score, BatSet.add reference candidates)
       else (score, candidates)
@@ -281,8 +291,8 @@ let rec update_matching : matching -> matching -> matching
     if BatMap.mem summary global then
       let reference' = BatMap.find summary global in
       (* Compare semantic distance *)
-      let p1 = compute_path_score summary.incomming reference.summary.incomming in
-      let p2 = compute_path_score summary.incomming reference'.summary.incomming in
+      let p1 = semantic_distance summary reference.summary in
+      let p2 = semantic_distance summary reference'.summary in
       if p1 < p2 then BatMap.add summary reference global 
       else 
         (* Compare syntactic distance  *)

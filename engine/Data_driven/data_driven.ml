@@ -74,32 +74,33 @@ let run2 : prog -> (string * prog) list -> examples -> prog
 	(* Template extraction *)
 	let (repair_templates, call_temps) = Extractor.extract_templates matching in
 	let _ =
-		Print.print_header "Call-templates";
-		print_endline (string_of_map (id) (string_of_set exp_to_string) call_temps)
-	in
-	let _ =
 		Print.print_header "Extracted Templates";
 		print_endline (string_of_set string_of_template repair_templates)
 	in
+	let repair_templates = BatSet.filter (fun temp -> not (check_redundant_template pgm temp)) repair_templates in
 	(* Patch generation *)
-	let pgm = Preprocessor.Renaming.apply_pgm r_env pgm in
 	let repair_templates = BatSet.map (fun (e_temp, d_temp) ->
 		let e_temp = 
 			match e_temp with
 			| ModifyExp (l, e) -> ModifyExp (l, Preprocessor.Renaming.apply_exp r_env e)
-			| InsertBranch (l, (p, e)) -> InsertBranch (l, (p, Preprocessor.Renaming.apply_exp r_env e))
+			| InsertBranch (l, (p, e)) -> InsertBranch (l, (Preprocessor.Renaming.apply_pat r_env p, Preprocessor.Renaming.apply_exp r_env e))
+			| DeleteBranch (l, (p, e)) -> DeleteBranch (l, (Preprocessor.Renaming.apply_pat r_env p, Preprocessor.Renaming.apply_exp r_env e))
 			| _ -> e_temp
 		in
 		(e_temp, d_temp)
 	) repair_templates in
-	let call_temps = BatMap.foldi (fun x es acc -> 
-		BatMap.add (Preprocessor.Renaming.apply_env x r_env) (BatSet.map (Preprocessor.Renaming.apply_exp r_env) es) acc
-	) call_temps BatMap.empty in
-	let repair_templates = BatSet.filter (fun temp -> not (check_redundant_template pgm temp)) repair_templates in
 	let _ =
 		Print.print_header "Filtered Templates";
 		print_endline (string_of_set string_of_template repair_templates)
 	in
+	let call_temps = BatMap.foldi (fun x es acc -> 
+		BatMap.add (Preprocessor.Renaming.apply_env x r_env) (BatSet.map (Preprocessor.Renaming.apply_exp r_env) es) acc
+	) call_temps BatMap.empty in
+	let _ =
+		Print.print_header "Call-templates";
+		print_endline (string_of_map (id) (string_of_set exp_to_string) call_temps)
+	in
+	let pgm = Preprocessor.Renaming.apply_pgm r_env pgm in
 	print_pgm pgm;
 	match Repairer.run pgm call_temps repair_templates testcases with
 	| Some pgm' -> 

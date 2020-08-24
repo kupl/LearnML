@@ -27,6 +27,33 @@ let get_label : repair_template -> label
 	| ModifyExp (l, _) | InsertBranch (l, _) | DeleteBranch (l, _)
   | Explore l -> l 
 
+(* To string *)
+let string_of_exp_template : exp_template -> string
+= fun temp ->
+  match temp with
+  | ModifyExp (l, e) -> "Modify (" ^ string_of_int l ^ " : " ^ exp_to_string e ^ ")" 
+  | InsertBranch (l, (p, e)) -> "Insert (" ^ pat_to_string p ^ " -> " ^ exp_to_string e ^ " At label " ^ string_of_int l
+	| DeleteBranch (l, (p, e)) -> "Delete (" ^ pat_to_string p ^ " -> " ^ exp_to_string e ^ " At label " ^ string_of_int l
+	| Explore l -> "Explore label " ^ string_of_int l
+
+let string_of_required_function : required_function -> string 
+= fun d_temp -> 
+  BatMap.foldi (fun f (is_rec, args, typ, body, callers) acc ->
+    acc ^ (decl_to_string (DLet (BindOne f, is_rec, args, typ, body)) "") ^ "\n" ^
+    "Callers : " ^ string_of_set id callers ^ "\n"
+  ) d_temp ""
+  
+let string_of_template : repair_template -> string
+= fun (e_temp, d_temp) -> 
+  "Exp : " ^ string_of_exp_template e_temp ^ "\n\n" ^
+  "Decls : \n" ^ string_of_required_function d_temp
+  
+let string_of_templates : repair_template BatSet.t -> string 
+= fun temp ->
+	let (e_temps, d_temp) = merge_templates temp in 
+  "Exp : " ^ string_of_set string_of_exp_template e_temps ^ "\n\n" ^
+  "Decls : \n" ^ string_of_required_function d_temp
+
 (******************)
 (* Template apply *)
 (******************)
@@ -281,31 +308,3 @@ let check_redundant_template : prog -> repair_template -> bool
 = fun pgm temp ->
   let pgm' = apply_template pgm temp in
   (program_to_string pgm) = (program_to_string pgm')
-
-(* To string *)
-let string_of_exp_template : exp_template -> string
-= fun temp ->
-  match temp with
-  | ModifyExp (l, e) -> "Modify (" ^ string_of_int l ^ " : " ^ exp_to_string e ^ ")" 
-  | InsertBranch (l, (p, e)) -> "Insert (" ^ pat_to_string p ^ " -> " ^ exp_to_string e ^ " At label " ^ string_of_int l
-	| DeleteBranch (l, (p, e)) -> "Delete (" ^ pat_to_string p ^ " -> " ^ exp_to_string e ^ " At label " ^ string_of_int l
-	| Explore l -> "Explore label " ^ string_of_int l
-
-let string_of_required_function : required_function -> string 
-= fun d_temp -> 
-  BatMap.foldi (fun f (is_rec, args, typ, body, callers) acc ->
-    acc ^ (decl_to_string (DLet (BindOne f, is_rec, args, typ, body)) "") ^ "\n" ^
-    "Callers : " ^ string_of_set id callers ^ "\n"
-  ) d_temp ""
-  
-let string_of_template : repair_template -> string
-= fun (e_temp, d_temp) -> 
-  "Exp : " ^ string_of_exp_template e_temp ^ "\n\n" ^
-  "Decls : \n" ^ string_of_required_function d_temp
-  
-let string_of_templates : repair_template BatSet.t -> string 
-= fun temp ->
-	let (e_temps, d_temp) = merge_templates temp in 
-  "Exp : " ^ string_of_set string_of_exp_template e_temps ^ "\n\n" ^
-  "Decls : \n" ^ string_of_required_function d_temp
-  

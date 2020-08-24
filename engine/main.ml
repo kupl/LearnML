@@ -242,11 +242,9 @@ let main () =
     | Some sub -> 
       let file_name = get_file_path !opt_submission_filename in
       let save_path = "../preprocessed_data" ^ file_name in
-      Data_driven.save_data ~logging_flag:true sub save_path
-      (*
+      Data_driven.save_data ~logging_flag:true sub save_path;
       let cg = Data_driven.load_data !opt_submission_filename in
       CallGraph.print_graph cg 
-      *)
     | _ -> raise (Failure "Submission file is not provided")
     end
   else
