@@ -39,7 +39,7 @@ let string_of_reference reference =
 
 let string_of_matching matching = 
   BatMap.foldi (fun target reference acc ->
-    let s = string_of_summary target ^ "\n => \n" ^ string_of_summary reference.summary in
+    let s = string_of_summary target ^ "\n => \n" ^ string_of_reference reference in
     if acc = "" then s else acc ^ "\n---------------------------\n" ^ s
   ) matching ""
 
