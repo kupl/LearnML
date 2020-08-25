@@ -27,8 +27,8 @@ let ctor_table = ref BatMap.empty
 
 let global_sem = ref 0.
 let local_sem = ref 0.
-let global_syn = ref 0
-let local_syn = ref 0
+let global_syn = ref 0.
+let local_syn = ref 0.
 
 (* pp *)
 let string_of_ctx (args, path) = "[" ^ (args_to_string args "") ^ "]:" ^ string_of_path path 
@@ -170,24 +170,24 @@ let rec match_pat : pat -> pat -> bool
   | PUnit, PUnit | PUnder, PUnder | PVar _, PVar _ -> true
   | _ -> false
 
-let rec syntactic_distance : lexp -> lexp -> int
+let rec syntactic_distance : lexp -> lexp -> float
 = fun exp1 exp2 ->
   match (snd exp1, snd exp2) with
-  | SInt _, SInt _ | SStr _, SStr _ | Hole _, Hole _ -> 0
+  | SInt _, SInt _ | SStr _, SStr _ | Hole _, Hole _ -> 0.
   (* Constant *)
-  | EUnit, EUnit | TRUE, TRUE | FALSE, FALSE | EVar _, EVar _ -> 0
-  | Const n1, Const n2 when n1 = n2 -> 0
-  | String s1, String s2 when s1 = s2 -> 0
+  | EUnit, EUnit | TRUE, TRUE | FALSE, FALSE | EVar _, EVar _ -> 0.
+  | Const n1, Const n2 when n1 = n2 -> 0.
+  | String s1, String s2 when s1 = s2 -> 0.
   (* List *)
   | EList es1, EList es2 | ETuple es1, ETuple es2 ->
     begin 
-      try List.fold_left2 (fun acc e1 e2 -> acc + syntactic_distance e1 e2) 0 es1 es2 
-      with _ -> exp_size exp1 + exp_size exp2 
+      try List.fold_left2 (fun acc e1 e2 -> acc +. syntactic_distance e1 e2) 0. es1 es2 
+      with _ -> float_of_int (exp_size exp1 + exp_size exp2)
     end
   | ECtor (x1, es1), ECtor (x2, es2) when x1 = x2 ->
     begin 
-      try List.fold_left2 (fun acc e1 e2 -> acc + syntactic_distance e1 e2) 0 es1 es2 
-      with _ -> exp_size exp1 + exp_size exp2 
+      try List.fold_left2 (fun acc e1 e2 -> acc +. syntactic_distance e1 e2) 0. es1 es2 
+      with _ -> float_of_int (exp_size exp1 + exp_size exp2)
     end
   (* Unary *)
   | MINUS e1, MINUS e2 | NOT e1, NOT e2 | ERef e1, ERef e2 | EDref e1, EDref e2 | Raise e1, Raise e2 | EFun (_, e1), EFun (_, e2) -> syntactic_distance e1 e2
@@ -196,29 +196,32 @@ let rec syntactic_distance : lexp -> lexp -> int
   | OR (e1, e2), OR (e1', e2') | AND (e1, e2), AND (e1', e2') | LESS (e1, e2), LESS (e1', e2') | LESSEQ (e1, e2), LESSEQ (e1', e2')
   | LARGER (e1, e2), LARGER (e1', e2') | LARGEREQ (e1, e2), LARGEREQ (e1', e2') | EQUAL (e1, e2), EQUAL (e1', e2') | NOTEQ(e1, e2), NOTEQ (e1', e2') 
   | DOUBLECOLON (e1, e2), DOUBLECOLON (e1', e2') | AT (e1, e2), AT (e1', e2') | STRCON (e1, e2), STRCON (e1', e2') | EAssign (e1, e2), EAssign (e1', e2') 
-  | EApp (e1, e2), EApp (e1', e2') | ELet (_, _, _, _, e1, e2), ELet (_, _, _, _, e1', e2') -> syntactic_distance e1 e1' + syntactic_distance e2 e2'
+  | EApp (e1, e2), EApp (e1', e2') | ELet (_, _, _, _, e1, e2), ELet (_, _, _, _, e1', e2') -> syntactic_distance e1 e1' +. syntactic_distance e2 e2'
   (* Condition *)
-  | IF (e1, e2, e3), IF (e1', e2', e3') -> syntactic_distance e1 e1' + syntactic_distance e2 e2' + syntactic_distance e3 e3'
+  | IF (e1, e2, e3), IF (e1', e2', e3') -> syntactic_distance e1 e1' +. syntactic_distance e2 e2' +. syntactic_distance e3 e3'
   | EMatch (e1, bs1), EMatch (e2, bs2) ->
     (* Distance between matched branches *)
     let (d1, unmatches) = List.fold_left (fun (d1, unmatches) (p, e) ->
       try 
         let (p', e') = List.find (fun (p', e') -> match_pat p p') unmatches in
-        (d1 + syntactic_distance e e', List.remove_assoc p' unmatches)
-      with _ -> (d1 + exp_size e, unmatches)
-    ) (0, bs2) bs1 in
+        (d1 +. syntactic_distance e e', List.remove_assoc p' unmatches)
+      with _ -> (d1 +. float_of_int (exp_size e), unmatches)
+    ) (0., bs2) bs1 in
     (* Distance of unmatches branches *)
-    let d2 = List.fold_left (fun acc (p, e) -> acc + exp_size e) 0 unmatches in
-    syntactic_distance e1 e2 + d1 + d2
+    let d2 = List.fold_left (fun acc (p, e) -> acc +. float_of_int (exp_size e)) 0. unmatches in
+    syntactic_distance e1 e2 +. d1 +. d2
   (* Binding block *)
   | EBlock (_, bs1, e1), EBlock (_, bs2, e2) ->
     let (es1, es2) = (List.map (fun (_, _, _, _, e) -> e) bs1, List.map (fun (_, _, _, _, e) -> e) bs2) in
     begin 
-      try List.fold_left2 (fun acc e1 e2 -> acc + syntactic_distance e1 e2) (syntactic_distance e1 e2) es1 es2 
-      with _ -> (syntactic_distance e1 e2) + (List.fold_left (fun acc e -> exp_size e) 0 es1) + (List.fold_left (fun acc e -> exp_size e) 0 es2)
+      try List.fold_left2 (fun acc e1 e2 -> acc +. syntactic_distance e1 e2) (syntactic_distance e1 e2) es1 es2 
+      with _ -> (syntactic_distance e1 e2) +. (List.fold_left (fun acc e -> float_of_int (exp_size e)) 0. es1) +. (List.fold_left (fun acc e -> float_of_int (exp_size e)) 0. es2)
     end
   (* Syntatically different *)
-  | _ -> 2 * (abs (exp_size exp1 - exp_size exp2))
+  | _ -> float_of_int (exp_size exp1 + exp_size exp2)
+
+let rec syntactic_distance : lexp -> lexp -> float
+= fun e1 e2 -> Syntactic_dist.syntactic_distance e1 e2
 
 (* Path similarity *)
 let rec match_arg : arg -> arg -> bool

@@ -51,18 +51,13 @@ let run2 : prog -> (string * prog) list -> examples -> prog
 = fun pgm cpgms testcases -> 
 	(* Preprocessing *)
 	library_pgm := Preprocessor.run (!library_pgm);
-	print_header "Preprocessing";
 	(* print_pgm2 pgm; *)
 	let preprocessing_time = Unix.gettimeofday () in
 	let pgm = Preprocessor.run pgm in 
 	let (r_env, pgm) = Preprocessor.Renaming.run pgm in
-	let cpgms = List.map (fun (f_name, cpgm) -> 
-		(f_name, load_data f_name)
-		(* (f_name, load_data f_name) *)
-	) cpgms in
+	let cpgms = List.map (fun (f_name, cpgm) -> (f_name, load_data f_name)) cpgms in
 	let preprocessing_time = Unix.gettimeofday () -. preprocessing_time in
 	(* Selection *)
-	print_header "Selecting";
 	let select_time = Unix.gettimeofday () in
 	let matching = select_solutions pgm cpgms in
 	let select_time = Unix.gettimeofday () -. select_time in

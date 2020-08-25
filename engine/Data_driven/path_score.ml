@@ -403,10 +403,3 @@ let check_path : CtorTable.t -> path -> bool
   | UNSATISFIABLE -> (* print_endline ("UNSAT"); *) false
   | UNKNOWN -> (* print_endline ("UNSAT"); *) false
   | SATISFIABLE -> (* print_endline ("SAT"); *) true 
-    (*
-    (* There exists an counter example *)
-    begin match Z3.Solver.get_model solver with
-    | Some model -> (*print_endline (Z3.Model.to_string model);*) true
-    | None -> (*print_endline ("SAT");*) false
-    end
-    *)

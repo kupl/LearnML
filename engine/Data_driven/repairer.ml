@@ -106,7 +106,7 @@ let rec replace_call : Type.HoleType.t -> Type.VariableType.t -> exp_template ->
   | _ -> e_temp
 
 (* Main Procedure *)
-let time_out = 600.0
+let time_out = 60.0
 let start_time = ref 0.0
 let debug_mode = false
 
