@@ -24,6 +24,12 @@ type matching = (summary, reference) BatMap.t
 
 let empty_matching = BatMap.empty
 let ctor_table = ref BatMap.empty
+
+let global_sem = ref 0.
+let local_sem = ref 0.
+let global_syn = ref 0
+let local_syn = ref 0
+
 (* pp *)
 let string_of_ctx (args, path) = "[" ^ (args_to_string args "") ^ "]:" ^ string_of_path path 
 
@@ -212,7 +218,7 @@ let rec syntactic_distance : lexp -> lexp -> int
       with _ -> (syntactic_distance e1 e2) + (List.fold_left (fun acc e -> exp_size e) 0 es1) + (List.fold_left (fun acc e -> exp_size e) 0 es2)
     end
   (* Syntatically different *)
-  | _ -> exp_size exp1 + exp_size exp2
+  | _ -> 2 * (abs (exp_size exp1 - exp_size exp2))
 
 (* Path similarity *)
 let rec match_arg : arg -> arg -> bool
@@ -243,7 +249,9 @@ let rec semantic_distance_ctx : calling_ctx BatSet.t -> calling_ctx BatSet.t -> 
   else
     let total_num = (float_of_int (BatSet.cardinal ctxs_sub)) *. (float_of_int (BatSet.cardinal ctxs_sol)) in
     let matching_num = BatSet.fold (fun ctx_sub acc ->
-      if BatSet.exists (fun ctx_sol -> verify_ctx ctx_sub ctx_sol) ctxs_sol then acc +. 0. else acc +. 1.
+      BatSet.fold (fun ctx_sol acc ->
+        if verify_ctx ctx_sub ctx_sol then acc +. 0. else acc +. 1.
+      ) ctxs_sol acc
     ) ctxs_sub 0. in
     matching_num /. total_num
 
@@ -266,10 +274,12 @@ let rec find_matching : summary BatSet.t -> reference BatSet.t -> matching
     (* Select solution functions with the minimal semantic distance *)
     let (_, candidates) = BatSet.fold (fun reference (score, candidates) ->
       let score' = semantic_distance summary reference.summary in
-      if score' < score then (score', BatSet.singleton reference)
+      if score' < score then 
+        let _ = local_sem := score' in 
+        (score', BatSet.singleton reference)
       else if score' = score then (score, BatSet.add reference candidates)
       else (score, candidates)
-    ) candidates (0., BatSet.empty) in
+    ) candidates (2., BatSet.empty) in
     if BatSet.is_empty candidates then
       (* If there are no matched solutions, do not change the matching relation *)
       matching
@@ -279,14 +289,17 @@ let rec find_matching : summary BatSet.t -> reference BatSet.t -> matching
       let reference = BatSet.fold (fun cur acc -> 
         let d1 = syntactic_distance summary.node.body cur.summary.node.body in
         let d2 = syntactic_distance summary.node.body acc.summary.node.body in
-        if d1 < d2 then cur else acc 
+        if d1 < d2 then 
+          let _ = local_syn := d1 in 
+          cur
+        else acc 
       ) remains candidate in
       BatMap.add summary reference matching
   ) summaries empty_matching
-  
-(* TODO : need more fine graining *)
+
+(* Update (global)matching result *)
 let rec update_matching : matching -> matching -> matching
-= fun global local ->
+= fun local global ->
   BatMap.foldi (fun summary reference global ->
     if BatMap.mem summary global then
       let reference' = BatMap.find summary global in
@@ -294,7 +307,8 @@ let rec update_matching : matching -> matching -> matching
       let p1 = semantic_distance summary reference.summary in
       let p2 = semantic_distance summary reference'.summary in
       if p1 < p2 then BatMap.add summary reference global 
-      else 
+      else if p1 > p2 then global
+      else
         (* Compare syntactic distance  *)
         let d1 = syntactic_distance summary.node.body reference.summary.node.body in
         let d2 = syntactic_distance summary.node.body reference'.summary.node.body in
@@ -308,5 +322,5 @@ let select_solutions : prog -> (string * graph) list -> matching
   let _ = ctor_table := Path_score.CtorTable.gen_ctor_table BatMap.empty pgm in
   List.fold_left (fun acc (f_name, cg_sol) ->
     let matching = find_matching summaries (get_references f_name cg_sol) in
-    update_matching acc matching
+    update_matching matching acc
   ) empty_matching cg_sols 
