@@ -270,18 +270,11 @@ let rec gen_pat_equations : TEnv.t -> pat -> typ -> (TEnv.t * typ_eqn)
       ) (tenv, [ty, t_name]) ps ts
     | _ -> raise TypeError
     end
-  | PCons ps -> 
+  | PCons (p1, p2) -> 
     let t = fresh_tvar () in
-    begin match ps with
-    | [] -> raise (Failure "Pattern cons does not have args")
-    | [p] -> 
-      let (tenv, eqns) = gen_pat_equations tenv p (TList t) in
-      (tenv, (ty, TList t)::eqns)
-    | phd::tl -> 
-      let (tenv, eqn1) = gen_pat_equations tenv phd t in
-      let (tenv, eqn2) = gen_pat_equations tenv (PCons tl) (TList t) in
-      (tenv, (ty, TList t)::(eqn1@eqn2))
-    end
+    let (tenv, eqn1) = gen_pat_equations tenv p1 t in
+    let (tenv, eqn2) = gen_pat_equations tenv p2 (TList t) in
+    (tenv, (ty, TList t)::(eqn1@eqn2))
   | PUnder -> (tenv, [ty, fresh_tvar ()])
   | Pats ps -> 
     List.fold_left (fun (tenv, eqns) p -> 

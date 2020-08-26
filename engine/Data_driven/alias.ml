@@ -195,11 +195,9 @@ let rec update_pat : analysis -> pat -> data -> analysis
   		(update_pat map p (ListElem (idx, d)), idx)
 		) (map, 0) ps in
 		map
-  | PCons (hd::tl) -> 
-		if tl = [] then update_pat map hd d
-		else 
-			let map = update_pat map hd (Head d) in
-			update_pat map (PCons tl) (Tail d)
+  | PCons (phd, ptl) -> 
+		let map = update_pat map phd (Head d) in
+    update_pat map ptl (Tail d)
   | PTuple ps -> 
   	let (map, idx) = List.fold_left (fun (map, idx) p -> 
   		let idx = idx + 1 in
@@ -214,7 +212,6 @@ let rec update_pat : analysis -> pat -> data -> analysis
 		map
 	| PUnit | PUnder | PInt _ | PBool _ -> map
 	| Pats ps -> List.fold_left (fun map p -> update_pat map p d) map ps
-	| PCons [] -> raise (Failure "Alias : invalid pat")
 
 let rec update_binding : analysis -> let_bind -> data -> analysis 
 = fun map binding d ->

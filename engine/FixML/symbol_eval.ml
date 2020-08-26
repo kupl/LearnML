@@ -87,8 +87,7 @@ and pattern_match : symbolic_value -> pat -> bool
   | List l1, PList l2 -> pattern_match_list l1 l2 
   | Tuple l1, PTuple l2 -> pattern_match_list l1 l2
   | Ctor (x1, l1), PCtor (x2, l2) -> (x1 = x2) && pattern_match_list l1 l2
-  | List [], PCons (phd::ptl) -> if ptl = [] then (pattern_match sv phd) else false
-  | List (vhd::vtl), PCons (phd::ptl) -> if ptl = [] then (pattern_match sv phd) else (pattern_match vhd phd) && (pattern_match (List vtl) (PCons ptl))
+  | List (vhd::vtl), PCons (phd, ptl) -> (pattern_match vhd phd) && (pattern_match (List vtl) ptl)
   | _, PVar x -> true
   | _, PUnder -> true
   | _, Pats pl -> (try List.exists (pattern_match sv) pl with _ -> false)
@@ -107,7 +106,8 @@ and gather_vars : id BatSet.t -> pat -> id BatSet.t
 = fun set p ->
   match p with
   | PVar x -> BatSet.add x set
-  | PList ps | PTuple ps | PCtor (_, ps) | PCons ps | Pats ps -> List.fold_left gather_vars set ps
+  | PList ps | PTuple ps | PCtor (_, ps) | Pats ps -> List.fold_left gather_vars set ps
+  | PCons (phd, ptl) -> gather_vars (gather_vars set phd) ptl
   | _ -> set
 
 let rec bind_pat : symbolic_env -> symbolic_value -> pat -> symbolic_env
@@ -121,8 +121,7 @@ let rec bind_pat : symbolic_env -> symbolic_value -> pat -> symbolic_env
   | List l1, PList l2 -> bind_pat_list env l1 l2 
   | Tuple l1, PTuple l2 -> bind_pat_list env l1 l2
   | Ctor (x1, l1), PCtor (x2, l2) -> bind_pat_list env l1 l2
-  | List [], PCons (phd::ptl) -> if ptl = [] then (bind_pat env sv phd) else raise (Failure "Pattern binding failure")
-  | List (vhd::vtl), PCons (phd::ptl) -> if ptl = [] then (bind_pat env sv phd) else bind_pat (bind_pat env vhd phd) (List vtl) (PCons ptl)
+  | List (vhd::vtl), PCons (phd, ptl) -> bind_pat (bind_pat env vhd phd) (List vtl) ptl
   | _ -> raise (Failure "Pattern binding failure")
 
 and bind_pat_list : symbolic_env -> symbolic_value list -> pat list -> symbolic_env

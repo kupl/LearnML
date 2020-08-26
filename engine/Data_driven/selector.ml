@@ -165,8 +165,9 @@ let rec match_pat : pat -> pat -> bool
   match (p1, p2) with
   | PInt n1, PInt n2 -> n1 = n2
   | PBool b1, PBool b2 -> b1 = b2
-  | PList ps1, PList ps2 | PTuple ps1, PTuple ps2 | PCons ps1, PCons ps2 -> (try List.for_all2 match_pat ps1 ps2 with _ -> false)
+  | PList ps1, PList ps2 | PTuple ps1, PTuple ps2 -> (try List.for_all2 match_pat ps1 ps2 with _ -> false)
   | PCtor (x, ps1), PCtor (y, ps2) -> (x = y) && (try List.for_all2 match_pat ps1 ps2 with _ -> false)
+  | PCons (phd1, ptl1), PCons (phd2, ptl2) -> match_pat phd1 phd2 && match_pat ptl1 ptl2
   | Pats ps, _ | _, Pats ps -> raise (Failure "Nomalized programs do not have this pattern")
   | PUnit, PUnit | PUnder, PUnder | PVar _, PVar _ -> true
   | _ -> false

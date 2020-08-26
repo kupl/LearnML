@@ -143,10 +143,9 @@ let rec pat_to_path : label -> pat -> typ -> path
     | TList t -> List (List.map (fun p -> pat_to_path l p t) ps, TList t)
     | _ -> raise (Failure ("Call grpah: invalid pat (" ^ pat_to_string p ^ ") while encoding path"))
     end
-  | PCons [p]-> pat_to_path l p typ
-  | PCons (phd::ptl) ->
+  | PCons (phd, ptl) ->
     begin match typ with
-    | TList t -> Concat (pat_to_path l phd t, pat_to_path l (PCons ptl) (TList t))
+    | TList t -> Concat (pat_to_path l phd t, pat_to_path l ptl (TList t))
     | _ -> raise (Failure ("Call grpah: invalid pat (" ^ pat_to_string p ^ ") while encoding path"))
     end
   | PTuple ps -> 

@@ -570,7 +570,7 @@ pat_comma_list:
 
 pat_op:
   | p1=pat_op DOUBLECOLON p2=pat_op
-    { PCons (p1::[p2]) }
+    { PCons (p1, p2) }
   | c=UID ps=pat_base
     { PCtor (c, [ps]) }
   | p=pat_base

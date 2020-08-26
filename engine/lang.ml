@@ -33,7 +33,7 @@ type pat =
   | PBool of bool
   | PVar of id
   | PList of pat list
-  | PCons of pat list
+  | PCons of pat * pat
   | PTuple of pat list
   | Pats of pat list
   | PCtor of id * pat list
@@ -352,7 +352,7 @@ and pat_cost : pat -> int
   | PBool b -> 10
   | PList lst | PTuple lst -> 10 + (list_fold (fun p r -> pat_cost p+r) lst 0)  
   | PUnder -> 10
-  | PCons (lst) -> 10 + (list_fold (fun p r -> pat_cost p+r) lst 0) 
+  | PCons (p1, p2) -> 10 + pat_cost p1 + pat_cost p2
 
 let cost_decl : decl -> int -> int
 = fun decl cost ->

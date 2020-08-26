@@ -121,8 +121,9 @@ let rec compare_pat : pat -> pat -> int
 	match (p1, p2) with
 	| _, PVar _ | _, PUnder -> -1
 	| PInt n1, PInt n2 -> if n1 < n2 then -1 else 1
-  | PList ps1, PList ps2 | PTuple ps1, PTuple ps2 | PCons ps1, PCons ps2 -> compare_pat_list ps1 ps2
+  | PList ps1, PList ps2 | PTuple ps1, PTuple ps2 -> compare_pat_list ps1 ps2
   | PCtor (x, ps1), PCtor (y, ps2) -> if x = y then compare_pat_list ps1 ps2 else 1
+  | PCons (phd1, ptl1), PCons (phd2, ptl2) -> if (compare_pat phd1 phd2) < 0 then -1 else compare_pat ptl1 ptl2
   | _ -> 1
 
 and compare_pat_list : pat list -> pat list -> int

@@ -237,52 +237,48 @@ let rec let_binding : TEnv.t -> let_bind -> typ -> TEnv.t
   | _ -> raise TypeError
 
 (* construct type eqn of patterns then bind type variables *)
-let rec gen_pat_equations : (TEnv.t * typ_eqn) -> pat -> typ -> (TEnv.t * typ_eqn)
-= fun (tenv, eqn) pat ty ->
+let rec gen_pat_equations : TEnv.t -> pat -> typ -> (TEnv.t * typ_eqn)
+= fun tenv pat ty ->
   match pat with
-  | PUnit -> (tenv, (ty, TUnit)::eqn)
-  | PInt n -> (tenv, (ty, TInt)::eqn)
-  | PBool b -> (tenv, (ty, TBool)::eqn)
+  | PUnit -> (tenv, [ty, TUnit])
+  | PInt n -> (tenv, [ty, TInt])
+  | PBool b -> (tenv, [ty, TBool])
   | PVar x -> 
     let t = fresh_tvar () in
-    (TEnv.extend (x, t) tenv, (ty, t)::eqn)
+    (TEnv.extend (x, t) tenv, [ty, t])
   | PList ps ->
     let t = fresh_tvar () in
-    gen_pat_list_equations (tenv, (ty, TList t)::eqn) ps t
+    List.fold_left (fun (tenv, eqns) p -> 
+      let (tenv, eqn) = gen_pat_equations tenv p t in
+      (tenv, eqn@eqns)
+    ) (tenv, [ty, TList t]) ps 
   | PTuple ps ->
-    let (env, eqn, ts) = 
-      List.fold_left (
-        fun (env, eqn, ts) pat ->
-          let t = fresh_tvar () in
-          let (env, eqn) = gen_pat_equations (env, eqn) pat t in
-          (env, eqn, ts@[t])
-      ) (tenv, eqn, []) ps
-    in
-    (env, (ty, TTuple ts)::eqn)
+    let ts = List.map (fun p -> fresh_tvar ()) ps in
+    List.fold_left2 (fun (tenv, eqns) p t ->
+      let (tenv, eqn) = gen_pat_equations tenv p t in
+      (tenv, eqn@eqns)
+    ) (tenv, [ty, TTuple ts]) ps ts 
   | PCtor (x, ps) ->
-    let tctor = TEnv.find tenv x in
-    begin match tctor with
-    | TCtor (t_base, ts) -> List.fold_left2 (fun (env, eqn) pat typ -> gen_pat_equations (env, eqn) pat typ) (tenv, (ty, t_base)::eqn) ps ts
+    let c_typ = TEnv.find tenv x in
+    begin match c_typ with
+    | TCtor (t_name, ts) -> 
+      List.fold_left2 (fun (tenv, eqns) p t -> 
+        let (tenv, eqn) = gen_pat_equations tenv p t in
+        (tenv, eqn@eqns)
+      ) (tenv, [ty, t_name]) ps ts
     | _ -> raise TypeError
     end
-  | PCons ps ->
+  | PCons (p1, p2) -> 
     let t = fresh_tvar () in
-    gen_pat_cons_equations (tenv, [ty, TList t]) ps t
-  | PUnder -> (tenv, (ty, fresh_tvar ())::eqn)
-  | Pats ps -> gen_pat_list_equations (tenv, eqn) ps ty
-
-and gen_pat_list_equations : (TEnv.t * typ_eqn) -> pat list -> typ -> (TEnv.t * typ_eqn)
-= fun (tenv, eqn) ps typ -> 
-  List.fold_left (fun (tenv, eqn) pat -> gen_pat_equations (tenv, eqn) pat typ) (tenv, eqn) ps 
-
-and gen_pat_cons_equations : (TEnv.t * typ_eqn) -> pat list -> typ -> (TEnv.t * typ_eqn)
-= fun (tenv, eqn) ps typ ->
-  match ps with
-  | [] -> raise (Failure "Pattern cons does not have args")
-  | [p] -> gen_pat_equations (tenv, eqn) p (TList typ)
-  | hd::tl ->
-    let (env, eqn) = gen_pat_equations (tenv, eqn) hd typ in
-    gen_pat_cons_equations (env, eqn) tl typ
+    let (tenv, eqn1) = gen_pat_equations tenv p1 t in
+    let (tenv, eqn2) = gen_pat_equations tenv p2 (TList t) in
+    (tenv, (ty, TList t)::(eqn1@eqn2))
+  | PUnder -> (tenv, [ty, fresh_tvar ()])
+  | Pats ps -> 
+    List.fold_left (fun (tenv, eqns) p -> 
+      let (tenv, eqn) = gen_pat_equations tenv p ty in
+      (tenv, eqn@eqns)
+    ) (tenv, []) ps 
 
 (* Construct type equations of expressions *)
 let rec gen_equations : HoleType.t -> VariableType.t -> TEnv.t -> lexp -> typ -> (typ_eqn * HoleType.t * VariableType.t)
@@ -409,17 +405,11 @@ let rec gen_equations : HoleType.t -> VariableType.t -> TEnv.t -> lexp -> typ ->
     let typ_exp = ty in
     let (eqns, hole_typ, var_typ) = gen_equations hole_typ var_typ tenv e typ_pat in
     (* Inference each branches *)
-    let results = 
-      List.map (fun (pat, exp) ->
-        let (tenv, pat_eqn) = gen_pat_equations (tenv, eqns) pat typ_pat in
-        let (exp_eqn, hole_typ, var_typ) = gen_equations hole_typ var_typ tenv exp typ_exp in
-        (pat_eqn@exp_eqn, hole_typ, var_typ)
-      ) bs
-    in
-    (* Merge them together *)
-    List.fold_left (fun (eqn, hole_typ, var_typ) (eqn', hole_typ', var_typ') -> 
-      (eqn@eqn', BatMap.union hole_typ hole_typ', BatMap.union var_typ var_typ')
-    ) (eqns, hole_typ, var_typ) results
+    List.fold_left (fun (eqns, h_t, v_t) (pat, exp) ->
+      let (tenv, pat_eqn) = gen_pat_equations tenv pat typ_pat in
+      let (exp_eqn, hole_typ, var_typ) = gen_equations h_t v_t tenv exp typ_exp in
+      (pat_eqn@exp_eqn@eqns, hole_typ, var_typ)
+    ) (eqns, hole_typ, var_typ) bs
   | Hole n ->
     let t = fresh_tvar () in
     let hole_typ = HoleType.extend n t hole_typ in

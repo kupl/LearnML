@@ -115,7 +115,8 @@ module Static = struct
   = fun pat ->
     match pat with
     | PVar x -> [x]
-    | PList l | PTuple l | PCtor (_,l) | PCons l -> list_fold (fun p l -> (pat2id p)@l) l [] 
+    | PList l | PTuple l | PCtor (_,l) -> list_fold (fun p l -> (pat2id p)@l) l [] 
+    | PCons (phd, ptl) -> (pat2id phd)@(pat2id ptl)
     | _ -> []
 
   let rec check_exist : id list -> id list -> bool

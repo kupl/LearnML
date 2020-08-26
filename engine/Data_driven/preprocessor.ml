@@ -167,9 +167,10 @@ module Renaming = struct
     | PCtor (c, ps) ->
       let (env, ps) = rename_pat_list env ps in
       (env, PCtor (c, ps))
-    | PCons ps ->
-      let (env, ps) = rename_pat_list env ps in
-      (env, PCons ps)
+    | PCons (phd, ptl) ->
+      let (env, phd) = rename_pat env phd in
+      let (env, ptl) = rename_pat env ptl in
+      (env, PCons (phd, ptl))
     | Pats ps ->
       let (env, ps) = rename_pat_list env ps in
       (env, Pats ps)
@@ -296,7 +297,7 @@ module Renaming = struct
     | PList ps -> PList (List.map (apply_pat env) ps)
     | PTuple ps -> PTuple (List.map (apply_pat env) ps)
     | PCtor (c, ps) -> PCtor (c, (List.map (apply_pat env) ps))
-    | PCons ps -> PCons (List.map (apply_pat env) ps)
+    | PCons (phd, ptl) -> PCons (apply_pat env phd, apply_pat env ptl)
     | Pats ps -> Pats (List.map (apply_pat env) ps)
     | _ -> pat
 

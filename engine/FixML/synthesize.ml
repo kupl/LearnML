@@ -278,7 +278,7 @@ let rec type_directed : lexp -> typ -> Type.TEnv.t -> type_env -> state option
     (* find type of branch condition *)
     let typ_pat = fresh_tvar () in
     let (tenvs, eqns) = List.fold_left (fun (tenvs, eqns) pat ->
-      let (tenv, pat_eqn) = Type.gen_pat_equations (env, eqns) pat typ_pat in
+      let (tenv, pat_eqn) = Type.gen_pat_equations env pat typ_pat in
       (tenv::tenvs, pat_eqn@eqns)
     ) ([], []) ps 
     in

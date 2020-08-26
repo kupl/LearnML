@@ -69,13 +69,7 @@ let rec pat_to_string : pat -> string
   | PList lst -> pp_list pat_to_string lst
   | PTuple lst -> pp_tuple pat_to_string lst
   | PUnder -> "_"
-  | PCons (lst) ->
-    begin match lst with
-      |[] -> raise (Failure "Pattern Cons does not have arguments")
-      |hd::tl ->
-        (pat_to_string hd)^(list_fold (fun p r -> r^"::"^(pat_to_string p)) tl "")
-    end
-  (*| PCons (phd, ptl) -> (pat_to_string phd) ^ "::" ^ (pat_to_string) *)
+  | PCons (p1, p2) -> pat_to_string p1 ^ "::" ^ pat_to_string p2
 
 let rec type_to_string : typ -> string
 = fun ty -> 

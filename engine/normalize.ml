@@ -61,7 +61,8 @@ module Simplification = struct
 	let rec var_in_pat : string -> pat -> bool
 	= fun var pat ->
 	  match pat with
-		| PList l | PTuple l | PCtor (_, l) | PCons l |Pats l -> List.exists (var_in_pat var) l
+		| PList l | PTuple l | PCtor (_, l) |Pats l -> List.exists (var_in_pat var) l
+    | PCons (p1, p2) -> var_in_pat var p1 || var_in_pat var p2
 		| PVar x -> x=var
 		| _ -> false
 

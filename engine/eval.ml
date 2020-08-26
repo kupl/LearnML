@@ -86,9 +86,7 @@ and pattern_match : value -> pat -> bool
   | VBool b1, PBool b2 -> b1 = b2
   | VList l1, PList l2 | VTuple l1, PTuple l2 -> pattern_match_list l1 l2
   | VCtor (x1, l1), PCtor (x2, l2) -> (x1 = x2) && pattern_match_list l1 l2
-  | VList [], PCons (phd::ptl) -> if ptl = [] then (pattern_match v phd) else false
-  | VList (vhd::vtl), PCons (phd::ptl) -> if ptl = [] then (pattern_match v phd) else (pattern_match vhd phd) && (pattern_match (VList vtl) (PCons ptl))
-  (*| VList (vhd::vtl), PCons (phd, ptl) -> (pattern_match v phd) && (pattern_match (VList vtl) ptl) *)
+  | VList (vhd::vtl), PCons (phd, ptl) -> (pattern_match vhd phd) && (pattern_match (VList vtl) ptl)
   | _, Pats pl -> (try List.exists (pattern_match v) pl with _ -> false)
   | _, PVar _ | _, PUnder -> true
   | _ -> false
@@ -106,7 +104,8 @@ and gather_vars : id BatSet.t -> pat -> id BatSet.t
 = fun set p ->
   match p with
   | PVar x -> BatSet.add x set
-  | PList ps | PTuple ps | PCtor (_, ps) | PCons ps | Pats ps -> List.fold_left gather_vars set ps
+  | PList ps | PTuple ps | PCtor (_, ps) | Pats ps -> List.fold_left gather_vars set ps
+  | PCons (phd, ptl) -> gather_vars (gather_vars set phd) ptl
   | _ -> set
 
 let rec bind_pat : env -> value -> pat -> env
@@ -114,11 +113,9 @@ let rec bind_pat : env -> value -> pat -> env
   match (v, p) with
   | _, PInt _ | _, PBool _ | _, PUnder -> env
   | VList l1, PList l2 | VTuple l1, PTuple l2 | VCtor (_, l1), PCtor (_, l2) -> bind_pat_list env l1 l2
-  | VList [], PCons (phd::ptl) ->  if ptl = [] then (bind_pat env v phd) else raise (Failure "Pattern binding failure")
-  | VList (vhd::vtl), PCons (phd::ptl) -> if ptl = [] then bind_pat env v phd else bind_pat (bind_pat env vhd phd) (VList vtl) (PCons ptl)
+  | VList (vhd::vtl), PCons (phd, ptl) -> bind_pat (bind_pat env vhd phd) (VList vtl) ptl
   | _, PVar x -> update_env x v env
   | _, Pats ps -> if check_patterns ps then bind_pat env v (List.find (pattern_match v) ps) else raise (Failure "Invalid pattern list")
-  (*| VList (vhd::vtl), PCons (phd::ptl) -> bind_pat (bind_pat env vhd phd) (VList vtl) ptl*)
   | _ -> raise (Failure ("Pattern binding failure : " ^ Print.pat_to_string p ^ ", " ^ Print.string_of_value v))
 
 and bind_pat_list : env -> value list -> pat list -> env

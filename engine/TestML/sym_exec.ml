@@ -37,8 +37,7 @@ module Executor = struct
 	  | Bool b1, PBool b2 -> b1 = b2
 	  | List l1, PList l2 | Tuple l1, PTuple l2 -> pattern_match_list l1 l2
 	  | Ctor (x1, l1), PCtor (x2, l2) -> (x1 = x2) && pattern_match_list l1 l2
-	  | List [], PCons (phd::ptl) -> if ptl = [] then (pattern_match sv phd) else false
-	  | List (vhd::vtl), PCons (phd::ptl) -> if ptl = [] then (pattern_match sv phd) else (pattern_match vhd phd) && (pattern_match (List vtl) (PCons ptl))
+	  | List (vhd::vtl), PCons (phd, ptl) -> (pattern_match vhd phd) && (pattern_match (List vtl) ptl)
 	  | ASymbol _, PInt _ | Aop _, PInt _ | Minus _, PInt _ | Not _, PBool _ | Bop _, PBool _ | ABop _, PBool _ | EQop _, PBool _ -> true
 	  | _, PVar _ | _, PUnder -> true
 	  | _, Pats pl -> raise (Failure "Invalid pattern type")
@@ -61,7 +60,8 @@ module Executor = struct
   = fun p -> 
   	match p with
   	| PInt _ -> true
-  	| PList ps | PTuple ps | PCtor (_, ps) | PCons ps | Pats ps -> List.exists pat_has_int ps
+  	| PList ps | PTuple ps | PCtor (_, ps) | Pats ps -> List.exists pat_has_int ps
+  	| PCons (phd, ptl) -> pat_has_int phd || pat_has_int ptl
   	| _ -> false
 
   let rec gen_matched_value : symbolic_value -> pat -> symbolic_value
@@ -72,8 +72,7 @@ module Executor = struct
 	  | List svs, PList ps -> List (List.map2 gen_matched_value svs ps)
 	  | Tuple svs, PTuple ps -> Tuple (List.map2 gen_matched_value svs ps)
 	  | Ctor (x1, svs), PCtor (x2, ps) -> Ctor (x2 , List.map2 gen_matched_value svs ps)
-	  | List [], PCons (phd::ptl) -> if ptl = [] then gen_matched_value sv phd else raise (Failure "Invalid pattern type")
-	  | List (vhd::vtl), PCons (phd::ptl) -> if ptl = [] then gen_matched_value sv phd else Cons (gen_matched_value vhd phd, (gen_matched_value (List vtl) (PCons ptl)))
+	  | List (vhd::vtl), PCons (phd, ptl) -> Cons (gen_matched_value vhd phd, (gen_matched_value (List vtl) ptl))
 	  | _, PVar _ | _, PUnder -> sv
 	  | _ -> raise (Failure "Invalid pattern type")
 
@@ -137,9 +136,8 @@ module Executor = struct
 		| _, PUnit | _, PInt _ | _, PBool _ | _, PUnder -> env
 		| _, PVar x -> extend_env (x, gen_sym_state (pc, sv)) env
 		| List svs, PList ps | Tuple svs, PTuple ps | Ctor (_, svs), PCtor (_, ps) -> pat_list_binding env pc ps svs
-		| List [], PCons (phd::ptl) -> if ptl = [] then (pat_binding env pc phd sv) else raise (Failure "Pattern binding failure")
-	  | List (vhd::vtl), PCons (phd::ptl) -> if ptl = [] then (pat_binding env pc phd sv) else pat_binding (pat_binding env pc phd vhd) pc (PCons ptl) (List vtl)
-	  | Cons (vhd, vtl), PCons (phd::ptl) -> if ptl = [] then (pat_binding env pc phd sv) else pat_binding (pat_binding env pc phd vhd) pc (List.hd ptl) vtl
+	  | List (vhd::vtl), PCons (phd, ptl) -> pat_binding (pat_binding env pc phd vhd) pc ptl (List vtl)
+	  | Cons (vhd, vtl), PCons (phd, ptl) -> pat_binding (pat_binding env pc phd vhd) pc ptl vtl
 		| _, Pats ps -> pat_binding env pc (List.hd ps) sv (* TODO => validitiy of patterns *)
 		| _ -> raise (Failure ("Pattern binding failure " ^ Print.pat_to_string p ^ ", " ^ symbol_to_string sv))
 
