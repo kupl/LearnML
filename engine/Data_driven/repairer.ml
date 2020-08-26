@@ -108,7 +108,7 @@ let rec replace_call : Type.HoleType.t -> Type.VariableType.t -> exp_template ->
 (* Main Procedure *)
 let time_out = 60.0
 let start_time = ref 0.0
-let debug_mode = false
+let debug_mode = true
 
 let debug = ref (open_out "log.txt")
 let cache = ref BatSet.empty (* Cacheing for stroing redundant candidate programs *)
@@ -150,10 +150,14 @@ let rec find_patch : prog -> (repair_template BatSet.t) BatSet.t -> examples -> 
     if not (check_cache s_pgm) then
       let _ = 
         if debug_mode then 
-          let header = "------------------------\nPatch Candidate\n------------------------\n" in
-          Printf.fprintf (!debug) "%s\n" (header ^ (string_of_templates cand) ^ "\n");
-          let result = "------------------------\nResult\n------------------------\n" in
-          Printf.fprintf (!debug) "%s\n" (result ^ (Print.program_to_string pgm') ^ "\n")
+          let s = 
+            "------------------------\nPatch Candidate\n------------------------\n" ^
+            string_of_templates cand ^ "\n" ^
+            "------------------------\nResult\n------------------------\n" ^
+            Print.program_to_string pgm' ^ "\n"
+          in
+          print_endline s;
+          Printf.fprintf (!debug) "%s\n" s
         else 
           ()
       in

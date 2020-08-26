@@ -11,7 +11,7 @@ type summary = {
   outgoing : calling_ctx BatSet.t  (* Outgoing edge to other nodes *)
 }
 (* Calling context : (args of caller, calling path of caller ) *)
-and calling_ctx = arg list * path
+and calling_ctx = typ * arg list * path
 
 type reference = {
   source : string; (* Source file of reference function *)
@@ -31,7 +31,7 @@ let global_syn = ref 0.
 let local_syn = ref 0.
 
 (* pp *)
-let string_of_ctx (args, path) = "[" ^ (args_to_string args "") ^ "]:" ^ string_of_path path 
+let string_of_ctx (typ, args, path) = type_to_string typ ^ " - [" ^ (args_to_string args "") ^ "]:" ^ string_of_path path 
 
 let string_of_summary summary = 
   string_of_node summary.node ^ "\n" ^
@@ -60,15 +60,16 @@ let rec get_incomming_edges : node_id -> graph -> calling_ctx BatSet.t
       BatSet.union callers_ctx acc
     else 
       let node = get_node_by_id edge.src cg in
-      BatSet.add (node.args, edge.ctx) acc
+      BatSet.add (get_output_typ node.typ, node.args, edge.ctx) acc
   ) calling_edges BatSet.empty
 
 let rec get_outgoing_edges : node_id -> graph -> calling_ctx BatSet.t
 = fun id cg ->
   let invoked_edges = BatSet.filter (fun edge -> id = edge.src) cg.edges in
   BatSet.fold (fun edge acc ->
-    let node = get_node_by_id edge.src cg in
-    BatSet.add (node.args, edge.ctx) acc
+    let cur_node = get_node_by_id edge.src cg in
+    let callee = get_node_by_id edge.sink cg in
+    BatSet.add (get_output_typ callee.typ, cur_node.args, edge.ctx) acc
   ) invoked_edges BatSet.empty
 
 let get_summaries : graph -> summary BatSet.t
@@ -220,8 +221,10 @@ let rec syntactic_distance : lexp -> lexp -> float
   (* Syntatically different *)
   | _ -> float_of_int (exp_size exp1 + exp_size exp2)
 
+
 let rec syntactic_distance : lexp -> lexp -> float
 = fun e1 e2 -> Syntactic_dist.syntactic_distance e1 e2
+
 
 (* Path similarity *)
 let rec match_arg : arg -> arg -> bool
@@ -233,11 +236,11 @@ let rec match_arg : arg -> arg -> bool
   | _ -> false
 
 let verify_ctx : calling_ctx -> calling_ctx -> bool
-= fun (args_sub, path_sub) (args_sol, path_sol) ->
+= fun (typ_sub, args_sub, path_sub) (typ_sol, args_sol, path_sol) ->
   try
     let vc = List.fold_left2 (fun vc arg_sub arg_sol ->
       (* TODO : Fix solver engine and remove checking *)
-      if match_arg arg_sub arg_sol then
+      if match_arg arg_sub arg_sol && check_typs typ_sub typ_sol then
         let new_path = EQop (Eq, arg_to_path arg_sub, arg_to_path arg_sol) in
         Bop (And, new_path, vc)
       else Bool false 
@@ -272,7 +275,7 @@ let rec find_matching : summary BatSet.t -> reference BatSet.t -> matching
   BatSet.fold (fun summary matching -> 
     (* Find a solution functions whose type is the same with the type of the submission *)
     let candidates = BatSet.filter (fun reference -> 
-      check_typs summary.node.typ reference.summary.node.typ
+      check_typs summary.node.typ reference.summary.node.typ || false
     ) references in
     (* Select solution functions with the minimal semantic distance *)
     let (_, candidates) = BatSet.fold (fun reference (score, candidates) ->
@@ -324,6 +327,7 @@ let select_solutions : prog -> (string * graph) list -> matching
   let summaries = get_summaries (extract_graph pgm) in
   let _ = ctor_table := Path_score.CtorTable.gen_ctor_table BatMap.empty pgm in
   List.fold_left (fun acc (f_name, cg_sol) ->
+    print_endline f_name;
     let matching = find_matching summaries (get_references f_name cg_sol) in
     update_matching matching acc
   ) empty_matching cg_sols 
