@@ -10,19 +10,19 @@ open CallGraph
 type vector = (string, int list) BatMap.t
 
 let update_vec vec key value = 
-	if BatMap.mem key vec then BatMap.modify key (fun seq -> value::seq) vec
-	else BatMap.add key [value] vec
+  if BatMap.mem key vec then BatMap.modify key (fun seq -> value::seq) vec
+  else BatMap.add key [value] vec
 
 (* Atomic tree pattern : exp *)
 let rec vectorize : vector -> int -> lexp -> vector
 = fun vec d (l, exp) ->
-	match exp with
-	| EUnit -> update_vec vec "unit" d
-	| Const _ -> update_vec vec "int" d
-	| TRUE -> update_vec vec "true" d
-	| FALSE -> update_vec vec "false" d
-	| String _ -> update_vec vec "string" d
-	| EVar _ -> update_vec vec "var" d
+  match exp with
+  | EUnit -> update_vec vec "unit" d
+  | Const _ -> update_vec vec "int" d
+  | TRUE -> update_vec vec "true" d
+  | FALSE -> update_vec vec "false" d
+  | String _ -> update_vec vec "string" d
+  | EVar _ -> update_vec vec "var" d
   | EFun (arg, e) -> vectorize (update_vec vec "fun" d) (d + 1) e
   | ERef e -> vectorize (update_vec vec "ref" d) (d + 1) e
   | EDref e -> vectorize (update_vec vec "dref" d) (d + 1) e
@@ -49,36 +49,33 @@ let rec vectorize : vector -> int -> lexp -> vector
   | EAssign (e1, e2) -> vectorize (vectorize (update_vec vec "assign" d) (d + 1) e1) (d + 1) e2
   | EList es -> List.fold_left (fun acc e -> vectorize acc (d + 1) e) (update_vec vec "list" d) es
   | ETuple es -> List.fold_left (fun acc e -> vectorize acc (d + 1) e) (update_vec vec "tuple" d) es
-  | ECtor (x, es) -> List.fold_left (fun acc e -> vectorize acc (d + 1) e) (update_vec vec "list" d) es
+  | ECtor (x, es) -> List.fold_left (fun acc e -> vectorize acc (d + 1) e) (update_vec vec ("ctor"^x) d) es
   | IF (e1, e2, e3) -> 
-  	vectorize (vectorize (vectorize (update_vec vec "if" d) (d + 1) e1) (d + 1) e2) (d + 1) e3
+    vectorize (vectorize (vectorize (update_vec vec "if" d) (d + 1) e1) (d + 1) e2) (d + 1) e3
   | EMatch (e, bs) -> 
-  	List.fold_left (fun acc (_, e) -> vectorize acc (d + 1) e) (vectorize (update_vec vec "match" d) (d + 1) e) bs
+    List.fold_left (fun acc (_, e) -> vectorize acc (d + 1) e) (vectorize (update_vec vec "match" d) (d + 1) e) bs
   | ELet (f, is_rec, args, typ, e1, e2) -> vectorize (vectorize (update_vec vec "let" d) (d + 1) e1) (d + 1) e2
   | EBlock (is_rec, bindings, e) -> 
-  	List.fold_left (fun acc (_, _, _, _, e) -> vectorize acc (d + 1) e) (vectorize (update_vec vec "letand" d) (d + 1) e) bindings
+    List.fold_left (fun acc (_, _, _, _, e) -> vectorize acc (d + 1) e) (vectorize (update_vec vec "letand" d) (d + 1) e) bindings
   | _ -> raise (Failure ("Vector extraction : invalid exp (" ^ Print.exp_to_string (l, exp)))
  
 let rec compute_norm2 : int list -> int list -> float 
-= fun seq1 seq2 ->	
-	match (seq1, seq2) with
-	| [], [] -> 0.
-	| hd1::tl1, hd2::tl2 -> (float_of_int ((hd1 - hd2) * (hd1 - hd2))) +. compute_norm2 tl1 tl2
-	| lst, [] | [], lst -> float_of_int (List.fold_left (fun acc e -> acc + (e * e)) 0 lst)
+= fun seq1 seq2 ->  
+  match (seq1, seq2) with
+  | [], [] -> 0.
+  | hd1::tl1, hd2::tl2 -> (float_of_int ((hd1 - hd2) * (hd1 - hd2))) +. compute_norm2 tl1 tl2
+  | lst, [] | [], lst -> float_of_int (List.fold_left (fun acc e -> acc + (e * e)) 0 lst)
 
 let rec compute_dist : vector -> vector -> float 
 = fun vec1 vec2 ->
-	BatMap.foldi (fun key seq1 acc ->
-		let dist = 
-			if BatMap.mem key vec2 then
-				sqrt (compute_norm2 (List.sort compare seq1) (List.sort compare (BatMap.find key vec2)))
-			else sqrt (compute_norm2 (List.sort compare seq1) [])
-		in
-		dist +. acc
-	) vec1 0.
+  BatMap.foldi (fun key seq1 acc ->
+    if BatMap.mem key vec2 then
+      acc +. compute_norm2 (List.sort compare seq1) (List.sort compare (BatMap.find key vec2))
+    else acc +. compute_norm2 (List.sort compare seq1) []
+  ) vec1 0.
 
 let rec syntactic_distance : lexp -> lexp -> float
 = fun e1 e2 ->
-	let (vec1, vec2) = (vectorize BatMap.empty 0 e1, vectorize BatMap.empty 0 e2) in
-	compute_dist vec1 vec2
+  let (vec1, vec2) = (vectorize BatMap.empty 0 e1, vectorize BatMap.empty 0 e2) in
+  sqrt (compute_dist vec1 vec2)
 
