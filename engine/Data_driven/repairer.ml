@@ -182,6 +182,10 @@ let rec work : prog -> call_templates -> Workset.t -> examples -> prog option
         (* Replace invalid function calls in templates by speicial hole *)
         let (_, h_t, v_t, _) = Type.run (apply_templates pgm a) in
         let a = BatSet.map (fun (e_temp, d_temp) -> (replace_call h_t v_t e_temp, d_temp)) a in
+        if debug_mode then (
+          print_header "Before Updating"; 
+          BatSet.iter (fun temp -> print_endline (string_of_template temp)) a;
+        );
         (* Update templates having function call using call information *)
         let (_, h_t, v_t, subst) = Type.run (apply_templates pgm a) in
         let candidates = BatSet.fold (fun (e_temp, d_temp) candidates -> 

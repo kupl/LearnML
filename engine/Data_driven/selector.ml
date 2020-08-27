@@ -239,16 +239,14 @@ let rec match_arg : arg -> arg -> bool
 let verify_ctx : calling_ctx -> calling_ctx -> bool
 = fun (typ_sub, args_sub, path_sub) (typ_sol, args_sol, path_sol) ->
   try
-    if check_typs typ_sub typ_sol then
-      let vc = List.fold_left2 (fun vc arg_sub arg_sol ->
-        (* TODO : Fix solver engine and remove checking *)
-        if match_arg arg_sub arg_sol then
-          let new_path = EQop (Eq, arg_to_path arg_sub, arg_to_path arg_sol) in
-          Bop (And, new_path, vc)
-        else Bool false 
-      ) (Bop (And, path_sub, path_sol)) args_sub args_sol in
-      Path_score.check_path !ctor_table vc
-    else false
+    let vc = List.fold_left2 (fun vc arg_sub arg_sol ->
+      (* TODO : Fix solver engine and remove checking *)
+      if match_arg arg_sub arg_sol then
+        let new_path = EQop (Eq, arg_to_path arg_sub, arg_to_path arg_sol) in
+        Bop (And, new_path, vc)
+      else Bool false 
+    ) (Bop (And, path_sub, path_sol)) args_sub args_sol in
+    Path_score.check_path !ctor_table vc
   with _ -> false 
 
 let rec semantic_distance_ctx : calling_ctx BatSet.t -> calling_ctx BatSet.t -> float

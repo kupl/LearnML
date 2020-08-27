@@ -140,10 +140,11 @@ let get_next_states : call_templates -> Workset.work -> lexp -> Workset.work Bat
   let hole_typ = BatMap.find n h_t in
   let hole_env = BatMap.find n v_t in
   (* if the current hole is a special function call then use the call templates *)
-  let next_states = BatMap.foldi (fun x t set -> 
+  let next_states = BatMap.foldi (fun f t set -> 
 	  match t with
 	  | TArr (t1, t2) when (check_typs hole_typ (get_output_typ t)) ->
-	    BatSet.union (BatMap.find x call_temps) set
+      (* If there is no usecase for function f then do not use the function *)
+	    (try BatSet.union (BatMap.find f call_temps) set with _ -> set)
 	  | _ -> set
 	) hole_env BatSet.empty in
 	let next_states = BatSet.map update_component next_states in
