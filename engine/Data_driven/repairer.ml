@@ -108,7 +108,7 @@ let rec replace_call : Type.HoleType.t -> Type.VariableType.t -> exp_template ->
 (* Main Procedure *)
 let time_out = 60.0
 let start_time = ref 0.0
-let debug_mode = false
+let debug_mode = true
 
 let debug = ref (open_out "log.txt")
 let cache = ref BatSet.empty (* Cacheing for stroing redundant candidate programs *)

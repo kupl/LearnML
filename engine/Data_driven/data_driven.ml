@@ -27,6 +27,7 @@ let save_data ?(logging_flag=false) : prog -> string -> unit
   	let log_oc = open_out log_path in
   	let nodes = BatSet.map (fun node ->
   		{ id = node.id;
+  			is_rec = node.is_rec;
   			name = Preprocessor.Renaming.apply_env node.name r_env;
   			args = List.map (Preprocessor.Renaming.apply_arg r_env) node.args;
   			typ = node.typ;
@@ -94,7 +95,7 @@ let run2 : prog -> (string * prog) list -> examples -> prog
 		print_endline (string_of_map (id) (string_of_set exp_to_string) call_temps)
 	in
 	let pgm = Preprocessor.Renaming.apply_pgm r_env pgm in
-	print_pgm pgm;
+	print_pgm2 pgm;
 	match Repairer.run pgm call_temps repair_templates testcases with
 	| Some pgm' -> 
 		let repair_time = Unix.gettimeofday() -. !(Repairer.start_time) in

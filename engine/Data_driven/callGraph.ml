@@ -9,6 +9,7 @@ exception UndefinedNode
 type node_id = int
 type node = {
   id : node_id;
+  is_rec : bool;
   name : string;
   args : arg list; 
   typ : typ;
@@ -273,7 +274,7 @@ let rec exp_to_cg : graph -> node_id -> path -> lexp -> graph
       (* If f is a function then generate new call-graph node *)    
       begin match f with
       | BindOne f -> 
-        let new_node = { id = fresh_id (); name = f; args = args; typ = get_func_typ args typ; body = extract_body e1 } in 
+        let new_node = { id = fresh_id (); is_rec = is_rec; name = f; args = args; typ = get_func_typ args typ; body = extract_body e1 } in 
         let cg1 = exp_to_cg cg new_node.id fresh_path e1 in 
         exp_to_cg (update_node new_node cg1) id path e2
       | _ -> raise (Failure "Call graph : invalid function definition")
@@ -288,7 +289,7 @@ let rec exp_to_cg : graph -> node_id -> path -> lexp -> graph
       if (args <> [] || is_fun typ) then
         begin match f with
         | BindOne f -> 
-          let new_node = { id = fresh_id (); name = f; args = args; typ = get_func_typ args typ; body = extract_body e } in 
+          let new_node = { id = fresh_id (); is_rec = is_rec; name = f; args = args; typ = get_func_typ args typ; body = extract_body e } in 
           update_node new_node acc
         | _ -> raise (Failure "Call graph : invalid function definition")
         end
@@ -332,7 +333,7 @@ let rec decl_to_cg : graph -> decl -> graph
     if (args <> [] || is_fun typ) then  
       begin match f with
       | BindOne f -> 
-        let new_node = { id = fresh_id (); name = f; args = args; typ = get_func_typ args typ; body = extract_body e } in 
+        let new_node = { id = fresh_id (); is_rec = is_rec; name = f; args = args; typ = get_func_typ args typ; body = extract_body e } in 
         update_node new_node (exp_to_cg cg new_node.id fresh_path e)
       | _ -> raise (Failure "Call graph : invalid function definition")
       end
@@ -342,7 +343,7 @@ let rec decl_to_cg : graph -> decl -> graph
       if (args <> [] || is_fun typ) then
         begin match f with
         | BindOne f -> 
-          let new_node = { id = fresh_id (); name = f; args = args; typ = get_func_typ args typ; body = extract_body e } in 
+          let new_node = { id = fresh_id (); is_rec = is_rec; name = f; args = args; typ = get_func_typ args typ; body = extract_body e } in 
           update_node new_node acc
         | _ -> raise (Failure "Call graph : invalid function definition")
         end

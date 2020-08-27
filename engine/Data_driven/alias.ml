@@ -282,7 +282,9 @@ and analysis_fun : analysis -> arg list -> lexp -> t
 	| _ -> analysis_exp (update_args args map) (l, exp)
 
 let rec analysis_node : node -> t
-= fun node -> analysis_exp (update_args node.args (BatMap.singleton node.name (Func node.typ))) node.body
+= fun node -> 
+  let init_condition = if node.is_rec then (BatMap.singleton node.name (Func node.typ)) else BatMap.empty in
+  analysis_exp (update_args node.args init_condition) node.body
 
 let rec compute_alias_set : analysis -> analysis -> alias_set
 = fun map1 map2 ->
