@@ -14,8 +14,8 @@ open Extractor
 let save_data ?(logging_flag=false) : prog -> string -> unit
 = fun pgm path -> 
 	(* Extract call graph *)
-  let (r_env, renamed_pgm) = Preprocessor.Renaming.run (Preprocessor.run pgm) in
-  let cg = CallGraph.extract_graph renamed_pgm in
+  let (r_env, renamed_pgm) = Preprocessor.run pgm in
+  let cg = extract_graph renamed_pgm in
 	(* Save preprocessed data file *)
 	let data_path = path ^ ".marshalled" in
 	let data_oc = open_out data_path in
@@ -47,14 +47,12 @@ let load_data : string -> graph
   close_in data_in;
   cg
 
+
 let run2 : prog -> (string * prog) list -> examples -> prog
 = fun pgm cpgms testcases -> 
 	(* Preprocessing *)
-	library_pgm := Preprocessor.run (!library_pgm);
-	(* print_pgm2 pgm; *)
-	let preprocessing_time = Unix.gettimeofday () in
-	let pgm = Preprocessor.run pgm in 
-	let (r_env, pgm) = Preprocessor.Renaming.run pgm in
+	let preprocessing_time = Unix.gettimeofday () in 
+	let (r_env, pgm) = Preprocessor.run pgm in
 	let cpgms = List.map (fun (f_name, cpgm) -> (f_name, load_data f_name)) cpgms in
 	let preprocessing_time = Unix.gettimeofday () -. preprocessing_time in
 	(* Selection *)

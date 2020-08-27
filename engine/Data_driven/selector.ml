@@ -222,10 +222,10 @@ let rec syntactic_distance : lexp -> lexp -> float
   (* Syntatically different *)
   | _ -> float_of_int (exp_size exp1 + exp_size exp2)
 
-
+(*
 let rec syntactic_distance : lexp -> lexp -> float
 = fun e1 e2 -> Syntactic_dist.syntactic_distance e1 e2
-
+*)
 
 (* Path similarity *)
 let rec match_arg : arg -> arg -> bool
@@ -239,14 +239,16 @@ let rec match_arg : arg -> arg -> bool
 let verify_ctx : calling_ctx -> calling_ctx -> bool
 = fun (typ_sub, args_sub, path_sub) (typ_sol, args_sol, path_sol) ->
   try
-    let vc = List.fold_left2 (fun vc arg_sub arg_sol ->
-      (* TODO : Fix solver engine and remove checking *)
-      if match_arg arg_sub arg_sol && check_typs typ_sub typ_sol then
-        let new_path = EQop (Eq, arg_to_path arg_sub, arg_to_path arg_sol) in
-        Bop (And, new_path, vc)
-      else Bool false 
-    ) (Bop (And, path_sub, path_sol)) args_sub args_sol in
-    Path_score.check_path !ctor_table vc
+    if check_typs typ_sub typ_sol then
+      let vc = List.fold_left2 (fun vc arg_sub arg_sol ->
+        (* TODO : Fix solver engine and remove checking *)
+        if match_arg arg_sub arg_sol then
+          let new_path = EQop (Eq, arg_to_path arg_sub, arg_to_path arg_sol) in
+          Bop (And, new_path, vc)
+        else Bool false 
+      ) (Bop (And, path_sub, path_sol)) args_sub args_sol in
+      Path_score.check_path !ctor_table vc
+    else false
   with _ -> false 
 
 let rec semantic_distance_ctx : calling_ctx BatSet.t -> calling_ctx BatSet.t -> float
@@ -257,6 +259,12 @@ let rec semantic_distance_ctx : calling_ctx BatSet.t -> calling_ctx BatSet.t -> 
     let total_num = (float_of_int (BatSet.cardinal ctxs_sub)) *. (float_of_int (BatSet.cardinal ctxs_sol)) in
     let matching_num = BatSet.fold (fun ctx_sub acc ->
       BatSet.fold (fun ctx_sol acc ->
+        (*
+        print_endline "---------------------------";
+        print_endline ("Sub ctx : " ^ string_of_ctx ctx_sub);
+        print_endline ("Sol ctx : " ^ string_of_ctx ctx_sol);
+        print_endline (string_of_bool (verify_ctx ctx_sub ctx_sol));
+        .*)
         if verify_ctx ctx_sub ctx_sol then acc +. 0. else acc +. 1.
       ) ctxs_sol acc
     ) ctxs_sub 0. in
@@ -266,9 +274,11 @@ let rec semantic_distance : summary -> summary -> float
 = fun summary_sub summary_sol ->
   let (incomming_sub, incomming_sol) = (summary_sub.incomming, summary_sol.incomming) in
   let incomming_distance = semantic_distance_ctx incomming_sub incomming_sol in
+  (*
   let (outgoing_sub, outgoing_sol) = (summary_sub.outgoing, summary_sol.outgoing) in
   let outgoing_distance = semantic_distance_ctx outgoing_sub outgoing_sol in
-  incomming_distance +. outgoing_distance
+  *)
+  incomming_distance (* +. outgoing_distance *)
 
 (* Compute (local)matching result *)
 let rec find_matching : summary BatSet.t -> reference BatSet.t -> matching
@@ -276,7 +286,7 @@ let rec find_matching : summary BatSet.t -> reference BatSet.t -> matching
   BatSet.fold (fun summary matching -> 
     (* Find a solution functions whose type is the same with the type of the submission *)
     let candidates = BatSet.filter (fun reference -> 
-      check_typs summary.node.typ reference.summary.node.typ || false
+      check_typs summary.node.typ reference.summary.node.typ
     ) references in
     (* Select solution functions with the minimal semantic distance *)
     let (_, candidates) = BatSet.fold (fun reference (score, candidates) ->
@@ -312,7 +322,18 @@ let rec update_matching : matching -> matching -> matching
       let reference' = BatMap.find summary global in
       (* Compare semantic distance *)
       let p1 = semantic_distance summary reference.summary in
+      (*
+      let _ =
+        print_header "submission"; print_endline (string_of_summary summary);
+        print_header ("local :" ^ string_of_float p1); print_endline (string_of_reference reference);
+      in
+      *)
       let p2 = semantic_distance summary reference'.summary in
+      (*
+      let _ =
+        print_header ("global :" ^ string_of_float p2); print_endline (string_of_reference reference');
+      in
+      *)
       if p1 < p2 then BatMap.add summary reference global 
       else if p1 > p2 then global
       else
@@ -328,7 +349,6 @@ let select_solutions : prog -> (string * graph) list -> matching
   let summaries = get_summaries (extract_graph pgm) in
   let _ = ctor_table := Path_score.CtorTable.gen_ctor_table BatMap.empty pgm in
   List.fold_left (fun acc (f_name, cg_sol) ->
-    print_endline f_name;
     let matching = find_matching summaries (get_references f_name cg_sol) in
     update_matching matching acc
   ) empty_matching cg_sols 

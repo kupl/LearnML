@@ -362,11 +362,11 @@ module Renaming = struct
     | Ctor (c, ps) -> Ctor (c, List.map (apply_path env) ps)
     | Var (x, typ) -> Var (apply_env x env, typ)
     | _ -> path
-
   (* Template restoring *)
 end
 
-let run : prog -> prog
+let run : prog -> Renaming.env * prog
 = fun pgm -> 
   Type_annotate.run pgm
   |> Decapsulation.run
+  |> Renaming.run
