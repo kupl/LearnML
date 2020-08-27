@@ -209,35 +209,17 @@ let main () =
       match submission, solutions_debug with
       | Some sub, cpgms -> 
         let cfg = Cfg.extract_cfg sub in
-        (*
-        Print.print_header "original"; Print.print_pgm sub;
-        Print.print_header "CFG"; Cfg.print cfg;
-        *)
         let all_matchings = List.fold_left (fun acc (file, cpgm) -> 
           let cfg' = Cfg.extract_cfg cpgm in
-          (*
-          Print.print_header ("Code of " ^ file); Print.print_pgm cpgm;
-          Print.print_header ("CFG of " ^ file); Cfg.print cfg';
-          *)
           match Cfg.match_t cfg cfg' with
           | None -> acc
           | Some matching -> (file, matching)::acc
         ) [] cpgms
         in
         if List.length all_matchings = 0 then (print_endline "X") else (print_endline "O")
-        (*
-        print_endline ("# of matched solutions : " ^ string_of_int (List.length all_matchings));
-        List.iter (fun (file, matching) -> 
-          print_endline file
-          (*
-          print_endline ("\n Matchign relations : \n");
-          Cfg.print_matching matching
-          *)
-        ) all_matchings;
-        *)
       | _ -> raise (Failure "Submission or solutions are not provided")
     end
-  else if !opt_preproc then
+      else if !opt_preproc then
     begin match submission with
     | Some sub -> 
       let file_name = get_file_path !opt_submission_filename in
@@ -248,16 +230,6 @@ let main () =
     | _ -> raise (Failure "Submission file is not provided")
     end
   else
-    (* Arg.usage options usage_msg *)
-    begin
-      match submission, solutions_debug with
-      | _, sols ->
-        List.iter (fun (fname, sol) -> 
-          Print.print_header ("Original (" ^ fname ^ ")"); Print.print_pgm sol;
-          let sol = Preprocessor.run sol in
-          Print.print_header ("Preprocessed (" ^ fname ^ ")"); Print.print_pgm sol
-        ) sols
-      | _ -> raise (Failure (!opt_submission_filename ^ " does not exist"))
-    end
+    Arg.usage options usage_msg 
 
 let _ = main ()
