@@ -272,11 +272,9 @@ let rec semantic_distance : summary -> summary -> float
 = fun summary_sub summary_sol ->
   let (incomming_sub, incomming_sol) = (summary_sub.incomming, summary_sol.incomming) in
   let incomming_distance = semantic_distance_ctx incomming_sub incomming_sol in
-  (*
   let (outgoing_sub, outgoing_sol) = (summary_sub.outgoing, summary_sol.outgoing) in
   let outgoing_distance = semantic_distance_ctx outgoing_sub outgoing_sol in
-  *)
-  incomming_distance (* +. outgoing_distance *)
+  incomming_distance +. outgoing_distance 
 
 (* Compute (local)matching result *)
 let rec find_matching : summary BatSet.t -> reference BatSet.t -> matching

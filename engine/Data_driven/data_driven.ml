@@ -14,7 +14,7 @@ open Extractor
 let save_data ?(logging_flag=false) : prog -> string -> unit
 = fun pgm path -> 
 	(* Extract call graph *)
-  let (r_env, renamed_pgm) = Preprocessor.run pgm in
+  let (r_env, renamed_pgm) = Preprocessor.run (append_grading pgm) in
   let cg = extract_graph renamed_pgm in
 	(* Save preprocessed data file *)
 	let data_path = path ^ ".marshalled" in
@@ -48,12 +48,11 @@ let load_data : string -> graph
   close_in data_in;
   cg
 
-
 let run2 : prog -> (string * prog) list -> examples -> prog
 = fun pgm cpgms testcases -> 
 	(* Preprocessing *)
 	let preprocessing_time = Unix.gettimeofday () in 
-	let (r_env, pgm) = Preprocessor.run pgm in
+	let (r_env, pgm) = Preprocessor.run (append_grading pgm) in
 	let cpgms = List.map (fun (f_name, cpgm) -> (f_name, load_data f_name)) cpgms in
 	let preprocessing_time = Unix.gettimeofday () -. preprocessing_time in
 	(* Selection *)
@@ -94,7 +93,7 @@ let run2 : prog -> (string * prog) list -> examples -> prog
 		Print.print_header "Call-templates";
 		print_endline (string_of_map (id) (string_of_set exp_to_string) call_temps)
 	in
-	let pgm = Preprocessor.Renaming.apply_pgm r_env pgm in
+	let pgm = Preprocessor.Renaming.apply_pgm r_env (remove_grading pgm) in
 	print_pgm2 pgm;
 	match Repairer.run pgm call_temps repair_templates testcases with
 	| Some pgm' -> 

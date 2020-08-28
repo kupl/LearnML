@@ -160,6 +160,7 @@ let gen_const : unit -> int
 let label_count = ref 0
 let gen_label : unit -> label
 = fun () -> label_count:=!label_count+1; (!label_count)
+
 let get_label : lexp -> label
 = fun (l, e) -> l
 
@@ -191,7 +192,7 @@ let rec get_labels_exp : lexp -> label BatSet.t
   in
   BatSet.add l sub_labels
 
-let get_labels_decl : decl -> label BatSet.t 
+and get_labels_decl : decl -> label BatSet.t 
 = fun decl ->
   match decl with
   | DLet (_, _, _, _, e) -> get_labels_exp e
@@ -200,6 +201,52 @@ let get_labels_decl : decl -> label BatSet.t
 
 let get_labels : prog -> label BatSet.t
 = fun pgm -> List.fold_left (fun labels decl -> BatSet.union labels (get_labels_decl decl)) BatSet.empty pgm
+
+let rec get_sub_exp : lexp -> label -> lexp option
+= fun lexp l ->
+  if l = get_label lexp then Some lexp
+  else 
+    match snd lexp with
+    | EList es | ECtor (_, es) | ETuple es -> get_sub_explist es l
+    | EFun (_, e) | MINUS e | NOT e | Raise e | ERef e | EDref e -> get_sub_exp e l 
+    | ADD (e1, e2) | SUB (e1, e2) | MUL (e1, e2) | DIV (e1, e2) | MOD (e1, e2) 
+    | OR (e1, e2) | AND (e1, e2) | LESS (e1, e2) | LARGER (e1, e2) | LESSEQ (e1, e2) | LARGEREQ (e1, e2) 
+    | EQUAL (e1, e2) | NOTEQ (e1, e2) | AT (e1, e2) | DOUBLECOLON (e1, e2) | STRCON (e1, e2) | EApp (e1, e2) 
+    | EAssign (e1, e2) | ELet (_, _, _, _, e1, e2) -> get_sub_explist [e1; e2] l
+    | EBlock (_, ds, e) ->
+      let es = (List.map (fun (_, _, _, _, e) -> e) ds)@[e] in
+      get_sub_explist es l
+    | EMatch (e, bs) ->
+      let es = e::(List.map (fun (p, e) -> e) bs) in
+      get_sub_explist es l
+    | IF (e1, e2, e3) -> get_sub_explist [e1; e2; e3] l
+    | _ -> None
+
+and get_sub_explist : lexp list -> label -> lexp option
+= fun es l ->
+  match es with
+  | [] -> None 
+  | hd::tl -> 
+    match get_sub_exp hd l with
+    | None -> get_sub_explist tl l 
+    | lexp -> lexp 
+
+let rec get_sub : prog -> label -> lexp option
+= fun decls l ->
+  match decls with
+  | [] -> None
+  | hd::tl -> 
+    match get_sub_decl hd l with
+    | None -> get_sub tl l
+    | lexp -> lexp
+
+and get_sub_decl : decl -> label -> lexp option
+= fun decl l ->
+  match decl with
+  | DLet (_, _, _, _, e) -> get_sub_exp e l
+  | DBlock (_, ds) -> get_sub (List.map (fun d -> DLet d) ds) l 
+  | _ -> None
+
 
 (* Hole *)
 let hole_count = ref 0
@@ -219,6 +266,20 @@ let gen_labeled_fhole () = (gen_label (), gen_fhole ())
 (* External functions *)
 let library_pgm : prog ref = ref []
 let grading_pgm : prog ref = ref []
+
+let grading_identifier = DExcept ("Grading", [])
+
+let append_grading : prog -> prog
+= fun pgm -> pgm@(grading_identifier::!grading_pgm)
+
+let rec remove_grading : prog -> prog
+= fun pgm ->
+  match pgm with
+  | [] -> []
+  | hd::tl -> if hd = grading_identifier then [] else hd::(remove_grading tl)
+
+let is_grading_entry : decl -> bool
+= fun decl -> decl = grading_identifier
 
 (* generate a fresh type variable *)
 let tvar_num = ref 0

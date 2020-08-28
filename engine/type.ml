@@ -175,7 +175,7 @@ module VariableType = struct
   let empty = BatMap.empty
 
   let find : int -> t -> TEnv.t
-  = fun label t -> BatMap.find label t 
+  = fun label t -> try BatMap.find label t with Not_found -> raise (Failure ("VarType : " ^ string_of_int label ^ " is not found!"))
 
   let extend : int -> TEnv.t -> t -> t
   = fun hole env varenv -> BatMap.add hole env varenv

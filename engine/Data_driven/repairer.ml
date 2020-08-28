@@ -39,7 +39,7 @@ module Workset = struct
 
   let explored : work -> t -> bool
   = fun work (_, prev) -> BatSet.mem work prev 
-
+    
   let add : work -> t -> t
   = fun work (heap, prev) -> 
     if explored work (heap, prev) then (heap, prev) 
@@ -108,7 +108,7 @@ let rec replace_call : Type.HoleType.t -> Type.VariableType.t -> exp_template ->
 (* Main Procedure *)
 let time_out = 60.0
 let start_time = ref 0.0
-let debug_mode = true
+let debug_mode = false
 
 let debug = ref (open_out "log.txt")
 let cache = ref BatSet.empty (* Cacheing for stroing redundant candidate programs *)
@@ -166,7 +166,32 @@ let rec find_patch : prog -> (repair_template BatSet.t) BatSet.t -> examples -> 
       else find_patch pgm remains testcases
     else find_patch pgm remains testcases
 
-(* Refactoring is needed *)
+
+(* If two templates fix intersect point simultaneously they are incompatible => *)
+let check_intersect : prog -> repair_template BatSet.t -> bool
+= fun pgm templates ->
+  BatSet.exists (fun (e_temp, d_temp) ->
+    match e_temp with
+    | ModifyExp (l, _) -> 
+      let labels1 = 
+        match get_sub pgm l with
+        | None -> failwith "Fail to find subexpression"
+        | Some lexp -> get_labels_exp lexp
+      in 
+      BatSet.exists (fun (e_temp, d_temp) ->
+        match e_temp with
+        | ModifyExp (l', _) -> 
+          let labels2 = 
+             match get_sub pgm l' with
+            | None -> failwith "Fail to find subexpression"
+            | Some lexp -> get_labels_exp lexp
+          in 
+          not (BatSet.disjoint labels1 labels2)
+        | _ -> false 
+      ) (BatSet.remove (e_temp, d_temp) templates)
+    | _ -> false 
+  ) templates
+
 let rec work : prog -> call_templates -> Workset.t -> examples -> prog option
 = fun pgm call_temps workset testcases ->
   if (Unix.gettimeofday()) -. (!start_time) > time_out then None
@@ -178,7 +203,9 @@ let rec work : prog -> call_templates -> Workset.t -> examples -> prog option
         print_header "Apply"; print_endline (string_of_templates a);
         print_header "Not-Apply"; print_endline (string_of_templates na)
       );
-      (try
+      if check_intersect pgm a then
+        work pgm call_temps remain testcases
+      else (try
         (* Replace invalid function calls in templates by speicial hole *)
         let (_, h_t, v_t, _) = Type.run (apply_templates pgm a) in
         let a = BatSet.map (fun (e_temp, d_temp) -> (replace_call h_t v_t e_temp, d_temp)) a in
@@ -190,7 +217,8 @@ let rec work : prog -> call_templates -> Workset.t -> examples -> prog option
         let (_, h_t, v_t, subst) = Type.run (apply_templates pgm a) in
         let candidates = BatSet.fold (fun (e_temp, d_temp) candidates -> 
           let e_temps = Update.update_call_templates call_temps h_t v_t subst e_temp in
-          if BatSet.is_empty candidates then
+          if BatSet.is_empty e_temps then candidates
+          else if BatSet.is_empty candidates then
             BatSet.map (fun e_temp -> BatSet.singleton (e_temp, d_temp)) e_temps
           else
             BatSet.fold (fun cand acc ->

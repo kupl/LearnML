@@ -87,7 +87,6 @@ let rec replace_var_exp : Alias.alias_info -> lexp -> lexp BatSet.t
       BatSet.singleton (l, gen_hole ())
     else 
       BatSet.map (fun x -> (l, EVar x)) xs
-  (* Function call -> if it is invalid then replace it by special hole which is filled with the call templates *)
   | EApp (e1, e2) -> 
     let es = join_tuple (replace_var_exp alias_info e1) (replace_var_exp alias_info e2) in
     BatSet.map (fun (e1, e2) -> (l, update_binary exp (e1, e2))) es 

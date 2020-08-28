@@ -243,16 +243,17 @@ module Renaming = struct
       (l, EBlock (is_rec, bs, rename_exp env e))
     | _ -> raise (Failure ("Renaming : invalid exp (" ^ Print.exp_to_string (l, exp)))
 
-  let rec rename_decls : env -> decl list -> decl list
+  let rec rename_decls : env -> decl list -> env * decl list
   = fun env decls ->
     match decls with
-    | [] -> []
+    | [] -> (env, [])
     | decl::tl ->
       begin match decl with
       | DLet (f, is_rec, args, typ, e) -> 
         let (func_env, f) = rename_binding env f in
-        let (env, args) = rename_arg_list (if is_rec then func_env else env) args in
-        (DLet (f, is_rec, args, typ, rename_exp env e))::(rename_decls func_env tl)
+        let (env1, args) = rename_arg_list (if is_rec then func_env else env) args in
+        let (env2, decls) = rename_decls func_env tl in
+        (env2, (DLet (f, is_rec, args, typ, rename_exp env1 e))::decls)
       | DBlock (is_rec, bindings) -> 
         if is_rec then 
           (* Renaming function name first *)
@@ -265,21 +266,26 @@ module Renaming = struct
             let (env, args) = rename_arg_list env args in
             (f, is_rec, args, typ, rename_exp env e)
           ) bs in
-          (DBlock (is_rec, bs))::(rename_decls env tl)
+          let (env, decls) = rename_decls env tl in
+          (env, (DBlock (is_rec, bs))::decls)
         else 
           let (env, bs) = List.fold_left (fun (env, bs) (f, is_rec, args, typ, e) ->
             let (func_env, f) = rename_binding env f in
             let (env, args) = rename_arg_list (if is_rec then func_env else env) args in
             (func_env, bs@[(f, is_rec, args, typ, rename_exp env e)])
           ) (env, []) bindings in
-          (DBlock (is_rec, bs))::(rename_decls env tl)
-      | _ -> decl::(rename_decls env tl)
+          let (env, decls) = rename_decls env tl in
+          (env, (DBlock (is_rec, bs))::decls)
+      | _ -> 
+        let (env, decls) = rename_decls env tl in
+        (env, decl::decls)
       end
 
   let run : prog -> env * prog
   = fun pgm -> 
     r_env := BatMap.empty;
-    let new_pgm = rename_decls BatMap.empty pgm in
+    let (env, new_pgm) = rename_decls BatMap.empty pgm in
+    renamed_entry := BatMap.find !Options.opt_entry_func env;
     (!r_env, new_pgm)
 
   (* Renaming the program to orignial form *)

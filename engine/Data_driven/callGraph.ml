@@ -104,11 +104,11 @@ let string_of_graph cg =
 let print_graph cg = print_endline (string_of_graph cg)
 
 (* Utility functions *)
-let h_t = ref BatMap.empty 
-let v_t = ref BatMap.empty 
-
+let is_grading = ref false
 let id_num = ref 0
-let fresh_id () = id_num := !id_num + 1; !id_num
+let fresh_id () = 
+  id_num := !id_num + 1; 
+  if !is_grading then -(!id_num) else !id_num
 
 let symbol_num = ref 0
 let fresh_symbol () = symbol_num := !symbol_num + 1; !symbol_num
@@ -124,8 +124,11 @@ let update_node : node -> graph -> graph
 
 let update_edge : edge -> graph -> graph
 = fun edge cg -> { nodes = cg.nodes; edges = BatSet.add edge cg.edges }
-
+  
 (* Path encoding *)
+let h_t = ref BatMap.empty 
+let v_t = ref BatMap.empty 
+
 let fresh_path = Bool true
 
 let rec update_path : path -> path -> path
@@ -328,6 +331,7 @@ let rec exp_to_cg : graph -> node_id -> path -> lexp -> graph
 
 let rec decl_to_cg : graph -> decl -> graph
 = fun cg decl ->
+  (if is_grading_entry decl then is_grading := true);
   match decl with
   | DLet (f, is_rec, args, typ, e) -> 
     if (args <> [] || is_fun typ) then  
@@ -362,6 +366,36 @@ let rec decl_to_cg : graph -> decl -> graph
     ) cg ds
   | _ -> cg
 
+(* Optimization *)
+let renamed_entry = ref ""
+
+let find_reachable_nodes : node -> graph -> node BatSet.t 
+= fun node cg -> 
+  let rec iter t =
+    let t' = BatSet.fold (fun node acc -> 
+      BatSet.fold (fun edge acc -> 
+        if node.id = edge.src || node.id = edge.sink then
+          BatSet.add (get_node_by_id edge.sink cg) (BatSet.add (get_node_by_id edge.src cg) acc)
+        else acc
+      ) cg.edges acc
+    ) t t in
+    if BatSet.equal t t' then t' else iter t'
+  in
+  iter (BatSet.singleton node)
+
+let rec post_prosessing : graph -> graph 
+= fun cg -> 
+  (* Remove unreachable functions && testing functions *)
+  try 
+    let entry_node = get_node_by_name !renamed_entry cg in
+    let reachable_nodes = BatSet.filter (fun node -> node.id > 0) (find_reachable_nodes entry_node cg) in
+    let reachable_ids = BatSet.map (fun node -> node.id) reachable_nodes in
+    {
+      nodes = reachable_nodes;
+      edges = BatSet.filter (fun edge -> BatSet.mem edge.src reachable_ids && BatSet.mem edge.sink reachable_ids) cg.edges 
+    }
+  with UndefinedNode -> cg 
+
 (* Extract call graph of a given program *)
 let extract_graph : prog -> graph
 = fun pgm -> 
@@ -369,5 +403,7 @@ let extract_graph : prog -> graph
   let (_, h_t', v_t', _) = Type2.run pgm in
   h_t := h_t';
   v_t := v_t';
+  (* Extract call graph*)
+  is_grading := false;
   let cg = List.fold_left (fun cg decl -> decl_to_cg cg decl) { nodes = BatSet.empty; edges = BatSet.empty } pgm in
-  cg
+  post_prosessing cg
