@@ -45,9 +45,9 @@ module Static = struct
     | EFun (arg, e) -> if is_arg f arg then false else check_exp f e
     | ELet (f', is_rec, args, typ , e1, e2) -> 
     	if is_bind f f' then
-    		check_exp (name_of_func f') e1
+    		if is_rec then check_exp (name_of_func f') e1 else false
     	else
-    		check_exp (name_of_func f') e1 || check_exp f e2
+    		(if is_rec then check_exp (name_of_func f') e1 else false) || check_exp f e2
     | EBlock (is_rec, bindings, e2) ->
     	if (List.exists (fun (f', is_rec, args, typ, e) -> is_bind f f') bindings) then
     		(List.exists (fun (f', is_rec, args, typ, e) -> if is_rec then check_exp (name_of_func f') e else false) bindings)
