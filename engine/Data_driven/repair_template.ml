@@ -21,12 +21,6 @@ let merge_templates : repair_template BatSet.t -> exp_templates * required_funct
 	  (BatSet.add e_temp e_temps, BatMap.union d_temp d_temps)
 	) temps (BatSet.empty, BatMap.empty)
 
-let get_label : repair_template -> label 
-= fun (e_temp, d_temp) ->
-	match e_temp with
-	| ModifyExp (l, _) | InsertBranch (l, _) | DeleteBranch (l, _)
-  | Explore l -> l 
-
 (* To string *)
 let string_of_exp_template : exp_template -> string
 = fun temp ->

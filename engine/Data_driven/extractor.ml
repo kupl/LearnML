@@ -159,7 +159,7 @@ let replace_var_template : Alias.t -> Alias.t -> exp_template -> exp_template Ba
 
 let extract_templates : matching -> repair_template BatSet.t * call_templates
 = fun matching ->
-  BatMap.foldi (fun target reference (repair_temps, call_temps) ->
+  BatMap.foldi (fun target (reference, _, _) (repair_temps, call_temps) ->
     let (target_node, reference_node) = (target.node, reference.summary.node) in
     let (t1, t2) = (Alias.analysis_node target_node, Alias.analysis_node reference_node) in
     let temps = extract_templates target_node.body reference_node.body in 

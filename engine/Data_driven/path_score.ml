@@ -398,6 +398,7 @@ let check_path : CtorTable.t -> path -> bool
   let (id, eqns) = Z3_Translator.translate ctor_map ctx path in
   let eqns = (Z3_Translator.mk_eq ctx id (Z3.Boolean.mk_true ctx))::eqns in
   let _ = Z3.Solver.add solver eqns in
+  (* let _ = print_endline (string_of_path path) in *)
   (* print_endline (Z3.Solver.to_string solver); *)
   match (Z3.Solver.check solver []) with
   | UNSATISFIABLE -> (* print_endline ("UNSAT"); *) false

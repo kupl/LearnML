@@ -94,7 +94,7 @@ let run2 : prog -> (string * prog) list -> examples -> prog
 		print_endline (string_of_map (id) (string_of_set exp_to_string) call_temps)
 	in
 	let pgm = Preprocessor.Renaming.apply_pgm r_env (remove_grading pgm) in
-	print_pgm2 pgm;
+	print_pgm pgm;
 	match Repairer.run pgm call_temps repair_templates testcases with
 	| Some pgm' -> 
 		let repair_time = Unix.gettimeofday() -. !(Repairer.start_time) in
