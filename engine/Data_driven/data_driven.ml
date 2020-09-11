@@ -14,6 +14,7 @@ open Extractor
 let save_data ?(logging_flag=false) : prog -> string -> unit
 = fun pgm path -> 
 	(* Extract call graph *)
+	let _ = Preprocessor.Renaming.flag := true in
   let (r_env, renamed_pgm) = Preprocessor.run (append_grading pgm) in
   let cg = extract_graph renamed_pgm in
 	(* Save preprocessed data file *)

@@ -106,7 +106,7 @@ let rec replace_call : Type.HoleType.t -> Type.VariableType.t -> exp_template ->
   | _ -> e_temp
 
 (* Main Procedure *)
-let time_out = 600.0
+let time_out = 60.0
 let start_time = ref 0.0
 let debug_mode = false
 
@@ -187,7 +187,7 @@ let check_intersect : prog -> repair_template BatSet.t -> bool
             | Some lexp -> get_labels_exp lexp
           in 
           not (BatSet.disjoint labels1 labels2)
-        | _ -> false 
+        | InsertBranch (l', _) | DeleteBranch (l', _) -> BatSet.mem l' (BatSet.remove l labels1)
       ) (BatSet.remove (e_temp, d_temp) templates)
     | _ -> false 
   ) templates

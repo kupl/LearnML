@@ -133,7 +133,8 @@ module Renaming = struct
   let apply_env x env = try BatMap.find x env with _ -> x
 
   let count = ref 0
-  let fresh_var () = count := !count + 1; "#v_" ^ (string_of_int !count)
+  let flag = ref false
+  let fresh_var () = count := !count + 1; (if !flag then "#s_" else "#v_") ^ (string_of_int !count)
 
   let rec rename_arg : env -> arg -> env * arg
   = fun env arg ->
@@ -362,7 +363,6 @@ module Renaming = struct
     | Concat (p1, p2) -> Concat (apply_path env p1, apply_path env p2)
     | Minus p -> Minus (apply_path env p)
     | Not p -> Not (apply_path env p)
-    | App (p1, p2) -> App (apply_path env p1, apply_path env p2)
     | List (ps, typ) -> List (List.map (apply_path env) ps, typ)
     | Tuple ps -> Tuple (List.map (apply_path env) ps)
     | Ctor (c, ps) -> Ctor (c, List.map (apply_path env) ps)

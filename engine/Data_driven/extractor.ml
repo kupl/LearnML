@@ -80,13 +80,17 @@ let rec replace_var_exp : Alias.alias_info -> lexp -> lexp BatSet.t
   match exp with
   (* Variable -> replace solution variable with the one in submission whose data flow is the same *)
   | EVar x -> 
-    let alias_set = BatMap.find l alias_info in
-    let xs = BatSet.map snd (BatSet.filter (fun (a, b) -> x = a) alias_set) in
-    if BatSet.is_empty xs then 
-      (* if there are no variables whose data-flow is exactly match with the solution variable *)
-      BatSet.singleton (l, gen_hole ())
+    if String.sub x 0 1 <> "#" then 
+      (* If it is a external variable do not change *)
+      BatSet.singleton (l, EVar x)
     else 
-      BatSet.map (fun x -> (l, EVar x)) xs
+      let alias_set = BatMap.find l alias_info in
+      let xs = BatSet.map snd (BatSet.filter (fun (a, b) -> x = a) alias_set) in
+      if BatSet.is_empty xs then 
+        (* if there are no variables whose data-flow is exactly match with the solution variable *)
+        BatSet.singleton (l, gen_hole ())
+      else 
+        BatSet.map (fun x -> (l, EVar x)) xs
   | EApp (e1, e2) -> 
     let es = join_tuple (replace_var_exp alias_info e1) (replace_var_exp alias_info e2) in
     BatSet.map (fun (e1, e2) -> (l, update_binary exp (e1, e2))) es 

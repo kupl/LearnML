@@ -1,7 +1,6 @@
 open Lang
 open Util
 open Print 
-open Type 
 
 exception UndefinedNode
 
@@ -35,8 +34,7 @@ and path =
   | Append of path * path
   | Concat of path * path
   | Minus of path
-  | Not of path 
-  | App of path * path
+  | Not of path
   | Tuple of path list
   | Ctor of id * path list 
   | List of path list * typ 
@@ -87,7 +85,6 @@ let rec string_of_path path =
   | Concat (p1, p2) -> string_of_path p1 ^ "::" ^ string_of_path p2
   | Minus p -> "-(" ^ string_of_path p ^ ")" 
   | Not p -> "not (" ^ string_of_path p ^ ")" 
-  | App (p1, p2) -> "(" ^ string_of_path p1 ^ " " ^ string_of_path p2 ^ ")"
   | List (ps, typ) -> pp_list string_of_path ps ^ ":" ^ type_to_string typ
   | Tuple ps -> pp_tuple string_of_path ps
   | Ctor (c, ps) -> c ^ (if ps = [] then "" else " (" ^ string_of_path (List.hd ps) ^ ")") 
@@ -212,7 +209,7 @@ let rec exp_to_path : lexp -> path
   | AT (e1, e2) -> Append (exp_to_path e1, exp_to_path e2)
   | DOUBLECOLON (e1, e2) -> Concat (exp_to_path e1, exp_to_path e2)
   | STRCON (e1, e2) -> Strcon (exp_to_path e1, exp_to_path e2)
-  | EApp (e1, e2) -> (* App (exp_to_path e1, exp_to_path e2) *) Symbol (fresh_symbol (), BatMap.find l !h_t)
+  | EApp (e1, e2) -> Symbol (fresh_symbol (), BatMap.find l !h_t)
   | EAssign _ | Raise _ | ERef _ | EDref _ | EFun _ | ELet _ | EBlock _ | EMatch _ | IF _ -> Symbol (fresh_symbol (), BatMap.find l !h_t)
   | _ -> raise (Failure ("Call graph : invalid exp (" ^ exp_to_string (l, exp) ^ ") while encoding path"))
 
@@ -261,15 +258,17 @@ let rec exp_to_cg : graph -> node_id -> path -> lexp -> graph
   | EVar x -> 
     (try
       let node' = get_node_by_name x cg in
-      let new_edge = { src = id; sink = node'.id; ctx = path } in
-      update_edge new_edge cg
+      if id <> node'.id then 
+        let new_edge = { src = id; sink = node'.id; ctx = path } in
+        update_edge new_edge cg
+      else cg
     with UndefinedNode -> cg)
+  | EApp (e1, e2) -> call_to_cg cg id path [e2] e1  
   | EList es | ECtor (_, es) | ETuple es -> List.fold_left (fun cg e -> exp_to_cg cg id path e) cg es
   | EFun (_, e) | MINUS e | NOT e | Raise e | ERef e | EDref e -> exp_to_cg cg id path e
   | ADD (e1, e2) | SUB (e1, e2) | MUL (e1, e2) | DIV (e1, e2) | MOD (e1, e2) 
   | OR (e1, e2) | AND (e1, e2) | LESS (e1, e2) | LARGER (e1, e2) | LESSEQ (e1, e2) | LARGEREQ (e1, e2) 
-  | EQUAL (e1, e2) | NOTEQ (e1, e2) | AT (e1, e2) | DOUBLECOLON (e1, e2) | STRCON (e1, e2) | EApp (e1, e2) 
-  | EAssign (e1, e2) -> 
+  | EQUAL (e1, e2) | NOTEQ (e1, e2) | AT (e1, e2) | DOUBLECOLON (e1, e2) | STRCON (e1, e2) | EAssign (e1, e2) -> 
     let cg1 = exp_to_cg cg id path e1 in
     exp_to_cg cg1 id path e2
   | ELet (f, is_rec, args, typ, e1, e2) ->
@@ -309,7 +308,7 @@ let rec exp_to_cg : graph -> node_id -> path -> lexp -> graph
         | _ -> raise (Failure "Call graph : invalid function definition")
         end
       else  
-        let new_path = EQop (Eq, binding_to_path f typ, exp_to_path (extract_body e))  in
+        let new_path = EQop (Eq, binding_to_path f typ, exp_to_path (extract_body e)) in
         (exp_to_cg cg id path e, (update_path new_path path))
     ) (cg, path) ds in
     exp_to_cg cg id path e
@@ -328,6 +327,29 @@ let rec exp_to_cg : graph -> node_id -> path -> lexp -> graph
     let cg2 = exp_to_cg cg1 id (update_path new_path path) e2 in
     exp_to_cg cg2 id (update_path (Not new_path) path) e3
   | _ -> raise (Failure ("Call graph : invalid exp (" ^ exp_to_string (l, exp)))
+
+and call_to_cg : graph -> node_id -> path -> lexp list -> lexp -> graph
+= fun cg id path args (l, exp) ->
+  match exp with 
+  | EApp (e1, e2) -> 
+    let cg = exp_to_cg cg id path e2 in
+    call_to_cg cg id path (e2::args) e1
+  | EVar x ->
+    (try
+      let node' = get_node_by_name x cg in
+      if id <> node'.id then 
+        let new_path = 
+          (try 
+            List.fold_left2 (fun path arg e -> 
+              update_path path (EQop (Eq, arg_to_path arg, exp_to_path e))
+            ) path node'.args args 
+          with _ -> Bool false)
+        in
+        let new_edge = { src = id; sink = node'.id; ctx = new_path } in
+        update_edge new_edge cg
+      else cg
+    with UndefinedNode -> cg)
+  | _ ->  exp_to_cg cg id path (l, exp)
 
 let rec decl_to_cg : graph -> decl -> graph
 = fun cg decl ->

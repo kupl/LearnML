@@ -52,7 +52,11 @@ let rec get_incomming_edges : node_id -> graph -> calling_ctx BatSet.t
     if edge.ctx = fresh_path then
       (* Apply tunneling *)
       let callers_ctx = get_incomming_edges edge.src cg in
-      BatSet.union callers_ctx acc
+      if BatSet.is_empty callers_ctx then
+        let node = get_node_by_id edge.src cg in
+        BatSet.add (get_output_typ node.typ, node.args, edge.ctx) acc
+      else 
+        BatSet.union callers_ctx acc
     else 
       let node = get_node_by_id edge.src cg in
       BatSet.add (get_output_typ node.typ, node.args, edge.ctx) acc
@@ -62,9 +66,19 @@ let rec get_outgoing_edges : node_id -> graph -> calling_ctx BatSet.t
 = fun id cg ->
   let invoked_edges = BatSet.filter (fun edge -> id = edge.src) cg.edges in
   BatSet.fold (fun edge acc ->
-    let cur_node = get_node_by_id edge.src cg in
-    let callee = get_node_by_id edge.sink cg in
-    BatSet.add (get_output_typ callee.typ, cur_node.args, edge.ctx) acc
+    if edge.ctx = fresh_path then
+      (* Apply tunneling *)
+      let callees_ctx = get_outgoing_edges edge.sink cg in
+      if BatSet.is_empty callees_ctx then
+        let cur_node = get_node_by_id edge.src cg in
+        let callee = get_node_by_id edge.sink cg in
+        BatSet.add (get_output_typ callee.typ, cur_node.args, edge.ctx) acc
+      else 
+        BatSet.union callees_ctx acc
+    else 
+      let cur_node = get_node_by_id edge.src cg in
+      let callee = get_node_by_id edge.sink cg in
+      BatSet.add (get_output_typ callee.typ, cur_node.args, edge.ctx) acc
   ) invoked_edges BatSet.empty
 
 let get_summaries : graph -> summary BatSet.t
@@ -231,20 +245,99 @@ let rec match_arg : arg -> arg -> bool
   | ArgTuple args1, ArgTuple args2 -> (try List.for_all2 match_arg args1 args2 with _ -> false)
   | _ -> false
 
+let rec gen_eqn_path : CallGraph.path -> typ -> Type.typ_eqn
+= fun path ty ->
+  match path with
+  | Unit -> [ty, TUnit]
+  | Int _ -> [ty, TInt]
+  | Bool _ -> [ty, TBool]
+  | Str _ -> [ty, TString]
+  | Aop (_, p1, p2) -> [ty, TInt]@(gen_eqn_path p1 TInt)@(gen_eqn_path p2 TInt)
+  | Bop (_, p1, p2) -> [ty, TBool]@(gen_eqn_path p1 TBool)@(gen_eqn_path p2 TBool)
+  | ABop (_, p1, p2) -> [ty, TBool]@(gen_eqn_path p1 TInt)@(gen_eqn_path p2 TInt)
+  | EQop (_, p1, p2) -> 
+    let new_tv = fresh_tvar () in
+    [ty, TBool]@(gen_eqn_path p1 new_tv)@(gen_eqn_path p2 new_tv)
+  | Strcon (p1, p2) -> [ty, TString]@(gen_eqn_path p1 TString)@(gen_eqn_path p2 TString)
+  | Append (p1, p2) -> 
+    let new_tv = fresh_tvar () in
+    [ty, TList new_tv]@(gen_eqn_path p1 (TList new_tv))@(gen_eqn_path p2 (TList new_tv))
+  | Concat (p1, p2) -> 
+    let new_tv = fresh_tvar () in
+    [ty, TList new_tv]@(gen_eqn_path p1 new_tv)@(gen_eqn_path p2 (TList new_tv))
+  | Minus p -> [ty, TInt]@(gen_eqn_path p TInt)
+  | Not p -> [ty, TBool]@(gen_eqn_path p TBool)
+  | Tuple ps ->
+    let (ts, eqns) = List.fold_left (fun (ts, eqns) p -> 
+      let new_tv = fresh_tvar () in
+      (new_tv::ts, (gen_eqn_path p new_tv)@eqns)
+    ) ([], []) ps in
+    (ty, TTuple (List.rev ts))::eqns
+  | List (ps, typ) -> 
+    let new_tv = fresh_tvar () in
+    List.fold_left (fun eqns p -> 
+      (gen_eqn_path p new_tv)@eqns
+    ) [ty, TList new_tv] ps
+  | Ctor (c, ps) -> [ty, fresh_tvar ()]
+  | Var (_, typ) | Symbol (_, typ) -> [ty, typ]
+
+let solve_path_eqn : Type.typ_eqn -> Type.Subst.t
+= fun eqns -> List.fold_left (fun subst (t1, t2) -> 
+    Type.unify subst ((Type.Subst.apply t1 subst), Type.Subst.apply t2 subst)
+  ) Type.Subst.empty eqns
+
+let rec apply_subst : Type.Subst.t -> CallGraph.path -> CallGraph.path
+= fun subst path ->
+  match path with 
+  | Aop (op, p1, p2) -> Aop (op, apply_subst subst p1, apply_subst subst p2)
+  | Bop (comb, p1, p2) -> Bop (comb, apply_subst subst p1, apply_subst subst p2)
+  | ABop (comp, p1, p2) -> ABop (comp, apply_subst subst p1, apply_subst subst p2)
+  | EQop (eq, p1, p2) -> EQop (eq, apply_subst subst p1, apply_subst subst p2)
+  | Strcon (p1, p2) -> Strcon (apply_subst subst p1, apply_subst subst p2)
+  | Append (p1, p2) -> Append (apply_subst subst p1, apply_subst subst p2)
+  | Concat (p1, p2) -> Concat (apply_subst subst p1, apply_subst subst p2)
+  | Minus p -> Minus (apply_subst subst p)
+  | Not p -> Not (apply_subst subst p)
+  | Tuple ps -> Tuple (List.map (apply_subst subst) ps)
+  | Ctor (c, ps) -> Ctor (c, List.map (apply_subst subst) ps)
+  | List (ps, typ) -> List (List.map (apply_subst subst) ps, Type.Subst.apply typ subst)
+  | Var (x, typ) -> Var (x, Type.Subst.apply typ subst)
+  | Symbol (n, typ) -> Symbol (n, Type.Subst.apply typ subst)
+  | _ -> path
+
+let subst_path : CallGraph.path -> CallGraph.path
+= fun path -> 
+  let eqns = gen_eqn_path path TBool in
+  let subst = solve_path_eqn eqns in
+  apply_subst subst path 
+
 let verify_ctx : calling_ctx -> calling_ctx -> bool
 = fun (typ_sub, args_sub, path_sub) (typ_sol, args_sol, path_sol) ->
   try
     if check_typs typ_sub typ_sol then 
+      (*
+      let _ = 
+        print_endline ("Sub : " ^ (args_to_string args_sub "") ^ " " ^ string_of_path path_sub);
+        print_endline ("Sol : " ^ (args_to_string args_sol "") ^ " " ^ string_of_path path_sol);
+      in
+      *)
       let vc = List.fold_left2 (fun vc arg_sub arg_sol ->
         (* TODO : Fix solver engine and remove checking *)
         if match_arg arg_sub arg_sol then
           let new_path = EQop (Eq, arg_to_path arg_sub, arg_to_path arg_sol) in
           Bop (And, new_path, vc)
-        else Bool false 
+        else Bool false
       ) (Bop (And, path_sub, path_sol)) args_sub args_sol in
-      Path_score.check_path !ctor_table vc
+      let vc = subst_path vc in
+      (*
+      print_endline "--------------------";
+      print_endline (string_of_path vc);
+      Path_score.check_sat !ctor_table vc 
+      *)
+      Path_score.check_sat !ctor_table vc
+      (* not (Path_score.check_sat !ctor_table (Not vc)) *)
     else false
-  with _ -> false 
+  with Type.TypeError | Invalid_argument ("List.fold_left2") -> false
 
 let rec semantic_distance_ctx : calling_ctx BatSet.t -> calling_ctx BatSet.t -> int
 = fun ctxs_sub ctxs_sol ->
@@ -253,7 +346,10 @@ let rec semantic_distance_ctx : calling_ctx BatSet.t -> calling_ctx BatSet.t -> 
     else 
       let (ctx_sub, remains) = BatSet.pop ctxs_sub in 
       let matched = BatSet.filter (fun ctx_sol -> verify_ctx ctx_sub ctx_sol) ctxs_sol in
-      if BatSet.is_empty matched then iter remains unmatched (sem_dist + 1) else iter remains (BatSet.diff unmatched matched) sem_dist
+      if BatSet.is_empty matched then 
+        iter remains unmatched (sem_dist + 1) 
+      else 
+        iter remains (BatSet.diff unmatched matched) sem_dist
   in
   iter ctxs_sub ctxs_sol 0
   (*
@@ -355,7 +451,7 @@ let select_solutions : prog -> (string * graph) list -> matching
   let summaries = get_summaries (extract_graph pgm) in
   let _ = ctor_table := Path_score.CtorTable.gen_ctor_table BatMap.empty pgm in
   List.fold_left (fun acc (f_name, cg_sol) ->
-    print_endline f_name;
+    (* print_endline f_name; *)
     let matching = find_matching summaries (get_references f_name cg_sol) in
     update_matching matching acc
   ) empty_matching cg_sols

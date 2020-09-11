@@ -83,6 +83,7 @@ module Z3_Translator = struct
       ) "" sorts) in
       tuple_sort ctx tuple_name sorts
     | TVar tx -> Z3.Sort.mk_uninterpreted_s ctx "poly" (* Polymorphic *)
+    | TArr (t1, t2) -> Z3.Sort.mk_uninterpreted_s ctx (Print.type_to_string typ) (* Function *)
     | _ -> raise (Failure ("Invalid sort : " ^ Print.type_to_string typ)) 
 
   let rec has_ctor_name : typ -> string -> bool
@@ -214,7 +215,6 @@ module Z3_Translator = struct
   = fun ctor_map ctx path ->
     (* let _ = print_endline (string_of_path path) in *)
     match path with
-    | Unit | App _ -> raise (Failure "Unencodable path condition")
     | Var (x, typ) ->
       let sort = typ_to_sort ctor_map ctx typ in
       let id = mk_symbol ctx sort in
@@ -389,7 +389,23 @@ module Z3_Translator = struct
     ) map
 end
 
-let check_path : CtorTable.t -> path -> bool
+let check_sat : CtorTable.t -> path -> bool
+= fun ctor_table path ->
+  let ctx = Z3_Translator.new_ctx () in
+  let ctor_map = Z3_Translator.init_ctor_map ctx ctor_table BatMap.empty in
+  let ctor_map = Z3_Translator.apply_recursive_datatype ctx ctor_table ctor_map in
+  let solver = Z3.Solver.mk_solver ctx None in
+  let (id, eqns) = Z3_Translator.translate ctor_map ctx path in
+  let eqns = (Z3_Translator.mk_eq ctx id (Z3.Boolean.mk_true ctx))::eqns in
+  let _ = Z3.Solver.add solver eqns in
+  (* let _ = print_endline (string_of_path path) in *)
+  (* print_endline (Z3.Solver.to_string solver); *)
+  match (Z3.Solver.check solver []) with
+  | UNSATISFIABLE -> (* print_endline ("UNSAT"); *) false
+  | UNKNOWN -> (* print_endline ("UNSAT"); *) false
+  | SATISFIABLE -> (* print_endline ("SAT"); *) true 
+
+let check_valid : CtorTable.t -> path -> bool
 = fun ctor_table path ->
   let ctx = Z3_Translator.new_ctx () in
   let ctor_map = Z3_Translator.init_ctor_map ctx ctor_table BatMap.empty in
