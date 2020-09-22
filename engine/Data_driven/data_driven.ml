@@ -14,9 +14,15 @@ open Extractor
 let save_data ?(logging_flag=false) : prog -> string -> unit
 = fun pgm path -> 
 	(* Extract call graph *)
-	let _ = Preprocessor.Renaming.flag := true in
+	let _ = 
+		Preprocessor.Renaming.flag := true;
+		(*
+		library_pgm := Preprocessor.Type_annotate.run !library_pgm
+			|> Preprocessor.Decapsulation.run
+		*)
+	in
   let (r_env, renamed_pgm) = Preprocessor.run (append_grading pgm) in
-  let cg = extract_graph renamed_pgm in
+  let cg = extract_graph (* (append_library renamed_pgm) *) renamed_pgm in
 	(* Save preprocessed data file *)
 	let data_path = path ^ ".marshalled" in
 	let data_oc = open_out data_path in

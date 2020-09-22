@@ -203,7 +203,7 @@ module Z3_Translator = struct
   let ctor_app ctx ctor_func exprs = Z3.Expr.mk_app ctx ctor_func exprs
   (* Generate a symbolic variable whose type is sort in current context *)
   let symbol_num = ref 0
-  let fresh_id () = (symbol_num := !symbol_num + 1); ("#" ^ (string_of_int !symbol_num))
+  let fresh_id () = (symbol_num := !symbol_num + 1); ("@" ^ (string_of_int !symbol_num))
   (* Symbolic variable (identifier) with type sort *)
   let mk_symbol ctx sort = Z3.Expr.mk_const_s ctx (fresh_id ()) sort
   let int_symbol ctx = mk_symbol ctx (int_sort ctx)
@@ -403,20 +403,4 @@ let check_sat : CtorTable.t -> path -> bool
   match (Z3.Solver.check solver []) with
   | UNSATISFIABLE -> (* print_endline ("UNSAT"); *) false
   | UNKNOWN -> (* print_endline ("UNSAT"); *) false
-  | SATISFIABLE -> (* print_endline ("SAT"); *) true 
-
-let check_valid : CtorTable.t -> path -> bool
-= fun ctor_table path ->
-  let ctx = Z3_Translator.new_ctx () in
-  let ctor_map = Z3_Translator.init_ctor_map ctx ctor_table BatMap.empty in
-  let ctor_map = Z3_Translator.apply_recursive_datatype ctx ctor_table ctor_map in
-  let solver = Z3.Solver.mk_solver ctx None in
-  let (id, eqns) = Z3_Translator.translate ctor_map ctx path in
-  let eqns = (Z3_Translator.mk_eq ctx id (Z3.Boolean.mk_true ctx))::eqns in
-  let _ = Z3.Solver.add solver eqns in
-  (* let _ = print_endline (string_of_path path) in *)
-  (* print_endline (Z3.Solver.to_string solver); *)
-  match (Z3.Solver.check solver []) with
-  | UNSATISFIABLE -> (* print_endline ("UNSAT"); *) false
-  | UNKNOWN -> (* print_endline ("UNSAT"); *) false
-  | SATISFIABLE -> (* print_endline ("SAT"); *) true 
+  | SATISFIABLE -> (* print_endline ("SAT"); *) true

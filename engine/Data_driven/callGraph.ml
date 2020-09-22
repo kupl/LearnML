@@ -121,7 +121,16 @@ let update_node : node -> graph -> graph
 
 let update_edge : edge -> graph -> graph
 = fun edge cg -> { nodes = cg.nodes; edges = BatSet.add edge cg.edges }
-  
+
+let rec size_of_path : path -> int 
+= fun path ->
+  match path with
+  | Aop (_ , p1, p2) | Bop (_, p1, p2) | ABop (_, p1, p2) | EQop (_, p1, p2)
+  | Strcon (p1, p2) | Append (p1, p2) | Concat (p1, p2) -> 1 + size_of_path p1 + size_of_path p2
+  | Minus p | Not p -> 1 + size_of_path p
+  | List (ps, _) | Tuple ps | Ctor (_, ps) -> 1 + List.fold_left (fun acc p -> acc + size_of_path p) 0 ps
+  | _ -> 1 
+
 (* Path encoding *)
 let h_t = ref BatMap.empty 
 let v_t = ref BatMap.empty 
@@ -263,7 +272,9 @@ let rec exp_to_cg : graph -> node_id -> path -> lexp -> graph
         update_edge new_edge cg
       else cg
     with UndefinedNode -> cg)
-  | EApp (e1, e2) -> call_to_cg cg id path [e2] e1  
+  | EApp (e1, e2) -> 
+    let cg = exp_to_cg cg id path e2 in
+    call_to_cg cg id path [e2] e1  
   | EList es | ECtor (_, es) | ETuple es -> List.fold_left (fun cg e -> exp_to_cg cg id path e) cg es
   | EFun (_, e) | MINUS e | NOT e | Raise e | ERef e | EDref e -> exp_to_cg cg id path e
   | ADD (e1, e2) | SUB (e1, e2) | MUL (e1, e2) | DIV (e1, e2) | MOD (e1, e2) 
@@ -277,7 +288,7 @@ let rec exp_to_cg : graph -> node_id -> path -> lexp -> graph
       begin match f with
       | BindOne f -> 
         let new_node = { id = fresh_id (); is_rec = is_rec; name = f; args = args; typ = get_func_typ args typ; body = extract_body e1 } in 
-        let cg1 = exp_to_cg cg new_node.id fresh_path e1 in 
+        let cg1 = exp_to_cg (if is_rec then update_node new_node cg else cg) new_node.id fresh_path e1 in 
         exp_to_cg (update_node new_node cg1) id path e2
       | _ -> raise (Failure "Call graph : invalid function definition")
       end
@@ -360,7 +371,7 @@ let rec decl_to_cg : graph -> decl -> graph
       begin match f with
       | BindOne f -> 
         let new_node = { id = fresh_id (); is_rec = is_rec; name = f; args = args; typ = get_func_typ args typ; body = extract_body e } in 
-        update_node new_node (exp_to_cg cg new_node.id fresh_path e)
+        update_node new_node (exp_to_cg (if is_rec then update_node new_node cg else cg) new_node.id fresh_path e)
       | _ -> raise (Failure "Call graph : invalid function definition")
       end
     else cg
@@ -396,8 +407,8 @@ let find_reachable_nodes : node -> graph -> node BatSet.t
   let rec iter t =
     let t' = BatSet.fold (fun node acc -> 
       BatSet.fold (fun edge acc -> 
-        if node.id = edge.src || node.id = edge.sink then
-          BatSet.add (get_node_by_id edge.sink cg) (BatSet.add (get_node_by_id edge.src cg) acc)
+        if node.id = edge.src then
+          BatSet.add (get_node_by_id edge.sink cg) acc
         else acc
       ) cg.edges acc
     ) t t in
@@ -407,10 +418,10 @@ let find_reachable_nodes : node -> graph -> node BatSet.t
 
 let rec post_prosessing : graph -> graph 
 = fun cg -> 
-  (* Remove unreachable functions && testing functions *)
+  (* Remove unreachable functions && external & testing functions *)
   try 
     let entry_node = get_node_by_name !renamed_entry cg in
-    let reachable_nodes = BatSet.filter (fun node -> node.id > 0) (find_reachable_nodes entry_node cg) in
+    let reachable_nodes = BatSet.filter (fun node -> node.id > 0 && not (is_external_var node.name)) (find_reachable_nodes entry_node cg) in
     let reachable_ids = BatSet.map (fun node -> node.id) reachable_nodes in
     {
       nodes = reachable_nodes;
