@@ -1,4 +1,4 @@
-let rec sigma (a, b, f) =
+let rec sigma f a b  = 
 	if a > b then 0
-	else (sigma ((a + 1), b, f)) + (f a)
+	else (sigma f (a+1) b) + (f a)
 

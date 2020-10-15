@@ -1,3 +1,3 @@
-let rec sigma(a, b, f) =
-    if a - b <= 0 then f(a) + (sigma((a+1), b, f))
+let rec sigma f a b  =
+    if a - b <= 0 then f(a) + (sigma f (a+1) b)
     else 0

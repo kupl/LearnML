@@ -1,4 +1,4 @@
-let sigma (a,b,f) =
+let sigma f a b =
   let rec sigma_rec (n, ret) =
     if (n<=b) 
     then sigma_rec ((n+1),(ret+ (f n)))

@@ -1,7 +1,7 @@
 (* ex 2 *)
-let rec sigma : int * int * (int -> int) -> int = fun (a, b, f) ->
+let rec sigma f a b =
   if (a > b) then 0
-  else f(a) + sigma(a+1, b, f)
+  else f(a) + sigma f (a+1) b
 
 (* ex 2 test *)
 (*

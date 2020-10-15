@@ -1,6 +1,6 @@
 (* HW 1-1 / 2007-11603 / 컴퓨터공학부 / 이영준 *)
 
-let sigma (cur, last, f) =
+let sigma f cur last =
 	let rec inner (cur, last, f) = 
 		if cur > last then
 			0

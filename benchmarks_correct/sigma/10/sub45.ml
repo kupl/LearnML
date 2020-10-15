@@ -1,7 +1,7 @@
 (* complete *)
 exception Invalid_Input
 
-let sigma(a,b,f) =
+let sigma f a b =
 	let rec iter(n) =
 		if n = b then f(n)
 			else f(n) + iter(n+1)

@@ -1,2 +1,2 @@
-let rec sigma (a,b,f): int =
-if a = b then f a else if a < b then f a + sigma (a+1,b,f) else 0
+let rec sigma f a b : int =
+if a = b then f a else if a < b then f a + sigma f (a+1) b else 0

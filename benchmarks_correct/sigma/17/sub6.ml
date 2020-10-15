@@ -1,3 +1,3 @@
-let rec sigma : int * int * (int->int) -> int = fun (x, y, f) ->
+let rec sigma f x y =
   if (x > y) then 0
-  else f x + sigma(x + 1, y, f)
+  else f x + sigma f (x+1) y

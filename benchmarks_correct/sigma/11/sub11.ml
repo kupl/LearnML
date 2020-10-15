@@ -1,5 +1,5 @@
-let rec sigma : int * int * (int -> int) -> int = fun (a, b, f) ->
-	if a < b then sigma (a, b-1, f) + f b
+let rec sigma f a b =
+	if a < b then sigma f a (b-1) + f b
 	else if a = b then f b
 	else raise (Invalid_argument "sigma")
 (*

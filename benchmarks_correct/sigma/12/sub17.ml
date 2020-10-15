@@ -1,7 +1,7 @@
 (* 2008-11874 EXERCISE 2 *)
 
-let rec sigma(a,b,f) = 
-	if b>a then (f b) + (sigma(a,b-1,f))
+let rec sigma f a b = 
+	if b>a then (f b) + (sigma f a (b-1))
 	else if b=a then (f b)
 	else 0
 	

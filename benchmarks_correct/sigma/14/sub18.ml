@@ -1,8 +1,8 @@
 (* sigma : int * int * (int -> int) -> int  *)
 
-let rec sigma (a, b, func) = 
+let rec sigma func a b =
   if a>b then 0
   else if a==b then (func a)
-  else (func a) + (sigma (a+1, b, func))
+  else (func a) + (sigma func (a+1) b)
 
 

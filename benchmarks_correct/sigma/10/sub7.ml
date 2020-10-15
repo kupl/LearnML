@@ -1,8 +1,8 @@
 (* 2004-11957 "Computer science and engineering" "Park Kwang-seok" homework#1-1 *)
 
-let rec sigma (a, b, f) =
+let rec sigma f a b =
 	if a > b then 0
-	else sigma ((a+1), b, f) + (f a)
+	else sigma f (a+1) b + (f a)
 
 (*
 (* test code *)

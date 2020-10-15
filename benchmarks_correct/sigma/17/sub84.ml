@@ -1,4 +1,4 @@
-let sigma: int * int * (int -> int) -> int = fun (a, b, f) ->
+let sigma f a b =
   let rec _sigma (_a: int) (_b: int) (r: int): int =
     if _a > b
       then r

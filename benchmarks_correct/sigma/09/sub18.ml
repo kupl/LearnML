@@ -2,7 +2,7 @@ exception Error of string
 
 
 
-let sigma( a, b, f) =	
+let sigma f a b =	
 	let rec gen a b=
 		if a>b then raise (Error "invalid arg")
 		else if a=b then [a] 

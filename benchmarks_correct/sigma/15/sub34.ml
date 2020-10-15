@@ -1,3 +1,3 @@
-let rec sigma (a, b, funx) =
+let rec sigma funx a b  =
 		if a>b then 0
-		else (funx a) + sigma (a+1, b, funx)
+		else (funx a) + sigma funx (a+1) b

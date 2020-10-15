@@ -1,5 +1,5 @@
 
-let sigma (a, b, f) =
+let sigma f a b =
   let rec sum x s =
     if x > b then s
     else (sum (x + 1) (s + (f x)))

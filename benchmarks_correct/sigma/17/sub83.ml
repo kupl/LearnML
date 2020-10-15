@@ -1,8 +1,8 @@
 (* Mechanical & Aerospace Eng./2013-11706/Kang Injae/1-2.ml *)
 
-let rec sigma ((a : int), (b : int), (f : 'n -> 'fn)) : int =
+let rec sigma f a b =
   if a > b then 0
-  else (f a) + (sigma (a+1, b, f))
+  else (f a) + (sigma f (a+1) b)
 
 (*
 let _ =

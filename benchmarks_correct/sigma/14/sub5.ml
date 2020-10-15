@@ -1,4 +1,4 @@
-let sigma ((a:int), (b:int), (f:int->int)): int =
+let sigma f a b =
   let rec sigmaInternal n result =
     if n > b then result
     else sigmaInternal (n + 1) (result + f n)

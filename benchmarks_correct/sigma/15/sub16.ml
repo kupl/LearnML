@@ -1,10 +1,10 @@
 (* 2010-11753 snucse Taekmin Kim *)
 (* HW 1-2 *)
 
-let rec sigma : int * int * (int -> int) -> int = fun(a, b, fn) ->
+let rec sigma fn a b  =
   if a > b then 0
   else 
-    fn(a) + sigma(a + 1, b, fn)
+    fn(a) + sigma fn (a+1) b
 
 
 (* 

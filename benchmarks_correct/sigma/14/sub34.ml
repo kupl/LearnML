@@ -1,6 +1,6 @@
 (* not tested *)
 
-let sigma ((a: int), (b: int), (f: int->int)) = 
+let sigma f a b =
 	let rec sigma_sub (cur, n, f) = 
 		if (cur == n)
 			then (f n)

@@ -1,4 +1,3 @@
-let rec sigma (x : int * int * (int -> int)) : int =
-let (a, b, f) = x in
+let rec sigma f a b =
 if (a > b) then 0
-else sigma(a+1, b, f) + f(a)
+else sigma f (a+1) b + f(a)

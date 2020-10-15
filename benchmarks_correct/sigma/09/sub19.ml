@@ -4,9 +4,9 @@
 (* Exercise 1*)
 exception Error of string 
 
-let rec sigma (a,b,f)=
+let rec sigma f a b =
 	if a=b then (f b)
 	else if a>b then raise ( Error "Illegal input")
-  		else (sigma (a+1, b, f) + (f a))
+  		else (sigma f (a+1) b + (f a))
   ;;
 

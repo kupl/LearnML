@@ -1,6 +1,6 @@
 (* sigma(a,b,f) := SIGMA i = a->b with function f(i) *)
 exception INVALID_RANGE
-let rec sigma : int * int * (int -> int) -> int = 
+let rec sigma : (int -> int) -> int -> int -> int = 
 	let rec sigma_rec : int * int * int * (int -> int) -> int =
 		fun(sum, i, b, f) -> 
 		if i < b then
@@ -10,7 +10,7 @@ let rec sigma : int * int * (int -> int) -> int =
 		else 
 			 raise INVALID_RANGE
 	in
-	fun(a, b, f) ->
+	fun f a b ->
 		if a > b then
 			0
 		else

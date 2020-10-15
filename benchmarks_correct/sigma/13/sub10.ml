@@ -1,8 +1,8 @@
 
-let rec sigma(st, ed, f ) = 
+let rec sigma f st ed =
 	if st>ed then 0
 	else if st=ed then f st
-	else f st + sigma(st+1,ed, f )
+	else f st + sigma f (st+1) ed
 
 
 (*	

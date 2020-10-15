@@ -1,4 +1,4 @@
-let rec sigma(int1, int2, func) =
+let rec sigma func int1 int2 =
 	if(int1 > int2) then 0
 	else if(int1 == int2) then (func int1)
-	else (func int1) + sigma(int1+1, int2, func)
+	else (func int1) + sigma func (int1+1) int2

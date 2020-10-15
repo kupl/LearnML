@@ -1,5 +1,5 @@
-let rec sigma ((startnum : int), (endnum : int), (fnt : (int -> int))) : int =
-  if (startnum > endnum) then
+let rec sigma fnt a b =
+  if (a > b) then
     0
   else
-    fnt(startnum) + sigma(startnum + 1, endnum, fnt)
+    fnt(a) + sigma fnt (a+1) b

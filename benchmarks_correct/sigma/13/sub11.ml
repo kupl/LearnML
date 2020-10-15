@@ -1,4 +1,4 @@
-let sigma (a, b, n) = 
+let sigma n a b =
   if a <= b then
     let rec sum (a, b, n) = 
       if a = b then n a

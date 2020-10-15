@@ -1,10 +1,10 @@
 (* 생명과학부/2011-10915/신지민 Homework 1-2 *)
 
 
-let rec sigma : int * int * (int->int) -> int = fun (a,b,f) ->
+let rec sigma f a b  =
  	if(a==b) then f a
 	else if(a>b) then 0
-	else sigma (a,b-1,f) + sigma (b,b,f)
+	else sigma f a (b-1) + sigma f b b
 
 (*
 let f : int -> int = fun x->x+1

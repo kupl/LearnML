@@ -1,4 +1,4 @@
-let rec sigma : int * int * (int->int) -> int = fun(a, b, f ) ->
+let rec sigma f a b =
   if b = a then f b
-  else if b > a then f b + sigma (a, b-1, f)
+  else if b > a then f b + sigma f a (b-1)
   else 0

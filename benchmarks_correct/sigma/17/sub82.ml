@@ -3,5 +3,5 @@ let rec sigma2 ((a: int), (b: int), (f: (int -> int)), (r: int)) : int =
      else if a=b then (f a) + r
      else (sigma2 (a+1, b, f, (f a) + r))
 
-let rec sigma ((a: int), (b: int), (f: (int -> int))) : int =
+let rec sigma f a b =
      sigma2 (a, b, f, 0)

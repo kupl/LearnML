@@ -1,6 +1,6 @@
 (* 2009-11674 ±è¿øÁø HW1-1*)
 
-let sigma(a, b, f) =
+let sigma f a b =
 
 	let rec sigma2(a, b, f, sum) =
         	if (a = b) then (sum + f(a))

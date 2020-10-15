@@ -1,3 +1,3 @@
-let rec sigma (a, b, fn) =
+let rec sigma fn a b =
 	if a > b then 0
-	else (fn a) + sigma(a+1, b, fn)
+	else (fn a) + sigma fn (a+1) b

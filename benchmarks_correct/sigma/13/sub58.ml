@@ -1,4 +1,4 @@
-let rec sigma(sn,en,f)=
+let rec sigma f sn en =
 	if sn>en then 0
     else if sn=en then (f sn)
-    else (f en) + (sigma(sn,(en-1),f))
+    else (f en) + (sigma f sn (en-1))

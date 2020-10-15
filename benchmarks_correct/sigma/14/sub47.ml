@@ -1,4 +1,4 @@
-let sigma ((a:int),(b:int),(f:int->int)) : int =
+let sigma f a b =
 	let rec tsigma res n =
 		if n > b then res
 		else tsigma (res + (f n)) (n + 1)

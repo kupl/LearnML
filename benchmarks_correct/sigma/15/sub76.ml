@@ -8,4 +8,4 @@ let rec iter_f a b f result =
     else
         result
 
-let sigma (a, b, f) = iter_f a b f 0
+let sigma f a b  = iter_f a b f 0

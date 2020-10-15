@@ -1,6 +1,6 @@
-let rec sigma (a, b, f) = 
+let rec sigma f a b =
     if b < a then 0
-    else f(b) + sigma(a, b-1, f)
+    else f(b) + sigma f a (b-1)
 
 (*
 let sum1 = sigma(1,10,fun x -> x)

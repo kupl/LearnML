@@ -6,7 +6,7 @@
 
 exception Error of string
 
-let sigma (a, b, f) =
+let sigma f a b =
   let rec s a b f =
     if a > b then 0
     else (f a) + (s (a+1) b f)

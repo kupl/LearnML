@@ -1,5 +1,5 @@
-let rec sigma(a,b,f) =
+let rec sigma f a b  =
 if a=b then f a
 else if a>b then 0
-else sigma(a,b-1,f) + f b
+else sigma f a (b-1) + f b
 

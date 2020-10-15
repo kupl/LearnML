@@ -1,4 +1,4 @@
-let sigma ((n1:int), (n2:int), (f: int -> int)) = 
+let sigma f n1 n2 =
 	let rec sigma_sub (cur, n, f) = 
 		if (cur == n)
 			then (f n)

@@ -1,4 +1,4 @@
-let rec sigma ((int1 : int), (int2 : int), (f : int->int)) : int =
+let rec sigma f int1 int2 =
 	if int1==int2 then f int2
-	else if int2>int1 then sigma (int1+1, int2, f) + f int1
+	else if int2>int1 then sigma f (int1+1) int2 + f int1
 	else 0

@@ -1,7 +1,7 @@
 (* 프로그래밍언어 Homework1 2009-11657 김동현 *)
 
 (* Exercise 1 *)
-let sigma (a, b, f) =
+let sigma f a b =
   if a > b then 0
   (* 시작 값이 끝 값보다 큰 경우는 잘못된 입력으로 간주하고 0 return *)
   else

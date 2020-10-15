@@ -7,5 +7,5 @@ let rec make_list a b=
 	if (a<=b) then a::make_list (a+1) b 
 	else [] ;;
 
-let rec sigma ((a:int),(b:int),(fn:int->int)) = 
+let rec sigma fn a b =
 	sum_list fn (make_list a b);;

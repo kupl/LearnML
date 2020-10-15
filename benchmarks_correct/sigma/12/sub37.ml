@@ -1,3 +1,3 @@
-let rec sigma (a, b, f) =
-	if a=b then (f b) else (f b)+(sigma (a, (b-1), f))
+let rec sigma f a b =
+	if a=b then (f b) else (f b)+(sigma f a (b-1))
 ;;

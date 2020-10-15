@@ -10,10 +10,10 @@ let b = 10
 let f x = x
 *)
 
-let rec sigma (a, b, f) =
+let rec sigma f a b =
 	if a > b then 0
 	else if a = b then f b
-	else f a + sigma (a+1, b, f)
+	else f a + sigma f (a+1) b
 
 (*
 let result = sigma (a, b, f)

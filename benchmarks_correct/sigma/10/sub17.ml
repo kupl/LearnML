@@ -1,7 +1,7 @@
 exception Error of string
 
-let rec sigma (a, b, f) = 
+let rec sigma f a b = 
 	if b < a then raise (Error "error")
 	else if b = a then f a
-	else f a + sigma (a+1, b, f)
+	else f a + sigma f (a+1) b
 

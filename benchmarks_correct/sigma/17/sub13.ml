@@ -1,3 +1,3 @@
-let rec sigma (x, y, f) =
+let rec sigma f x y =
   if (x > y) then 0
-  else (f y) + sigma(x, y - 1, f)
+  else (f y) + sigma f x (y-1)

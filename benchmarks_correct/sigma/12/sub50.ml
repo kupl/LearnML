@@ -1,9 +1,9 @@
-let rec sigma (lower, upper, func) =
+let rec sigma func lower upper =
 	if (lower <= upper)
 	then
 		if (lower = upper)
 		then (func lower)
-		else (func lower) + (sigma (lower + 1, upper, func))
+		else (func lower) + (sigma func (lower+1) upper)
 	else 0
 	
 (* TEST SET *)

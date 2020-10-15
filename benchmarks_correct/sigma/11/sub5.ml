@@ -1,7 +1,7 @@
 (*2006-11681 °­Çö¼®*)
 exception Invalid_argument of string
 
-let rec sigma (a,b,f)=
+let rec sigma f a b =
 	if a>b then raise (Invalid_argument "sigma:a>b") 
 	else if a=b then (f b)
-	else (f a) + sigma ((a+1),b,f)
+	else (f a) + sigma f (a+1) b

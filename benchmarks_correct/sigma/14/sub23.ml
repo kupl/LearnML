@@ -1,5 +1,5 @@
 (*컴퓨터공학부 2010-11779 박진영 1.1*)
-let sigma (a, b, f) = 
+let sigma f a b =
 
   let rec cal (a, b, f, rs) =
     if a > b then rs

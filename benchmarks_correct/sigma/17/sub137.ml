@@ -1,4 +1,4 @@
-let rec sigma:int*int*(int->int)->int=fun(a,b,f)->
+let rec sigma f a b =
   if(a<=b)
-  then(f(a)+sigma(a+1,b,f))
+  then(f(a)+sigma f (a+1) b)
   else 0

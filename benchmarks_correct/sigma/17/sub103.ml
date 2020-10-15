@@ -1,9 +1,9 @@
 (* 2014-17189 이소희
  * Exercise 1-2, Due: 9/14, 24:00 *)
 
-let rec sigma ((a : int), (b : int), (f : int -> int)) : int =
+let rec sigma f a b =
   if (a <= b)
-    then (f b) + (sigma (a, (b-1), f))
+    then (f b) + (sigma f a (b-1))
     else 0
 
 (* test : test function *)

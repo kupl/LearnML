@@ -2,7 +2,6 @@
 (* Student ID: 2010-11834 *)
 (* Name: Kwonjoon Lee *)
 (* Exercise #2 *)
-let rec sigma (t : int * int * (int -> int)) : int =
-	match t with (a,b,f) ->
+let rec sigma f a b  =
 		if a>b then 0
-		else f b + sigma(a, b-1, f)
+		else f b + sigma f a (b-1)

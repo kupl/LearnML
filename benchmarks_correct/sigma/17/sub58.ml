@@ -1,3 +1,3 @@
-let rec sigma ((x : int), (y : int), udf) : int =
+let rec sigma udf x y =
   if (x > y) then 0
-  else (udf x) + sigma (x+1, y, udf)
+  else (udf x) + sigma udf (x+1) y

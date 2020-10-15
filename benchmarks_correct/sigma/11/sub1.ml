@@ -1,8 +1,8 @@
 (* Didn't handle exception case according to a TA Yoon's comment on Web Board *)
 (* I'll be used to it next time T^T *)
-let rec sigma (a, b, f) =
+let rec sigma f a b =
 	if a=b then f a
-	else f a + sigma (a+1, b, f)
+	else f a + sigma f (a+1) b
 
 (* Test Code ::
 let original n = n

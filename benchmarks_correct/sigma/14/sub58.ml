@@ -1,2 +1,2 @@
-let rec sigma (a, b, f) =
-    if a>b then 0 else sigma (a, b-1, f) + f(b);;
+let rec sigma f a b  =
+    if a>b then 0 else sigma f a (b-1) + f(b);;

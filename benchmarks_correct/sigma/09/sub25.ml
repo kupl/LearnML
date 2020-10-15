@@ -3,9 +3,9 @@
  * Name        : Kim, Seongjun
  *)
 
-let rec sigma (a, b, f) =
+let rec sigma f a b =
     if a > b then 0
-    else (f a) + (sigma ((a+1), b, f))
+    else (f a) + (sigma f (a+1) b)
 
 (* TEST 
 open OUnit;;

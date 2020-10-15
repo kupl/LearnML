@@ -1,4 +1,4 @@
-let sigma : int * int * (int -> int) -> int = fun (a,b,f) ->
+let sigma f a b =
 	let rec help = fun (a, b, f, r) ->
 		if a=b then (f a) +r
 		else if a>b then 0
