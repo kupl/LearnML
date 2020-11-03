@@ -1,43 +1,43 @@
-type formula = TRUE
-			| FALSE
-			| NOT of formula
-			| ANDALSO of formula * formula
-			| ORELSE of formula * formula
-			| IMPLY of formula * formula
-			| LESS of expr * expr
-	and expr = NUM of int
-			| PLUS of expr * expr
-			| MINUS of expr * expr
+type formula = True
+			| False
+			| Not of formula
+			| AndAlso of formula * formula
+			| OrElse of formula * formula
+			| Imply of formula * formula
+			| Equal of exp * exp
+	and exp = Num of int
+			| Plus of exp * exp
+			| Minus of exp * exp
 
-let rec evalExpr (ex: expr): int =
+let rec evalExpr (ex: exp): int =
 	match ex with
-	| NUM i -> i
-	| PLUS (e1, e2) -> (evalExpr e1) + (evalExpr e2)
-	| MINUS (e1, e2) -> (evalExpr e1) - (evalExpr e2)
+	| Num i -> i
+	| Plus (e1, e2) -> (evalExpr e1) + (evalExpr e2)
+	| Minus (e1, e2) -> (evalExpr e1) - (evalExpr e2)
 
 let rec evalForm (fm: formula): formula =
 	match fm with
-	| TRUE -> TRUE
-	| FALSE -> FALSE
-	| NOT f1 -> 
-		if (evalForm f1) = TRUE then FALSE
-		else TRUE
-	| ANDALSO (f1, f2) -> 
-		if ((evalForm f1 = TRUE) && (evalForm f2 = TRUE)) then TRUE
-		else FALSE
-	| ORELSE (f1, f2) ->
-		if ((evalForm f1 = TRUE) || (evalForm f2 = TRUE)) then TRUE
-		else FALSE
-	| IMPLY (f1, f2) ->
-		if ((evalForm f1 = TRUE) && (evalForm f2 = FALSE)) then FALSE
-		else TRUE
-	| LESS (e1, e2) -> 
-		if ((evalExpr e1) < (evalExpr e2)) then TRUE
-		else FALSE
+	| True -> True
+	| False -> False
+	| Not f1 -> 
+		if (evalForm f1) = True then False
+		else True
+	| AndAlso (f1, f2) -> 
+		if ((evalForm f1 = True) && (evalForm f2 = True)) then True
+		else False
+	| OrElse (f1, f2) ->
+		if ((evalForm f1 = True) || (evalForm f2 = True)) then True
+		else False
+	| Imply (f1, f2) ->
+		if ((evalForm f1 = True) && (evalForm f2 = False)) then False
+		else True
+	| Equal (e1, e2) -> 
+		if ((evalExpr e1) = (evalExpr e2)) then True
+		else False
 
 
 let eval (fm: formula): bool =
 	match (evalForm fm) with
-	| TRUE -> true
-	| FALSE -> false 
+	| True -> true
+	| False -> false 
 	| _ -> false

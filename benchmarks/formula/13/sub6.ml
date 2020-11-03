@@ -2,55 +2,55 @@
 
 (* PREDEFINED TYPES *)
 type formula = 
-TRUE
-|FALSE
-|NOT of formula
-|ANDALSO of formula * formula
-|ORELSE of formula * formula
-|IMPLY of formula * formula
-|LESS of expr * expr
-and expr =
-	NUM of int
-	|PLUS of expr * expr
-	|MINUS of expr * expr
+True
+|False
+|Not of formula
+|AndAlso of formula * formula
+|OrElse of formula * formula
+|Imply of formula * formula
+|Equal of exp * exp
+and exp =
+	Num of int
+	|Plus of exp * exp
+	|Minus of exp * exp
 (* END OF PREDEFINED TYPES *)
 
 let rec eval formula = 
-	(* exprEval EVALUATES expr TYPE *)
-	let rec exprEval expr =
-		match expr with
-		|NUM a -> a
-		|PLUS (a, b) -> (exprEval a) + (exprEval b)
-		|MINUS (a, b) -> (exprEval a) - (exprEval b)
+	(* expEval EVALUATES exp TYPE *)
+	let rec expEval exp =
+		match exp with
+		|Num a -> a
+		|Plus (a, b) -> (expEval a) + (expEval b)
+		|Minus (a, b) -> (expEval a) - (expEval b)
 in
 	match formula with
-	|TRUE -> true
-	|FALSE -> false
-	|NOT subformula -> 
+	|True -> true
+	|False -> false
+	|Not subformula -> 
 		(
 		match (eval subformula) with
 		|true -> false
 		|false -> true
 		)
-	|ANDALSO (a, b) ->
+	|AndAlso (a, b) ->
 		(
 		match ((eval a), (eval b)) with
 		|(true, true) -> true
 		|_ -> false
 		)
-	|ORELSE (a, b) ->
+	|OrElse (a, b) ->
 		(
 		match ((eval a), (eval b)) with
 		|(false, false) -> false
 		|_ -> true
 		)
-	|IMPLY (a, b) ->
+	|Imply (a, b) ->
 		(
 		match ((eval a), (eval b)) with
 		|(true, false) -> false
 		|_ -> true
 		)
-	|LESS (a, b) -> 
-		if (exprEval a) < (exprEval b) 
+	|Equal (a, b) -> 
+		if (expEval a) = (expEval b) 
 		then true 
 		else false

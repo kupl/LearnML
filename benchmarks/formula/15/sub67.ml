@@ -1,29 +1,29 @@
-type formula = TRUE
-            | FALSE
-            | NOT of formula
-            | ANDALSO of formula * formula
-            | ORELSE of formula * formula
-            | IMPLY of formula * formula
-            | LESS of expr * expr
-and expr = NUM of int
-        | PLUS of expr * expr
-        | MINUS of expr * expr
+type formula = True
+            | False
+            | Not of formula
+            | AndAlso of formula * formula
+            | OrElse of formula * formula
+            | Imply of formula * formula
+            | Equal of exp * exp
+and exp = Num of int
+        | Plus of exp * exp
+        | Minus of exp * exp
 
 let rec calc e =
     match e with
-    | NUM (n) -> n
-    | PLUS (n, m) -> calc(n) + calc(m)
-    | MINUS (n, m) -> calc(n) - calc(m);;
+    | Num (n) -> n
+    | Plus (n, m) -> calc(n) + calc(m)
+    | Minus (n, m) -> calc(n) - calc(m);;
 
 let rec eval f =
     match f with
-    | TRUE -> true
-    | FALSE -> false
-    | NOT p -> not (eval p)
-    | ANDALSO (p, q) -> (eval p) && (eval q)
-    | ORELSE (p, q) -> (eval p) || (eval q)
-    | IMPLY (p, q) -> not (eval p) || (eval q)
-    | LESS (a, b) -> (calc a) < (calc b);;
+    | True -> true
+    | False -> false
+    | Not p -> not (eval p)
+    | AndAlso (p, q) -> (eval p) && (eval q)
+    | OrElse (p, q) -> (eval p) || (eval q)
+    | Imply (p, q) -> not (eval p) || (eval q)
+    | Equal (a, b) -> (calc a) = (calc b);;
 
 (*
 let bool_to_string e =
@@ -31,7 +31,7 @@ let bool_to_string e =
     | true -> "true"
     | false -> "false";;
 
-print_endline (bool_to_string (eval TRUE));;
-print_endline (bool_to_string (eval (ORELSE (TRUE, FALSE))));;
-print_endline (bool_to_string (eval (LESS (NUM 10, PLUS(NUM 5, NUM 4)))));;
+print_endline (bool_to_string (eval True));;
+print_endline (bool_to_string (eval (OrElse (True, False))));;
+print_endline (bool_to_string (eval (Equal (Num 10, Plus(Num 5, Num 4)))));;
 *)

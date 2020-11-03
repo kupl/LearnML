@@ -1,26 +1,26 @@
-type formula = TRUE
-              |FALSE
-              |NOT of formula
-              |ANDALSO of formula * formula
-              |ORELSE of formula * formula
-              |IMPLY of formula * formula
-              |LESS of expr * expr
-and expr = NUM of int
-          |PLUS of expr * expr
-          |MINUS of expr * expr
+type formula = True
+              |False
+              |Not of formula
+              |AndAlso of formula * formula
+              |OrElse of formula * formula
+              |Imply of formula * formula
+              |Equal of exp * exp
+and exp = Num of int
+          |Plus of exp * exp
+          |Minus of exp * exp
 
-let rec calc var_expr = 
-  match var_expr with
-    NUM int_var -> int_var
-    |PLUS (expr1, expr2) -> (calc expr1) + (calc expr2)
-    |MINUS (expr1, expr2) -> (calc expr1) - (calc expr2)
+let rec calc var_exp = 
+  match var_exp with
+    Num int_var -> int_var
+    |Plus (exp1, exp2) -> (calc exp1) + (calc exp2)
+    |Minus (exp1, exp2) -> (calc exp1) - (calc exp2)
 
 let rec eval var_form =
   match var_form with
-    TRUE -> true
-    |FALSE -> false
-    |NOT form1 -> if (eval form1) == true then false else true
-    |ANDALSO (form1, form2) -> (eval form1) && (eval form2)
-    |ORELSE (form1,form2) -> (eval form1) || (eval form2)
-    |IMPLY (form1,form2) -> if (eval form1) == false then true else (eval form2)
-    |LESS (expr1,expr2) -> if (calc expr1) < (calc expr2) then true else false
+    True -> true
+    |False -> false
+    |Not form1 -> if (eval form1) == true then false else true
+    |AndAlso (form1, form2) -> (eval form1) && (eval form2)
+    |OrElse (form1,form2) -> (eval form1) || (eval form2)
+    |Imply (form1,form2) -> if (eval form1) == false then true else (eval form2)
+    |Equal (exp1,exp2) -> if (calc exp1) = (calc exp2) then true else false

@@ -1,29 +1,29 @@
-type formula = TRUE | FALSE
-	|NOT of formula
-	|ANDALSO of formula * formula
-	|ORELSE of formula * formula
-	|IMPLY of formula * formula
-	|LESS of expr * expr
-and expr = NUM of int
-	|PLUS of expr * expr
-	|MINUS of expr * expr
+type formula = True | False
+	|Not of formula
+	|AndAlso of formula * formula
+	|OrElse of formula * formula
+	|Imply of formula * formula
+	|Equal of exp * exp
+and exp = Num of int
+	|Plus of exp * exp
+	|Minus of exp * exp
 
 let rec eval x =
 	
 	(* Calculate value *)
-	let rec calexpr t =
+	let rec calexp t =
 		match t with
-		NUM a-> a
-		|PLUS (a, b)->(calexpr a) + (calexpr b)
-		|MINUS (a, b)->(calexpr a) - (calexpr b)
+		Num a-> a
+		|Plus (a, b)->(calexp a) + (calexp b)
+		|Minus (a, b)->(calexp a) - (calexp b)
 	in
 
 
 	match x with
-	|TRUE -> true
-	|FALSE -> false
-	|NOT a -> not (eval a)
-	|ANDALSO (a, b) -> (eval a)&&(eval b)
-	|ORELSE (a, b) -> (eval a)||(eval b)
-	|IMPLY (a, b) -> (not (eval a))||(eval b)
-	|LESS (a, b) -> if (calexpr a)<(calexpr b) then true else false
+	|True -> true
+	|False -> false
+	|Not a -> not (eval a)
+	|AndAlso (a, b) -> (eval a)&&(eval b)
+	|OrElse (a, b) -> (eval a)||(eval b)
+	|Imply (a, b) -> (not (eval a))||(eval b)
+	|Equal (a, b) -> if (calexp a)=(calexp b) then true else false

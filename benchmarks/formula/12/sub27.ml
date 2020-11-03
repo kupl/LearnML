@@ -1,27 +1,27 @@
-type formula  = TRUE
-	| FALSE
-	| NOT of formula
-	| ANDALSO of formula * formula
-	| ORELSE of formula * formula
-	| IMPLY of formula * formula
-	| LESS of expr * expr
+type formula  = True
+	| False
+	| Not of formula
+	| AndAlso of formula * formula
+	| OrElse of formula * formula
+	| Imply of formula * formula
+	| Equal of exp * exp
 
-	and expr = NUM of int
-	| PLUS of expr * expr
-	| MINUS of expr * expr
+	and exp = Num of int
+	| Plus of exp * exp
+	| Minus of exp * exp
 
 let rec calExpr exp =
 	match exp with
-	| NUM i -> i
-	| PLUS (left, right) -> (calExpr left) + (calExpr right)
-	| MINUS (left, right) -> (calExpr left) - (calExpr right)
+	| Num i -> i
+	| Plus (left, right) -> (calExpr left) + (calExpr right)
+	| Minus (left, right) -> (calExpr left) - (calExpr right)
 
 let rec eval fml =
 	match fml with
-	| TRUE -> true
-	| FALSE -> false
-	| NOT subFml -> not (eval subFml)
-	| ANDALSO (fml1, fml2) -> (eval fml1) && (eval fml2)
-	| ORELSE (fml1, fml2)  -> (eval fml1) || (eval fml2)
-	| IMPLY (fml1, fml2) 	-> if ((eval fml1)&&(eval fml2))|| (not (eval fml1)) then true else false
-	| LESS (fml1, fml2)	-> if ((calExpr fml1) < (calExpr fml2)) then true else false 
+	| True -> true
+	| False -> false
+	| Not subFml -> not (eval subFml)
+	| AndAlso (fml1, fml2) -> (eval fml1) && (eval fml2)
+	| OrElse (fml1, fml2)  -> (eval fml1) || (eval fml2)
+	| Imply (fml1, fml2) 	-> if ((eval fml1)&&(eval fml2))|| (not (eval fml1)) then true else false
+	| Equal (fml1, fml2)	-> if ((calExpr fml1) = (calExpr fml2)) then true else false 

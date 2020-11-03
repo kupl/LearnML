@@ -1,62 +1,62 @@
- type formula = TRUE
-  | FALSE
-  | NOT of formula
-  | ANDALSO of formula * formula
-  | ORELSE of formula * formula
-  | IMPLY of formula * formula
-  | LESS of expr * expr
-and expr = NUM of int
-  | PLUS of expr * expr
-  | MINUS of expr * expr
+ type formula = True
+  | False
+  | Not of formula
+  | AndAlso of formula * formula
+  | OrElse of formula * formula
+  | Imply of formula * formula
+  | Equal of exp * exp
+and exp = Num of int
+  | Plus of exp * exp
+  | Minus of exp * exp
 
 let eval : formula -> bool = fun x ->
   match x with
-  | TRUE -> true
-  | FALSE -> false
-  | NOT(y) ->
+  | True -> true
+  | False -> false
+  | Not(y) ->
     (match y with
-    |TRUE -> false
-    |FALSE -> true
+    |True -> false
+    |False -> true
     )
-  | ANDALSO(x, y) -> (
+  | AndAlso(x, y) -> (
     match (x,y) with
-    |(TRUE, TRUE) -> true
-    |(FALSE, _) -> false
-    |(_, FALSE) -> false
+    |(True, True) -> true
+    |(False, _) -> false
+    |(_, False) -> false
     )
-  | ORELSE(x,y) -> (
+  | OrElse(x,y) -> (
     match (x,y) with
-    |(TRUE, _) -> true
-    |(_, TRUE) -> true
-    |(FALSE,FALSE) -> false
+    |(True, _) -> true
+    |(_, True) -> true
+    |(False,False) -> false
   )
-  | IMPLY(x,y) -> (
+  | Imply(x,y) -> (
     match(x,y) with
-    |(FALSE, _) -> true
-    |(TRUE,TRUE) -> true
-    |(TRUE, FALSE) -> false
+    |(False, _) -> true
+    |(True,True) -> true
+    |(True, False) -> false
 
   )
 
-  | LESS(a,b) -> (
+  | Equal(a,b) -> (
     match (a,b) with
-    | (PLUS(NUM(a),NUM(b)), PLUS(NUM(c),NUM(d))) -> (
+    | (Plus(Num(a),Num(b)), Plus(Num(c),Num(d))) -> (
       if a+b >= c+d then false
       else true
     )
-    | (PLUS(NUM(a),NUM(b)), MINUS(NUM(c),NUM(d))) -> (
+    | (Plus(Num(a),Num(b)), Minus(Num(c),Num(d))) -> (
       if a+b >= c-d then false
       else true
     )
-    | (MINUS(NUM(a),NUM(b)), PLUS(NUM(c),NUM(d))) -> (
+    | (Minus(Num(a),Num(b)), Plus(Num(c),Num(d))) -> (
       if a-b >= c+d then false
       else true
     )
-    | (MINUS(NUM(a),NUM(b)), MINUS(NUM(c),NUM(d))) -> (
+    | (Minus(Num(a),Num(b)), Minus(Num(c),Num(d))) -> (
       if a-b >= c-d then false
       else true
     )
-    |(NUM(a),NUM(b)) -> (
+    |(Num(a),Num(b)) -> (
     if a >= b then false
     else true
     )

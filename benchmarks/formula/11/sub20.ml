@@ -1,40 +1,39 @@
-(* 2009-11674 ±è¿øÁø HW1-5 *)
 
-type formula = TRUE
-	     | FALSE
-	     | NOT of formula
-	     | ANDALSO of formula * formula
-	     | ORELSE of formula * formula
-	     | IMPLY of formula * formula
-	     | LESS of expr * expr
-and expr = NUM of int
-	 | PLUS of expr * expr
-	 | MINUS of expr * expr
+type formula = True
+	     | False
+	     | Not of formula
+	     | AndAlso of formula * formula
+	     | OrElse of formula * formula
+	     | Imply of formula * formula
+	     | Equal of exp * exp
+and exp = Num of int
+	 | Plus of exp * exp
+	 | Minus of exp * exp
 
 
 let rec eval form =
 
 	let rec cal ex =
         	match ex with
-                	| NUM a -> a
-               		| PLUS(a,b) -> (cal a) + (cal b)
-               	 	| MINUS(a,b) -> (cal a) - (cal b)
+                	| Num a -> a
+               		| Plus(a,b) -> (cal a) + (cal b)
+               	 	| Minus(a,b) -> (cal a) - (cal b)
 	in
 
 	match form with
-		| TRUE -> true
-		| FALSE -> false
-		| NOT f -> (match (eval f) with
+		| True -> true
+		| False -> false
+		| Not f -> (match (eval f) with
 				| true -> false
 				| false -> true)
-		| ANDALSO(f1, f2) -> (match ((eval f1), (eval f2)) with
+		| AndAlso(f1, f2) -> (match ((eval f1), (eval f2)) with
 						| (true, true) -> true
 						| (_, _) -> false )
-		| ORELSE(f1, f2) -> (match ((eval f1), (eval f2)) with
+		| OrElse(f1, f2) -> (match ((eval f1), (eval f2)) with
 						| (false, false) -> false
 						| (_, _) -> true )
-		| IMPLY(f1, f2) -> (match ((eval f1), (eval f2)) with
+		| Imply(f1, f2) -> (match ((eval f1), (eval f2)) with
 						| (true, false) -> false
 						| (_, _) -> true )
-		| LESS(e1, e2) -> (if ((cal e1) < (cal e2)) then true
+		| Equal(e1, e2) -> (if ((cal e1) = (cal e2)) then true
 				   else false)

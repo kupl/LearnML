@@ -1,56 +1,56 @@
-type formula = TRUE
-| FALSE
-| NOT of formula
-| ANDALSO of formula * formula
-| ORELSE of formula * formula
-| IMPLY of formula * formula
-| LESS of expr * expr
-and expr = NUM of int
-| PLUS of expr * expr
-| MINUS of expr * expr
+type formula = True
+| False
+| Not of formula
+| AndAlso of formula * formula
+| OrElse of formula * formula
+| Imply of formula * formula
+| Equal of exp * exp
+and exp = Num of int
+| Plus of exp * exp
+| Minus of exp * exp
 ;;
 
-let rec calc expr =
-    match expr with
-    | NUM (expr) -> expr
-    | PLUS (lExpr, rExpr) -> calc lExpr + calc rExpr
-    | MINUS (lExpr, rExpr) -> calc lExpr - calc rExpr
+let rec calc exp =
+    match exp with
+    | Num (exp) -> exp
+    | Plus (lExpr, rExpr) -> calc lExpr + calc rExpr
+    | Minus (lExpr, rExpr) -> calc lExpr - calc rExpr
     ;;
 
 
 let rec eval formula =
     match formula with
-    | TRUE -> true
-    | FALSE -> false
-    | NOT (formula) -> not (eval formula)
-    | ANDALSO (lFormula, rFormula) -> eval lFormula && eval rFormula
-    | ORELSE (lFormula, rFormula) -> eval lFormula || eval rFormula
-    | IMPLY (lFormula, rFormula) -> eval (ORELSE ((NOT lFormula), rFormula))
-    | LESS (lExpr, rExpr) -> calc lExpr < calc rExpr
+    | True -> true
+    | False -> false
+    | Not (formula) -> not (eval formula)
+    | AndAlso (lFormula, rFormula) -> eval lFormula && eval rFormula
+    | OrElse (lFormula, rFormula) -> eval lFormula || eval rFormula
+    | Imply (lFormula, rFormula) -> eval (OrElse ((Not lFormula), rFormula))
+    | Equal (lExpr, rExpr) -> calc lExpr = calc rExpr
     ;;
 
 (*
-print_endline (string_of_int (calc (PLUS (NUM 1, NUM 2))));;
-print_endline (string_of_int (calc (MINUS (NUM 2, NUM 3))));;
-print_endline (string_of_bool(eval (LESS (NUM 4, NUM 2))));
-print_endline (string_of_bool (eval (LESS ((MINUS (NUM 1, NUM 2)), (MINUS (NUM 1, NUM 1))))));;
+print_endline (string_of_int (calc (Plus (Num 1, Num 2))));;
+print_endline (string_of_int (calc (Minus (Num 2, Num 3))));;
+print_endline (string_of_bool(eval (Equal (Num 4, Num 2))));
+print_endline (string_of_bool (eval (Equal ((Minus (Num 1, Num 2)), (Minus (Num 1, Num 1))))));;
 
-print_endline (string_of_bool (eval (TRUE)));;
-print_endline (string_of_bool (eval (FALSE)));;
-print_endline (string_of_bool (eval (NOT TRUE)));;
-print_endline (string_of_bool (eval (NOT FALSE)));;
-print_endline (string_of_bool (eval (ANDALSO (TRUE, TRUE))));;
-print_endline (string_of_bool (eval (ANDALSO (TRUE, FALSE))));;
-print_endline (string_of_bool (eval (ANDALSO (FALSE, TRUE))));;
-print_endline (string_of_bool (eval (ANDALSO (FALSE, FALSE))));;
-print_endline (string_of_bool (eval (ORELSE (TRUE, TRUE))));;
-print_endline (string_of_bool (eval (ORELSE (TRUE, FALSE))));;
-print_endline (string_of_bool (eval (ORELSE (FALSE, TRUE))));;
-print_endline (string_of_bool (eval (ORELSE (FALSE, FALSE))));;
-print_endline (string_of_bool (eval (IMPLY (TRUE, TRUE))));;
-print_endline (string_of_bool (eval (IMPLY (TRUE, FALSE))));;
-print_endline (string_of_bool (eval (IMPLY (FALSE, TRUE))));;
-print_endline (string_of_bool (eval (IMPLY (FALSE, FALSE))));;
+print_endline (string_of_bool (eval (True)));;
+print_endline (string_of_bool (eval (False)));;
+print_endline (string_of_bool (eval (Not True)));;
+print_endline (string_of_bool (eval (Not False)));;
+print_endline (string_of_bool (eval (AndAlso (True, True))));;
+print_endline (string_of_bool (eval (AndAlso (True, False))));;
+print_endline (string_of_bool (eval (AndAlso (False, True))));;
+print_endline (string_of_bool (eval (AndAlso (False, False))));;
+print_endline (string_of_bool (eval (OrElse (True, True))));;
+print_endline (string_of_bool (eval (OrElse (True, False))));;
+print_endline (string_of_bool (eval (OrElse (False, True))));;
+print_endline (string_of_bool (eval (OrElse (False, False))));;
+print_endline (string_of_bool (eval (Imply (True, True))));;
+print_endline (string_of_bool (eval (Imply (True, False))));;
+print_endline (string_of_bool (eval (Imply (False, True))));;
+print_endline (string_of_bool (eval (Imply (False, False))));;
 *)
 
 (*
@@ -73,27 +73,27 @@ print_endline (string_of_int (sum_of_tree (Leaf 5)))
 let _ = 
 let print_bool x = 
 print_endline (string_of_bool x) in 
-print_bool (true = eval TRUE); 
-print_bool (false = eval FALSE); 
-print_bool (false = eval (NOT TRUE)); 
-print_bool (true = eval (NOT FALSE)); 
-print_bool (true = eval (ANDALSO (TRUE, TRUE))); 
-print_bool (false = eval (ANDALSO (TRUE, FALSE))); 
-print_bool (false = eval (ANDALSO (FALSE, TRUE))); 
-print_bool (false = eval (ANDALSO (FALSE, FALSE))); 
-print_bool (true = eval (ORELSE (TRUE, TRUE))); 
-print_bool (true = eval (ORELSE (TRUE, FALSE))); 
-print_bool (true = eval (ORELSE (FALSE, TRUE))); 
-print_bool (false = eval (ORELSE (FALSE, FALSE))); 
-print_bool (false = eval (IMPLY (TRUE, FALSE))); 
-print_bool (true = eval (IMPLY (TRUE, TRUE))); 
-print_bool (true = eval (IMPLY (FALSE, TRUE))); 
-print_bool (true = eval (IMPLY (FALSE, FALSE))); 
-print_bool (true = eval (LESS (NUM 3, NUM 5))); 
-print_bool (false = eval (LESS (NUM 3, NUM 3))); 
-print_bool (false = eval (LESS (NUM 3, NUM 1))); 
+print_bool (true = eval True); 
+print_bool (false = eval False); 
+print_bool (false = eval (Not True)); 
+print_bool (true = eval (Not False)); 
+print_bool (true = eval (AndAlso (True, True))); 
+print_bool (false = eval (AndAlso (True, False))); 
+print_bool (false = eval (AndAlso (False, True))); 
+print_bool (false = eval (AndAlso (False, False))); 
+print_bool (true = eval (OrElse (True, True))); 
+print_bool (true = eval (OrElse (True, False))); 
+print_bool (true = eval (OrElse (False, True))); 
+print_bool (false = eval (OrElse (False, False))); 
+print_bool (false = eval (Imply (True, False))); 
+print_bool (true = eval (Imply (True, True))); 
+print_bool (true = eval (Imply (False, True))); 
+print_bool (true = eval (Imply (False, False))); 
+print_bool (true = eval (Equal (Num 3, Num 5))); 
+print_bool (false = eval (Equal (Num 3, Num 3))); 
+print_bool (false = eval (Equal (Num 3, Num 1))); 
 print_bool (false = eval 
-(LESS (PLUS (NUM 3, NUM 4), MINUS (NUM 5, NUM 1)))); 
+(Equal (Plus (Num 3, Num 4), Minus (Num 5, Num 1)))); 
 print_bool (true = eval 
-(LESS (PLUS (NUM 10, NUM 12), MINUS (NUM 10, NUM (-13))))); 
+(Equal (Plus (Num 10, Num 12), Minus (Num 10, Num (-13))))); 
 *)

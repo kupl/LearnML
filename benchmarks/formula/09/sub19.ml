@@ -1,26 +1,26 @@
-type formula = TRUE
-  		| FALSE
-  		| NOT of formula
-  		| ANDALSO of formula * formula
-  		| ORELSE of formula * formula
-  		| IMPLY of formula * formula
-  		| LESS of expr * expr
-and expr = NUM of int
-  		| PLUS of expr * expr
-  		| MINUS of expr * expr
+type formula = True
+  		| False
+  		| Not of formula
+  		| AndAlso of formula * formula
+  		| OrElse of formula * formula
+  		| Imply of formula * formula
+  		| Equal of exp * exp
+and exp = Num of int
+  		| Plus of exp * exp
+  		| Minus of exp * exp
 
 let rec eval formulain= 
-	let rec calc exprin= 
-		match exprin with
-			NUM(x) -> x
-			| PLUS(x,y) -> (calc(x))+(calc(y))
-			| MINUS(x,y) -> (calc(x))-(calc(y))
+	let rec calc expin= 
+		match expin with
+			Num(x) -> x
+			| Plus(x,y) -> (calc(x))+(calc(y))
+			| Minus(x,y) -> (calc(x))-(calc(y))
 	in
 	match formulain with
-		TRUE -> true
-		| FALSE -> false
-		| NOT(interform) -> not (eval(interform))
-		| ANDALSO(interform1,interform2) -> eval(interform1) && eval(interform2)
-		| ORELSE(interform1,interform2) -> eval(interform1) || eval(interform2)
-		| IMPLY(interform1,interform2) -> not (eval(interform1) && (not(eval(interform2))))
-		| LESS(expr1,expr2) -> (calc(expr1)) < (calc(expr2))
+		True -> true
+		| False -> false
+		| Not(interform) -> not (eval(interform))
+		| AndAlso(interform1,interform2) -> eval(interform1) && eval(interform2)
+		| OrElse(interform1,interform2) -> eval(interform1) || eval(interform2)
+		| Imply(interform1,interform2) -> not (eval(interform1) && (not(eval(interform2))))
+		| Equal(exp1,exp2) -> (calc(exp1)) = (calc(exp2))

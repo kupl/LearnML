@@ -1,29 +1,29 @@
-type formula = TRUE
-             | FALSE
-             | NOT of formula
-             | ANDALSO of formula * formula
-             | ORELSE of formula * formula
-             | IMPLY of formula * formula
-             | LESS of expr * expr
-and expr = NUM of int
-         | PLUS of expr * expr
-         | MINUS of expr * expr
+type formula = True
+             | False
+             | Not of formula
+             | AndAlso of formula * formula
+             | OrElse of formula * formula
+             | Imply of formula * formula
+             | Equal of exp * exp
+and exp = Num of int
+         | Plus of exp * exp
+         | Minus of exp * exp
 
 let rec eval : formula -> bool = fun f ->
-  let rec extoint : expr -> int = fun e ->
+  let rec extoint : exp -> int = fun e ->
     match e with
-    | NUM x -> x
-    | PLUS (x, y) -> extoint(x) + extoint(y)
-    | MINUS (x, y) -> extoint(x) - extoint(y) in
+    | Num x -> x
+    | Plus (x, y) -> extoint(x) + extoint(y)
+    | Minus (x, y) -> extoint(x) - extoint(y) in
   match f with
-  | TRUE -> true
-  | FALSE -> false
-  | NOT x -> not(eval(x))
-  | ANDALSO (x, y) -> eval(x) && eval(y)
-  | ORELSE (x, y) -> eval(x) || eval(y)
-  | IMPLY (x, y) ->
-    if(x == TRUE && y == FALSE) then false
+  | True -> true
+  | False -> false
+  | Not x -> not(eval(x))
+  | AndAlso (x, y) -> eval(x) && eval(y)
+  | OrElse (x, y) -> eval(x) || eval(y)
+  | Imply (x, y) ->
+    if(x == True && y == False) then false
      else true
-  | LESS (x, y) ->
-    if(extoint(x) < extoint(y)) then true
+  | Equal (x, y) ->
+    if(extoint(x) = extoint(y)) then true
     else false

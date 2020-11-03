@@ -1,30 +1,30 @@
 type formula=
-    TRUE
-	|FALSE
-	|NOT of formula
-	|ANDALSO of formula*formula
-	|ORELSE of formula*formula
-	|IMPLY of formula*formula
-	|LESS of expr*expr
-and expr=
-    |NUM of int
-	|PLUS of expr*expr
-	|MINUS of expr*expr
+    True
+	|False
+	|Not of formula
+	|AndAlso of formula*formula
+	|OrElse of formula*formula
+	|Imply of formula*formula
+	|Equal of exp*exp
+and exp=
+    |Num of int
+	|Plus of exp*exp
+	|Minus of exp*exp
 
-let rec expr_eval:expr->int=
+let rec exp_eval:exp->int=
     fun ex->
 	    match ex with
-		|NUM n -> n
-		|PLUS (ln,rn) -> (expr_eval ln)+(expr_eval rn)
-	    |MINUS (ln,rn)-> (expr_eval ln)-(expr_eval rn)
+		|Num n -> n
+		|Plus (ln,rn) -> (exp_eval ln)+(exp_eval rn)
+	    |Minus (ln,rn)-> (exp_eval ln)-(exp_eval rn)
 
 let rec eval:formula->bool=
     fun fo->
 	    match fo with
-		| TRUE -> true
-		| FALSE -> false
-		| NOT f -> not((eval f))
-	    | ANDALSO (lf,rf) -> (eval lf)&&(eval rf)
-		| ORELSE (lf,rf) -> (eval lf)||(eval rf)
-		| IMPLY (lf,rf) -> not((eval lf))||(eval rf)
-		| LESS (ln,rn) -> (expr_eval ln)<(expr_eval rn)
+		| True -> true
+		| False -> false
+		| Not f -> not((eval f))
+	    | AndAlso (lf,rf) -> (eval lf)&&(eval rf)
+		| OrElse (lf,rf) -> (eval lf)||(eval rf)
+		| Imply (lf,rf) -> not((eval lf))||(eval rf)
+		| Equal (ln,rn) -> (exp_eval ln)=(exp_eval rn)

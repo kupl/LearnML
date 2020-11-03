@@ -1,13 +1,13 @@
-type formula = TRUE
-             | FALSE
-             | NOT of formula
-             | ANDALSO of formula * formula
-             | ORELSE of formula * formula
-             | IMPLY of formula * formula
-             | LESS of expr * expr
-and expr = NUM of int
-         | PLUS of expr * expr
-         | MINUS of expr * expr;;
+type formula = True
+             | False
+             | Not of formula
+             | AndAlso of formula * formula
+             | OrElse of formula * formula
+             | Imply of formula * formula
+             | Equal of exp * exp
+and exp = Num of int
+         | Plus of exp * exp
+         | Minus of exp * exp;;
 
 
 let rec eval formula_eq =
@@ -16,28 +16,28 @@ let rec eval formula_eq =
     | (true, bool_y) -> bool_y
     | (false, bool_y) -> true in
 
-  let rec calc expr =
-    match expr with
-    | NUM (n) ->
+  let rec calc exp =
+    match exp with
+    | Num (n) ->
        n
-    | PLUS (expr_1, expr_2) ->
-       (calc expr_1) + (calc expr_2)
-    | MINUS (expr_1, expr_2) ->
-       (calc expr_1) - (calc expr_2) in
+    | Plus (exp_1, exp_2) ->
+       (calc exp_1) + (calc exp_2)
+    | Minus (exp_1, exp_2) ->
+       (calc exp_1) - (calc exp_2) in
 
   match formula_eq with
-  | TRUE ->
+  | True ->
      true
-  | FALSE ->
+  | False ->
      false
-  | NOT (formula_1) ->
+  | Not (formula_1) ->
      not (eval formula_1)
-  | ANDALSO (formula_1, formula_2) ->
+  | AndAlso (formula_1, formula_2) ->
      (eval formula_1) && (eval formula_2)
-  | ORELSE (formula_1, formula_2) ->
+  | OrElse (formula_1, formula_2) ->
      (eval formula_1) || (eval formula_2)
-  | IMPLY (formula_1, formula_2) ->
+  | Imply (formula_1, formula_2) ->
      imply (eval formula_1, eval formula_2)
-  | LESS (expr_1, expr_2) ->
-     (calc expr_1) < (calc expr_2)
+  | Equal (exp_1, exp_2) ->
+     (calc exp_1) = (calc exp_2)
 ;;

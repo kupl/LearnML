@@ -1,33 +1,33 @@
 (* 컴퓨터공학부 2013-11425 이창영 hw2_1 *)
 
-type expr = NUM of int
-| PLUS of expr * expr
-| MINUS of expr * expr
+type exp = Num of int
+| Plus of exp * exp
+| Minus of exp * exp
 
-type formula = TRUE
-              | FALSE
-              | NOT of formula
-              | ANDALSO of formula * formula
-              | ORELSE of formula * formula
-              | IMPLY of formula * formula
-              | LESS of expr * expr
+type formula = True
+              | False
+              | Not of formula
+              | AndAlso of formula * formula
+              | OrElse of formula * formula
+              | Imply of formula * formula
+              | Equal of exp * exp
 
-let rec valofexpr (e : expr) : int =
+let rec valofexp (e : exp) : int =
   match e with
-  | (NUM a) -> a
-  | (PLUS (a, b)) -> (valofexpr a) + (valofexpr b)
-  | (MINUS (a, b)) -> (valofexpr a) - (valofexpr b)
+  | (Num a) -> a
+  | (Plus (a, b)) -> (valofexp a) + (valofexp b)
+  | (Minus (a, b)) -> (valofexp a) - (valofexp b)
 
 let rec eval (f: formula) : bool =
   match f with
-  | TRUE -> true
-  | FALSE -> false
-  | (NOT a) -> not (eval a)
-  | (ANDALSO (a, b)) -> (eval a) && (eval b)
-  | (ORELSE (a, b)) -> (eval a) || (eval b)
-  | (IMPLY (a, b)) -> if (eval a) == false then true
+  | True -> true
+  | False -> false
+  | (Not a) -> not (eval a)
+  | (AndAlso (a, b)) -> (eval a) && (eval b)
+  | (OrElse (a, b)) -> (eval a) || (eval b)
+  | (Imply (a, b)) -> if (eval a) == false then true
                       else (
                         if (eval b) == true then true
                         else false
                         )
-  | (LESS (a, b)) -> if (valofexpr a) < (valofexpr b) then true else false
+  | (Equal (a, b)) -> if (valofexp a) = (valofexp b) then true else false

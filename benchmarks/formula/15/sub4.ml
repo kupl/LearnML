@@ -1,28 +1,28 @@
-type formula = TRUE
-             | FALSE
-             | NOT of formula
-             | ANDALSO of formula * formula
-             | ORELSE of formula * formula
-             | IMPLY of formula * formula
-             | LESS of expr * expr
-and  expr = NUM of int
-          | PLUS of expr * expr
-          | MINUS of expr * expr
+type formula = True
+             | False
+             | Not of formula
+             | AndAlso of formula * formula
+             | OrElse of formula * formula
+             | Imply of formula * formula
+             | Equal of exp * exp
+and  exp = Num of int
+          | Plus of exp * exp
+          | Minus of exp * exp
 
 let rec eval =
     fun f ->
         match f with
-        | TRUE -> true
-        | FALSE -> false
-        | NOT e -> not (eval e)
-        | ANDALSO (f, s) -> (eval f) && (eval s)
-        | ORELSE (f, s) -> (eval f) || (eval s)
-        | IMPLY (f, s) -> not (eval f) || (eval s)
-        | LESS (f, s) ->
-                let rec expr =
+        | True -> true
+        | False -> false
+        | Not e -> not (eval e)
+        | AndAlso (f, s) -> (eval f) && (eval s)
+        | OrElse (f, s) -> (eval f) || (eval s)
+        | Imply (f, s) -> not (eval f) || (eval s)
+        | Equal (f, s) ->
+                let rec exp =
                     fun e ->
                         match e with
-                        | NUM i -> i
-                        | PLUS (f, s) -> (expr f) + (expr s)
-                        | MINUS (f, s) -> (expr f) - (expr s)
-                    in (expr f) < (expr s)
+                        | Num i -> i
+                        | Plus (f, s) -> (exp f) + (exp s)
+                        | Minus (f, s) -> (exp f) - (exp s)
+                    in (exp f) = (exp s)

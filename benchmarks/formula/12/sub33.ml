@@ -1,38 +1,38 @@
-type formula = TRUE
-| FALSE
-| NOT of formula
-| ANDALSO of formula * formula
-| ORELSE of formula * formula
-| IMPLY of formula * formula
-| LESS of expr * expr
+type formula = True
+| False
+| Not of formula
+| AndAlso of formula * formula
+| OrElse of formula * formula
+| Imply of formula * formula
+| Equal of exp * exp
 
-and expr = NUM of int
-| PLUS of expr * expr
-| MINUS of expr * expr
+and exp = Num of int
+| Plus of exp * exp
+| Minus of exp * exp
 
 let rec eval fm =
 
-	let rec exprcalc e =
+	let rec expcalc e =
 		match e with 
-		| NUM n -> n
-		| PLUS (f1, f2) -> (exprcalc f1) + (exprcalc f2)
-		| MINUS (f1, f2) -> (exprcalc f1) - (exprcalc f2)
+		| Num n -> n
+		| Plus (f1, f2) -> (expcalc f1) + (expcalc f2)
+		| Minus (f1, f2) -> (expcalc f1) - (expcalc f2)
 	in
 
 	match fm with
-	| TRUE -> true
-	| FALSE -> false
-	| NOT f -> not (eval f)
-	| ANDALSO (f1, f2) -> (eval f1) && (eval f2)
-	| ORELSE (f1, f2) -> (eval f1) || (eval f2)
-	| IMPLY (f1, f2) -> if (eval f1)==true && (eval f2)==false then false else true
-	| LESS (f1, f2) -> if((exprcalc f1)<(exprcalc f2)) then true else false
+	| True -> true
+	| False -> false
+	| Not f -> not (eval f)
+	| AndAlso (f1, f2) -> (eval f1) && (eval f2)
+	| OrElse (f1, f2) -> (eval f1) || (eval f2)
+	| Imply (f1, f2) -> if (eval f1)==true && (eval f2)==false then false else true
+	| Equal (f1, f2) -> if((expcalc f1)=(expcalc f2)) then true else false
 
 ;;
-let a61 = eval TRUE 
-let a62 = eval FALSE 
-let a63 = eval (NOT TRUE) 
-let a64 = eval (ANDALSO (TRUE, FALSE)) 
-let a65 = eval (ORELSE (TRUE, FALSE)) 
-let a66 = eval (LESS (PLUS(NUM 3, NUM 4), MINUS(NUM 7, NUM 8))) 
+let a61 = eval True 
+let a62 = eval False 
+let a63 = eval (Not True) 
+let a64 = eval (AndAlso (True, False)) 
+let a65 = eval (OrElse (True, False)) 
+let a66 = eval (Equal (Plus(Num 3, Num 4), Minus(Num 7, Num 8))) 
 ;;

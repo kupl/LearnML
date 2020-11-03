@@ -1,29 +1,29 @@
-type formula = TRUE
-	     | FALSE
-	     | NOT of formula
-	     | ANDALSO of formula * formula
-	     | ORELSE of formula * formula
-	     | IMPLY of formula * formula
-	     | LESS of expr * expr
-and expr = NUM of int
-	 | PLUS of expr * expr
-	 | MINUS of expr * expr
+type formula = True
+	     | False
+	     | Not of formula
+	     | AndAlso of formula * formula
+	     | OrElse of formula * formula
+	     | Imply of formula * formula
+	     | Equal of exp * exp
+and exp = Num of int
+	 | Plus of exp * exp
+	 | Minus of exp * exp
 
 let rec eval : formula -> bool = fun f ->
-	let rec expr_int : expr -> int = fun g ->
+	let rec exp_int : exp -> int = fun g ->
 		match g with
-		| NUM x -> x
-		| PLUS (x,y) -> (expr_int x) + (expr_int y)
-		| MINUS (x,y) -> (expr_int x) - (expr_int y)
+		| Num x -> x
+		| Plus (x,y) -> (exp_int x) + (exp_int y)
+		| Minus (x,y) -> (exp_int x) - (exp_int y)
 	in match f with
-	| TRUE -> true
-	| FALSE -> false
-	| NOT x -> if (eval x) then false
+	| True -> true
+	| False -> false
+	| Not x -> if (eval x) then false
 		   else true
-	| ANDALSO (x,y) -> if (eval x) && (eval y) then true
+	| AndAlso (x,y) -> if (eval x) && (eval y) then true
 			   else false
-	| ORELSE (x,y) -> if (eval x) || (eval y) then true
+	| OrElse (x,y) -> if (eval x) || (eval y) then true
 			  else false
-	| IMPLY (x,y) -> if (eval x) && (eval (NOT y)) then false
+	| Imply (x,y) -> if (eval x) && (eval (Not y)) then false
 			 else true
-	| LESS (a, b) -> (expr_int a) < (expr_int b)
+	| Equal (a, b) -> (exp_int a) = (exp_int b)

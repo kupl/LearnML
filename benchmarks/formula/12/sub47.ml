@@ -1,29 +1,29 @@
 type formula = 	 
-	 TRUE
-	|FALSE
-	|NOT of formula
-	|ANDALSO of formula * formula
-	|ORELSE of formula * formula
-	|IMPLY of formula * formula
-	|LESS of expr * expr
+	 True
+	|False
+	|Not of formula
+	|AndAlso of formula * formula
+	|OrElse of formula * formula
+	|Imply of formula * formula
+	|Equal of exp * exp
 
-and expr = 
-	 NUM of int
-	|PLUS of expr * expr
-	|MINUS of expr * expr
+and exp = 
+	 Num of int
+	|Plus of exp * exp
+	|Minus of exp * exp
 
-let rec doexpr (x:expr) =
+let rec doexp (x:exp) =
 	match x with
-	|NUM a -> a
-	|PLUS (a, b) -> (doexpr a) + (doexpr b)
-	|MINUS (a, b) -> (doexpr a) - (doexpr b)
+	|Num a -> a
+	|Plus (a, b) -> (doexp a) + (doexp b)
+	|Minus (a, b) -> (doexp a) - (doexp b)
 
 let rec eval (form:formula) = 
 	match form with
-	|TRUE -> true
-	|FALSE -> false
-	|NOT a -> not (eval a)
-	|ANDALSO (a, b) -> (eval a) && (eval b)
-	|ORELSE (a, b) -> (eval a) || (eval b) 
-	|IMPLY (a, b) -> if (eval a) then (eval b) else true
-	|LESS (a, b) -> if (doexpr a) < (doexpr b) then true else false 
+	|True -> true
+	|False -> false
+	|Not a -> not (eval a)
+	|AndAlso (a, b) -> (eval a) && (eval b)
+	|OrElse (a, b) -> (eval a) || (eval b) 
+	|Imply (a, b) -> if (eval a) then (eval b) else true
+	|Equal (a, b) -> if (doexp a) = (doexp b) then true else false 

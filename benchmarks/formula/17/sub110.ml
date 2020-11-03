@@ -1,31 +1,31 @@
 (* 2015 - 14718 Giyeon Kim HW 2 *)
 
 (* Exercise 1 *)
-type formula = TRUE
-             | FALSE
-             | NOT of formula
-             | ANDALSO of formula * formula
-             | ORELSE of formula * formula
-             | IMPLY of formula * formula
-             | LESS of expr * expr
-and expr = NUM of int
-         | PLUS of expr * expr
-         | MINUS of expr * expr
+type formula = True
+             | False
+             | Not of formula
+             | AndAlso of formula * formula
+             | OrElse of formula * formula
+             | Imply of formula * formula
+             | Equal of exp * exp
+and exp = Num of int
+         | Plus of exp * exp
+         | Minus of exp * exp
 
-let rec calc: expr -> int = fun expr ->
-    match expr with
-    | NUM i -> i
-    | PLUS (l, r) -> calc l + calc r
-    | MINUS (l, r) -> calc l - calc r
+let rec calc: exp -> int = fun exp ->
+    match exp with
+    | Num i -> i
+    | Plus (l, r) -> calc l + calc r
+    | Minus (l, r) -> calc l - calc r
 
 let rec eval: formula -> bool = fun form ->
     match form with
-    | TRUE -> true
-    | FALSE -> false
-    | NOT f -> not (eval f)
-    | ANDALSO (l, r) -> (eval l) && (eval r)
-    | ORELSE (l, r) -> (eval l) || (eval r)
-    | IMPLY (l, r) -> not (eval l) || (eval r)
-    | LESS (lexpr, rexpr) -> (calc lexpr) < (calc rexpr)
+    | True -> true
+    | False -> false
+    | Not f -> not (eval f)
+    | AndAlso (l, r) -> (eval l) && (eval r)
+    | OrElse (l, r) -> (eval l) || (eval r)
+    | Imply (l, r) -> not (eval l) || (eval r)
+    | Equal (lexp, rexp) -> (calc lexp) = (calc rexp)
 
 

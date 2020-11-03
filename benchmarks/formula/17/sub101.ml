@@ -1,25 +1,25 @@
-type formula = TRUE
-  | FALSE
-  | NOT of formula
-  | ANDALSO of formula * formula
-  | ORELSE of formula * formula
-  | IMPLY of formula * formula
-  | LESS of expr * expr
-and expr = NUM of int
-  | PLUS of expr * expr
-  | MINUS of expr * expr
+type formula = True
+  | False
+  | Not of formula
+  | AndAlso of formula * formula
+  | OrElse of formula * formula
+  | Imply of formula * formula
+  | Equal of exp * exp
+and exp = Num of int
+  | Plus of exp * exp
+  | Minus of exp * exp
 
 let rec value ex : int =
   match ex with
-    | NUM x -> x
-    | PLUS (x,y) -> (value x)+(value y)
-    | MINUS (x,y) -> (value x)-(value y)
+    | Num x -> x
+    | Plus (x,y) -> (value x)+(value y)
+    | Minus (x,y) -> (value x)-(value y)
 let rec eval fm : bool =
   match fm with
-    | TRUE -> true
-    | FALSE -> false
-    | NOT x -> (eval x)==false
-    | ANDALSO (x,y) -> (eval x) && (eval y)
-    | ORELSE (x,y) ->  (eval x) || (eval y)
-    | IMPLY (x,y) -> (eval x)==false || (eval y)
-    | LESS (x,y) -> value(x) < value(y)
+    | True -> true
+    | False -> false
+    | Not x -> (eval x)==false
+    | AndAlso (x,y) -> (eval x) && (eval y)
+    | OrElse (x,y) ->  (eval x) || (eval y)
+    | Imply (x,y) -> (eval x)==false || (eval y)
+    | Equal (x,y) -> value(x) = value(y)

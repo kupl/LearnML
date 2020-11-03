@@ -1,33 +1,33 @@
-type formula = TRUE
-	| FALSE
-	| NOT of formula
-	| ANDALSO of formula * formula
-	| ORELSE of formula * formula
-	| IMPLY of formula * formula
-	| LESS of expr * expr
-	and expr = NUM of int
-	| PLUS of expr * expr
-	| MINUS of expr * expr
+type formula = True
+	| False
+	| Not of formula
+	| AndAlso of formula * formula
+	| OrElse of formula * formula
+	| Imply of formula * formula
+	| Equal of exp * exp
+	and exp = Num of int
+	| Plus of exp * exp
+	| Minus of exp * exp
 
 
 let rec eval f =
 	let rec evalExpr ep =
 		match ep with
-			| NUM n -> n
-			| PLUS( a, b ) -> evalExpr( a ) + evalExpr( b )
-			| MINUS( a, b ) -> evalExpr( a ) - evalExpr( b ) in
+			| Num n -> n
+			| Plus( a, b ) -> evalExpr( a ) + evalExpr( b )
+			| Minus( a, b ) -> evalExpr( a ) - evalExpr( b ) in
 	match f with
-		| TRUE -> true
-		| FALSE -> false
-		| NOT a -> not ( eval a )
-		| ANDALSO( a, b ) -> if( eval a ) then ( eval b ) else false
-		| ORELSE( a, b ) -> if ( eval a ) then true else ( eval b )
-		| IMPLY( a, b ) -> if ( eval a ) then ( eval b ) else true
-		| LESS( a, b ) -> evalExpr( a ) <  evalExpr( b );;
+		| True -> true
+		| False -> false
+		| Not a -> not ( eval a )
+		| AndAlso( a, b ) -> if( eval a ) then ( eval b ) else false
+		| OrElse( a, b ) -> if ( eval a ) then true else ( eval b )
+		| Imply( a, b ) -> if ( eval a ) then ( eval b ) else true
+		| Equal( a, b ) -> evalExpr( a ) =  evalExpr( b );;
 (*
 let check f =
 	if( eval f ) then print_string "true\n"
 	else print_string "false\n";;
 
 
-check( IMPLY( LESS( PLUS( NUM 10, NUM 15 ), NUM 25 ), LESS( PLUS( NUM 10, NUM 15 ), NUM 25 ) ) );;*)
+check( Imply( Equal( Plus( Num 10, Num 15 ), Num 25 ), Equal( Plus( Num 10, Num 15 ), Num 25 ) ) );;*)

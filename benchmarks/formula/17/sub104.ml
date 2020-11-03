@@ -1,52 +1,52 @@
 (* Dept. of Computer Science and Engineering, 2015-12055, An Dantae, 2-1 *)
-type formula = TRUE
-             | FALSE
-             | NOT of formula
-             | ANDALSO of formula * formula
-             | ORELSE of formula * formula
-             | IMPLY of formula * formula
-             | LESS of expr * expr
-and expr = NUM of int
-         | PLUS of expr * expr
-         | MINUS of expr * expr
+type formula = True
+             | False
+             | Not of formula
+             | AndAlso of formula * formula
+             | OrElse of formula * formula
+             | Imply of formula * formula
+             | Equal of exp * exp
+and exp = Num of int
+         | Plus of exp * exp
+         | Minus of exp * exp
 
-let rec compute : expr -> int = fun (e) ->
+let rec compute : exp -> int = fun (e) ->
     match e with
-    | NUM i -> i
-    | PLUS (f,g) -> (compute (f) + compute (g))
-    | MINUS (f,g) -> (compute (f) - compute (g))
+    | Num i -> i
+    | Plus (f,g) -> (compute (f) + compute (g))
+    | Minus (f,g) -> (compute (f) - compute (g))
 
 let rec eval : formula -> bool = fun (a) ->
     match a with
-    | TRUE -> true
-    | FALSE -> false
-    | NOT b -> 
+    | True -> true
+    | False -> false
+    | Not b -> 
         (match eval (b) with
          | true -> false
          | false -> true)
-    | ANDALSO (b,c) -> 
+    | AndAlso (b,c) -> 
         (match (eval (b), eval (c)) with
          | (true, true) -> true
          | _ -> false)
-    | ORELSE (b,c) -> 
+    | OrElse (b,c) -> 
         (match (eval (b), eval (c)) with
          | (false, false) -> false
          | _ -> true)
-    | IMPLY (b,c) ->
+    | Imply (b,c) ->
         (match (eval (b), eval (c)) with
          | (true, false) -> false
          | _ -> true)
-    | LESS (e,f) -> (compute(e) < compute(f))
+    | Equal (e,f) -> (compute(e) = compute(f))
 (* Test Code
-let e : expr = PLUS (NUM 3, MINUS (NUM 8, NUM 4))
-let f : expr = PLUS (NUM 2, NUM 6)
-let g : expr = NUM 5
-let x : formula = NOT (ORELSE (IMPLY(LESS(e,f), LESS(g, f)), ANDALSO(FALSE, TRUE)))
-let y : formula = LESS(g, e)
-let z : formula = IMPLY(x, y)
-let w : formula = IMPLY(y, x)
-let t : formula = ANDALSO(z, w)
-let s : formula = ORELSE(w, z)
+let e : exp = Plus (Num 3, Minus (Num 8, Num 4))
+let f : exp = Plus (Num 2, Num 6)
+let g : exp = Num 5
+let x : formula = Not (OrElse (Imply(Equal(e,f), Equal(g, f)), AndAlso(False, True)))
+let y : formula = Equal(g, e)
+let z : formula = Imply(x, y)
+let w : formula = Imply(y, x)
+let t : formula = AndAlso(z, w)
+let s : formula = OrElse(w, z)
 
 let test b = match eval (b) with
     | false -> print_endline ("false")

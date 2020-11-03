@@ -1,31 +1,31 @@
-type formula = TRUE
-			| FALSE
-			| NOT of formula
-			| ANDALSO of formula * formula
-			| ORELSE of formula * formula
-			| IMPLY of formula * formula
-			| LESS of expr * expr
-and expr = NUM of int
-			| PLUS of expr * expr
-			| MINUS of expr * expr
+type formula = True
+			| False
+			| Not of formula
+			| AndAlso of formula * formula
+			| OrElse of formula * formula
+			| Imply of formula * formula
+			| Equal of exp * exp
+and exp = Num of int
+			| Plus of exp * exp
+			| Minus of exp * exp
 
 
-let rec cal : expr -> int =
+let rec cal : exp -> int =
 	fun input ->
 	match input with
-	| NUM a -> a
-	| PLUS (a,b) -> cal a + cal b
-	| MINUS (a,b) -> cal a - cal b
+	| Num a -> a
+	| Plus (a,b) -> cal a + cal b
+	| Minus (a,b) -> cal a - cal b
 
 let rec eval : formula -> bool =
 	fun input ->
 	match input with
-	| TRUE -> true
-	| FALSE -> false
-	| NOT a -> not (eval a)
-	| ANDALSO (a,b) -> (eval a) && (eval b)
-	| ORELSE (a,b) -> (eval a ) || (eval b)
-	| IMPLY (a,b) -> not ( (eval a) && (not (eval b)  ))
-	| LESS (x, y) -> if (cal x < cal y) then eval TRUE else eval FALSE
+	| True -> true
+	| False -> false
+	| Not a -> not (eval a)
+	| AndAlso (a,b) -> (eval a) && (eval b)
+	| OrElse (a,b) -> (eval a ) || (eval b)
+	| Imply (a,b) -> not ( (eval a) && (not (eval b)  ))
+	| Equal (x, y) -> if (cal x = cal y) then eval True else eval False
 
 

@@ -1,32 +1,32 @@
 (* C:\Users\saigoy\Desktop\eval.ml *)
 
-type formula = TRUE
-  | FALSE
-  | NOT of formula
-  | ANDALSO of formula * formula
-  | ORELSE of formula * formula
-  | IMPLY of formula * formula
-  | LESS of expr * expr
-  and expr = NUM of int
-  | PLUS of expr * expr
-  | MINUS of expr * expr;;
+type formula = True
+  | False
+  | Not of formula
+  | AndAlso of formula * formula
+  | OrElse of formula * formula
+  | Imply of formula * formula
+  | Equal of exp * exp
+  and exp = Num of int
+  | Plus of exp * exp
+  | Minus of exp * exp;;
 
 let rec eval : formula -> bool = fun fml ->
   	let rec calc exp = 
   	match exp with
-  	| NUM n -> n
-  	| PLUS (le, re) -> ((calc le) + (calc re))
-  	| MINUS (le, re) -> ((calc le) - (calc re)) in
+  	| Num n -> n
+  	| Plus (le, re) -> ((calc le) + (calc re))
+  	| Minus (le, re) -> ((calc le) - (calc re)) in
   match fml with
-  | TRUE -> true 
-  | FALSE -> false
-  | NOT f -> (eval f)
-  | ANDALSO (lf, rf) -> ((eval lf)&&(eval rf))
-  | ORELSE (lf, rf) -> ((eval lf)||(eval rf))
-  | IMPLY (lf, rf) -> 
+  | True -> true 
+  | False -> false
+  | Not f -> (eval f)
+  | AndAlso (lf, rf) -> ((eval lf)&&(eval rf))
+  | OrElse (lf, rf) -> ((eval lf)||(eval rf))
+  | Imply (lf, rf) -> 
   (
   	if ( (eval lf) ) then (eval rf)
   	else true
   )
-  | LESS (le, re) -> ((calc le) < (calc re));;
+  | Equal (le, re) -> ((calc le) = (calc re));;
 

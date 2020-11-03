@@ -1,39 +1,39 @@
-type formula = TRUE
-	| FALSE
-	| NOT of formula
-	| ANDALSO of formula * formula
-	| ORELSE of formula * formula
-	| IMPLY of formula * formula
-	| LESS of expr * expr
+type formula = True
+	| False
+	| Not of formula
+	| AndAlso of formula * formula
+	| OrElse of formula * formula
+	| Imply of formula * formula
+	| Equal of exp * exp
 
-and expr = NUM of int
-	| PLUS of expr * expr
-	| MINUS of expr * expr
+and exp = Num of int
+	| Plus of exp * exp
+	| Minus of exp * exp
 
 let rec eval : formula -> bool = fun f ->
 	match f with 
-	| TRUE ->
+	| True ->
 		true
-	| FALSE ->
+	| False ->
 		false
-	| NOT f1 ->
+	| Not f1 ->
 		not (eval f1)		
-	| ANDALSO (f1, f2) ->
+	| AndAlso (f1, f2) ->
 		(eval f1) && (eval f2)
-	| ORELSE (f1, f2) ->
+	| OrElse (f1, f2) ->
 		(eval f1) || (eval f2)
-	| IMPLY (f1, f2) ->
+	| Imply (f1, f2) ->
 		if ((eval f1) = true) && ((eval f2) = false) then false
 		else true
-	| LESS (e1, e2) ->
-		let rec calc : expr -> int = fun e ->
+	| Equal (e1, e2) ->
+		let rec calc : exp -> int = fun e ->
 			(match e with
-			| NUM i ->
+			| Num i ->
 				i
-			| PLUS (e1, e2) ->
+			| Plus (e1, e2) ->
 				calc(e1) + calc(e2)
-			| MINUS (e1, e2) ->
+			| Minus (e1, e2) ->
 				calc(e1) - calc(e2))
 		in
-			if calc(e1) < calc(e2) then true
+			if calc(e1) = calc(e2) then true
 			else false

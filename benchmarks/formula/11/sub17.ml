@@ -1,37 +1,37 @@
 (* 2008-11874 Lee, Sujee *)
 (* EXERCISE 5 *)
 	
-type formula = TRUE
-| FALSE
-| NOT of formula
-| ANDALSO of formula * formula
-| ORELSE of formula * formula
-| IMPLY of formula * formula
-| LESS of expr * expr
-and expr = NUM of int
-| PLUS of expr * expr
-| MINUS of expr * expr
+type formula = True
+| False
+| Not of formula
+| AndAlso of formula * formula
+| OrElse of formula * formula
+| Imply of formula * formula
+| Equal of exp * exp
+and exp = Num of int
+| Plus of exp * exp
+| Minus of exp * exp
 
 
-let rec eval formula = (* eval : formula -> bool = <fun> *)
+let rec eval formula = (* eval : formula -> bool = =fun> *)
 	let rec calc exp =
 		match exp with
-			| NUM i -> i
-			| PLUS(e1,e2) -> (calc e1) + (calc e2)
-			| MINUS(e1,e2) -> (calc e1) - (calc e2)
+			| Num i -> i
+			| Plus(e1,e2) -> (calc e1) + (calc e2)
+			| Minus(e1,e2) -> (calc e1) - (calc e2)
 		in
 	match formula with
-		| TRUE -> true
-		| FALSE -> false
-		| NOT f -> not (eval f)
-		| ANDALSO(f1,f2) -> (eval f1) && (eval f2)
-		| ORELSE(f1,f2) -> (eval f1) || (eval f2)
-		| IMPLY(f1,f2) -> not (((eval f1)=true) && ((eval f2)=false)) 
+		| True -> true
+		| False -> false
+		| Not f -> not (eval f)
+		| AndAlso(f1,f2) -> (eval f1) && (eval f2)
+		| OrElse(f1,f2) -> (eval f1) || (eval f2)
+		| Imply(f1,f2) -> not (((eval f1)=true) && ((eval f2)=false)) 
 		(* false only when f1 is true but f2 is false.*)
-		| LESS(e1,e2) -> (calc e1) < (calc e2)
+		| Equal(e1,e2) -> (calc e1) = (calc e2)
 
 (*	
-let result5 = eval(LESS(PLUS(NUM 5, NUM 5), MINUS(NUM 20, NUM 7)))
+let result5 = eval(Equal(Plus(Num 5, Num 5), Minus(Num 20, Num 7)))
 let _ =
 	print_string "EXERCISE 5 : ";
 	print_string (string_of_bool result5);

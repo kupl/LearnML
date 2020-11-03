@@ -1,31 +1,31 @@
 (* HW1 exercise6 2009-11697 Kim HyunJoon *)
 (* Eval *)
 
-type formula 	= TRUE 
-		| FALSE 
-		| NOT of formula 
-		| ANDALSO of formula * formula
-		| ORELSE of formula * formula
-		| IMPLY of formula * formula
-		| LESS of expr * expr
+type formula 	= True 
+		| False 
+		| Not of formula 
+		| AndAlso of formula * formula
+		| OrElse of formula * formula
+		| Imply of formula * formula
+		| Equal of exp * exp
 
-and expr = NUM of int
-	| PLUS of expr * expr
-	| MINUS of expr * expr
+and exp = Num of int
+	| Plus of exp * exp
+	| Minus of exp * exp
 
 let rec eval : formula -> bool = 
 	fun input ->
 	let rec value exp =
 		match exp with
-		| NUM n -> n
-		| PLUS (exp1, exp2) -> (value exp1)+(value exp2)
-		| MINUS (exp1, exp2) -> (value exp1)-(value exp2)
+		| Num n -> n
+		| Plus (exp1, exp2) -> (value exp1)+(value exp2)
+		| Minus (exp1, exp2) -> (value exp1)-(value exp2)
 	in
 	match input with
-	| TRUE -> true
-	| FALSE -> false
-	| NOT f -> (not (eval f))
-	| ANDALSO (f1, f2) -> (eval f1) && (eval f2)
-	| ORELSE (f1, f2) -> (eval f1) || (eval f2)
-	| IMPLY (f1, f2) -> (not (eval f1)) || (eval f2)
-	| LESS (exp1, exp2) -> ((value exp1) < (value exp2))
+	| True -> true
+	| False -> false
+	| Not f -> (not (eval f))
+	| AndAlso (f1, f2) -> (eval f1) && (eval f2)
+	| OrElse (f1, f2) -> (eval f1) || (eval f2)
+	| Imply (f1, f2) -> (not (eval f1)) || (eval f2)
+	| Equal (exp1, exp2) -> ((value exp1) = (value exp2))

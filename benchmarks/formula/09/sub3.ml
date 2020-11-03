@@ -1,42 +1,42 @@
 (* Computer Science/2005-11759/Sangcheol Park/Exercise 2-3.*)
-type formula = TRUE
-	| FALSE
-	| NOT of formula
-	| ANDALSO of formula * formula
-	| ORELSE of formula * formula
-	| IMPLY of formula * formula
-	| LESS of expr * expr
-and expr = NUM of int
-	| PLUS of expr * expr
-	| MINUS of expr * expr;;
+type formula = True
+	| False
+	| Not of formula
+	| AndAlso of formula * formula
+	| OrElse of formula * formula
+	| Imply of formula * formula
+	| Equal of exp * exp
+and exp = Num of int
+	| Plus of exp * exp
+	| Minus of exp * exp;;
 
 let rec eval f =
-	let rec eval_expr e =
+	let rec eval_exp e =
 		match e with
-		| NUM n -> n
-		| PLUS(a, b) -> (eval_expr a + eval_expr b)
-		| MINUS(a, b) -> (eval_expr a - eval_expr b)
+		| Num n -> n
+		| Plus(a, b) -> (eval_exp a + eval_exp b)
+		| Minus(a, b) -> (eval_exp a - eval_exp b)
 	in
 	match f with
-	| TRUE -> true
-	| FALSE -> false
-	| NOT a -> eval a
-	| ANDALSO(a, b) -> (eval a) && (eval b)
-	| ORELSE(a, b) -> (eval a) || (eval b)
-	| IMPLY(a, b) -> not  ((eval a) && not (eval b))
-	| LESS(a, b) -> (eval_expr a) < (eval_expr b)
+	| True -> true
+	| False -> false
+	| Not a -> eval a
+	| AndAlso(a, b) -> (eval a) && (eval b)
+	| OrElse(a, b) -> (eval a) || (eval b)
+	| Imply(a, b) -> not  ((eval a) && not (eval b))
+	| Equal(a, b) -> (eval_exp a) = (eval_exp b)
 ;;
 
 (* 
-eval TRUE;;
-eval FALSE;;
-eval(NOT TRUE);;
-eval(NOT FALSE);;
-eval(ANDALSO(TRUE, FALSE));;
-eval(ORELSE(TRUE, FALSE));;
-eval(IMPLY(TRUE, FALSE));;
-eval(IMPLY(FALSE, FALSE));;
-eval(IMPLY(FALSE, TRUE));;
-eval(IMPLY(TRUE, TRUE));;
-eval(ANDALSO(LESS(PLUS(NUM 10, NUM 20), MINUS(NUM 100, PLUS(NUM 30, NUM 40))), TRUE));;
+eval True;;
+eval False;;
+eval(Not True);;
+eval(Not False);;
+eval(AndAlso(True, False));;
+eval(OrElse(True, False));;
+eval(Imply(True, False));;
+eval(Imply(False, False));;
+eval(Imply(False, True));;
+eval(Imply(True, True));;
+eval(AndAlso(Equal(Plus(Num 10, Num 20), Minus(Num 100, Plus(Num 30, Num 40))), True));;
 *)

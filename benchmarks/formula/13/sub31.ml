@@ -1,28 +1,28 @@
-type formula = TRUE
-| FALSE
-| NOT of formula
-| ANDALSO of formula * formula
-| ORELSE of formula * formula
-| IMPLY of formula * formula
-| LESS of expr * expr
+type formula = True
+| False
+| Not of formula
+| AndAlso of formula * formula
+| OrElse of formula * formula
+| Imply of formula * formula
+| Equal of exp * exp
 
-and expr = NUM of int
-| PLUS of expr * expr
-| MINUS of expr * expr
+and exp = Num of int
+| Plus of exp * exp
+| Minus of exp * exp
 
-let rec evalexpr ex = 
+let rec evalexp ex = 
 	match ex with
-		NUM(i) -> i
-		| PLUS(e1, e2) -> ((evalexpr e1) + (evalexpr e2))
-		| MINUS(e1, e2) -> ((evalexpr e1) - (evalexpr e2))
+		Num(i) -> i
+		| Plus(e1, e2) -> ((evalexp e1) + (evalexp e2))
+		| Minus(e1, e2) -> ((evalexp e1) - (evalexp e2))
 
 let rec eval form = 
 	match form with
-		TRUE -> true
-		| FALSE -> false
-		| NOT(f) -> (not (eval f))
-		| ANDALSO(f, g) -> ((eval f) && (eval g))
-		| ORELSE(f, g) -> ((eval f) || (eval g))
-		| IMPLY(f, g) -> ((not (eval f)) || (eval g))
-		| LESS(ex1, ex2) -> ((evalexpr ex1) < (evalexpr ex2))
+		True -> true
+		| False -> false
+		| Not(f) -> (not (eval f))
+		| AndAlso(f, g) -> ((eval f) && (eval g))
+		| OrElse(f, g) -> ((eval f) || (eval g))
+		| Imply(f, g) -> ((not (eval f)) || (eval g))
+		| Equal(ex1, ex2) -> ((evalexp ex1) = (evalexp ex2))
 

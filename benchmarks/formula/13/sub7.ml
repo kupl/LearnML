@@ -1,30 +1,30 @@
-type formula  = TRUE
-			| FALSE
-			| NOT of formula
-			| ANDALSO of formula * formula
-			| ORELSE of formula * formula
-			| IMPLY of formula * formula
-			| LESS of expr * expr
-and  expr = NUM of int
-		| PLUS of expr * expr
-		| MINUS of expr * expr
+type formula  = True
+			| False
+			| Not of formula
+			| AndAlso of formula * formula
+			| OrElse of formula * formula
+			| Imply of formula * formula
+			| Equal of exp * exp
+and  exp = Num of int
+		| Plus of exp * exp
+		| Minus of exp * exp
 
 
-let rec exprval ex=
+let rec expval ex=
 	match ex with
-		|NUM n -> n
-		|PLUS (ex1,ex2) -> exprval(ex1) + exprval(ex2)
-		|MINUS (ex1,ex2) -> exprval(ex1) - exprval(ex2)
+		|Num n -> n
+		|Plus (ex1,ex2) -> expval(ex1) + expval(ex2)
+		|Minus (ex1,ex2) -> expval(ex1) - expval(ex2)
 
 
 
 	
 let rec eval fm=
 	match fm with 
-		|TRUE -> true
-		|FALSE -> false
-		|NOT f -> not (eval f)
-		|ANDALSO (fm1, fm2) -> (eval fm1) && (eval fm2)
-		|ORELSE (fm1, fm2) -> (eval fm1) || (eval fm2)
-		|IMPLY (fm1, fm2) -> not ( (eval fm1) && not (eval fm2))
-		|LESS (exp1, exp2) -> if (exprval exp1) < (exprval exp2) then true else false
+		|True -> true
+		|False -> false
+		|Not f -> not (eval f)
+		|AndAlso (fm1, fm2) -> (eval fm1) && (eval fm2)
+		|OrElse (fm1, fm2) -> (eval fm1) || (eval fm2)
+		|Imply (fm1, fm2) -> not ( (eval fm1) && not (eval fm2))
+		|Equal (exp1, exp2) -> if (expval exp1) = (expval exp2) then true else false

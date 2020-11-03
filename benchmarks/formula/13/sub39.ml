@@ -1,31 +1,31 @@
-type formula = TRUE
-			| FALSE
-			| NOT of formula
-			| ANDALSO of formula * formula
-			| ORELSE of formula * formula
-			| IMPLY of formula * formula
-			| LESS of expr * expr
-and expr = NUM of int
-		| PLUS of expr * expr
-		| MINUS of expr * expr
+type formula = True
+			| False
+			| Not of formula
+			| AndAlso of formula * formula
+			| OrElse of formula * formula
+			| Imply of formula * formula
+			| Equal of exp * exp
+and exp = Num of int
+		| Plus of exp * exp
+		| Minus of exp * exp
 
-let rec makeexpr ex =
+let rec makeexp ex =
 	match ex with
-	| NUM i -> i
-	| PLUS (ex1, ex2) -> (makeexpr ex1) + (makeexpr ex2)
-	| MINUS (ex1, ex2) -> (makeexpr ex1) - (makeexpr ex2)
+	| Num i -> i
+	| Plus (ex1, ex2) -> (makeexp ex1) + (makeexp ex2)
+	| Minus (ex1, ex2) -> (makeexp ex1) - (makeexp ex2)
 
 let rec eval f =
 	match f with
-	| TRUE -> true
-	| FALSE -> false
-	| NOT f1 -> not (eval f1)
-	| ANDALSO (f1, f2) -> (eval f1) && (eval f2)
-	| ORELSE (f1, f2) -> (eval f1) || (eval f2)
-	| IMPLY (f1, f2) ->
+	| True -> true
+	| False -> false
+	| Not f1 -> not (eval f1)
+	| AndAlso (f1, f2) -> (eval f1) && (eval f2)
+	| OrElse (f1, f2) -> (eval f1) || (eval f2)
+	| Imply (f1, f2) ->
 		if ((eval f2) = true) && ((eval f2) == true) then true
 		else if ((eval f1) = false) then true
 		else false
-	| LESS (ex1, ex2) -> (makeexpr ex1) < (makeexpr ex2)
+	| Equal (ex1, ex2) -> (makeexp ex1) = (makeexp ex2)
 
 

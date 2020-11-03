@@ -1,26 +1,26 @@
-type formula=TRUE
-            |FALSE
-            |NOT of formula
-            |ANDALSO of formula*formula
-            |ORELSE of formula*formula
-            |IMPLY of formula*formula
-            |LESS of expr*expr
-and expr=NUM of int
-        |PLUS of expr*expr
-        |MINUS of expr*expr
+type formula=True
+            |False
+            |Not of formula
+            |AndAlso of formula*formula
+            |OrElse of formula*formula
+            |Imply of formula*formula
+            |Equal of exp*exp
+and exp=Num of int
+        |Plus of exp*exp
+        |Minus of exp*exp
 
-let rec eval_expr:expr->int=fun(a)->
+let rec eval_exp:exp->int=fun(a)->
   match a with
-  |NUM b->b
-  |PLUS (b,c)->eval_expr(b)+eval_expr(c)
-  |MINUS (b,c)->eval_expr(b)-eval_expr(c)
+  |Num b->b
+  |Plus (b,c)->eval_exp(b)+eval_exp(c)
+  |Minus (b,c)->eval_exp(b)-eval_exp(c)
 
 let rec eval:formula->bool=fun(a)->
   match a with
-  |TRUE->true
-  |FALSE->false
-  |NOT b->not(eval b)
-  |ANDALSO (b,c)->eval(b)&&eval(c)
-  |ORELSE (b,c)->eval(b)||eval(c)
-  |IMPLY (b,c)->eval c||not(eval b)
-  |LESS (b,c)->eval_expr(b)<eval_expr(c)
+  |True->true
+  |False->false
+  |Not b->not(eval b)
+  |AndAlso (b,c)->eval(b)&&eval(c)
+  |OrElse (b,c)->eval(b)||eval(c)
+  |Imply (b,c)->eval c||not(eval b)
+  |Equal (b,c)->eval_exp(b)=eval_exp(c)

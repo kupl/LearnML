@@ -1,39 +1,37 @@
-(* C:\Documents and Settings\Administrator\¹ÙÅÁ È­¸é\pl_second_homework\HW3_Exercise3.ml *)
-
 (*Exercise 3*)
-type expr = NUM of int
-		| PLUS of expr*expr
-		| MINUS of expr*expr
+type exp = Num of int
+		| Plus of exp*exp
+		| Minus of exp*exp
 
-type formula = TRUE
-	        | FALSE
-	        | NOT of formula
-		| ANDALSO of formula*formula
-		| ORELSE of formula*formula
-		| IMPLY of formula*formula
-		| LESS of expr*expr
+type formula = True
+	        | False
+	        | Not of formula
+		| AndAlso of formula*formula
+		| OrElse of formula*formula
+		| Imply of formula*formula
+		| Equal of exp*exp
 ;;
 
 let rec eval formul =
-  let rec account expre =
-	match expre with
-	PLUS (x,y) -> (account x) + (account y)
-	|MINUS (x,y) -> (account x) - (account y)	 	
-	|NUM a -> a
+  let rec account expe =
+	match expe with
+	Plus (x,y) -> (account x) + (account y)
+	|Minus (x,y) -> (account x) - (account y)	 	
+	|Num a -> a
 	in	
 
 	  match formul with	
-          TRUE -> true
-	  | FALSE -> false
-	  | NOT x -> not (eval x)
-	  | ANDALSO (x,y) -> (eval x) && (eval y)
-	  | ORELSE (x,y) -> (eval x) || (eval y)
-	  | IMPLY (x,y) -> (
+          True -> true
+	  | False -> false
+	  | Not x -> not (eval x)
+	  | AndAlso (x,y) -> (eval x) && (eval y)
+	  | OrElse (x,y) -> (eval x) || (eval y)
+	  | Imply (x,y) -> (
 				if ((eval x)=true && (eval y)=false) then false
 				else true
 			   )
-	  | LESS (x,y) -> (
-				if  (account x) < (account y) then true
+	  | Equal (x,y) -> (
+				if  (account x) = (account y) then true
 				else false
 			   )
 	;;

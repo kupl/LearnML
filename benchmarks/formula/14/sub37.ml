@@ -1,28 +1,28 @@
 type formula =
-    | TRUE
-    | FALSE
-    | NOT of formula
-    | ANDALSO of formula * formula
-    | ORELSE of formula * formula
-    | IMPLY of formula * formula
-    | LESS of expr * expr
-and expr =
-    | NUM of int
-    | PLUS of expr * expr
-    | MINUS of expr * expr
+    | True
+    | False
+    | Not of formula
+    | AndAlso of formula * formula
+    | OrElse of formula * formula
+    | Imply of formula * formula
+    | Equal of exp * exp
+and exp =
+    | Num of int
+    | Plus of exp * exp
+    | Minus of exp * exp
 
 let rec eval (f: formula): bool =
-    let rec eval_expr (e: expr): int =
+    let rec eval_exp (e: exp): int =
         match e with
-        | NUM n -> n
-        | PLUS (n1, n2) -> (eval_expr n1) + (eval_expr n2)
-        | MINUS (n1, n2) -> (eval_expr n1) - (eval_expr n2)
+        | Num n -> n
+        | Plus (n1, n2) -> (eval_exp n1) + (eval_exp n2)
+        | Minus (n1, n2) -> (eval_exp n1) - (eval_exp n2)
     in
     match f with
-    | TRUE -> true
-    | FALSE -> false
-    | NOT b -> not (eval b)
-    | ANDALSO (b1, b2) -> (eval b1) && (eval b2)
-    | ORELSE (b1, b2) -> (eval b1) || (eval b2)
-    | IMPLY (b1, b2) -> (not (eval b1)) || (eval b2)
-    | LESS (n1, n2) -> (eval_expr n1) < (eval_expr n2)
+    | True -> true
+    | False -> false
+    | Not b -> not (eval b)
+    | AndAlso (b1, b2) -> (eval b1) && (eval b2)
+    | OrElse (b1, b2) -> (eval b1) || (eval b2)
+    | Imply (b1, b2) -> (not (eval b1)) || (eval b2)
+    | Equal (n1, n2) -> (eval_exp n1) = (eval_exp n2)

@@ -1,28 +1,28 @@
 (* exercise 1*)
-type expr = NUM of int
-          | PLUS of expr * expr
-          | MINUS of expr * expr
+type exp = Num of int
+          | Plus of exp * exp
+          | Minus of exp * exp
 
-type formula = TRUE
-             | FALSE
-             | NOT of formula
-             | ANDALSO of formula * formula
-             | ORELSE of formula * formula
-             | IMPLY of formula * formula
-             | LESS of expr * expr
+type formula = True
+             | False
+             | Not of formula
+             | AndAlso of formula * formula
+             | OrElse of formula * formula
+             | Imply of formula * formula
+             | Equal of exp * exp
 
 let rec eval evalin =
         let rec num numin =
                match numin with
-               | NUM(n) -> n
-               | PLUS(n, m) -> ((num n) + (num m))
-               | MINUS(n, m) -> ((num n) - (num m))
+               | Num(n) -> n
+               | Plus(n, m) -> ((num n) + (num m))
+               | Minus(n, m) -> ((num n) - (num m))
         in
         match evalin with
-        | TRUE -> true
-        | FALSE -> false
-        | NOT(x) -> (not (eval x))
-        | ANDALSO(x, y) -> ((eval x) && (eval y))
-        | ORELSE(x, y) -> ((eval x) || (eval y))
-        | IMPLY(x, y) -> ((not (eval x)) || (eval y))
-        | LESS(w, z) -> ((num w) < (num z))
+        | True -> true
+        | False -> false
+        | Not(x) -> (not (eval x))
+        | AndAlso(x, y) -> ((eval x) && (eval y))
+        | OrElse(x, y) -> ((eval x) || (eval y))
+        | Imply(x, y) -> ((not (eval x)) || (eval y))
+        | Equal(w, z) -> ((num w) = (num z))

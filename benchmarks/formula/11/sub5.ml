@@ -1,27 +1,27 @@
 
-type formula = TRUE
-	     | FALSE
-	     | NOT of formula
-	     | ANDALSO of formula * formula
-	     | ORELSE of formula * formula
-	     | IMPLY of formula * formula
-	     | LESS of expr * expr
-and expr = NUM of int
-	 | PLUS of expr * expr
-	 | MINUS of expr * expr
+type formula = True
+	     | False
+	     | Not of formula
+	     | AndAlso of formula * formula
+	     | OrElse of formula * formula
+	     | Imply of formula * formula
+	     | Equal of exp * exp
+and exp = Num of int
+	 | Plus of exp * exp
+	 | Minus of exp * exp
 
-let rec calexpr expr =
-	match expr with
-	|NUM a -> a
-	|PLUS(a,b) -> calexpr(a) + calexpr(b)
-	|MINUS(a,b) -> calexpr(a) - calexpr(b)
+let rec calexp exp =
+	match exp with
+	|Num a -> a
+	|Plus(a,b) -> calexp(a) + calexp(b)
+	|Minus(a,b) -> calexp(a) - calexp(b)
 
 let rec eval formula = 
 	match formula with
-	|TRUE -> true
-	|FALSE -> false
-	|NOT f1 -> not(eval f1)
-	|ANDALSO(f1, f2) -> (eval f1) && (eval f2)
-	|ORELSE(f1, f2) -> (eval f1) || (eval f2)
-	|IMPLY(f1, f2) -> not(eval f1) || (eval f2)
-	|LESS(e1, e2) -> calexpr(e1) < calexpr(e2)
+	|True -> true
+	|False -> false
+	|Not f1 -> not(eval f1)
+	|AndAlso(f1, f2) -> (eval f1) && (eval f2)
+	|OrElse(f1, f2) -> (eval f1) || (eval f2)
+	|Imply(f1, f2) -> not(eval f1) || (eval f2)
+	|Equal(e1, e2) -> calexp(e1) = calexp(e2)

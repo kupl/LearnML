@@ -1,27 +1,27 @@
-type expr = NUM of int
-	| PLUS of expr * expr
-	| MINUS of expr * expr;;
+type exp = Num of int
+	| Plus of exp * exp
+	| Minus of exp * exp;;
 
-type formula = TRUE
-	| FALSE
-	| NOT of formula
-	| ANDALSO of formula * formula
-	| ORELSE of formula * formula
-	| IMPLY of formula * formula
-	| LESS of expr * expr;;
+type formula = True
+	| False
+	| Not of formula
+	| AndAlso of formula * formula
+	| OrElse of formula * formula
+	| Imply of formula * formula
+	| Equal of exp * exp;;
 
-let rec evalexpr e =
+let rec evalexp e =
 	match e with
-	|NUM t -> t
-	|PLUS(e1,e2) -> evalexpr(e1) + evalexpr(e2)
-	|MINUS(e1,e2) -> evalexpr(e1) - evalexpr(e2);;
+	|Num t -> t
+	|Plus(e1,e2) -> evalexp(e1) + evalexp(e2)
+	|Minus(e1,e2) -> evalexp(e1) - evalexp(e2);;
 
 let rec eval f =
 	match f with
-	|TRUE -> true
-	|FALSE -> false
-	|NOT tail -> if eval(tail)==true then false else true
-	|ANDALSO(t1, t2) -> if eval(t1) && eval(t2) then true else false
-	|ORELSE(t1, t2) -> if eval(t1) || eval(t2) then true else false
-	|IMPLY(t1, t2) -> if eval(t1) && (not(eval(t2))) then false else true
-	|LESS(e1, e2) -> evalexpr(e1) < evalexpr(e2);;
+	|True -> true
+	|False -> false
+	|Not tail -> if eval(tail)==true then false else true
+	|AndAlso(t1, t2) -> if eval(t1) && eval(t2) then true else false
+	|OrElse(t1, t2) -> if eval(t1) || eval(t2) then true else false
+	|Imply(t1, t2) -> if eval(t1) && (not(eval(t2))) then false else true
+	|Equal(e1, e2) -> evalexp(e1) = evalexp(e2);;

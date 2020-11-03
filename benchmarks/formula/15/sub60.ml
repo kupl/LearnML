@@ -1,29 +1,29 @@
 type formula =
-    |TRUE
-    |FALSE
-    |NOT of formula
-    |ANDALSO of formula * formula
-    |ORELSE of formula * formula
-    |IMPLY of formula * formula
-    |LESS of expr * expr
-and expr =
-    |NUM of int
-    |PLUS of expr * expr
-    |MINUS of expr * expr;;
+    |True
+    |False
+    |Not of formula
+    |AndAlso of formula * formula
+    |OrElse of formula * formula
+    |Imply of formula * formula
+    |Equal of exp * exp
+and exp =
+    |Num of int
+    |Plus of exp * exp
+    |Minus of exp * exp;;
 
 let rec eval form =
-    let rec cal expr =
-        match expr with
-        |NUM a -> a
-        |PLUS (a, b) -> (cal a) + (cal b)
-        |MINUS (a, b) -> (cal a) - (cal b)
+    let rec cal exp =
+        match exp with
+        |Num a -> a
+        |Plus (a, b) -> (cal a) + (cal b)
+        |Minus (a, b) -> (cal a) - (cal b)
     in
     match form with
-    |TRUE -> true
-    |FALSE -> false
-    |NOT a -> not (eval a)
-    |ANDALSO (a, b) -> (eval a) && (eval b)
-    |ORELSE (a, b) -> (eval a) || (eval b)
-    |IMPLY (a, b) -> (not (eval a)) || (eval b)
-    |LESS (a, b) -> (cal a) < (cal b);;
+    |True -> true
+    |False -> false
+    |Not a -> not (eval a)
+    |AndAlso (a, b) -> (eval a) && (eval b)
+    |OrElse (a, b) -> (eval a) || (eval b)
+    |Imply (a, b) -> (not (eval a)) || (eval b)
+    |Equal (a, b) -> (cal a) = (cal b);;
 

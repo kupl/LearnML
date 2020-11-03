@@ -1,31 +1,31 @@
-type expr = NUM of int
-| PLUS of expr * expr
-| MINUS of expr * expr
+type exp = Num of int
+| Plus of exp * exp
+| Minus of exp * exp
 
-type formula = TRUE
-| FALSE
-| NOT of formula
-| ANDALSO of formula * formula
-| ORELSE of formula * formula
-| IMPLY of formula * formula
-| LESS of expr * expr
+type formula = True
+| False
+| Not of formula
+| AndAlso of formula * formula
+| OrElse of formula * formula
+| Imply of formula * formula
+| Equal of exp * exp
 
 
     
 let rec eval f =
-    let rec val_of_expr expr = 
-        match expr with
-        NUM a -> a
-        | PLUS (a,b) -> (val_of_expr a)+(val_of_expr b)
-        | MINUS (a,b) -> (val_of_expr a)-(val_of_expr b)
+    let rec val_of_exp exp = 
+        match exp with
+        Num a -> a
+        | Plus (a,b) -> (val_of_exp a)+(val_of_exp b)
+        | Minus (a,b) -> (val_of_exp a)-(val_of_exp b)
     in
         
     match f with
-    TRUE -> true
-    | FALSE -> false
-    | NOT a -> not (eval a)
-    | ANDALSO (a,b) -> (eval a)&(eval b)
-    | ORELSE (a,b) -> (eval a)||(eval b)
-    | IMPLY (a,b) -> (not (eval a))||(eval b)
-    | LESS (e1,e2) -> (val_of_expr e1)<(val_of_expr e2)
+    True -> true
+    | False -> false
+    | Not a -> not (eval a)
+    | AndAlso (a,b) -> (eval a)&(eval b)
+    | OrElse (a,b) -> (eval a)||(eval b)
+    | Imply (a,b) -> (not (eval a))||(eval b)
+    | Equal (e1,e2) -> (val_of_exp e1)=(val_of_exp e2)
       

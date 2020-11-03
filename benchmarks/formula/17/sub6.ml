@@ -1,36 +1,36 @@
-type formula = TRUE
-              | FALSE
-              | NOT of formula
-              | ANDALSO of formula * formula
-              | ORELSE of formula * formula
-              | IMPLY of formula * formula
-              | LESS of expr * expr
+type formula = True
+              | False
+              | Not of formula
+              | AndAlso of formula * formula
+              | OrElse of formula * formula
+              | Imply of formula * formula
+              | Equal of exp * exp
 
-and expr = NUM of int
-          | PLUS of expr * expr
-          | MINUS of expr * expr
+and exp = Num of int
+          | Plus of exp * exp
+          | Minus of exp * exp
 
 let rec expEval = (fun x ->
   match x with
-  | PLUS (a,b) -> (expEval a) + (expEval b)
-  | MINUS (a,b) -> (expEval a) - (expEval b)
-  | NUM a -> a
+  | Plus (a,b) -> (expEval a) + (expEval b)
+  | Minus (a,b) -> (expEval a) - (expEval b)
+  | Num a -> a
   )
 
 let rec eval = (fun x ->
   match x with
-  | TRUE -> true
-  | FALSE -> false
-  | NOT a -> not (eval a)
-  | ANDALSO (a,b) -> (eval a) && (eval b)
-  | ORELSE (a,b) -> (eval a) || (eval b)
-  | IMPLY (a,b) -> (
+  | True -> true
+  | False -> false
+  | Not a -> not (eval a)
+  | AndAlso (a,b) -> (eval a) && (eval b)
+  | OrElse (a,b) -> (eval a) || (eval b)
+  | Imply (a,b) -> (
     if (eval a) = true && (eval b) = false
     then false
     else true
     )
-  | LESS (a,b) -> (
-    if (expEval a) < (expEval b)
+  | Equal (a,b) -> (
+    if (expEval a) = (expEval b)
     then true
     else false
     )

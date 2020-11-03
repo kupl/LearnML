@@ -1,24 +1,24 @@
-type formula = TRUE
-  |FALSE
-  |NOT of formula
-  |ANDALSO of formula * formula
-  |ORELSE of formula * formula
-  |IMPLY of formula * formula
-  |LESS of expr * expr
-and expr = NUM of int
-  |PLUS of expr * expr
-  |MINUS of expr * expr
-let rec eval_expr n =
+type formula = True
+  |False
+  |Not of formula
+  |AndAlso of formula * formula
+  |OrElse of formula * formula
+  |Imply of formula * formula
+  |Equal of exp * exp
+and exp = Num of int
+  |Plus of exp * exp
+  |Minus of exp * exp
+let rec eval_exp n =
   match n with
-  |NUM a -> a
-  |PLUS (left, right) -> (eval_expr left)+(eval_expr right)
-  |MINUS (left, right) -> (eval_expr left)-(eval_expr right)
+  |Num a -> a
+  |Plus (left, right) -> (eval_exp left)+(eval_exp right)
+  |Minus (left, right) -> (eval_exp left)-(eval_exp right)
 let rec eval m =
   match m with
-  |TRUE -> true
-  |FALSE -> false
-  |NOT f -> not (eval f)
-  |ANDALSO (left, right) -> (eval left) && (eval right)
-  |ORELSE (left, right) -> (eval left) || (eval right)
-  |IMPLY (left, right) -> (not (eval left)) || (eval right)
-  |LESS (left, right) -> (eval_expr left) < (eval_expr right)
+  |True -> true
+  |False -> false
+  |Not f -> not (eval f)
+  |AndAlso (left, right) -> (eval left) && (eval right)
+  |OrElse (left, right) -> (eval left) || (eval right)
+  |Imply (left, right) -> (not (eval left)) || (eval right)
+  |Equal (left, right) -> (eval_exp left) = (eval_exp right)

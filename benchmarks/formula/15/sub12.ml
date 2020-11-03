@@ -1,49 +1,49 @@
 
-type formula = TRUE
-            | FALSE
-            | NOT of formula
-            | ANDALSO of formula * formula
-            | ORELSE of formula * formula
-            | IMPLY of formula * formula
-            | LESS of expr * expr
-and expr = NUM of int
-        | PLUS of expr * expr
-        | MINUS of expr * expr
+type formula = True
+            | False
+            | Not of formula
+            | AndAlso of formula * formula
+            | OrElse of formula * formula
+            | Imply of formula * formula
+            | Equal of exp * exp
+and exp = Num of int
+        | Plus of exp * exp
+        | Minus of exp * exp
 
-let rec calc : expr -> int = fun e ->
+let rec calc : exp -> int = fun e ->
     match e with
-    | NUM i -> i
-    | PLUS (e1, e2) -> calc e1 + calc e2
-    | MINUS (e1, e2) -> calc e1 - calc e2
+    | Num i -> i
+    | Plus (e1, e2) -> calc e1 + calc e2
+    | Minus (e1, e2) -> calc e1 - calc e2
 
 let rec eval : formula -> bool = fun f -> 
    match f with
-   | TRUE -> true
-   | FALSE -> false
-   | NOT f1 -> not (eval f1)
-   | ANDALSO (f1, f2) -> (eval f1) && (eval f2)
-   | ORELSE (f1, f2) -> (eval f1) || (eval f2)
-   | IMPLY (f1, f2) -> if eval f1 == true && eval f2 == false then false
+   | True -> true
+   | False -> false
+   | Not f1 -> not (eval f1)
+   | AndAlso (f1, f2) -> (eval f1) && (eval f2)
+   | OrElse (f1, f2) -> (eval f1) || (eval f2)
+   | Imply (f1, f2) -> if eval f1 == true && eval f2 == false then false
                        else true
-   | LESS (e1, e2) -> if calc e1 < calc e2 then true
+   | Equal (e1, e2) -> if calc e1 = calc e2 then true
                       else false
 
 (*
 
-let _ = print_endline (string_of_bool (eval TRUE))
-let _ = print_endline (string_of_bool (eval FALSE))
-let _ = print_endline (string_of_bool (eval(NOT TRUE)))
-let _ = print_endline (string_of_bool (eval(ANDALSO(TRUE, FALSE))))
-let _ = print_endline (string_of_bool (eval(ORELSE(TRUE, FALSE))))
-let _ = print_endline (string_of_bool (eval(IMPLY(TRUE, FALSE))))
+let _ = print_endline (string_of_bool (eval True))
+let _ = print_endline (string_of_bool (eval False))
+let _ = print_endline (string_of_bool (eval(Not True)))
+let _ = print_endline (string_of_bool (eval(AndAlso(True, False))))
+let _ = print_endline (string_of_bool (eval(OrElse(True, False))))
+let _ = print_endline (string_of_bool (eval(Imply(True, False))))
 
-let a = NUM 10
-let b = NUM 15
-let c = PLUS(a, b)
-let d = MINUS(a, b)
+let a = Num 10
+let b = Num 15
+let c = Plus(a, b)
+let d = Minus(a, b)
 
-let _ = print_endline (string_of_bool (eval(LESS(a, b))))
-let _ = print_endline (string_of_bool (eval(LESS(c, b))))
-let _ = print_endline (string_of_bool (eval(LESS(d, b))))
+let _ = print_endline (string_of_bool (eval(Equal(a, b))))
+let _ = print_endline (string_of_bool (eval(Equal(c, b))))
+let _ = print_endline (string_of_bool (eval(Equal(d, b))))
 
 *)

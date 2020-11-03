@@ -1,31 +1,31 @@
-type expr = NUM of int
-					| PLUS of expr * expr
-					| MINUS of expr * expr
+type exp = Num of int
+					| Plus of exp * exp
+					| Minus of exp * exp
 
-type formula = TRUE
-							| FALSE
-							| NOT of formula
-							| ANDALSO of formula * formula
-							| ORELSE of formula * formula
-							| IMPLY of formula * formula
-							| LESS of expr * expr
+type formula = True
+							| False
+							| Not of formula
+							| AndAlso of formula * formula
+							| OrElse of formula * formula
+							| Imply of formula * formula
+							| Equal of exp * exp
 
 let eval form =
-	let rec exprTOINT expr =
-		match expr with
-		| NUM(a) -> a
-		| PLUS(a,b) -> exprTOINT(a) + exprTOINT(b)
-		| MINUS(a,b) -> exprTOINT(a) - exprTOINT(b) in
+	let rec expTOINT exp =
+		match exp with
+		| Num(a) -> a
+		| Plus(a,b) -> expTOINT(a) + expTOINT(b)
+		| Minus(a,b) -> expTOINT(a) - expTOINT(b) in
 	let rec formTOBool form =
 		match form with
-		| TRUE -> true
-		| FALSE -> false
-		| NOT a -> not (formTOBool (a))
-		| ANDALSO (a,b) -> formTOBool (a) && formTOBool (b)
-		| ORELSE (a,b) -> formTOBool (a) || formTOBool (b)
-		| IMPLY (a,b) -> if (formTOBool (a) == true && formTOBool (b) == false)
+		| True -> true
+		| False -> false
+		| Not a -> not (formTOBool (a))
+		| AndAlso (a,b) -> formTOBool (a) && formTOBool (b)
+		| OrElse (a,b) -> formTOBool (a) || formTOBool (b)
+		| Imply (a,b) -> if (formTOBool (a) == true && formTOBool (b) == false)
 											then false else true
-		| LESS (h,t) -> if (exprTOINT (h) < exprTOINT (t))
-										then formTOBool(TRUE) else formTOBool(FALSE) in
+		| Equal (h,t) -> if (expTOINT (h) = expTOINT (t))
+										then formTOBool(True) else formTOBool(False) in
 	formTOBool form
 	

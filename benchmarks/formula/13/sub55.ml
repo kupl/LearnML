@@ -3,36 +3,36 @@
 	student ID : 2012-11242 / name : Seon-bi, Park
 *)
 
-type formula = TRUE
-			| FALSE
-			| NOT of formula
-			| ANDALSO of formula * formula
-			| ORELSE of formula * formula
-			| IMPLY of formula * formula
-			| LESS of expr * expr
-and expr = NUM of int | PLUS of expr * expr | MINUS of expr * expr
+type formula = True
+			| False
+			| Not of formula
+			| AndAlso of formula * formula
+			| OrElse of formula * formula
+			| Imply of formula * formula
+			| Equal of exp * exp
+and exp = Num of int | Plus of exp * exp | Minus of exp * exp
 
 
-let rec cal num =		(* expr -> int *)
+let rec cal num =		(* exp -> int *)
 	match num with
-		| NUM (lnum) -> lnum
-		| PLUS (lnum, rnum) -> (cal (lnum) + cal (rnum))
-		| MINUS (lnum, rnum) -> (cal (lnum) - cal (rnum))
+		| Num (lnum) -> lnum
+		| Plus (lnum, rnum) -> (cal (lnum) + cal (rnum))
+		| Minus (lnum, rnum) -> (cal (lnum) - cal (rnum))
 
 
 let rec eval logic =		(* formula -> bool *)
 	match logic with
-		| TRUE -> true
-		| FALSE -> false
-		| NOT (fst) -> (not (eval (fst)))
-		| ANDALSO (fst, snd) -> ((eval (fst)) && (eval (snd)))
-		| ORELSE (fst, snd) -> ((eval (fst)) || (eval (snd)))
-		| IMPLY (fst, snd) -> 
+		| True -> true
+		| False -> false
+		| Not (fst) -> (not (eval (fst)))
+		| AndAlso (fst, snd) -> ((eval (fst)) && (eval (snd)))
+		| OrElse (fst, snd) -> ((eval (fst)) || (eval (snd)))
+		| Imply (fst, snd) -> 
 			( if (eval (fst) = false) then true
 			  else if (eval (snd) = true) then true
 			  else false
 			  )
-		| LESS (fst, snd) -> 
-			( if cal (fst) < cal (snd) then true
+		| Equal (fst, snd) -> 
+			( if cal (fst) = cal (snd) then true
 			  else false
 			  )
