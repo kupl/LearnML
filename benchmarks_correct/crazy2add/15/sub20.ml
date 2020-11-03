@@ -23,7 +23,8 @@ let crazy2add ((c1:crazy2), (c2:crazy2)) :crazy2 =
   | NIL, NIL, n | NIL, n, NIL | n, NIL, NIL -> n
   | NIL, n, c | n, NIL, c -> 
     (match n, c with
-	 | n , (NIL|ZERO _) -> n
+	 | n , NIL -> n
+   | n , ZERO _ -> n
 	 | NIL, c -> c
 	 | MONE k, MONE _ -> ZERO (c2addWithCarry NIL k (MONE NIL))
 	 | ZERO k, MONE _ -> MONE k
