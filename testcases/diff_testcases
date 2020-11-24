@@ -24,5 +24,8 @@
   (Times [Const 2; Sum [Var "x"; Var "y"]; Power ("x", 3)], "x") ; [("x", 2); ("y", 1)] => 88;
   (Times [Sum [Var "x"; Var "y"; Var "z"]; Power ("x", 2); Sum[Times [Const 3; Var "x"]; Var "z"]], "x") ; [("x", 2); ("y", 1); ("z", 1)] => 188;
   (Times [Sum [Var "x"; Var "y"; Var "z"]; Power ("x", 2); Sum[Times [Const 3; Var "x"]; Var "z"]], "y") ; [("x", 1); ("y", 1); ("z", 1)] => 4;
+  (Sum ([Var ("x"); Var ("x")]), "x") ;[("x", 1)] => 2;
+  (Sum ([Const (1)]), "x") ;[("x", 1)] => 0;
+  (Times ([Var ("x")]), "x") ;[("x", 1)] => 1;
 }
 
