@@ -79,7 +79,11 @@ let fix_with_solution : prog -> prog -> examples -> unit
   | None -> print_endline ("FixML fails to generate a patch")
   | Some pgm' ->
     Print.print_header "result"; Print.print_pgm pgm';
-    print_endline ("Total time :" ^ string_of_float (Sys.time() -. !Synthesize.start_time))
+    print_endline ("Total time :" ^ string_of_float (Sys.time() -. !Synthesize.start_time));
+    begin match TestGenerator.gen_counter_example pgm' cpgm with
+    | Some _ -> print_endline "Overfitted patch";
+    | None -> print_endline "Success to repair";
+    end 
 
 let generate_testcases : prog -> prog -> examples
 = fun submission solution -> 
@@ -200,10 +204,25 @@ let main () =
     end
   else if !opt_dd then (* Data-driven FixML *)
     begin 
-      match submission, solutions_debug with
-      | Some sub, sols -> ignore (Data_driven.run2 sub sols testcases)
+      match submission, solutions_debug, solution with
+      | Some sub, sols, Some sol -> ignore (Data_driven.run2 sub sol (List.map fst sols) [])
+      (*
+      | Some sub, sols, Some sol -> 
+        (*
+        begin match Data_driven.run sub (List.map fst sols) testcases with
+        | Some pgm' ->
+          begin match TestGenerator.gen_counter_example pgm' sol with
+          | Some _ -> print_endline "Overfitted patch";
+          | None -> print_endline "Success to repair";
+          end 
+        | None -> print_endline "Fail to repair";
+        end
+        *)
+      *)
+      | Some sub, sols, None -> ignore (Data_driven.run sub (List.map fst sols) testcases)
       | _ -> raise (Failure "Submission or solutions are not provided")
     end
+  (*
   else if !opt_cfg then
     begin 
       match submission, solutions_debug with
@@ -219,14 +238,15 @@ let main () =
         if List.length all_matchings = 0 then (print_endline "X") else (print_endline "O")
       | _ -> raise (Failure "Submission or solutions are not provided")
     end
-      else if !opt_preproc then
+  *)
+  else if !opt_preproc then
     begin match submission with
     | Some sub -> 
       let file_name = get_file_path !opt_submission_filename in
       let save_path = "../preprocessed_data" ^ file_name in
       Data_driven.save_data ~logging_flag:true sub save_path;
       let cg = Data_driven.load_data !opt_submission_filename in
-      CallGraph.print_graph cg 
+      ()
     | _ -> raise (Failure "Submission file is not provided")
     end
   else
