@@ -21,7 +21,7 @@ let rec match_pat : pat -> pat -> bool
   | PUnit, PUnit | PUnder, PUnder | PVar _, PVar _ -> true
   | _ -> false
 
-let rec extract_templates : lexp -> lexp -> exp_template BatSet.t
+let rec extract_templates : lexp -> lexp -> repair_template BatSet.t
 = fun (l1, exp1) exp2 ->
   match (exp1, snd exp2) with
   (* Exceptional expressions *)
@@ -67,6 +67,11 @@ let rec extract_templates : lexp -> lexp -> exp_template BatSet.t
     ) ([], bs2, extract_templates e1 e2) bs1 in
     let match_template = List.fold_left (fun acc (e1, e2) -> BatSet.union acc (extract_templates e1 e2)) temps matches in
     List.fold_left (fun acc b -> BatSet.add (InsertBranch (l1, b)) acc) match_template unmatches
+  (* Newley added ones *)
+  | EFun (_, e1), EFun (_, e2) -> extract_templates e1 e2
+  | ELet (_, _, _ ,_ , e1, e2), ELet (_, _, _ ,_ , e1', e2') -> BatSet.union (extract_templates e1 e1') (extract_templates e2 e2')
+  | e1, ELet (_, _, _ ,_ , _, e2) | e1, EBlock (_, _, e2) -> extract_templates (l1, e1) e2
+  | ELet (_, _, _ ,_ , _, e1), e2 | EBlock (_, _, e1), e2 -> extract_templates e1 exp2
   (* Special Cases : var, function, bindings *)
   | EVar x, EVar y -> BatSet.singleton (ModifyExp (l1, exp2))
   | _, EFun _ | _, EApp _ -> BatSet.singleton (ModifyExp (l1, exp2))
@@ -80,10 +85,10 @@ let rec replace_var_exp : Alias.alias_info -> lexp -> lexp BatSet.t
   match exp with
   (* Variable -> replace solution variable with the one in submission whose data flow is the same *)
   | EVar x -> 
-    if String.sub x 0 1 <> "#" then 
-      (* If it is a external variable do not change *)
-      BatSet.singleton (l, EVar x)
-    else 
+    if is_external_var x then BatSet.singleton (l, EVar x)
+    else
+      BatSet.singleton (l, gen_hole ())
+      (* 
       let alias_set = BatMap.find l alias_info in
       let xs = BatSet.map snd (BatSet.filter (fun (a, b) -> x = a) alias_set) in
       if BatSet.is_empty xs then 
@@ -91,6 +96,7 @@ let rec replace_var_exp : Alias.alias_info -> lexp -> lexp BatSet.t
         BatSet.singleton (l, gen_hole ())
       else 
         BatSet.map (fun x -> (l, EVar x)) xs
+      *)
   | EApp (e1, e2) -> 
     let es = join_tuple (replace_var_exp alias_info e1) (replace_var_exp alias_info e2) in
     BatSet.map (fun (e1, e2) -> (l, update_binary exp (e1, e2))) es 
@@ -148,9 +154,9 @@ let rec replace_var_exp : Alias.alias_info -> lexp -> lexp BatSet.t
     ) ds BatSet.empty
   | _ -> raise (Failure ("Extractor: invalid template (" ^ Print.exp_to_string (l, exp) ^ ")"))
 
-let replace_var_template : Alias.t -> Alias.t -> exp_template -> exp_template BatSet.t
-= fun t1 t2 e_temp ->
-  match e_temp with
+let replace_var_template : Alias.t -> Alias.t -> repair_template -> repair_template BatSet.t
+= fun t1 t2 temp ->
+  match temp with
   | ModifyExp (l, e) -> 
     let alias_info = Alias.compute_alias_info (BatMap.find l t1) t2 in
     let es = replace_var_exp alias_info e in
@@ -159,7 +165,22 @@ let replace_var_template : Alias.t -> Alias.t -> exp_template -> exp_template Ba
     let alias_info = Alias.compute_alias_info (BatMap.find l t1) t2 in
     let es = replace_var_exp alias_info e in
     BatSet.map (fun e -> InsertBranch (l, (p, e))) es
-  | _ -> BatSet.singleton e_temp
+  | _ -> BatSet.singleton temp
+
+let rec get_function_templates : id -> reference BatSet.t -> repair_template BatSet.t
+= fun f helpers ->
+  BatSet.fold (fun helper acc -> 
+    let helper_node = helper.summary.node in
+    let helpers = get_function_templates helper_node.name helper.helpers in
+    let new_temp = InsertFunction ((BindOne helper_node.name, helper_node.is_rec, helper_node.args, get_output_typ helper_node.typ, helper_node.body), f) in
+    BatSet.add new_temp (BatSet.union helpers acc)
+  ) helpers BatSet.empty 
+
+let rec get_usecase_of_helper : call_templates -> reference BatSet.t -> call_templates 
+= fun call_temps helpers -> BatSet.fold (fun helper acc -> 
+    let acc = get_usecase_of_helper acc helper.helpers in
+    BatMap.add helper.summary.node.name helper.usecase acc
+  ) helpers call_temps
 
 let extract_templates : matching -> repair_template BatSet.t * call_templates
 = fun matching ->
@@ -167,12 +188,12 @@ let extract_templates : matching -> repair_template BatSet.t * call_templates
     let (target_node, reference_node) = (target.node, reference.summary.node) in
     let (t1, t2) = (Alias.analysis_node target_node, Alias.analysis_node reference_node) in
     let temps = extract_templates target_node.body reference_node.body in 
+    let temps = BatSet.union temps (get_function_templates target_node.name reference.helpers) in
     (* Replace variables in templates with comparable ones *)
-    let temps = BatSet.fold (fun e_temp acc -> BatSet.union acc (replace_var_template t1 t2 e_temp)) temps BatSet.empty in
-    (* TODO : how to deal helper functions *)
-    let temps = BatSet.map (fun e_temp -> (e_temp, BatMap.empty)) temps in
+    let temps = BatSet.fold (fun temp acc -> BatSet.union acc (replace_var_template t1 t2 temp)) temps BatSet.empty in
     (* Save how current function is used in reference *)
     let r_env = BatMap.singleton reference_node.name target_node.name in
     let call_temp = BatSet.map (fun e -> Preprocessor.Renaming.apply_exp r_env e) reference.usecase in
+    let call_temps = get_usecase_of_helper call_temps reference.helpers in
     (BatSet.union repair_temps temps, BatMap.add target_node.name call_temp call_temps)
   ) matching (BatSet.empty, BatMap.empty)

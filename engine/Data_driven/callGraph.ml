@@ -50,7 +50,7 @@ type graph = { nodes : node BatSet.t; edges : edge BatSet.t }
 (* To string *)
 let string_of_node node =
   "-------------(" ^ string_of_int node.id ^ ")-------------\n" ^
-  node.name ^ (args_to_string node.args "") ^ " : " ^ type_to_string node.typ ^ "\n" ^
+  node.name ^ (args_to_string node.args " ") ^ " : " ^ type_to_string node.typ ^ "\n" ^
   "---------------------------\n" ^
   exp_to_string node.body
 

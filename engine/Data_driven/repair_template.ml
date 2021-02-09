@@ -2,62 +2,37 @@ open Lang
 open Util
 open Print
 
-(* Reapair template = expression template * required functions definition *)
-type exp_template = 
-  | ModifyExp of label * lexp (* Modify (l, E) -> (l' E') *)
+type repair_template =
+	| ModifyExp of label * lexp (* Modify (l, E) -> (l' E') *)
   | InsertBranch of label * branch (* Insert branch to label l *)
-  | DeleteBranch of label * branch (* Delete branch b at label l *)
-  | Explore of label (* Explore label l *)
-and exp_templates = exp_template BatSet.t
+	| DeleteBranch of label * branch (* Delete branch b at label l *)
+	| InsertFunction of binding * id (* Insert function f before a function g *)
+type repair_templates = repair_template BatSet.t
 
-type required_function = (id, bool * arg list * typ * lexp * id BatSet.t) BatMap.t (* function id -> func info * caller functions *)
-
-type repair_template = exp_template * required_function
 type call_templates = (id, lexp BatSet.t) BatMap.t
 
-let merge_templates : repair_template BatSet.t -> exp_templates * required_function
-= fun temps -> 
-	BatSet.fold (fun (e_temp, d_temp) (e_temps, d_temps) ->
-	  (BatSet.add e_temp e_temps, BatMap.union d_temp d_temps)
-	) temps (BatSet.empty, BatMap.empty)
-
 (* To string *)
-let string_of_exp_template : exp_template -> string
+let string_of_template : repair_template -> string
 = fun temp ->
   match temp with
   | ModifyExp (l, e) -> "Modify (" ^ string_of_int l ^ " : " ^ exp_to_string e ^ ")" 
   | InsertBranch (l, (p, e)) -> "Insert (" ^ pat_to_string p ^ " -> " ^ exp_to_string e ^ " At label " ^ string_of_int l
 	| DeleteBranch (l, (p, e)) -> "Delete (" ^ pat_to_string p ^ " -> " ^ exp_to_string e ^ " At label " ^ string_of_int l
-	| Explore l -> "Explore label " ^ string_of_int l
+	| InsertFunction (decl, g) -> "Insert Function (" ^ "d" ^ ")"
 
-let string_of_required_function : required_function -> string 
-= fun d_temp -> 
-  BatMap.foldi (fun f (is_rec, args, typ, body, callers) acc ->
-    acc ^ (decl_to_string (DLet (BindOne f, is_rec, args, typ, body)) "") ^ "\n" ^
-    "Callers : " ^ string_of_set id callers ^ "\n"
-  ) d_temp ""
-  
-let string_of_template : repair_template -> string
-= fun (e_temp, d_temp) -> 
-  "Exp : " ^ string_of_exp_template e_temp ^ "\n\n" ^
-  "Decls : \n" ^ string_of_required_function d_temp
-  
-let string_of_templates : repair_template BatSet.t -> string 
-= fun temp ->
-	let (e_temps, d_temp) = merge_templates temp in 
-  "Exp : " ^ string_of_set string_of_exp_template e_temps ^ "\n\n" ^
-  "Decls : \n" ^ string_of_required_function d_temp
+let string_of_templates : repair_templates -> string
+= fun temps -> string_of_set ~first:"{\n" ~last:"\n}" ~sep:",\n" string_of_template temps
 
 (******************)
 (* Template apply *)
 (******************)
-let normalize_template : exp_template -> exp_template
-= fun e_temp ->
-	match e_temp with
+let normaliztemplate : repair_template -> repair_template
+= fun temp ->
+	match temp with
 	| ModifyExp (l, e) -> ModifyExp (l, Normalize.normalize_exp e)
   | InsertBranch (l, (p, e)) -> InsertBranch (l, (p, Normalize.normalize_exp e))
-  | DeleteBranch (l, (p, e)) -> DeleteBranch (l, (p, Normalize.normalize_exp e))
-  | _ -> e_temp
+	| DeleteBranch (l, (p, e)) -> DeleteBranch (l, (p, Normalize.normalize_exp e))
+	(* | InsertFunction ((f, is_rec, args, typ, e), g) -> InsertFunction ((f, is_rec, args, typ, e), g) *)
   
 (* Modification *)
 let rec modify_exp : lexp -> label * lexp -> lexp
@@ -242,65 +217,67 @@ let rec delete_branch_decl : decl -> label * branch -> decl
 let rec delete_branch_pgm : prog -> label * branch -> prog
 = fun pgm temp -> List.map (fun decl -> delete_branch_decl decl temp) pgm 
 
-let rec apply_exp_temp : prog -> exp_template -> prog
+(* Functrion Insertion *)
+let rec is_defined_exp : lexp -> id -> bool
+= fun (l, exp) f ->
+	match exp with
+	| EFun (_, e) | ERef e | EDref e | Raise e | MINUS e | NOT e -> is_defined_exp e f
+	| ADD (e1, e2) | SUB (e1, e2) | MUL (e1, e2) | DIV (e1, e2) | MOD (e1, e2) 
+	| OR (e1, e2) | AND (e1, e2) | LESS (e1, e2) | LESSEQ (e1, e2) | LARGER (e1, e2) | LARGEREQ (e1, e2) 
+	| EQUAL (e1, e2) | NOTEQ (e1, e2) | DOUBLECOLON (e1, e2) | AT (e1, e2) | STRCON (e1, e2) | EApp (e1, e2) 
+	| EAssign (e1, e2) -> (is_defined_exp e2 f) || (is_defined_exp e2 f)
+	| EList es | ETuple es | ECtor (_, es) -> List.exists (fun e -> is_defined_exp e f) es
+	| IF (e1, e2, e3) -> (is_defined_exp e2 f) || (is_defined_exp e2 f) || (is_defined_exp e3 f)
+	| EMatch (e, bs) -> (is_defined_exp e f) || (List.exists (fun (p, e) -> is_defined_exp e f) bs)
+	| ELet (g, is_rec, args, typ, e1, e2) -> (is_defined_bind (g, is_rec, args, typ, e1) f) || (is_defined_exp e2 f)
+	| EBlock (is_rec, ds, e) -> (List.exists (fun decl -> is_defined_bind decl f) ds) || (is_defined_exp e f)
+	| _ -> false
+
+and is_defined_bind : binding -> id -> bool
+= fun (g, is_rec, args, typ, e) f -> 
+	match g with 
+	| BindOne g -> (g = f) || (is_defined_exp e f)
+	| _ -> false
+
+let rec is_defined_decl : decl -> id -> bool
+= fun decl f -> 
+	match decl with
+	| DLet decl -> is_defined_bind decl f
+	| DBlock (is_rec, bindings) -> List.exists (fun decl -> is_defined_bind decl f) bindings
+	| _ -> false
+
+let rec is_defined_pgm : prog -> id -> bool
+= fun pgm f -> List.exists (fun decl -> is_defined_decl decl f) pgm
+
+let rec insert_function_pgm : prog -> binding * id -> prog 
+= fun pgm (decl, f) ->
+	match pgm with 
+	| [] -> []
+	| hd::tl -> if is_defined_decl hd f then (DLet decl)::pgm else hd::(insert_function_pgm tl (decl, f))
+
+let rec apply_template : prog -> repair_template -> prog
 = fun pgm temp ->
 	match temp with
 	| ModifyExp (l, e) -> modify_pgm pgm (l, e)
 	| InsertBranch (l, b) -> insert_branch_pgm pgm (l, b)
 	| DeleteBranch (l, b) -> delete_branch_pgm pgm (l, b)
-	| _ -> pgm
+	| InsertFunction (decl, f) -> insert_function_pgm pgm (decl, f)
 
-(* Insert new function *)
-let rec is_defined_decl : id -> decl -> bool
-= fun f decl -> 
-	match decl with
-	| DLet (f', _, _, _, _) ->
-	  begin match f' with
-	  | BindOne f' -> f = f'
-	  | _ -> false
-	  end
-	| DBlock (_, bindings) -> List.exists (fun (f', _, _, _, _) ->
-	    match f' with
-	    | BindOne f' -> f = f'
-	    | _ -> false
-	  ) bindings
-	| _ -> false
-
-let rec is_defined : id -> prog -> bool
-= fun f decls -> List.exists (fun decl -> is_defined_decl f decl) decls
-
-let rec insert_function : prog -> id * bool * arg list * typ * lexp * id BatSet.t -> prog
-= fun pgm (f, is_rec, args, typ, e, caller) -> 
-	match pgm with
-	| [] -> []
-	| hd::tl ->
-	  if BatSet.exists (fun f' -> is_defined_decl f' hd) caller then
-	    (DLet (BindOne f, is_rec, args, typ, e))::(pgm)
-	  else hd::(insert_function tl (f, is_rec, args, typ, e, caller))
-
-let rec apply_required_function : prog -> required_function -> prog
-= fun pgm d_temp -> 
-	let (pgm', d_temp') = BatMap.foldi (fun f (is_rec, args, typ, e, caller) (pgm', d_temp') ->
-	  if BatSet.for_all (fun id -> is_defined id pgm) caller then 
-	    (insert_function pgm' (f, is_rec, args, typ, e, caller), d_temp')
-	  else
-	    (pgm', BatMap.add f (is_rec, args, typ, e, caller) d_temp')
-	) d_temp (pgm, BatMap.empty) in
-	if BatMap.is_empty (BatMap.diff d_temp d_temp') then pgm' else apply_required_function pgm' d_temp'
-
-let rec apply_template : prog -> repair_template -> prog
-= fun pgm (e_temp, d_temp) ->
-	let pgm = apply_required_function pgm d_temp in
-	apply_exp_temp pgm e_temp
-
-let rec apply_templates : prog -> repair_template BatSet.t -> prog 
-= fun pgm temps ->
-	let (e_temps, d_temps) = merge_templates temps in
-	let pgm' = apply_required_function pgm d_temps in
-	BatSet.fold (fun e_temp pgm -> apply_exp_temp pgm e_temp) e_temps pgm'
+let rec apply_templates : prog -> repair_templates -> prog 
+= fun pgm temps -> 
+	let rec iter : prog -> repair_templates -> prog 
+	= fun pgm temps ->	
+		let (pgm, remains) = BatSet.fold (fun temp (pgm, remains) -> 
+			match temp with 
+			| InsertFunction (decl, f) when (not (is_defined_pgm pgm f)) -> (pgm, BatSet.add temp remains)
+			| _ -> (apply_template pgm temp, remains)
+		) temps (pgm, BatSet.empty) in
+		if BatSet.equal temps remains then pgm else iter pgm remains
+	in
+	iter pgm temps
 
 (* Redundant check *)
 let check_redundant_template : prog -> repair_template -> bool
 = fun pgm temp ->
   let pgm' = apply_template pgm temp in
-  (program_to_string pgm) = (program_to_string pgm')
+	(program_to_string pgm) = (program_to_string pgm')

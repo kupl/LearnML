@@ -191,6 +191,11 @@ module LocEnv = struct
   = fun t -> BatMap.iter (fun num env ->print_endline(string_of_int num);TEnv.print env ) t
 end
 
+let rec print_eqn : typ_eqn -> unit
+= fun eqn -> 
+  print_endline "----------- Type Equation -----------";
+  List.iter (fun (t1, t2) -> print_endline (Print.type_to_string t1 ^ " := " ^ Print.type_to_string t2)) eqn
+
 (* Support functions *)
 let rec bind_arg : TEnv.t -> arg -> TEnv.t
 = fun tenv arg ->
@@ -285,7 +290,6 @@ let rec gen_pat_equations : TEnv.t -> pat -> typ -> (TEnv.t * typ_eqn)
 (* Construct type equations of expressions *)
 let rec gen_equations : LocType.t -> LocEnv.t -> TEnv.t -> lexp -> typ -> (typ_eqn * LocType.t * LocEnv.t)
 = fun l_t l_env tenv (l, exp) ty ->
-  (* let _ = print_endline (exp_to_string (l, exp)) in *)
   match exp with
   | EUnit -> ([ty, TUnit], LocType.extend l TUnit l_t, LocEnv.extend l tenv l_env)
   | SInt n | Const n -> ([(ty, TInt)], LocType.extend l TInt l_t, LocEnv.extend l tenv l_env)
@@ -421,11 +425,6 @@ let rec gen_equations : LocType.t -> LocEnv.t -> TEnv.t -> lexp -> typ -> (typ_e
     let (eqns2, l_t, l_env) = gen_equations l_t l_env tenv e2 t in
     ((ty, TUnit)::(eqns1@eqns2), LocType.extend l TUnit l_t, LocEnv.extend l tenv l_env)
   
-let rec print_eqn : typ_eqn -> unit
-= fun eqn -> 
-  print_endline "----------- Type Equation -----------";
-  List.iter (fun (t1, t2) -> print_endline (Print.type_to_string t1 ^ " := " ^ Print.type_to_string t2)) eqn
-
 (* Unification *)
 let rec is_exist : id -> typ -> bool
 = fun x t ->
@@ -441,6 +440,7 @@ and is_exist2 : id -> typ list -> bool
 
 let rec unify : Subst.t -> (typ * typ) -> Subst.t
 = fun subst (t1, t2) ->
+  (* let _ = print_endline ("T1 : " ^ type_to_string t1 ^ ", T2 : " ^ type_to_string t2) in *)
   if t1 = t2 then subst else
   match t1, t2 with
   | TList t1, TList t2 | TRef t1, TRef t2 -> unify subst (t1, t2)
@@ -534,6 +534,7 @@ and ctors_to_env : TEnv.t -> typ -> ctor list -> TEnv.t
 let run : prog -> (TEnv.t * LocType.t * LocEnv.t * Subst.t)
 = fun decls -> 
   let _ = start_time:=Sys.time() in
+  (* let _ = print_pgm decls in *)
   let decls = Converter.convert Converter.empty decls in
   let (init_env, l_t, l_env, subst) = List.fold_left type_decl (TEnv.empty, LocType.empty, LocEnv.empty, Subst.empty) (!library_pgm) in
   let (tenv, l_t, l_env, subst) = List.fold_left type_decl (init_env, l_t, l_env, subst) decls in

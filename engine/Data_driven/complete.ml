@@ -1,15 +1,13 @@
 open Lang
 open Util
 open Repair_template
+open Selector
+open Type
 
 (******************************)
 (* Synthesize repair template *)
 (******************************)
-
-(*
-  state = exp * h_t * v_t * subst
-*)
-type state = lexp * Type2.LocType.t * Type2.LocEnv.t * Type2.Subst.t
+type state = lexp * Type.HoleType.t * Type.VariableType.t * Type.Subst.t
 and hole = int
 
 module Workset = struct
@@ -35,10 +33,10 @@ module Workset = struct
   = fun exp (_, sset) -> BatSet.mem (Print.exp_to_string exp) sset
 
   let add : work -> t -> t
-  = fun (e, l_t, l_env, subst) (heap, sset) ->
+  = fun (e, h_t, v_t, subst) (heap, sset) ->
     try
       if explored e (heap, sset) then (heap, sset)
-      else (Heap.add (e, l_t, l_env, subst) heap, BatSet.add (Print.exp_to_string e) sset)
+      else (Heap.add (e, h_t, v_t, subst) heap, BatSet.add (Print.exp_to_string e) sset)
     with _ -> (heap, sset)
 
   let choose : t -> (work * t) option
@@ -95,32 +93,40 @@ let rec replace_exp : lexp -> (hole * lexp) -> lexp
     let (ps, es) = List.split bs in
     (l, EMatch (replace_exp e (hole, e'), List.combine ps (List.map (fun e -> replace_exp e (hole, e')) es)))
   | IF (e1, e2, e3) -> (l, IF (replace_exp e1 (hole, e'), replace_exp e2 (hole, e'), replace_exp e3 (hole, e')))
-  | Hole n -> if (l = hole) then e' else (l, e)
+  | Hole n -> if (n = hole) then e' else (l, e)
   | _ -> (l, e)
 
 let extract_holenum : lexp -> hole
-= fun (l, e) -> 
-  match e with
-  | Hole n -> l
+= fun e -> 
+  match snd e with
+  | Hole n -> n
   | _ -> raise (Failure "Error during obtain hole number")
 
 (* Update polymorphic type variable t1 in Hole_Type, Var_Type, Subst to t2 *)
-let rec update_polymorphic : (typ * typ) -> (Type2.LocType.t * Type2.LocEnv.t * Type2.Subst.t) -> (Type2.LocType.t * Type2.LocEnv.t * Type2.Subst.t)
-= fun (t1, t2) (l_t, l_env, subst) ->
-  let subst' = Type2.unify subst (Type2.Subst.apply t1 subst, Type.Subst.apply t2 subst) in
-  let l_t' = Type2.LocType.update subst' l_t in
-  let l_env' = Type2.LocEnv.update subst' l_env in
-  (l_t', l_env', subst')
+let rec update_polymorphic : (typ * typ) -> (Type.HoleType.t * Type.VariableType.t * Type.Subst.t) -> (Type.HoleType.t * Type.VariableType.t * Type.Subst.t)
+= fun (t1, t2) (h_t, v_t, subst) ->
+  let subst' = Type.unify subst (Type.Subst.apply t1 subst, Type.Subst.apply t2 subst) in
+  let h_t' = Type.HoleType.update subst' h_t in
+  let v_t' = Type.VariableType.update subst' v_t in
+  (h_t', v_t', subst')
+
+let rec update_state : (hole * typ) list -> Type.TEnv.t -> state -> state
+= fun ts hole_env (e, h_t, v_t, subst) ->
+  List.fold_left (fun (e, h_t, v_t, subst) (hole, typ) ->
+    let h_t = Type.HoleType.extend hole typ h_t in
+    let v_t = Type.VariableType.extend hole hole_env v_t in
+    (e, h_t, v_t, subst)
+  ) (e, h_t, v_t, subst) ts
 
 (* Type-directed Transition *)
-let rec type_directed : (hole * typ * Type2.TEnv.t) -> state -> state option
-= fun (hole, hole_typ, hole_env) (lexp, l_t, l_env, subst) ->
+let rec type_directed : (hole * typ * Type.TEnv.t) -> state -> state option
+= fun (hole, hole_typ, hole_env) (lexp, h_t, v_t, subst) ->
   match snd lexp with
   (* var comp *)
   | EVar x ->
     let var_typ = BatMap.find x hole_env in
-    let (l_t, l_env, subst) = update_polymorphic (hole_typ, var_typ) (l_t, l_env, subst) in
-    Some (lexp, l_t, l_env, subst)
+    let (h_t, v_t, subst) = update_polymorphic (hole_typ, var_typ) (h_t, v_t, subst) in
+    Some (lexp, h_t, v_t, subst)
   | _ -> None
 
 (* Get a hole that appears at first, if the expression is closed returns empty set *)
@@ -152,35 +158,35 @@ and find_first_hole_list : lexp list-> lexp BatSet.t
     if (BatSet.is_empty set) then find_first_hole_list tl else set
 
 let get_next_states : Workset.work -> lexp -> Workset.work BatSet.t
-= fun (e, l_t, l_env, subst) hole ->
+= fun (e, h_t, v_t, subst) hole ->
   let n = extract_holenum hole in
-  let hole_typ = BatMap.find n l_t in
-  let hole_env = BatMap.find n l_env in
-  (* Bound variables *)
-  let comp = BatMap.foldi (fun var t set ->
+  let hole_typ = BatMap.find n h_t in
+  let hole_env = BatMap.find n v_t in
+  (* if the current hole is a special function call then use the call templates *)
+  let comps = BatMap.foldi (fun x t set -> 
     match t with
     | TCtor _ -> set
-    | _ -> BatSet.add (gen_label (), EVar var) set
+    | _ -> BatSet.add (gen_label (), EVar x) set
   ) hole_env BatSet.empty in
   (* Transition *)
   let next_states = BatSet.fold (fun comp set -> 
     let new_state = 
       try 
-        type_directed (n, hole_typ, hole_env) (comp, l_t, l_env, subst)
+        type_directed (n, hole_typ, hole_env) (comp, h_t, v_t, subst)
       with _ -> None
     in
     match new_state with
     |Some state -> BatSet.add state set
     |None -> set
-  ) comp BatSet.empty in
+  ) comps BatSet.empty in
   (* Replace *)
-  BatSet.map (fun (e', l_t, l_env, subst)-> (replace_exp e (n, e'), BatMap.remove n l_t, BatMap.remove n l_env, subst)) next_states 
+  BatSet.map (fun (e', h_t, v_t, subst)-> (replace_exp e (n, e'), BatMap.remove n h_t, BatMap.remove n v_t, subst)) next_states 
 
 let next : Workset.work -> Workset.work BatSet.t
-= fun (e, l_t, l_env, subst) ->
+= fun (e, h_t, v_t, subst) ->
   let holes = find_first_hole e in
   BatSet.fold (fun hole set ->
-    BatSet.union (get_next_states (e, l_t, l_env, subst) hole) set
+    BatSet.union (get_next_states (e, h_t, v_t, subst) hole) set
   ) holes BatSet.empty
 
 let is_closed : lexp -> bool
@@ -190,17 +196,17 @@ let rec work : Workset.t -> lexp BatSet.t
 = fun workset ->
   match Workset.choose workset with
   | None -> BatSet.empty
-  | Some ((e, l_t, l_env, subst), remain) ->
+  | Some ((e, h_t, v_t, subst), remain) ->
     if is_closed e then 
       BatSet.add e (work remain)
     else
-      let nextstates = next (e, l_t, l_env, subst) in
+      let nextstates = next (e, h_t, v_t, subst) in
       let new_workset = BatSet.fold Workset.add nextstates remain in
       work new_workset
 
-let rec complete_template : Type2.LocType.t -> Type2.LocEnv.t -> Type2.Subst.t -> exp_template -> exp_templates
-= fun l_t l_env subst e_temp ->
-  match e_temp with
-  | ModifyExp (l, e) -> BatSet.map (fun e -> ModifyExp (l, e)) (work (Workset.init (e, l_t, l_env, subst)))
-  | InsertBranch (l, (p, e)) -> BatSet.map (fun e -> InsertBranch (l, (p, e))) (work (Workset.init (e, l_t, l_env, subst)))
-  | _ -> BatSet.singleton e_temp
+let rec complete_template : Type.HoleType.t -> Type.VariableType.t -> Type.Subst.t -> repair_template -> repair_templates
+= fun h_t v_t subst temp ->
+  match temp with
+  | ModifyExp (l, e) -> BatSet.map (fun e -> ModifyExp (l, e)) (work (Workset.init (e, h_t, v_t, subst)))
+  | InsertBranch (l, (p, e)) -> BatSet.map (fun e -> InsertBranch (l, (p, e))) (work (Workset.init (e, h_t, v_t, subst)))
+  | _ -> BatSet.singleton temp

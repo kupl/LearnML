@@ -18,14 +18,15 @@ and calling_ctx = {
   callee_typ : typ;
   callee_args : arg list
 }
+type summaries = summary BatSet.t
 
 type reference = {
   source : string; (* Source file of reference function *)
   summary : summary; (* Funciton summary for patch *)
   usecase : lexp BatSet.t; (* Use case of reference function *)
-  helpers : reference BatSet.t; 
+  helpers : reference BatSet.t (* Helper functions *)
 }
-
+type references = reference BatSet.t
 (* Matching *)
 type matching = (summary, (reference * int * float)) BatMap.t
 
@@ -136,7 +137,7 @@ let rec get_outgoing_edges : node_id -> graph -> calling_ctx BatSet.t
       BatSet.add ctx acc
   ) invoked_edges BatSet.empty
 
-let get_summaries : graph -> summary BatSet.t
+let get_summaries : graph -> summaries
 = fun cg ->
   BatSet.fold (fun node acc ->
     if is_external_var node.name then acc
@@ -220,7 +221,6 @@ let get_usecase : summary -> graph -> lexp BatSet.t
   BatSet.fold (fun node acc ->
     BatSet.union acc (get_usecase_exp target_node.name [] node.body)
   ) nodes BatSet.empty 
-
 let rec get_helpers : reference BatSet.t -> graph -> reference BatSet.t 
 = fun references cg ->
   let references' = BatSet.fold (fun reference acc ->
@@ -234,15 +234,27 @@ let rec get_helpers : reference BatSet.t -> graph -> reference BatSet.t
       helpers = helpers
     } in
     BatSet.add reference acc 
-  ) references BatSet.empty in
+  ) references references in
   if BatSet.equal references references' then references' else get_helpers references' cg
 
-let get_references : string -> graph -> reference BatSet.t
+let get_references : string -> graph -> references
 = fun source cg ->
   let references = BatSet.fold (fun summary acc ->
     let referece = { source = source; summary = summary; usecase = get_usecase summary cg; helpers = BatSet.empty } in
     BatSet.add referece acc
   ) (get_summaries cg) BatSet.empty in
+  (* Make 1-call relation *)
+  let references = BatSet.map (fun reference ->
+    let cur_node = reference.summary.node.id in
+    let next_nodes = BatSet.map (fun edge -> edge.sink) (BatSet.filter (fun edge -> cur_node = edge.src) cg.edges) in
+    let helpers = BatSet.filter (fun reference -> BatSet.mem reference.summary.node.id next_nodes) references in 
+    {
+      source = reference.source;
+      summary = reference.summary;
+      usecase = reference.usecase;
+      helpers = helpers
+    }
+  ) references in
   (* let references = get_helpers references cg in *)
   references
 
@@ -309,10 +321,8 @@ let rec syntactic_distance : lexp -> lexp -> float
   (* Syntatically different *)
   | _ -> float_of_int (exp_size exp1 + exp_size exp2)
 
-(*
 let rec syntactic_distance : lexp -> lexp -> float
 = fun e1 e2 -> Syntactic_dist.syntactic_distance e1 e2
-*)
 
 (* Path similarity *)
 let unsat_score = 100 
@@ -428,48 +438,6 @@ let rec gen_vc : CallGraph.path -> arg list -> arg list -> CallGraph.path
     Bop (And, new_path, vc)
   ) vc args_sub args_sol
 
-let rec simplify_vc : CallGraph.path -> CallGraph.path
-= fun vc ->
-  (* Simple heuristic to simplify given vc *)
-  let rec subst_clause : id * id -> CallGraph.path -> CallGraph.path 
-  = fun (a, b) path ->
-    match path with 
-    | Var (x, typ) when a = x -> Var (b, typ)
-    | Aop (op, p1, p2) -> Aop (op, subst_clause (a, b) p1, subst_clause (a, b) p2)
-    | Bop (comb, p1, p2) -> Bop (comb, subst_clause (a, b) p1, subst_clause (a, b) p2)
-    | ABop (comp, p1, p2) -> ABop (comp, subst_clause (a, b) p1, subst_clause (a, b) p2)
-    | EQop (eq, p1, p2) -> EQop (eq, subst_clause (a, b) p1, subst_clause (a, b) p2)
-    | Strcon (p1, p2) -> Strcon (subst_clause (a, b) p1, subst_clause (a, b) p2)
-    | Append (p1, p2) -> Append (subst_clause (a, b) p1, subst_clause (a, b) p2)
-    | Concat (p1, p2) -> Concat (subst_clause (a, b) p1, subst_clause (a, b) p2)
-    | Minus p -> Minus (subst_clause (a, b) p)
-    | Not p -> Not (subst_clause (a, b) p)
-    | Tuple ps -> Tuple (List.map (subst_clause (a, b)) ps)
-    | List (ps, typ) -> List (List.map (subst_clause (a, b)) ps, typ)
-    | Ctor (c, ps) -> Ctor (c, List.map (subst_clause (a, b)) ps)
-    | _ -> path
-  in
-  let rec iter : CallGraph.path BatSet.t -> CallGraph.path BatSet.t
-  = fun clauses ->
-    let alias = BatSet.fold (fun clause acc ->
-      match clause with
-      | EQop (Eq, Var (x, _), Var (y, _)) -> BatSet.add (x, y) acc
-      | _ -> acc
-    ) clauses BatSet.empty in
-    let clauses' = 
-      BatSet.fold (fun (a, b) acc -> BatSet.map (subst_clause (a, b)) acc) alias clauses
-      |> BatSet.filter (fun clause -> match clause with EQop (Eq, a, b) when a = b -> false | _ -> true)
-      |> BatSet.filter (fun clause -> clause <> Bool true)
-    in
-    if BatSet.equal clauses clauses' then clauses' else iter clauses'
-  in
-  let clauses = List.fold_left (fun acc clause -> BatSet.add clause acc) BatSet.empty (extract_clauses vc) in
-  BatSet.fold (fun clause acc -> 
-    if acc = Bool true then clause 
-    else if clause = Bool true then acc
-    else Bop (And, acc, clause)
-  ) (iter clauses) (Bool true) 
-
 let compute_path_score : calling_ctx -> calling_ctx -> int
 = fun ctx_sub ctx_sol ->
   try
@@ -480,13 +448,6 @@ let compute_path_score : calling_ctx -> calling_ctx -> int
       (* Normalize verification condition *)
       let vc_subst = solve_path_eqn (gen_path_eqn vc TBool) in
       let vc = apply_subst vc_subst vc in
-      (*
-      let _ = 
-        print_endline ("VC : " ^ string_of_path vc);
-        print_endline ("VC' : " ^ string_of_path (simplify_vc vc));
-      in
-      *)
-      let vc = simplify_vc vc in
       if Path_score.check_sat !ctor_table vc then 
         (* If two contexts are comparable compute similarity of two ctx *)
         path_similarity (apply_subst vc_subst ctx_sub.path) (apply_subst vc_subst ctx_sol.path)
@@ -533,7 +494,7 @@ let rec semantic_distance : summary -> summary -> int
   2 * incomming_distance + outgoing_distance
 
 (* Compute (local)matching result *)
-let rec find_matching : summary BatSet.t -> reference BatSet.t -> matching
+let rec find_matching : summaries -> references -> matching
 = fun summaries references ->
   BatSet.fold (fun summary matching -> 
     (* Find a solution functions whose type is the same with the type of the submission *)
@@ -543,17 +504,6 @@ let rec find_matching : summary BatSet.t -> reference BatSet.t -> matching
     (* Select solution functions with the minimal semantic distance *)
     let (sem_dist, candidates) = BatSet.fold (fun reference (score, candidates) ->
       let score' = semantic_distance summary reference.summary in
-      (*
-      let _ =
-        if summary.node.id = 36 then
-          (
-          print_header "submission"; print_endline (string_of_summary summary);
-          print_header ("local :" ^ string_of_int score'); print_endline (string_of_reference reference);
-          )
-        else 
-          ()
-      in
-      *)
       if score' < score then (score', BatSet.singleton reference)
       else if score' = score then (score, BatSet.add reference candidates)
       else (score, candidates)
@@ -572,66 +522,58 @@ let rec find_matching : summary BatSet.t -> reference BatSet.t -> matching
       BatMap.add summary (reference, sem_dist, syn_dist) matching
   ) summaries empty_matching
 
-(*
-(* Compute (local)matching result *)
-let rec find_matching : matching -> summary BatSet.t -> reference BatSet.t -> matching
+let rec find_refs_by_prototype : summary -> references -> references
+= fun summary references -> BatSet.filter (fun reference -> 
+    (List.length summary.node.args) = (List.length reference.summary.node.args) &&
+    check_typs summary.node.typ reference.summary.node.typ
+  ) references
+
+let rec find_matching : matching -> summaries -> references -> matching
 = fun matching summaries references ->
-  BatSet.fold (fun summary matching -> 
-    (* Find a solution functions whose type is the same with the type of the submission *)
-    let candidates = BatSet.filter (fun reference -> 
-      check_typs summary.node.typ reference.summary.node.typ
-    ) references in
-    (* Select solution functions with the minimal semantic distance *)
-    let (sem_dist, candidates) = BatSet.fold (fun reference (score, candidates) ->
-      let score' = semantic_distance summary reference.summary in
-      if score' < score then (score', BatSet.singleton reference)
-      else if score' = score then (score, BatSet.add reference candidates)
-      else (score, candidates)
-    ) candidates (max_int, BatSet.empty) in
-    if BatSet.is_empty candidates then
-      (* If there are no matched solutions, do not change the matching relation *)
-      matching
-    else
-      (* Pick the most similar ones in candidates *)
-      let (candidate, remains) = BatSet.pop candidates in
-      let (syn_dist, reference) = BatSet.fold (fun reference (score, acc) -> 
-        let score' = syntactic_distance summary.node.body reference.summary.node.body in
-        if score' < score then (score', reference)
-        else (score, acc)
-      ) remains (syntactic_distance summary.node.body candidate.summary.node.body, candidate) in
-      BatMap.add summary (reference, sem_dist, syn_dist) matching
-  ) summaries empty_matching
-*)
-
-(* Update (global)matching result *)
-let rec update_matching : matching -> matching -> matching
-= fun local global ->
-  BatMap.foldi (fun summary (reference, sem_dist, syn_dist) global ->
-    if BatMap.mem summary global then
-      let (reference', sem_dist', syn_dist') = BatMap.find summary global in
-      (* Compare semantic distance *)
-      (*
-      let _ =
-        if summary.node.id = 34 then
-          (
-          print_header "submission"; print_endline (string_of_summary summary);
-          print_header ("local :" ^ string_of_int p1); print_endline (string_of_reference reference);
-          print_header ("global :" ^ string_of_int p2); print_endline (string_of_reference reference');
-          )
-        else 
-          ()
-      in
-      *)
-      if sem_dist < sem_dist' then BatMap.add summary (reference, sem_dist, syn_dist) global 
-      else if sem_dist > sem_dist' then global
+  if BatSet.is_empty summaries then matching
+  else 
+    let (summary, summaries) = BatSet.pop summaries in 
+    if BatMap.mem summary matching then 
+      let (reference, sem_dist, syn_dist) = BatMap.find summary matching in
+      if sem_dist = 0 (* && syn_dist = 0. *) then find_matching matching summaries references
       else
-        (* Compare syntactic distance *)
-        if syn_dist < syn_dist' then BatMap.add summary (reference, sem_dist, syn_dist) global else global
-    else BatMap.add summary (reference, sem_dist, syn_dist) global
-  ) local global
+        (* Find a solution functions whose type is the same with the type of the submission *)
+        let candidates = find_refs_by_prototype summary references in
+        (* Select reference which is more similar than current one *)
+        let (reference', sem_dist', syn_dist') = BatSet.fold (fun reference' (reference, sem_dist, syn_dist) ->
+          let sem_dist' = semantic_distance summary reference'.summary in
+          if sem_dist' < sem_dist then (reference', sem_dist', syntactic_distance summary.node.body reference'.summary.node.body)
+          else if sem_dist' = sem_dist then 
+            let syn_dist' = syntactic_distance summary.node.body reference'.summary.node.body in
+            if syn_dist' < syn_dist then (reference', sem_dist', syn_dist')
+            else (reference, sem_dist, syn_dist) 
+          else (reference, sem_dist, syn_dist)
+        ) candidates (reference, sem_dist, syn_dist) in 
+        let new_matching = BatMap.add summary (reference', sem_dist', syn_dist') matching in
+        find_matching new_matching summaries (* (BatSet.remove reference' references) *) references
+    else
+      let candidates = find_refs_by_prototype summary references in
+      (* Select solution functions with the minimal semantic distance *)
+      let (sem_dist', candidates) = BatSet.fold (fun reference (score, candidates) ->
+        let score' = semantic_distance summary reference.summary in
+        if score' < score then (score', BatSet.singleton reference)
+        else if score' = score then (score, BatSet.add reference candidates)
+        else (score, candidates)
+      ) candidates (max_int, BatSet.empty) in
+      if BatSet.is_empty candidates then find_matching matching summaries references
+      else
+        (* Pick the most similar ones in candidates *)
+        let (candidate, remains) = BatSet.pop candidates in
+        let (syn_dist', reference') = BatSet.fold (fun reference (score, acc) -> 
+          let score' = syntactic_distance summary.node.body reference.summary.node.body in
+          if score' < score then (score', reference)
+          else (score, acc)
+        ) remains (syntactic_distance summary.node.body candidate.summary.node.body, candidate) in
+        let new_matching = BatMap.add summary (reference', sem_dist', syn_dist') matching in
+        find_matching new_matching summaries (* (BatSet.remove reference' references) *) references
 
-let select_solutions : prog -> (string * graph) list -> matching
-= fun pgm cg_sols -> 
+let select_solutions : prog -> references list -> matching
+= fun pgm references -> 
   let _ = 
     library_pgm := Preprocessor.Type_annotate.run !library_pgm
     |> Preprocessor.Decapsulation.run
@@ -639,9 +581,70 @@ let select_solutions : prog -> (string * graph) list -> matching
   let summaries = get_summaries (extract_graph (!library_pgm@pgm)) in
   BatSet.iter (fun summary -> print_endline (string_of_summary summary)) summaries;
   let _ = ctor_table := Path_score.CtorTable.gen_ctor_table BatMap.empty pgm in
-  let matching = List.fold_left (fun acc (f_name, cg_sol) ->
-    (* print_endline f_name; *)
-    let matching = find_matching summaries (get_references f_name cg_sol) in
-    update_matching matching acc
-  ) empty_matching cg_sols in
-  matching
+  List.fold_left (fun acc reference -> find_matching acc summaries reference) empty_matching references
+
+let rec find_matching_syn : matching -> summaries -> references -> matching
+= fun matching summaries references ->
+  if BatSet.is_empty summaries then matching
+  else 
+    let (summary, summaries) = BatSet.pop summaries in 
+    if BatMap.mem summary matching then 
+      let (reference, sem_dist, syn_dist) = BatMap.find summary matching in
+      let candidates = find_refs_by_prototype summary references in
+      (* Select reference which is more similar than current one *)
+      let (reference', sem_dist', syn_dist') = BatSet.fold (fun reference' (reference, sem_dist, syn_dist) ->
+        let syn_dist' = syntactic_distance summary.node.body reference'.summary.node.body in
+        if syn_dist' < syn_dist then (reference', 0, syn_dist')
+        else (reference, 0, syn_dist)
+      ) candidates (reference, sem_dist, syn_dist) in 
+      let new_matching = BatMap.add summary (reference', sem_dist', syn_dist') matching in
+      find_matching_syn new_matching summaries (* (BatSet.remove reference' references) *) references
+    else
+      let candidates = find_refs_by_prototype summary references in
+      if BatSet.is_empty candidates then find_matching matching summaries references
+      else
+        let (candidate, remains) = BatSet.pop candidates in
+        let (syn_dist', reference') = BatSet.fold (fun reference (score, acc) -> 
+          let score' = syntactic_distance summary.node.body reference.summary.node.body in
+          if score' < score then (score', reference)
+          else (score, acc)
+        ) remains (syntactic_distance summary.node.body candidate.summary.node.body, candidate) in
+        let new_matching = BatMap.add summary (reference', 0, syn_dist') matching in
+        find_matching_syn new_matching summaries (* (BatSet.remove reference' references) *) references
+
+let select_solutions_syn : prog -> references list -> matching
+= fun pgm references -> 
+  let _ = 
+    library_pgm := Preprocessor.Type_annotate.run !library_pgm
+    |> Preprocessor.Decapsulation.run
+  in
+  let summaries = get_summaries (extract_graph (!library_pgm@pgm)) in
+  BatSet.iter (fun summary -> print_endline (string_of_summary summary)) summaries;
+  let _ = ctor_table := Path_score.CtorTable.gen_ctor_table BatMap.empty pgm in
+  List.fold_left (fun acc reference -> find_matching_syn acc summaries reference) empty_matching references
+
+let select_solution_syn : prog -> references list -> matching
+= fun pgm references -> 
+  let _ = 
+    library_pgm := Preprocessor.Type_annotate.run !library_pgm
+    |> Preprocessor.Decapsulation.run
+  in
+  let summaries = get_summaries (extract_graph (!library_pgm@pgm)) in
+  BatSet.iter (fun summary -> print_endline (string_of_summary summary)) summaries;
+  let _ = ctor_table := Path_score.CtorTable.gen_ctor_table BatMap.empty pgm in
+  List.fold_left (fun acc reference -> 
+    (* Mode 1 = score / cardinal *)
+    (* Mode 2 = cardinal -> sum of score *)
+    let new_matching = find_matching_syn BatMap.empty summaries reference in
+    if BatMap.cardinal acc = 0 then new_matching
+    else if BatMap.cardinal new_matching = 0 then acc
+    else
+    let score1 = (BatMap.fold (fun (r, sem, syn) acc -> acc +. syn) acc 0.) /. float_of_int (BatMap.cardinal acc) in
+    let score2 = (BatMap.fold (fun (r, sem, syn) acc -> acc +. syn) new_matching 0.) /. float_of_int (BatMap.cardinal new_matching)in
+    (*
+    if BatMap.cardinal acc > BatMap.cardinal new_matching then acc 
+    else if BatMap.cardinal acc < BatMap.cardinal new_matching then new_matching
+    else 
+    *)
+      if score1 < score2 then acc else new_matching
+  ) empty_matching references

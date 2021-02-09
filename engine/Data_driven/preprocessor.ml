@@ -62,11 +62,15 @@ module Decapsulation = struct
         (flatten_branch flat_bs)@(flatten_branch tl)
       | _ -> (p, e)::(flatten_branch tl) 
       end
-
-  let rec get_output_typ : typ -> typ
-  = fun typ ->
+  
+  let rec get_output_typ : typ -> arg list -> typ
+  = fun typ typs ->
     match typ with
-    | TArr (t1, t2) -> get_output_typ t2
+    | TArr (t1, t2) -> 
+      begin match typs with
+      | [] -> typ
+      | hd::tl -> get_output_typ t2 tl
+      end 
     | _ -> typ
 
   let rec decapsulate_exp : lexp -> lexp 
@@ -93,7 +97,7 @@ module Decapsulation = struct
   and decapsulate_binding : binding -> binding
   = fun (f, is_rec, args, typ, e) ->
     let (args', e') = extract_func (decapsulate_exp e) in
-    (f, is_rec, args@args', get_output_typ typ, e')
+    (f, is_rec, args@args', get_output_typ typ args', e')
 
   and extract_func : lexp -> arg list * lexp
   = fun (l, exp) ->

@@ -232,11 +232,13 @@ let rec update_binding : analysis -> let_bind -> data -> analysis
 let rec analysis_exp : analysis -> lexp -> t
 = fun map (l, exp) ->	
 	match exp with
-  | EUnit | Const _ | TRUE | FALSE | String _ | EVar _ -> BatMap.singleton l map 
+	| EUnit | Const _ | TRUE | FALSE | String _ | EVar _ -> BatMap.singleton l map 
+	(*
   | EFun (arg, e) -> 
   	let t = analysis_fun map [arg] e in
-  	BatMap.add l map t
-  | ERef e | EDref e | Raise e | MINUS e | NOT e -> 
+		BatMap.add l map t
+	*)
+  | ERef e | EDref e | Raise e | MINUS e | NOT e | EFun (_, e) -> 
   	let t = analysis_exp map e in
   	BatMap.add l map t 
   | ADD (e1, e2) | SUB (e1, e2) | MUL (e1, e2) | DIV (e1, e2) | MOD (e1, e2) 
@@ -285,6 +287,20 @@ let rec analysis_node : node -> t
 = fun node -> 
   let init_condition = if node.is_rec then (BatMap.singleton node.name (Func node.typ)) else BatMap.empty in
   analysis_exp (update_args node.args init_condition) node.body
+
+(*
+let rec analysis_decl : decl -> t
+= fun decl ->
+	match decls with
+	| DLet (f, is_rec, args, typ, e) ->
+		
+		DLet (f, is_rec, annotate_args subst args, Type2.Subst.apply typ subst, annotate_exp subst e)
+	| DBlock (is_rec, bindings) -> DBlock (is_rec, List.map (fun (f, is_rec, args, typ, e) -> (f, is_rec, annotate_args subst args, Type2.Subst.apply typ subst, annotate_exp subst e)) bindings)
+	| _ -> decl
+
+let rec analysis_pgm : prog -> t
+= fun pgm ->
+*)
 
 let rec compute_alias_set : analysis -> analysis -> alias_set
 = fun map1 map2 ->

@@ -172,9 +172,9 @@ let rec work : call_templates -> Workset.t -> lexp BatSet.t
       let new_workset = BatSet.fold Workset.add nextstates remain in
       work call_temps new_workset
 
-let rec update_call_templates : call_templates -> Type.HoleType.t -> Type.VariableType.t -> Type.Subst.t -> exp_template -> exp_templates
-= fun call_temps h_t v_t subst e_temp ->
-  match e_temp with
+let rec update_call_templates : call_templates -> Type.HoleType.t -> Type.VariableType.t -> Type.Subst.t -> repair_template -> repair_templates
+= fun call_temps h_t v_t subst temp ->
+  match temp with
   | ModifyExp (l, e) -> BatSet.map (fun e -> ModifyExp (l, e)) (work call_temps (Workset.init (e, h_t, v_t, subst)))
   | InsertBranch (l, (p, e)) -> BatSet.map (fun e -> InsertBranch (l, (p, e))) (work call_temps (Workset.init (e, h_t, v_t, subst)))
-  | _ -> BatSet.singleton e_temp
+  | _ -> BatSet.singleton temp

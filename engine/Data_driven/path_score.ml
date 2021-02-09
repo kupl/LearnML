@@ -54,8 +54,8 @@ module Z3_Translator = struct
   let sort_to_symbol sort = Z3.Sort.get_name sort
   let counter = ref 0
   let new_counter () = (counter := !counter + 1); !counter
-  (* context => if the formula is too hard to solve in 0.05 sec, fail to find a counter example *)
-  let new_ctx () = mk_context [("timeout", "50"); ]
+  (* context => if the formula is too hard to solve in 0.01 sec, fail to find a counter example *)
+  let new_ctx () = mk_context [("timeout", "10"); ]
 
   (* sort *)
   let int_sort ctx = Z3.Arithmetic.Integer.mk_sort ctx
@@ -391,16 +391,18 @@ end
 
 let check_sat : CtorTable.t -> path -> bool
 = fun ctor_table path ->
-  let ctx = Z3_Translator.new_ctx () in
-  let ctor_map = Z3_Translator.init_ctor_map ctx ctor_table BatMap.empty in
-  let ctor_map = Z3_Translator.apply_recursive_datatype ctx ctor_table ctor_map in
-  let solver = Z3.Solver.mk_solver ctx None in
-  let (id, eqns) = Z3_Translator.translate ctor_map ctx path in
-  let eqns = (Z3_Translator.mk_eq ctx id (Z3.Boolean.mk_true ctx))::eqns in
-  let _ = Z3.Solver.add solver eqns in
-  (* let _ = print_endline (string_of_path path) in *)
-  (* print_endline (Z3.Solver.to_string solver); *)
-  match (Z3.Solver.check solver []) with
-  | UNSATISFIABLE -> (* print_endline ("UNSAT"); *) false
-  | UNKNOWN -> (* print_endline ("UNSAT"); *) false
-  | SATISFIABLE -> (* print_endline ("SAT"); *) true
+  try
+    let ctx = Z3_Translator.new_ctx () in
+    let ctor_map = Z3_Translator.init_ctor_map ctx ctor_table BatMap.empty in
+    let ctor_map = Z3_Translator.apply_recursive_datatype ctx ctor_table ctor_map in
+    let solver = Z3.Solver.mk_solver ctx None in
+    let (id, eqns) = Z3_Translator.translate ctor_map ctx path in
+    let eqns = (Z3_Translator.mk_eq ctx id (Z3.Boolean.mk_true ctx))::eqns in
+    let _ = Z3.Solver.add solver eqns in
+    (* let _ = print_endline (string_of_path path) in *)
+    (* print_endline (Z3.Solver.to_string solver); *)
+    match (Z3.Solver.check solver []) with
+    | UNSATISFIABLE -> (* print_endline ("UNSAT"); *) false
+    | UNKNOWN -> (* print_endline ("UNSAT"); *) false
+    | SATISFIABLE -> (* print_endline ("SAT"); *) true
+  with _ -> false
