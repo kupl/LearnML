@@ -1,8 +1,0 @@
-(* problem 6 완료 *)
-
-let rec drop : 'a list -> int -> 'a list
-= fun l n -> 
-match l with
- [] -> l
-| hd::tl -> if n>=1 then drop tl (n-1) else l
-;;

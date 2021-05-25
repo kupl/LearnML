@@ -1,1 +1,0 @@
-(* problem 5*) let rec dfact : int -> int = fun n -> if (n mod 2 = 0) && (n > 2) then n * dfact (n-2) else if (n mod 2 = 1) && (n > 1) then n * dfact (n-2) else if n = 2 then 2 else if n = 1 then 1 else failwith "failure";;

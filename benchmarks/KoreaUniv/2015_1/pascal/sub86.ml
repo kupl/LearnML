@@ -1,1 +1,0 @@
-(* Problem 1 *)let rec pascal (x, y) =if (x>1) && (y>0) && (y<x) then pascal (x-1, y-1) + pascal (x-1, y) else 1
