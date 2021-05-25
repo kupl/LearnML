@@ -160,7 +160,11 @@ dmypy.json
 # pytype static type analyzer
 .pytype/
 
+# Evaluation log
+script/
+
 # Log files
 *.txt
+
 
 # End of https://www.toptal.com/developers/gitignore/api/ocaml,python
