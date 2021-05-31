@@ -305,7 +305,7 @@ let rec partial_eval_exp : symbolic_env -> lexp -> symbolic_value
   let sv = 
     match exp with 
     (* Const *)
-    | SStr _ | SInt _ -> fresh_symbol ()
+    | Hole n -> fresh_symbol ()
     | EUnit -> Unit
     | Const n -> Int n
     | TRUE -> Bool true
@@ -316,7 +316,6 @@ let rec partial_eval_exp : symbolic_env -> lexp -> symbolic_value
     | ETuple es -> Tuple (List.map (partial_eval_exp env) es)
     | ECtor (x, es) -> Ctor (x, List.map (partial_eval_exp env) es)
     | Raise e -> Exn (partial_eval_exp env e)
-    | Hole n -> fresh_symbol ()
     | EFun (arg, e) -> Fun (arg, e, env)
     (* Unary Operator *)
     | MINUS e -> Minus (partial_eval_exp env e)
@@ -435,7 +434,7 @@ let rec partial_eval_exp : symbolic_env -> lexp -> symbolic_value
       | Symbol _ -> fresh_symbol () (* ??? *)
       | _ -> raise (Failure "function_call error")
       end
-    (*| SInt _ -> raise (Failure "unexpected input")*) (* What does the SInt mean? *)
+    | _ -> raise (Failure ("Unexpected input"))
     in 
     normalize sv
 

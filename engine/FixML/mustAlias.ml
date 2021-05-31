@@ -179,7 +179,7 @@ module Sem : S = struct
 		| EFun (a, e) ->
 			let s = kill_arg a s in
 			analysis_exp s e
-		| ELet (f, is_rec, args, typ, e1, e2) -> (* TODO *)
+		| ELet (f, is_rec, args, typ, e1, e2) -> 
 			Map.union (analysis_exp s e1)
 			(
 				if (args != []) then analysis_exp s e2 
@@ -189,7 +189,7 @@ module Sem : S = struct
 					let s = closure s in
 					analysis_exp s e2
 			)
-		| EBlock (is_rec, bindings, e2) -> (* TODO *)
+		| EBlock (is_rec, bindings, e2) -> 
 			let (alias_info, s) = list_fold( fun (f, is_rec, args, typ, e) (map, s) ->
 				if (args != []) then (map,s) 
 				else
@@ -209,6 +209,7 @@ module Sem : S = struct
 					Map.union (analysis_exp s exp) acc
 				) bs empty_alias
 			)
+		| _ -> empty_alias (* TODO *)
 
 	let rec analysis_decl : decl -> env -> env
 	= fun decl (s,map) ->
