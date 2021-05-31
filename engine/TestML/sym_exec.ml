@@ -1,6 +1,6 @@
 open Lang
 open Util
-open Symbol_lang2
+open Test_lang
 open Thread
 open Event
 
@@ -32,58 +32,58 @@ module Executor = struct
 
 	let rec pattern_match : symbolic_value -> pat -> bool
 	= fun sv p ->
-	  match (sv, p) with
-	  | Int n1, PInt n2 -> n1 = n2
-	  | Bool b1, PBool b2 -> b1 = b2
-	  | List l1, PList l2 | Tuple l1, PTuple l2 -> pattern_match_list l1 l2
-	  | Ctor (x1, l1), PCtor (x2, l2) -> (x1 = x2) && pattern_match_list l1 l2
-	  | List (vhd::vtl), PCons (phd, ptl) -> (pattern_match vhd phd) && (pattern_match (List vtl) ptl)
-	  | ASymbol _, PInt _ | Aop _, PInt _ | Minus _, PInt _ | Not _, PBool _ | Bop _, PBool _ | ABop _, PBool _ | EQop _, PBool _ -> true
-	  | _, PVar _ | _, PUnder -> true
-	  | _, Pats pl -> raise (Failure "Invalid pattern type")
-	  | _ -> false
+		match (sv, p) with
+		| Int n1, PInt n2 -> n1 = n2
+		| Bool b1, PBool b2 -> b1 = b2
+		| List l1, PList l2 | Tuple l1, PTuple l2 -> pattern_match_list l1 l2
+		| Ctor (x1, l1), PCtor (x2, l2) -> (x1 = x2) && pattern_match_list l1 l2
+		| List (vhd::vtl), PCons (phd, ptl) -> (pattern_match vhd phd) && (pattern_match (List vtl) ptl)
+		| ASymbol _, PInt _ | Aop _, PInt _ | Minus _, PInt _ | Not _, PBool _ | Bop _, PBool _ | ABop _, PBool _ | EQop _, PBool _ -> true
+		| _, PVar _ | _, PUnder -> true
+		| _, Pats pl -> raise (Failure "Invalid pattern type")
+		| _ -> false
 	
 	and pattern_match_list : symbolic_value list -> pat list -> bool
 	= fun svs ps -> try List.for_all2 pattern_match svs ps with _ -> false
-  
-  let rec has_symbol : symbolic_value -> bool
+	
+	let rec has_symbol : symbolic_value -> bool
  	= fun sv ->
  		match sv with
-	  | SSymbol _ | ASymbol _ -> true
-	  | List svs | Tuple svs | Ctor (_, svs) -> List.exists has_symbol svs
-	  | Minus sv | Not sv -> has_symbol sv
-	  | Aop (_, sv1, sv2) | Bop (_, sv1, sv2) | ABop (_, sv1, sv2) | EQop (_, sv1, sv2) 
-	  | Cons (sv1, sv2) | Append (sv1, sv2) | Strcon (sv1, sv2) -> has_symbol sv1 || has_symbol sv2
-	  | _ -> false
+		| SSymbol _ | ASymbol _ -> true
+		| List svs | Tuple svs | Ctor (_, svs) -> List.exists has_symbol svs
+		| Minus sv | Not sv -> has_symbol sv
+		| Aop (_, sv1, sv2) | Bop (_, sv1, sv2) | ABop (_, sv1, sv2) | EQop (_, sv1, sv2) 
+		| Cons (sv1, sv2) | Append (sv1, sv2) | Strcon (sv1, sv2) -> has_symbol sv1 || has_symbol sv2
+		| _ -> false
 
-  let rec pat_has_int : pat -> bool
-  = fun p -> 
-  	match p with
-  	| PInt _ -> true
-  	| PList ps | PTuple ps | PCtor (_, ps) | Pats ps -> List.exists pat_has_int ps
-  	| PCons (phd, ptl) -> pat_has_int phd || pat_has_int ptl
-  	| _ -> false
+	let rec pat_has_int : pat -> bool
+	= fun p -> 
+		match p with
+		| PInt _ -> true
+		| PList ps | PTuple ps | PCtor (_, ps) | Pats ps -> List.exists pat_has_int ps
+		| PCons (phd, ptl) -> pat_has_int phd || pat_has_int ptl
+		| _ -> false
 
-  let rec gen_matched_value : symbolic_value -> pat -> symbolic_value
-  = fun sv p ->
-  	match (sv, p) with
-	  | Int _, PInt n2 | ASymbol _, PInt n2 | Aop _, PInt n2 | Minus _, PInt n2 -> Int n2
-	  | Bool _, PBool b2 | Not _, PBool b2 | Bop _, PBool b2 | ABop _, PBool b2 | EQop _, PBool b2-> Bool b2
-	  | List svs, PList ps -> List (List.map2 gen_matched_value svs ps)
-	  | Tuple svs, PTuple ps -> Tuple (List.map2 gen_matched_value svs ps)
-	  | Ctor (x1, svs), PCtor (x2, ps) -> Ctor (x2 , List.map2 gen_matched_value svs ps)
-	  | List (vhd::vtl), PCons (phd, ptl) -> Cons (gen_matched_value vhd phd, (gen_matched_value (List vtl) ptl))
-	  | _, PVar _ | _, PUnder -> sv
-	  | _ -> raise (Failure "Invalid pattern type")
+	let rec gen_matched_value : symbolic_value -> pat -> symbolic_value
+	= fun sv p ->
+		match (sv, p) with
+		| Int _, PInt n2 | ASymbol _, PInt n2 | Aop _, PInt n2 | Minus _, PInt n2 -> Int n2
+		| Bool _, PBool b2 | Not _, PBool b2 | Bop _, PBool b2 | ABop _, PBool b2 | EQop _, PBool b2-> Bool b2
+		| List svs, PList ps -> List (List.map2 gen_matched_value svs ps)
+		| Tuple svs, PTuple ps -> Tuple (List.map2 gen_matched_value svs ps)
+		| Ctor (x1, svs), PCtor (x2, ps) -> Ctor (x2 , List.map2 gen_matched_value svs ps)
+		| List (vhd::vtl), PCons (phd, ptl) -> Cons (gen_matched_value vhd phd, (gen_matched_value (List vtl) ptl))
+		| _, PVar _ | _, PUnder -> sv
+		| _ -> raise (Failure "Invalid pattern type")
 
-  (* Environment update *)
+	(* Environment update *)
 	let rec func_binding : arg list -> lexp -> lexp 
-  = fun xs e -> 
-    match xs with
-    | [] -> e
-    | hd::tl -> (gen_label (), EFun (hd, func_binding tl e))  
+	= fun xs e -> 
+		match xs with
+		| [] -> e
+		| hd::tl -> (gen_label (), EFun (hd, func_binding tl e))	
 
-  let flat_sym_formula : sym_formula -> sym_formula list
+	let flat_sym_formula : sym_formula -> sym_formula list
 	= fun psi ->
 		let flat_list = BatSet.fold (fun (pc, sv) psis ->
 			match sv with
@@ -136,8 +136,8 @@ module Executor = struct
 		| _, PUnit | _, PInt _ | _, PBool _ | _, PUnder -> env
 		| _, PVar x -> extend_env (x, gen_sym_state (pc, sv)) env
 		| List svs, PList ps | Tuple svs, PTuple ps | Ctor (_, svs), PCtor (_, ps) -> pat_list_binding env pc ps svs
-	  | List (vhd::vtl), PCons (phd, ptl) -> pat_binding (pat_binding env pc phd vhd) pc ptl (List vtl)
-	  | Cons (vhd, vtl), PCons (phd, ptl) -> pat_binding (pat_binding env pc phd vhd) pc ptl vtl
+		| List (vhd::vtl), PCons (phd, ptl) -> pat_binding (pat_binding env pc phd vhd) pc ptl (List vtl)
+		| Cons (vhd, vtl), PCons (phd, ptl) -> pat_binding (pat_binding env pc phd vhd) pc ptl vtl
 		| _, Pats ps -> pat_binding env pc (List.hd ps) sv (* TODO => validitiy of patterns *)
 		| _ -> raise (Failure ("Pattern binding failure " ^ Print.pat_to_string p ^ ", " ^ symbol_to_string sv))
 
@@ -151,15 +151,15 @@ module Executor = struct
 			let rec symval_is_fun : symbolic_value -> bool
 			= fun sv ->
 				match sv with
-			  | Minus sv | Not sv -> symval_is_fun sv 
-			  | Aop (_, sv1, sv2) | Bop (_, sv1, sv2) | ABop (_, sv1, sv2) | EQop (_, sv1, sv2)
-			  | Cons (sv1, sv2) | Append (sv1, sv2) | Strcon (sv1, sv2) -> symval_is_fun sv1 || symval_is_fun sv2
-			  | List vs | Tuple vs | Ctor (_, vs) -> List.exists symval_is_fun vs
-			  | Fun _ | FunRec _ | FunBlock _ -> true
-			  | _ -> false
+				| Minus sv | Not sv -> symval_is_fun sv 
+				| Aop (_, sv1, sv2) | Bop (_, sv1, sv2) | ABop (_, sv1, sv2) | EQop (_, sv1, sv2)
+				| Cons (sv1, sv2) | Append (sv1, sv2) | Strcon (sv1, sv2) -> symval_is_fun sv1 || symval_is_fun sv2
+				| List vs | Tuple vs | Ctor (_, vs) -> List.exists symval_is_fun vs
+				| Fun _ | FunRec _ | FunBlock _ -> true
+				| _ -> false
 			in symval_is_fun sv
 		) psi
-	  
+		
 	let rec update_func_env : symbolic_env -> sym_formula -> sym_formula
 	= fun env psi ->
 		BatSet.map (fun (pc, sv) -> 
@@ -168,23 +168,23 @@ module Executor = struct
 				match sv with
 				| Minus sv -> Minus (update_symval_func_env sv)
 				| Not sv -> Not (update_symval_func_env sv)
-			  | Aop (op, sv1, sv2) -> Aop (op, update_symval_func_env sv1, update_symval_func_env sv2)
-			  | Bop (op, sv1, sv2) -> Bop (op, update_symval_func_env sv1, update_symval_func_env sv2)
+				| Aop (op, sv1, sv2) -> Aop (op, update_symval_func_env sv1, update_symval_func_env sv2)
+				| Bop (op, sv1, sv2) -> Bop (op, update_symval_func_env sv1, update_symval_func_env sv2)
 				| ABop (op, sv1, sv2) -> ABop (op, update_symval_func_env sv1, update_symval_func_env sv2)
 				| EQop (op, sv1, sv2) -> EQop (op, update_symval_func_env sv1, update_symval_func_env sv2)
-			  | Cons (sv1, sv2) -> Cons (update_symval_func_env sv1, update_symval_func_env sv2)
-			  | Append (sv1, sv2) -> Append (update_symval_func_env sv1, update_symval_func_env sv2)
-			  | Strcon (sv1, sv2) -> Strcon (update_symval_func_env sv1, update_symval_func_env sv2)
-			  | List svs -> List (List.map update_symval_func_env svs)
-			  | Tuple svs -> Tuple (List.map update_symval_func_env svs)
-			  | Ctor (x, svs) -> Ctor (x, List.map update_symval_func_env svs)
-			  | Fun (x, e, env') -> Fun (x, e, env)
-			  | FunRec (f, x, e, env', depth) -> FunRec (f, x, e, env, depth)
-			  | FunBlock (f, mappings) -> 
-			    let (xs, psis) = List.split mappings in
-			    let psis = List.map (fun psi -> update_func_env env psi) psis in
-			    FunBlock (f, List.combine xs psis)
-			  | _ -> sv
+				| Cons (sv1, sv2) -> Cons (update_symval_func_env sv1, update_symval_func_env sv2)
+				| Append (sv1, sv2) -> Append (update_symval_func_env sv1, update_symval_func_env sv2)
+				| Strcon (sv1, sv2) -> Strcon (update_symval_func_env sv1, update_symval_func_env sv2)
+				| List svs -> List (List.map update_symval_func_env svs)
+				| Tuple svs -> Tuple (List.map update_symval_func_env svs)
+				| Ctor (x, svs) -> Ctor (x, List.map update_symval_func_env svs)
+				| Fun (x, e, env') -> Fun (x, e, env)
+				| FunRec (f, x, e, env', depth) -> FunRec (f, x, e, env, depth)
+				| FunBlock (f, mappings) -> 
+					let (xs, psis) = List.split mappings in
+					let psis = List.map (fun psi -> update_func_env env psi) psis in
+					FunBlock (f, List.combine xs psis)
+				| _ -> sv
 			in
 			(pc, update_symval_func_env sv)
 		) psi
@@ -197,288 +197,280 @@ module Executor = struct
 			match sv with
 			| Minus sv -> Minus (decrease_symval_func_depth sv)
 			| Not sv -> Not (decrease_symval_func_depth sv)
-		  | Aop (op, sv1, sv2) -> Aop (op, decrease_symval_func_depth sv1, decrease_symval_func_depth sv2)
-		  | Bop (op, sv1, sv2) -> Bop (op, decrease_symval_func_depth sv1, decrease_symval_func_depth sv2)
+			| Aop (op, sv1, sv2) -> Aop (op, decrease_symval_func_depth sv1, decrease_symval_func_depth sv2)
+			| Bop (op, sv1, sv2) -> Bop (op, decrease_symval_func_depth sv1, decrease_symval_func_depth sv2)
 			| ABop (op, sv1, sv2) -> ABop (op, decrease_symval_func_depth sv1, decrease_symval_func_depth sv2)
 			| EQop (op, sv1, sv2) -> EQop (op, decrease_symval_func_depth sv1, decrease_symval_func_depth sv2)
-		  | Cons (sv1, sv2) -> Cons (decrease_symval_func_depth sv1, decrease_symval_func_depth sv2)
-		  | Append (sv1, sv2) -> Append (decrease_symval_func_depth sv1, decrease_symval_func_depth sv2)
-		  | Strcon (sv1, sv2) -> Strcon (decrease_symval_func_depth sv1, decrease_symval_func_depth sv2)
-		  | List svs -> List (List.map decrease_symval_func_depth svs)
-		  | Tuple svs -> Tuple (List.map decrease_symval_func_depth svs)
-		  | Ctor (x, svs) -> Ctor (x, List.map decrease_symval_func_depth svs)
-		  | FunRec (f, x, e, env', depth) -> FunRec (f, x, e, env', depth - 1)
-		  | _ -> sv
+			| Cons (sv1, sv2) -> Cons (decrease_symval_func_depth sv1, decrease_symval_func_depth sv2)
+			| Append (sv1, sv2) -> Append (decrease_symval_func_depth sv1, decrease_symval_func_depth sv2)
+			| Strcon (sv1, sv2) -> Strcon (decrease_symval_func_depth sv1, decrease_symval_func_depth sv2)
+			| List svs -> List (List.map decrease_symval_func_depth svs)
+			| Tuple svs -> Tuple (List.map decrease_symval_func_depth svs)
+			| Ctor (x, svs) -> Ctor (x, List.map decrease_symval_func_depth svs)
+			| FunRec (f, x, e, env', depth) -> FunRec (f, x, e, env', depth - 1)
+			| _ -> sv
 			in
 			(pc, decrease_symval_func_depth sv)
 		) psi
 		
 	let bind_block : symbolic_env -> path_cond -> (id * sym_formula) list -> symbolic_env
 	= fun env pc mappings ->
-	  let (xs, _) = List.split mappings in
-	  List.fold_left (fun env x -> extend_env (x, gen_sym_state (pc, FunBlock (x, mappings))) env) env xs
+		let (xs, _) = List.split mappings in
+		List.fold_left (fun env x -> extend_env (x, gen_sym_state (pc, FunBlock (x, mappings))) env) env xs
 
 	(* Execution rules *)
 	let rec sym_eval_exp : symbolic_env -> path_cond -> bool -> lexp -> sym_formula
 	= fun env pc mode (l, exp) ->
-		(*
-		let _ =
-			print_endline (string_of_pc pc);
-			print_endline ("Exp : " ^ Print.exp_to_string (l, exp));
-			print_endline (if mode then "Dynamic" else "Static");
-			print_endline ("Time : " ^ string_of_float (Unix.gettimeofday () -. !start_time))
-		in
-		*)
 		let psi =
 			try 
 				if Unix.gettimeofday () -. !start_time > 0.25 then
 					BatSet.singleton (pc, Exn) 
 				else 
 				match exp with 
-			  (* Const *)
-			  | SStr n -> BatSet.singleton (pc, SSymbol n)
+				(* Const *)
+				| SStr n -> BatSet.singleton (pc, SSymbol n)
 			 	| SInt n -> BatSet.singleton (pc, ASymbol n)
-			  | EUnit -> BatSet.singleton (pc, Unit)
-			  | Const n -> BatSet.singleton (pc, Int n)
-			  | TRUE -> BatSet.singleton (pc, Bool true)
-			  | FALSE -> BatSet.singleton (pc, Bool false)
-			  | String str -> BatSet.singleton (pc, Str str)
-			  | EVar x -> BatSet.map (fun (pc', sv') -> (extend_pc pc pc', sv')) (find_env x env)
-			  | EList es -> 
-			  	let psis = sym_eval_exp_list env pc mode es in
-			  	BatSet.map (fun (pc, svs) -> (pc, List svs)) psis
-			  | ETuple es -> 
-			  	let psis = sym_eval_exp_list env pc mode es in
-			  	BatSet.map (fun (pc, svs) -> (pc, Tuple svs)) psis
-			  | ECtor (x, es) -> 
-			  	let psis = sym_eval_exp_list env pc mode es in
-			  	BatSet.map (fun (pc, svs) -> (pc, Ctor (x, svs))) psis
-			  | Raise e -> BatSet.singleton (pc, Exn)
-			  | EFun (arg, e) -> BatSet.singleton (pc, Fun (arg, e, env))
-			  (* Unary operation *)
-			  | MINUS e -> 
-			  	let psi1 = sym_eval_exp env pc mode e in
-			  	BatSet.map (fun (pc, sv) -> (pc, Minus sv)) psi1
-			  | NOT e -> 
-			  	let psi1 = sym_eval_exp env pc mode e in
-			  	BatSet.map (fun (pc, sv) -> (pc, Not sv)) psi1
-			  (* Binary operation *)
-			  | ADD (e1, e2) -> 
-			  	let (psi1, psi2) = (sym_eval_exp env pc mode e1, sym_eval_exp env pc mode e2) in
-			  	sym_eval_aop pc psi1 psi2 Add
-			  | SUB (e1, e2) -> 
-			  	let (psi1, psi2) = (sym_eval_exp env pc mode e1, sym_eval_exp env pc mode e2) in
-			  	sym_eval_aop pc psi1 psi2 Sub
-			  | MUL (e1, e2) -> 
-			  	let (psi1, psi2) = (sym_eval_exp env pc mode e1, sym_eval_exp env pc mode e2) in
-			  	sym_eval_aop pc psi1 psi2 Mul
-			  | DIV (e1, e2) -> 
-			  	let (psi1, psi2) = (sym_eval_exp env pc mode e1, sym_eval_exp env pc mode e2) in
-			  	sym_eval_nonzero_aop pc psi1 psi2 Div
-			  | MOD (e1, e2) -> 
-			  	let (psi1, psi2) = (sym_eval_exp env pc mode e1, sym_eval_exp env pc mode e2) in
-			  	sym_eval_nonzero_aop pc psi1 psi2 Mod
-			  | OR (e1, e2) -> 
-			  	let (psi1, psi2) = (sym_eval_exp env pc mode e1, sym_eval_exp env pc mode e2) in
-			  	sym_eval_bop pc psi1 psi2 Or
-			  | AND (e1, e2) -> 
-			  	let (psi1, psi2) = (sym_eval_exp env pc mode e1, sym_eval_exp env pc mode e2) in
-			  	sym_eval_bop pc psi1 psi2 And
-			  | LESS (e1, e2) -> 
-			  	let (psi1, psi2) = (sym_eval_exp env pc mode e1, sym_eval_exp env pc mode e2) in
-			  	sym_eval_abop pc psi1 psi2 Lt
-			  | LESSEQ (e1, e2) -> 
-			  	let (psi1, psi2) = (sym_eval_exp env pc mode e1, sym_eval_exp env pc mode e2) in
-			  	sym_eval_abop pc psi1 psi2 Le
-			  | LARGER (e1, e2) -> 
-			  	let (psi1, psi2) = (sym_eval_exp env pc mode e1, sym_eval_exp env pc mode e2) in
-			  	sym_eval_abop pc psi1 psi2 Gt
-			  | LARGEREQ (e1, e2) -> 
-			  	let (psi1, psi2) = (sym_eval_exp env pc mode e1, sym_eval_exp env pc mode e2) in
-			  	sym_eval_abop pc psi1 psi2 Ge
-			  | EQUAL (e1, e2) ->
-			  	let (psi1, psi2) = (sym_eval_exp env pc mode e1, sym_eval_exp env pc mode e2) in
-			  	sym_eval_eqop pc psi1 psi2 Eq
-			  | NOTEQ (e1, e2) -> 
-			  	let (psi1, psi2) = (sym_eval_exp env pc mode e1, sym_eval_exp env pc mode e2) in
-			  	sym_eval_eqop pc psi1 psi2 NEq
-			  | DOUBLECOLON (e1, e2) -> 
-			  	let (psi1, psi2) = (sym_eval_exp env pc mode e1, sym_eval_exp env pc mode e2) in
-			  	BatSet.fold (fun (pc1, sv1) acc ->
+				| EUnit -> BatSet.singleton (pc, Unit)
+				| Const n -> BatSet.singleton (pc, Int n)
+				| TRUE -> BatSet.singleton (pc, Bool true)
+				| FALSE -> BatSet.singleton (pc, Bool false)
+				| String str -> BatSet.singleton (pc, Str str)
+				| EVar x -> BatSet.map (fun (pc', sv') -> (extend_pc pc pc', sv')) (find_env x env)
+				| EList es -> 
+					let psis = sym_eval_exp_list env pc mode es in
+					BatSet.map (fun (pc, svs) -> (pc, List svs)) psis
+				| ETuple es -> 
+					let psis = sym_eval_exp_list env pc mode es in
+					BatSet.map (fun (pc, svs) -> (pc, Tuple svs)) psis
+				| ECtor (x, es) -> 
+					let psis = sym_eval_exp_list env pc mode es in
+					BatSet.map (fun (pc, svs) -> (pc, Ctor (x, svs))) psis
+				| Raise e -> BatSet.singleton (pc, Exn)
+				| EFun (arg, e) -> BatSet.singleton (pc, Fun (arg, e, env))
+				(* Unary operation *)
+				| MINUS e -> 
+					let psi1 = sym_eval_exp env pc mode e in
+					BatSet.map (fun (pc, sv) -> (pc, Minus sv)) psi1
+				| NOT e -> 
+					let psi1 = sym_eval_exp env pc mode e in
+					BatSet.map (fun (pc, sv) -> (pc, Not sv)) psi1
+				(* Binary operation *)
+				| ADD (e1, e2) -> 
+					let (psi1, psi2) = (sym_eval_exp env pc mode e1, sym_eval_exp env pc mode e2) in
+					sym_eval_aop pc psi1 psi2 Add
+				| SUB (e1, e2) -> 
+					let (psi1, psi2) = (sym_eval_exp env pc mode e1, sym_eval_exp env pc mode e2) in
+					sym_eval_aop pc psi1 psi2 Sub
+				| MUL (e1, e2) -> 
+					let (psi1, psi2) = (sym_eval_exp env pc mode e1, sym_eval_exp env pc mode e2) in
+					sym_eval_aop pc psi1 psi2 Mul
+				| DIV (e1, e2) -> 
+					let (psi1, psi2) = (sym_eval_exp env pc mode e1, sym_eval_exp env pc mode e2) in
+					sym_eval_nonzero_aop pc psi1 psi2 Div
+				| MOD (e1, e2) -> 
+					let (psi1, psi2) = (sym_eval_exp env pc mode e1, sym_eval_exp env pc mode e2) in
+					sym_eval_nonzero_aop pc psi1 psi2 Mod
+				| OR (e1, e2) -> 
+					let (psi1, psi2) = (sym_eval_exp env pc mode e1, sym_eval_exp env pc mode e2) in
+					sym_eval_bop pc psi1 psi2 Or
+				| AND (e1, e2) -> 
+					let (psi1, psi2) = (sym_eval_exp env pc mode e1, sym_eval_exp env pc mode e2) in
+					sym_eval_bop pc psi1 psi2 And
+				| LESS (e1, e2) -> 
+					let (psi1, psi2) = (sym_eval_exp env pc mode e1, sym_eval_exp env pc mode e2) in
+					sym_eval_abop pc psi1 psi2 Lt
+				| LESSEQ (e1, e2) -> 
+					let (psi1, psi2) = (sym_eval_exp env pc mode e1, sym_eval_exp env pc mode e2) in
+					sym_eval_abop pc psi1 psi2 Le
+				| LARGER (e1, e2) -> 
+					let (psi1, psi2) = (sym_eval_exp env pc mode e1, sym_eval_exp env pc mode e2) in
+					sym_eval_abop pc psi1 psi2 Gt
+				| LARGEREQ (e1, e2) -> 
+					let (psi1, psi2) = (sym_eval_exp env pc mode e1, sym_eval_exp env pc mode e2) in
+					sym_eval_abop pc psi1 psi2 Ge
+				| EQUAL (e1, e2) ->
+					let (psi1, psi2) = (sym_eval_exp env pc mode e1, sym_eval_exp env pc mode e2) in
+					sym_eval_eqop pc psi1 psi2 Eq
+				| NOTEQ (e1, e2) -> 
+					let (psi1, psi2) = (sym_eval_exp env pc mode e1, sym_eval_exp env pc mode e2) in
+					sym_eval_eqop pc psi1 psi2 NEq
+				| DOUBLECOLON (e1, e2) -> 
+					let (psi1, psi2) = (sym_eval_exp env pc mode e1, sym_eval_exp env pc mode e2) in
+					BatSet.fold (fun (pc1, sv1) acc ->
 						let psi = BatSet.fold (fun (pc2, sv2) acc2 ->
 							BatSet.add (extend_pc pc (extend_pc pc1 pc2), Cons (sv1, sv2)) acc2
 						) psi2 BatSet.empty 
 						in 
 						BatSet.union psi acc
 					) psi1 BatSet.empty
-			  | AT (e1, e2) -> 
-			  	let (psi1, psi2) = (sym_eval_exp env pc mode e1, sym_eval_exp env pc mode e2) in
-			  	BatSet.fold (fun (pc1, sv1) acc ->
+				| AT (e1, e2) -> 
+					let (psi1, psi2) = (sym_eval_exp env pc mode e1, sym_eval_exp env pc mode e2) in
+					BatSet.fold (fun (pc1, sv1) acc ->
 						let psi = BatSet.fold (fun (pc2, sv2) acc2 ->
 							BatSet.add (extend_pc pc (extend_pc pc1 pc2), Append (sv1, sv2)) acc2
 						) psi2 BatSet.empty 
 						in 
 						BatSet.union psi acc
 					) psi1 BatSet.empty
-			  | STRCON (e1,e2) -> 
-			  	let (psi1, psi2) = (sym_eval_exp env pc mode e1, sym_eval_exp env pc mode e2) in
-			  	BatSet.fold (fun (pc1, sv1) acc ->
+				| STRCON (e1,e2) -> 
+					let (psi1, psi2) = (sym_eval_exp env pc mode e1, sym_eval_exp env pc mode e2) in
+					BatSet.fold (fun (pc1, sv1) acc ->
 						let psi = BatSet.fold (fun (pc2, sv2) acc2 ->
 							BatSet.add (extend_pc pc (extend_pc pc1 pc2), Strcon (sv1, sv2)) acc2
 						) psi2 BatSet.empty 
 						in 
 						BatSet.union psi acc
 					) psi1 BatSet.empty
-			  | IF (e1, e2, e3) ->
-			  	let psi1 = sym_eval_exp env pc mode e1 in
-			  	BatSet.fold (fun (pc1, sv1) psi ->
-			  		let psi' =
-			  			(* If branch is deterministic execute one of them *)
-				  		if sv1 = Bool true then
-			    			let pc = extend_pc pc (extend_pc pc1 (gen_pc sv1)) in
-			    			sym_eval_exp env pc mode e2
-				  		else if sv1 = Bool false then
-			    			let pc = extend_pc pc (extend_pc pc1 (gen_pc (Not sv1))) in
-			    			sym_eval_exp env pc mode e3
-				  		else 
-				  			(* Execute both branches with bounded loop boundary *)
-				  			let pc2 = extend_pc pc (extend_pc pc1 (gen_pc sv1)) in
-			    			let psi2 = sym_eval_exp env pc2 false e2 in
-			    			let pc3 = extend_pc pc (extend_pc pc1 (gen_pc (Not sv1))) in
-			    			let psi3 = sym_eval_exp env pc3 false e3 in
-			    			BatSet.union psi2 psi3
-				  	in
-				  	BatSet.union psi' psi
-			  	) psi1 BatSet.empty
-			  | EMatch (e, bs) -> 
-			  	let psi1 = sym_eval_exp env pc mode e in
-			  	BatSet.fold (fun (pc, sv) psi ->
-			  		let bs = List.filter (fun (p, e') -> pattern_match sv p) (flatten_branch bs) in	
-			  		let psi' =
-			  			if List.length bs = 0 then 
-			  				(* Pattern Match Fail *)
-			  				(*raise (Failure ("Symbol : " ^ symbol_to_string sv ^ " Pattern matching failure"))*)
-			  				BatSet.singleton (pc, Exn)
-				  		else if not (has_symbol sv) || List.for_all (fun (p, e') -> not (pat_has_int p)) bs then
-			  				(* If match with only one branch or only matched with wildcards => concrete execution *)
-				  			let (p, e') = List.hd bs in
-				  			let sv' = gen_matched_value sv p in
-				  			let pc = extend_pc pc (gen_pc (EQop (Eq, sv, sv'))) in
-				  			sym_eval_exp (pat_binding env pc p sv') pc mode e'
-				  		else
-				  			(* If not execute all matched branchese with bounded loop boundary *)
-				  			let (psi, _) = List.fold_left (fun (psis, ps) (p, e') ->
-				  				let pc = List.fold_left (fun pc p -> 
-				  					let sv' = gen_matched_value sv p in
-				  					extend_pc pc (gen_pc (EQop (NEq, sv, sv')))
-				  				) pc ps 
-				  				in
-				  				let sv' = gen_matched_value sv p in
-				  				let pc = extend_pc pc (gen_pc (EQop (Eq, sv, sv'))) in
-				  				let psi = sym_eval_exp (pat_binding env pc p sv') pc false e' in
-				  				(BatSet.union psi psis, p::ps)
-				  			) (BatSet.empty, []) bs
-				  			in
-				  			psi 
-				  	in
-				  	BatSet.union psi' psi
-			  	) psi1 BatSet.empty
-			  | ELet (f, is_rec, args, typ, e1, e2) -> 
-			  	begin match args with
-			  	| [] ->
-			  		let psi1 = sym_eval_exp env pc mode e1 in
-			  		if is_rec then
-		          begin match f with
-		          | BindOne f ->
-		          	let psi1 = BatSet.map (fun (pc1, sv1) -> 
-		          		match sv1 with
-		          		| Fun (x, e, env') -> (pc1, FunRec (f, x, e, env', !k_bound))
-		          		| _ -> (pc1, sv1)
-		          	) psi1 
-		          	in
-		          	sym_eval_exp (extend_env (f, psi1) env) pc mode e2
-		          | _ -> raise (Failure "Only variables are allowed as left-hand side of `let rec'")
-		          end
-		        else 
-		        	let pc = if BatSet.cardinal psi1 = 1 then BatSet.fold (fun (pc1, sv1) pc -> extend_pc pc1 pc) psi1 pc else pc in
-		        	sym_eval_exp (let_binding env f psi1) pc mode e2
-			  	| _ ->
-				  	let x = List.hd args in
-				  	let vfunc = 
-						  if is_rec then
-					      begin match f with
-					      | BindOne f -> BatSet.singleton (pc, FunRec (f, x, (func_binding (List.tl args) e1), env, !k_bound))
-					      | _ -> raise (Failure "Only variables are allowed as left-hand side of `let rec'")
-					      end
-					    else BatSet.singleton (pc, Fun (x, (func_binding (List.tl args) e1), env))  
-					   in
-					   sym_eval_exp (let_binding env f vfunc) pc mode e2
+				| IF (e1, e2, e3) ->
+					let psi1 = sym_eval_exp env pc mode e1 in
+					BatSet.fold (fun (pc1, sv1) psi ->
+						let psi' =
+							(* If branch is deterministic execute one of them *)
+							if sv1 = Bool true then
+								let pc = extend_pc pc (extend_pc pc1 (gen_pc sv1)) in
+								sym_eval_exp env pc mode e2
+							else if sv1 = Bool false then
+								let pc = extend_pc pc (extend_pc pc1 (gen_pc (Not sv1))) in
+								sym_eval_exp env pc mode e3
+							else 
+								(* Execute both branches with bounded loop boundary *)
+								let pc2 = extend_pc pc (extend_pc pc1 (gen_pc sv1)) in
+								let psi2 = sym_eval_exp env pc2 false e2 in
+								let pc3 = extend_pc pc (extend_pc pc1 (gen_pc (Not sv1))) in
+								let psi3 = sym_eval_exp env pc3 false e3 in
+								BatSet.union psi2 psi3
+						in
+						BatSet.union psi' psi
+					) psi1 BatSet.empty
+				| EMatch (e, bs) -> 
+					let psi1 = sym_eval_exp env pc mode e in
+					BatSet.fold (fun (pc, sv) psi ->
+						let bs = List.filter (fun (p, e') -> pattern_match sv p) (flatten_branch bs) in	
+						let psi' =
+							if List.length bs = 0 then 
+								(* Pattern Match Fail *)
+								(*raise (Failure ("Symbol : " ^ symbol_to_string sv ^ " Pattern matching failure"))*)
+								BatSet.singleton (pc, Exn)
+							else if not (has_symbol sv) || List.for_all (fun (p, e') -> not (pat_has_int p)) bs then
+								(* If match with only one branch or only matched with wildcards => concrete execution *)
+								let (p, e') = List.hd bs in
+								let sv' = gen_matched_value sv p in
+								let pc = extend_pc pc (gen_pc (EQop (Eq, sv, sv'))) in
+								sym_eval_exp (pat_binding env pc p sv') pc mode e'
+							else
+								(* If not execute all matched branchese with bounded loop boundary *)
+								let (psi, _) = List.fold_left (fun (psis, ps) (p, e') ->
+									let pc = List.fold_left (fun pc p -> 
+										let sv' = gen_matched_value sv p in
+										extend_pc pc (gen_pc (EQop (NEq, sv, sv')))
+									) pc ps 
+									in
+									let sv' = gen_matched_value sv p in
+									let pc = extend_pc pc (gen_pc (EQop (Eq, sv, sv'))) in
+									let psi = sym_eval_exp (pat_binding env pc p sv') pc false e' in
+									(BatSet.union psi psis, p::ps)
+								) (BatSet.empty, []) bs
+								in
+								psi 
+						in
+						BatSet.union psi' psi
+					) psi1 BatSet.empty
+				| ELet (f, is_rec, args, typ, e1, e2) -> 
+					begin match args with
+					| [] ->
+						let psi1 = sym_eval_exp env pc mode e1 in
+						if is_rec then
+							begin match f with
+							| BindOne f ->
+								let psi1 = BatSet.map (fun (pc1, sv1) -> 
+									match sv1 with
+									| Fun (x, e, env') -> (pc1, FunRec (f, x, e, env', !k_bound))
+									| _ -> (pc1, sv1)
+								) psi1 
+								in
+								sym_eval_exp (extend_env (f, psi1) env) pc mode e2
+							| _ -> raise (Failure "Only variables are allowed as left-hand side of `let rec'")
+							end
+						else 
+							let pc = if BatSet.cardinal psi1 = 1 then BatSet.fold (fun (pc1, sv1) pc -> extend_pc pc1 pc) psi1 pc else pc in
+							sym_eval_exp (let_binding env f psi1) pc mode e2
+					| _ ->
+						let x = List.hd args in
+						let vfunc = 
+							if is_rec then
+								begin match f with
+								| BindOne f -> BatSet.singleton (pc, FunRec (f, x, (func_binding (List.tl args) e1), env, !k_bound))
+								| _ -> raise (Failure "Only variables are allowed as left-hand side of `let rec'")
+								end
+							else BatSet.singleton (pc, Fun (x, (func_binding (List.tl args) e1), env))	
+						 in
+						 sym_eval_exp (let_binding env f vfunc) pc mode e2
 					 end
-			  | EBlock (is_rec, bindings, e2) -> 
-			  	let env = 
-			      begin match is_rec with
-			      | true ->
-			        let (func_map, const_map) = List.fold_left (
-			          fun (func_map, const_map) (f, is_rec, args, typ, exp) ->
-			          begin match f with 
-			          | BindOne x ->
-			            let psi = sym_eval_exp env pc mode (gen_label(), ELet (BindOne x, is_rec, args, typ, exp, (gen_label (), EVar x))) in
-			            if is_fun psi then ((x, psi)::func_map, const_map) else (func_map, (x, psi)::const_map)
-			          | _ -> raise (Failure "Only variables are allowed as left-hand side of `let rec'")
-			          end
-			        ) ([], []) bindings
-			        in
-			        (* constant mapping *)
-			        let init_env = List.fold_left (fun env (x, psi) -> extend_env (x, psi) env) env const_map in
-			        (* update each function's closure *)
-			        let func_map = List.map (fun (x, psi) -> (x, update_func_env init_env psi)) func_map in
-			        (* block mapping *)
-			        List.fold_left (fun env (x, psi) -> extend_env (x, (gen_sym_state (pc, FunBlock (x, func_map)))) env) init_env func_map
-			      | false ->
-			        let psis = List.map (fun (f, is_rec, args, typ, e) -> sym_eval_exp env pc mode (gen_label (), ELet (f, is_rec, args, typ, e, let_to_exp f))) bindings in
-			        List.fold_left2 (fun env (f, is_rec, args, typ, e) psi -> let_binding env f psi) env bindings psis
-			      end
-			    in sym_eval_exp env pc mode e2
-			  | EApp (e1, e2) ->
-			  	let (psi1, psi2) = (sym_eval_exp env pc mode e1, sym_eval_exp env pc mode e2) in
-			  	(* If e1 or e2 are evaluated statically then change execution mode *)
-			  	let mode = if (BatSet.cardinal psi1) > 1 || (BatSet.cardinal psi2) > 1 then false else mode in
-			    BatSet.fold (fun (pc1, sv1) psis ->
-			    	begin match sv1 with
-			    	| Fun (x, e, env') ->
-			    		let psi = sym_eval_exp (arg_binding env' x psi2) (extend_pc pc pc1) mode e in
+				| EBlock (is_rec, bindings, e2) -> 
+					let env = 
+						begin match is_rec with
+						| true ->
+							let (func_map, const_map) = List.fold_left (
+								fun (func_map, const_map) (f, is_rec, args, typ, exp) ->
+								begin match f with 
+								| BindOne x ->
+									let psi = sym_eval_exp env pc mode (gen_label(), ELet (BindOne x, is_rec, args, typ, exp, (gen_label (), EVar x))) in
+									if is_fun psi then ((x, psi)::func_map, const_map) else (func_map, (x, psi)::const_map)
+								| _ -> raise (Failure "Only variables are allowed as left-hand side of `let rec'")
+								end
+							) ([], []) bindings
+							in
+							(* constant mapping *)
+							let init_env = List.fold_left (fun env (x, psi) -> extend_env (x, psi) env) env const_map in
+							(* update each function's closure *)
+							let func_map = List.map (fun (x, psi) -> (x, update_func_env init_env psi)) func_map in
+							(* block mapping *)
+							List.fold_left (fun env (x, psi) -> extend_env (x, (gen_sym_state (pc, FunBlock (x, func_map)))) env) init_env func_map
+						| false ->
+							let psis = List.map (fun (f, is_rec, args, typ, e) -> sym_eval_exp env pc mode (gen_label (), ELet (f, is_rec, args, typ, e, let_to_exp f))) bindings in
+							List.fold_left2 (fun env (f, is_rec, args, typ, e) psi -> let_binding env f psi) env bindings psis
+						end
+					in sym_eval_exp env pc mode e2
+				| EApp (e1, e2) ->
+					let (psi1, psi2) = (sym_eval_exp env pc mode e1, sym_eval_exp env pc mode e2) in
+					(* If e1 or e2 are evaluated statically then change execution mode *)
+					let mode = if (BatSet.cardinal psi1) > 1 || (BatSet.cardinal psi2) > 1 then false else mode in
+					BatSet.fold (fun (pc1, sv1) psis ->
+						begin match sv1 with
+						| Fun (x, e, env') ->
+							let psi = sym_eval_exp (arg_binding env' x psi2) (extend_pc pc pc1) mode e in
 							BatSet.union psi psis
-			    	| FunRec (f, x, e, env', k) ->
-	    				(* Stop if it over the loop-bound *)
-			    		let psi =
-			    			(* Stop if it over the loop-bound *)
-				    		if k <= 0 then BatSet.singleton (extend_pc pc pc1, Exn)
-				    		else 
-				    		(* If the mode is static execution, decrease the loop depth *)
-				    			sym_eval_exp (extend_env (f, BatSet.singleton (pc1, FunRec (f, x, e, env', if mode then k else k-1))) (arg_binding env' x psi2)) (extend_pc pc pc1) mode e 
-					    in
+						| FunRec (f, x, e, env', k) ->
+							(* Stop if it over the loop-bound *)
+							let psi =
+								(* Stop if it over the loop-bound *)
+								if k <= 0 then BatSet.singleton (extend_pc pc pc1, Exn)
+								else 
+								(* If the mode is static execution, decrease the loop depth *)
+									sym_eval_exp (extend_env (f, BatSet.singleton (pc1, FunRec (f, x, e, env', if mode then k else k-1))) (arg_binding env' x psi2)) (extend_pc pc pc1) mode e 
+							in
 							BatSet.union psi psis
-			    	| FunBlock (f, mappings) -> 
-			    		let psi1 = snd (List.find (fun (f', psi) -> f = f') mappings) in
-			    		BatSet.fold (fun (pc1, sv1) psis ->
-			    			let psi = 
-				    			begin match sv1 with
-				    			| FunRec (f, x, e, env', k) ->
-				    				(* Stop if it over the loop-bound *)
-						    		if k <= 0 then BatSet.singleton (extend_pc pc pc1, Exn)
-						    		else 
-						    		(* If the mode is static execution, decrease the loop depth *)
-						    			let mappings = if mode then mappings else List.map (fun (f', psi) -> if f = f' then (f', decrease_func_depth psi) else (f', psi)) mappings in
-						    			let env' = bind_block env' pc mappings in
-						    			sym_eval_exp (arg_binding env' x psi2) (extend_pc pc pc1) mode e 
-				    			| _ -> raise (Failure "mutually recursive function call error")
-				    			end
-				    		in 
-				    		BatSet.union psi psis
-			    		)	psi1 BatSet.empty 
-			    	| Exn -> BatSet.add (pc, Exn) psis
-			    	| _ -> raise (Failure ("Symbol : " ^ symbol_to_string sv1 ^ " Function Call error"))
-			    	end
+						| FunBlock (f, mappings) -> 
+							let psi1 = snd (List.find (fun (f', psi) -> f = f') mappings) in
+							BatSet.fold (fun (pc1, sv1) psis ->
+								let psi = 
+									begin match sv1 with
+									| FunRec (f, x, e, env', k) ->
+										(* Stop if it over the loop-bound *)
+										if k <= 0 then BatSet.singleton (extend_pc pc pc1, Exn)
+										else 
+										(* If the mode is static execution, decrease the loop depth *)
+											let mappings = if mode then mappings else List.map (fun (f', psi) -> if f = f' then (f', decrease_func_depth psi) else (f', psi)) mappings in
+											let env' = bind_block env' pc mappings in
+											sym_eval_exp (arg_binding env' x psi2) (extend_pc pc pc1) mode e 
+									| _ -> raise (Failure "mutually recursive function call error")
+									end
+								in 
+								BatSet.union psi psis
+							)	psi1 BatSet.empty 
+						| Exn -> BatSet.add (pc, Exn) psis
+						| _ -> raise (Failure ("Symbol : " ^ symbol_to_string sv1 ^ " Function Call error"))
+						end
 					) psi1 BatSet.empty
 				| _ -> raise (Failure "Unexpected Exp while sym_exec")
 			with 
@@ -486,16 +478,6 @@ module Executor = struct
 			| e -> (*print_endline (Printexc.to_string e);*) BatSet.singleton (pc, Exn) (* Stack Overflow or TimeOut *)
 		in 
 		let psi = Formula_normalize.run psi in
-		(*
-		let _ = 
-			print_endline ("*************");
-			print_endline (string_of_pc pc);
-			print_endline ("Exp : " ^ Print.exp_to_string (l, exp));
-			print_endline ("Output : ");
-			print psi;
-		in
-		*)
-		(*print_endline ("Size : " ^ string_of_int (BatSet.cardinal psi));*)
 		psi
 
 	and sym_eval_exp_list : symbolic_env -> path_cond -> bool -> lexp list -> (path_cond * symbolic_value list) BatSet.t
@@ -567,50 +549,50 @@ module Executor = struct
 	let rec sym_eval_decl : symbolic_env -> decl -> symbolic_env
 	= fun env decl ->
 		match decl with
-	  | DLet (f, is_rec, args, typ, e) ->
-	  	let exp = 
-	      begin match f with 
-	      | BindUnder -> e
-	      | _ -> (gen_label(), ELet (f, is_rec, args, typ, e, let_to_exp f))
-	      end
-	    in
-	    let psi = sym_eval_exp env init_pc true exp in
-	    let_binding env f psi
-	  | DBlock (is_rec, bindings) -> 
-	  	begin match is_rec with
-      | true ->
-        let (func_map, const_map) = List.fold_left (
-          fun (func_map, const_map) (f, is_rec, args, typ, exp) ->
-          begin match f with 
-          | BindOne x ->
-            let psi = sym_eval_exp env init_pc true (gen_label(), ELet (BindOne x, is_rec, args, typ, exp, (gen_label (), EVar x))) in
-            if is_fun psi then ((x, psi)::func_map, const_map) else (func_map, (x, psi)::const_map)
-          | _ -> raise (Failure "Only variables are allowed as left-hand side of `let rec'")
-          end
-        ) ([], []) bindings
-        in
-        (* constant mapping *)
-        let init_env = List.fold_left (fun env (x, psi) -> extend_env (x, psi) env) env const_map in
-        (* update each function's closure *)
-        let func_map = List.map (fun (x, psi) -> (x, update_func_env init_env psi)) func_map in
-        (* block mapping *)
-	      List.fold_left (fun env (x, psi) -> extend_env (x, (gen_sym_state (init_pc, FunBlock (x, func_map)))) env) init_env func_map
-      | false ->
-        let envs = List.map (fun binding -> sym_eval_decl env (DLet binding)) bindings in
-        List.fold_left (fun env new_env -> BatMap.union env new_env) env envs
-      end
-	  | _ -> env
+		| DLet (f, is_rec, args, typ, e) ->
+			let exp = 
+				begin match f with 
+				| BindUnder -> e
+				| _ -> (gen_label(), ELet (f, is_rec, args, typ, e, let_to_exp f))
+				end
+			in
+			let psi = sym_eval_exp env init_pc true exp in
+			let_binding env f psi
+		| DBlock (is_rec, bindings) -> 
+			begin match is_rec with
+			| true ->
+				let (func_map, const_map) = List.fold_left (
+					fun (func_map, const_map) (f, is_rec, args, typ, exp) ->
+					begin match f with 
+					| BindOne x ->
+						let psi = sym_eval_exp env init_pc true (gen_label(), ELet (BindOne x, is_rec, args, typ, exp, (gen_label (), EVar x))) in
+						if is_fun psi then ((x, psi)::func_map, const_map) else (func_map, (x, psi)::const_map)
+					| _ -> raise (Failure "Only variables are allowed as left-hand side of `let rec'")
+					end
+				) ([], []) bindings
+				in
+				(* constant mapping *)
+				let init_env = List.fold_left (fun env (x, psi) -> extend_env (x, psi) env) env const_map in
+				(* update each function's closure *)
+				let func_map = List.map (fun (x, psi) -> (x, update_func_env init_env psi)) func_map in
+				(* block mapping *)
+				List.fold_left (fun env (x, psi) -> extend_env (x, (gen_sym_state (init_pc, FunBlock (x, func_map)))) env) init_env func_map
+			| false ->
+				let envs = List.map (fun binding -> sym_eval_decl env (DLet binding)) bindings in
+				List.fold_left (fun env new_env -> BatMap.union env new_env) env envs
+			end
+		| _ -> env
 
 	let run : prog -> lexp list -> sym_formula
 	= fun pgm input ->
-  	let pgm = pgm@(!grading_pgm) in
-  	let _ = start_time := Unix.gettimeofday () in
-  	let init_env = List.fold_left (fun env decl -> sym_eval_decl env decl) empty_env (!library_pgm) in
-  	let _ = start_time := Unix.gettimeofday () in
-  	let env = List.fold_left (fun (env) decl -> sym_eval_decl env decl) init_env pgm in
-  	let exp = appify (gen_label(), (EVar !Options.opt_entry_func)) input in
-  	let _ = start_time := Unix.gettimeofday () in
-  	Formula_normalize.run2 (sym_eval_exp env init_pc true exp)
+		let pgm = pgm@(!grading_pgm) in
+		let _ = start_time := Unix.gettimeofday () in
+		let init_env = List.fold_left (fun env decl -> sym_eval_decl env decl) empty_env (!library_pgm) in
+		let _ = start_time := Unix.gettimeofday () in
+		let env = List.fold_left (fun (env) decl -> sym_eval_decl env decl) init_env pgm in
+		let exp = appify (gen_label(), (EVar !Options.opt_entry_func)) input in
+		let _ = start_time := Unix.gettimeofday () in
+		Formula_normalize.run2 (sym_eval_exp env init_pc true exp)
 end
 
 module VC_generator = struct
