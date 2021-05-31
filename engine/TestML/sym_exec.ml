@@ -1,8 +1,6 @@
 open Lang
 open Util
 open Test_lang
-open Thread
-open Event
 
 module Executor = struct
 	(* Symbolic execution module *)
