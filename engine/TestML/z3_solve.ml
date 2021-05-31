@@ -1,6 +1,6 @@
 open Util
 open Lang
-open Symbol_lang2
+open Test_lang
 open Z3
 open Z3.Solver
 
@@ -48,7 +48,7 @@ module Z3_Translator = struct
   let counter = ref 0
   let new_counter () = (counter := !counter + 1); !counter
   (* context => if the formula is too hard to solve in 0.05 sec, fail to find a counter example *)
-  let new_ctx () = mk_context [("timeout", "50")]
+  let new_ctx () = mk_context [("timeout", "3000")]
 
   (* sort *)
   let int_sort ctx = Z3.Arithmetic.Integer.mk_sort ctx
@@ -86,7 +86,7 @@ module Z3_Translator = struct
   let mk_neq ctx expr1 expr2 = (mk_not ctx (mk_eq ctx expr1 expr2))
   let mk_imply ctx expr1 expr2 = Z3.Boolean.mk_implies ctx expr1 expr2
 
-  (* list  *)
+  (* list *)
   let mk_nil sort = Z3.Z3List.nil sort
   let mk_cons ctx sort expr1 expr2 =
     let cons_func = Z3.Z3List.get_cons_decl sort in
@@ -213,7 +213,7 @@ module Z3_Translator = struct
                 match typ with
                 | TBase x -> if (x = name) then (None) else (Some (typ_to_sort map ctx typ))
                 | _ -> (Some (typ_to_sort map ctx typ))
-              )  ts
+              ) ts
               in
             let int_list = List.map (fun typ -> if typ = TBase name then 0 else 1) ts in
             Z3.Datatype.mk_constructor_s ctx x (Z3.Symbol.mk_string ctx x) symbols sorts int_list

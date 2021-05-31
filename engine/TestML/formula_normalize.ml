@@ -1,6 +1,6 @@
 open Lang
 open Util
-open Symbol_lang2
+open Test_lang
 
 type eq_class = symbolic_value BatSet.t
 (* Normalize the result of symbolic execution *)
@@ -40,7 +40,7 @@ let rec reorder_sym_val : symbolic_value -> symbolic_value
 = fun sv ->
   let rec arg_num : symbolic_value -> int
   = fun sv ->
-    match sv with      
+    match sv with   
     | List svs | Tuple svs | Ctor (_, svs) -> List.fold_left (fun acc sv -> acc + arg_num sv) 0 svs
     | Minus sv | Not sv -> arg_num sv
     | Aop (_, sv1, sv2) | Bop (_, sv1, sv2) | ABop (_, sv1, sv2) | EQop (_, sv1, sv2)
@@ -161,7 +161,7 @@ and normalize_aop : operator -> symbolic_value -> symbolic_value -> symbolic_val
     | Int 1, sv | sv, Int 1 -> sv
     | Int (-1), sv | sv, Int (-1) -> normalize_sym_val (Minus sv)
     | Int n1, Aop (Mul, Int n2, sv') | Int n1, Aop (Mul, sv', Int n2) -> normalize_sym_val (Aop (Mul, Int (n1 * n2), sv'))
-    | Aop (Mul, Int n1, sv'), Int n2 | Aop (Mul, sv', Int n1), Int n2  -> normalize_sym_val (Aop (Mul, Int (n1 * n2), sv'))
+    | Aop (Mul, Int n1, sv'), Int n2 | Aop (Mul, sv', Int n1), Int n2 -> normalize_sym_val (Aop (Mul, Int (n1 * n2), sv'))
     | _ -> Aop (op, sv1, sv2)
     end
   | Div ->
@@ -220,7 +220,7 @@ and normalize_abop : comparator -> symbolic_value -> symbolic_value -> symbolic_
     | Gt -> if n1 = min_int then Bool false else if n1 = max_int then Bool true else ABop (op, sv1, sv2)
     | Le -> if n1 = max_int then Bool false else if n1 = min_int then Bool true else ABop (op, sv1, sv2)
     | Ge -> if n1 = min_int then Bool false else if n1 = max_int then Bool true else ABop (op, sv1, sv2)
-    end  
+    end 
   | _, Int n2 ->
     begin match op with
     | Lt -> if n2 = min_int then Bool false else if n2 = max_int then Bool true else ABop (op, sv1, sv2)
@@ -232,10 +232,10 @@ and normalize_abop : comparator -> symbolic_value -> symbolic_value -> symbolic_
     begin match op with
     | Lt | Gt -> if sv1 = sv2 then Bool false else ABop (op, sv1, sv2)
     | _ -> ABop (op, sv1, sv2)
-    end  
+    end 
 
 and normalize_eqop : eq_operator -> symbolic_value -> symbolic_value -> symbolic_value
-= fun op sv1 sv2 ->  
+= fun op sv1 sv2 -> 
   let sv' = 
     match op with 
     | Eq -> 
@@ -249,7 +249,7 @@ and normalize_eqop : eq_operator -> symbolic_value -> symbolic_value -> symbolic
           normalize_sym_val sv
         with _ -> Bool false)
       | Ctor (x, svs1), Ctor (y, svs2) -> 
-        if x = y then  
+        if x = y then 
           let sv = List.fold_left2 (fun sv sv1 sv2 -> Bop (And, sv, EQop (Eq, sv1, sv2))) (Bool true) svs1 svs2 in
           normalize_sym_val sv
         else Bool false
@@ -266,7 +266,7 @@ and normalize_eqop : eq_operator -> symbolic_value -> symbolic_value -> symbolic
           normalize_sym_val sv
         with _ -> Bool false)
       | Ctor (x, svs1), Ctor (y, svs2) -> 
-        if x = y then  
+        if x = y then 
           let sv = List.fold_left2 (fun sv sv1 sv2 -> Bop (Or, sv, EQop (NEq, sv1, sv2))) (Bool false) svs1 svs2 in
           normalize_sym_val sv
         else Bool true
@@ -437,7 +437,7 @@ let comp_sat_checker2 : comparator -> symbolic_value -> symbolic_value -> bool
     begin match sv1, sv2 with
     | Aop (Add, Int n, sv1), sv2 | Aop (Add, sv1, Int n), sv2 -> sv1 = sv2 && n >= 0 
     | sv1, Aop (Add, Int n, sv2) | sv1, Aop (Add, sv2, Int n) -> sv1 = sv2 && n <= 0
-    | sv1, Aop (Sub, sv2, Int n) -> sv1 = sv2 && n >= 0  
+    | sv1, Aop (Sub, sv2, Int n) -> sv1 = sv2 && n >= 0 
     | _ -> false
     end
   | Le ->
@@ -609,7 +609,7 @@ let rec is_sat_pc2 : path_cond -> path_cond -> bool
                   else 
                     if (BatSet.exists (fun sv'' ->
                       match sv'' with
-                      | EQop (eq, Aop (op, sv1', sv2'), sv3') | EQop (eq, sv3',  Aop (op, sv1', sv2')) ->
+                      | EQop (eq, Aop (op, sv1', sv2'), sv3') | EQop (eq, sv3', Aop (op, sv1', sv2')) ->
                         if sv1 = sv1' && sv2 = sv3' then (Bool false) = normalize_sym_val (EQop (eq, Aop (op, Int n1, sv2'), Int n2))
                         else if sv1 = sv2' && sv2 = sv3' then (Bool false) = normalize_sym_val (EQop (eq, Aop (op, sv1', Int n1), Int n2))
                         else if sv2 = sv1' && sv1 = sv3' then (Bool false) = normalize_sym_val (EQop (eq, Aop (op, Int n2, sv2'), Int n1))
@@ -622,26 +622,8 @@ let rec is_sat_pc2 : path_cond -> path_cond -> bool
                 | ABop (comp, Int n2, sv2) when (sv1 = sv2 && n1 < n2) -> (comp = Gt) || (comp = Ge)
                 | _ -> false
               ) pc') then false else is_sat_pc2 pc pc'
-      
-          (*
-          BatSet.exists (fun sv3' ->
-                    match sv3' with
-                    | EQop (eq, Aop (op, sv1'', sv''), sv2'') | EQop (eq, Aop (op, sv'', sv1''), sv2'')
-                    | EQop (eq, sv2'', Aop (op, sv1'', sv'')) | EQop (eq, sv2'', Aop (op, sv'', sv1'')) ->
-                      let _ = print_endline ("000000") in
-                      let _ = print_endline ("Sv' : " ^ symbol_to_string sv') in
-                      if (sv1' = sv2'') && (sv1 = sv1'') then 
-                        let _ = print_endline ("B1 : " ^ symbol_to_string (EQop (eq, Aop (op, Int n2, sv''), Int n2'))) in
-                        (Bool false) = normalize_sym_val (EQop (eq, Aop (op, Int n2, sv''), Int n2')) 
-                      else if (sv1 = sv2'') && (sv1' = sv1'') then 
-                        let _ = print_endline ("B2 : " ^ symbol_to_string (EQop (eq, Aop (op, Int n2', sv''), Int n2))) in
-                        (Bool false) = normalize_sym_val (EQop (eq, Aop (op, Int n2', sv''), Int n2)) 
-                      else false
-                    | _ -> false
-                  ) pc' 
-          *)
       | _ -> is_sat_pc2 pc pc'
-      end      
+      end   
     | ABop (Gt, sv1, sv2) -> 
       begin match sv1, sv2 with
       | sv1, Int n2 -> if (BatSet.exists (fun sv' -> 
