@@ -15,4 +15,6 @@
 	AndAlso ((True, Not (True))) => false;
 	OrElse ((False, Not (False))) => true;
 	Imply  (False, True) => true;
+	Not (Not (Not (True))) => false;
+	Not (AndAlso ((True, Not (False)))) => false;
 }
