@@ -41,7 +41,7 @@ let rec ae_eval : aexp -> (string * int) list -> int
 	| Times l ->
 		begin 
 			match l with
-			| [] -> 0
+			| [] -> 1
 			| [hd] -> ae_eval hd env
 			| hd::tl -> (ae_eval hd env) * (ae_eval (Times tl) env)
 		end

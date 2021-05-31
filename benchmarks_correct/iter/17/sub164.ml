@@ -1,5 +1,4 @@
-let rec iter (pair : int * ('a -> 'a)) : ('a -> 'a) =
-  let (n,f) = pair in
+let rec iter (n, f) : ('a -> 'a) =
   if n <= 0 then (fun x -> x)
   else (
     let compose f g x = f (g x) in

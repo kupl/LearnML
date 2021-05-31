@@ -14,19 +14,19 @@ and exp =
  
 let rec eval : formula -> bool
    = fun f ->
-       match f with
-       | True -> true
-       | False -> false
-       | Not (a) -> not (eval a)
-       | AndAlso (a, b) -> eval a && eval b
-       | OrElse (a, b) -> eval a || eval b
-       | Imply (a, b) -> if eval a then eval b else true
-       | Equal (a, b) -> a = b
-         
-let rec expr
-		= fun e ->
-       match e with
-       | Num (n) -> n
-       | Plus (e1, e2) -> (expr e1) + (expr  e2)
-       | Minus (e1, e2) -> (expr e1) - (expr  e2)
+         match f with
+         | True -> true
+         | False -> false
+         | Not (a) -> not (eval a)
+         | AndAlso (a, b) -> eval a && eval b
+         | OrElse (a, b) -> eval a || eval b
+         | Imply (a, b) -> if eval a then eval b else true
+         | Equal (a, b) -> a = b
+           
+  let rec expr
+  		= fun e ->
+         match e with
+         | Num (n) -> n
+         | Plus (e1, e2) -> (expr e1) + (expr  e2)
+         | Minus (e1, e2) -> (expr e1) - (expr  e2)
 

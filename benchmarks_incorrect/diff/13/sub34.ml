@@ -46,13 +46,9 @@ let rec minimize_sum lst =
 let rec minimize_times lst =
 	match lst with
 	| [] -> []
-	| hd::tl ->
-		match hd with
-		| Const 1 -> minimize_times tl
-		| Times lst -> lst@(minimize_times tl)
-		| _ -> hd::(minimize_times tl)
-
-
+	| (Const 1)::tl -> minimize_times tl
+	| (Times lst)::tl -> lst@(minimize_times tl)
+	| hd::tl -> hd::(minimize_times tl)
 
 let rec minimize aexp = 
 	match aexp with

@@ -5,8 +5,7 @@ type aexp = Const of int
 	| Times of aexp list
 	| Power of string * int
  let rec diff (aexp, str) =
- 
-	match aexp with
+ 	match aexp with
 	  
 	| Const a -> Const 0
 	| Var b -> if str = b then Const 1

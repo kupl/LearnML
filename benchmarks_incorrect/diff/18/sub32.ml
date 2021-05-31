@@ -24,6 +24,7 @@ and jun : aexp list -> string -> aexp list
           let a = hd and b = tl in
           match b with
             | [] -> [diff (a, x)]
-            | hd::tl -> [diff (a, x)]@[diff (hd, x)]@(jun tl x);;
+            | hd::tl -> [diff (a, x)]@[diff (hd, x)]@(jun tl x)
+            | [] -> [];;
             
 diff(Sum [Power ("x", 2); Times [Const 2; Var "x"]; Const 1], "x");;
