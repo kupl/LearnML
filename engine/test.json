@@ -1,7 +1,0 @@
-{
-    "solutions_path": "../benchmarks_correct/All_diff/",
-    "testcases_path": "../benchmarks_correct/All_diff/testcases",
-    "grading_path" : "../benchmarks_correct/All_diff/grading.ml",
-    "entry" : "grading"
-}
-
