@@ -247,7 +247,6 @@ and get_sub_decl : decl -> label -> lexp option
   | DBlock (_, ds) -> get_sub (List.map (fun d -> DLet d) ds) l 
   | _ -> None
 
-
 (* Hole *)
 let hole_count = ref 0
 let gen_hole : unit -> exp
@@ -267,10 +266,31 @@ let gen_labeled_fhole () = (gen_label (), gen_fhole ())
 let library_pgm : prog ref = ref []
 let grading_pgm : prog ref = ref []
 
+let library_identifier = DExcept ("Library", [])
 let grading_identifier = DExcept ("Grading", [])
 
+let external_var = [ 
+  "assert'"; "invalid_arg"; "failwith"; "__list_hd__"; 
+  "__list_tl__"; "__list_map__"; "__list_mem__"; "__list_exists__";
+  "__list_filter__"; "__list_append__"; "__list_length__";
+  "__list_nth__"; "__list_rev__"; "__list_foldl__"; "__list_foldr__";
+  "__list_rev_map__"; "__list_sort__"; "__list_memq__"; "__list_rev_append__";
+  "__list_map_i__"; "__list_for_all__"; "__list_find__"; "__list_assoc__";
+  "__string_concat__"; "string_of_int"; "max_int"; "min_int";
+  "fst"; "snd"; "max"; "min"; "compare"
+]
+let is_external_var var = List.mem var external_var
+
+let append_library : prog -> prog
+= fun pgm -> !library_pgm@(library_identifier::pgm)
 let append_grading : prog -> prog
 = fun pgm -> pgm@(grading_identifier::!grading_pgm)
+
+let rec remove_library : prog -> prog
+= fun pgm ->
+  match pgm with
+  | [] -> []
+  | hd::tl -> if hd = library_identifier then tl else remove_library tl
 
 let rec remove_grading : prog -> prog
 = fun pgm ->
@@ -454,7 +474,7 @@ let rec update_component : lexp -> lexp
   let l = gen_label () in
   match exp with
   | EUnit | Const _ | TRUE | FALSE | String _ | EVar _ -> (l, exp)
-  | EFun (arg, e) -> (gen_label (), EFun (arg, update_component e))
+  | EFun (arg, e) -> (l, EFun (arg, update_component e))
   | ERef e | EDref e | Raise e | MINUS e | NOT e -> (l, update_unary exp (update_component e))
   | ADD (e1, e2) | SUB (e1, e2) | MUL (e1, e2) | DIV (e1, e2) | MOD (e1, e2) 
   | OR (e1, e2) | AND (e1, e2) | LESS (e1, e2) | LESSEQ (e1, e2) | LARGER (e1, e2) | LARGEREQ (e1, e2) 

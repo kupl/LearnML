@@ -434,5 +434,7 @@ let rec is_solution : prog -> examples -> bool
   List.for_all (fun (input, output) ->
     try
       value_equality (get_output pgm input) output
-    with _ -> false
+    with
+      | EExcept v -> (try (value_equality v output) with _ -> false) 
+      | _ -> false
   ) examples
