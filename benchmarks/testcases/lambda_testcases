@@ -1,0 +1,35 @@
+{
+  V ("X") => false;
+  (C (P ("h", P ("f", P ("y", P ("c", C (C (V "f", V "f"), V "c"))))), V "z")) => false;
+  (C (V "h", C (C (V "f", V "f"), V "y"))) => false;
+  (P ("y", P ("g", C (V "f", V "f")))) => false;
+  (C (C (V "b", P ("c", V "c")), P ("y", P ("c", C (C (V "f", V "f"), V "c"))))) => false;
+  (C (V "h", V "y")) => false;
+  (P ("g", P ("x", V "y"))) => false;
+  (C (P ("y", P ("c", C (C (V "f", V "f"), V "c"))), C (C (V "f", V "f"), V "y"))) => false;
+  (C (P ("f", P ("y", P ("c", C (C (V "f", V "f"), V "c")))), P ("b", C (V "f", V "f")))) => false;
+  (C (C (C (V "z", P ("x", V "y")), P ("y", P ("c", C (C (V "f", V "f"), V "c")))), C (V "x", V "h"))) => false;
+  (P ("h", P ("y", P ("c", C (C (V "f", V "f"), V "c"))))) => false;
+  (P ("c", V "c")) => true;
+  (P ("h", P ("h", P ("f", P ("y", P ("c", C (C (V "f", V "f"), V "c"))))))) => true;
+  (P ("h", P ("f", P ("y", P ("c", C (C (V "f", V "f"), V "c")))))) => true;
+  (P ("h", P ("b", P ("f", P ("y", P ("c", C (C (V "f", V "f"), V "c"))))))) => true;
+  (P ("g", P ("h", P ("f", P ("y", P ("c", C (C (V "f", V "f"), V "c"))))))) => true;
+  (P ("x", P ("c", V "c"))) => true;
+  (P ("b", P ("f", P ("y", P ("c", C (C (V "f", V "f"), V "c")))))) => true;
+  (P ("f", P ("y", P ("c", C (C (V "f", V "f"), V "c"))))) => true;
+  (P ("h", C (P ("x", P ("c", V "c")), V "h"))) => true;
+  (P ("a", P ("b", C(V "a", V "b")))) => true;
+  C ((P (("x", V ("x"))), P (("x", V ("x"))))) => true;
+  C ((P (("x", V ("x"))), V ("x"))) => false;
+  P (("x_0", C ((V ("x_1"), P (("x_1", V ("x_0"))))))) => false;
+  P (("x_1", P (("x_0", C ((V ("x_1"), V ("x_1"))))))) => true;
+  P (("x_0", P (("x_1", P (("x_2", C ((V ("x_0"), V ("x_1"))))))))) => true;
+  P (("x", P (("x", P (("x", V ("x"))))))) => true;
+  P (("x_0", C ((V ("x_1"), P (("x_1", V ("x_1"))))))) => false;
+  P (("x_0", C ((P (("x_1", V ("x_1"))), V ("x_1"))))) => false;
+  P (("x_0", C ((V ("x_0"), V ("x_1"))))) => false;
+  P (("x_1", C ((P (("x_0", C ((V ("x_0"), V ("x_1"))))), V ("x_1"))))) => true;
+  C ((P (("x", V ("x"))), C ((V ("x"), P (("x", V ("x"))))))) => false;
+  C ((C ((V ("x"), P (("x", V ("x"))))), P (("x", V ("x"))))) => false;
+}

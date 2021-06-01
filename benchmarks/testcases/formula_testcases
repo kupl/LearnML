@@ -1,0 +1,20 @@
+{
+	Imply (Not False,Not False) => true;
+	Imply (Not False,AndAlso (True,False)) => false;
+	Imply (False, False) => true;
+	Equal (Minus (Num 5,Num 2),Num 3) => true;
+	Not (Not (Not (Not (Imply (True, True))))) => true;
+	AndAlso (OrElse(True, False), Not (Imply (True, False))) => true;
+	Not (Imply (AndAlso (False, True), OrElse (False, False))) => false;
+	Equal (Plus (Minus (Num 4, Num 5), Minus (Num 1, Num (-1))), Plus (Minus (Num 3, Num (-5)), Plus (Num 4, Num 5))) => false;
+	OrElse (Equal (Minus (Num 3, Num 4), Plus (Num 3, Num 4)), AndAlso (Not (True), True)) => false;
+	AndAlso (AndAlso(True, True), AndAlso (Not (AndAlso (True, False)), Not (OrElse (False, False)))) => true;
+	OrElse (True, True) => true;
+	OrElse (True, Not True) => true;
+	Equal (Num 1, Plus (Num 0, Num 1)) => true;
+	AndAlso ((True, Not (True))) => false;
+	OrElse ((False, Not (False))) => true;
+	Imply  (False, True) => true;
+	Not (Not (Not (True))) => false;
+	Not (AndAlso ((True, Not (False)))) => false;
+}
