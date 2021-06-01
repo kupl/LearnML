@@ -1,8 +1,0 @@
-exception Error of string
-
-let rec sigma f a b = if (a<b) then ((f a) + (sigma f (a+1) b))
-                else if (a=b) then (f a)
-                else (raise (Error ("index error: a shouldn't be larger than b"))) 
-
-let square a = a * a
-let identity a = a
