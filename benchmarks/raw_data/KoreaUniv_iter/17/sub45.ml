@@ -1,1 +1,0 @@
-(* problem 3*) let iter : int * (int -> int) -> (int -> int) = fun (n,f) -> let rec appl n k = if n = 0 then fun x -> k(x) else appl (n-1) (fun x -> f(k(x))) in if n = 0 then fun x -> x+0 else appl (n-1) f;;
