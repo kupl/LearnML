@@ -4,7 +4,7 @@ LearnML is a framework for providing personalized feedbacks on functional progra
 
 * **FixML** ([OOPSLA_18](https://dl.acm.org/doi/10.1145/3276528)) : **search-based** automated feedback generator
 * **TestML** ([OOPSLA_19](https://dl.acm.org/doi/10.1145/3360614)): logical error detector using **counter-example generation**
-* **CAFE** ([FSE_21]): **context-aware** and **data-driven** feedback generator
+* **CAFE** (FSE_21): **context-aware** and **data-driven** feedback generator
 
 All the tools are licensed under the [MIT license](LICENSE.txt).
 
