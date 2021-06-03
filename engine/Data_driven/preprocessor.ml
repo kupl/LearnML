@@ -138,7 +138,7 @@ module Renaming = struct
 
   let count = ref 0
   let flag = ref false
-  let fresh_var () = count := !count + 1; (if !flag then "#s_" else "#v_") ^ (string_of_int !count)
+  let fresh_var () = count := !count + 1; (if !flag then "__s" else "__v") ^ (string_of_int !count)
 
   let rec rename_arg : env -> arg -> env * arg
   = fun env arg ->
@@ -372,7 +372,15 @@ module Renaming = struct
     | Ctor (c, ps) -> Ctor (c, List.map (apply_path env) ps)
     | Var (x, typ) -> Var (apply_env x env, typ)
     | _ -> path
+  
   (* Template restoring *)
+  let apply_template : env -> Repair_template.repair_template ->  Repair_template.repair_template
+  = fun env temp ->
+    match temp with
+    | ModifyExp (l, e) -> ModifyExp (l, apply_exp env e)
+    | InsertBranch (l, (p, e)) -> InsertBranch (l, (apply_pat env p, apply_exp env e))
+    | DeleteBranch (l, (p, e)) -> DeleteBranch (l, (apply_pat env p, apply_exp env e))
+    | InsertFunction ((g, b, args, typ, e), f) -> InsertFunction ((g, b, args, typ, apply_exp env e), apply_env f env) 
 end
 
 let run : prog -> Renaming.env * prog

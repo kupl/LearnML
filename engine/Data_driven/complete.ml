@@ -162,7 +162,7 @@ let get_next_states : Workset.work -> lexp -> Workset.work BatSet.t
   let n = extract_holenum hole in
   let hole_typ = BatMap.find n h_t in
   let hole_env = BatMap.find n v_t in
-  (* if the current hole is a special function call then use the call templates *)
+  (* if the current hole is a special function call then use the function call templates *)
   let comps = BatMap.foldi (fun x t set -> 
     match t with
     | TCtor _ -> set
@@ -204,9 +204,9 @@ let rec work : Workset.t -> lexp BatSet.t
       let new_workset = BatSet.fold Workset.add nextstates remain in
       work new_workset
 
-let rec complete_template : Type.HoleType.t -> Type.VariableType.t -> Type.Subst.t -> repair_template -> repair_templates
-= fun h_t v_t subst temp ->
+let rec complete_template : Type.HoleType.t -> Type.VariableType.t -> Type.Subst.t -> repair_template * string -> repair_templates
+= fun h_t v_t subst (temp, source) ->
   match temp with
-  | ModifyExp (l, e) -> BatSet.map (fun e -> ModifyExp (l, e)) (work (Workset.init (e, h_t, v_t, subst)))
-  | InsertBranch (l, (p, e)) -> BatSet.map (fun e -> InsertBranch (l, (p, e))) (work (Workset.init (e, h_t, v_t, subst)))
-  | _ -> BatSet.singleton temp
+  | ModifyExp (l, e) -> BatSet.map (fun e -> (ModifyExp (l, e), source)) (work (Workset.init (e, h_t, v_t, subst)))
+  | InsertBranch (l, (p, e)) -> BatSet.map (fun e -> (InsertBranch (l, (p, e)), source)) (work (Workset.init (e, h_t, v_t, subst)))
+  | _ -> BatSet.singleton (temp, source)
