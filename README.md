@@ -34,7 +34,7 @@ The VirtualBox image contains the following contents in the directory `~/FSE21_a
 4. `table.py` is a python script for visualizing evaluation result.
 5. `result` contains all results obtained by running `run.py`. Since running the script takes a long time, we also provide the pre-excuted results.
 
-## Reproducing The Results Presented In The Paper
+## Reproducing the results presented in the paper
 Here we explain how to reproduce our main results (i.e., Table1 and Figure6).
 
 ### Table1 and Figure6
