@@ -13,26 +13,20 @@ let path =
 	|[hd] -> "./moduleSpec.ml"
 	|hd::tl -> (path_to_str tl)^"moduleSpec.ml"
 
-
 let opt_solution_filename = ref ""
 let opt_solution_dirname = ref ""
 let opt_submission_filename = ref ""
 let opt_testcases_filename = ref ""
 let opt_grading_filename = ref ""
-let opt_entry_func = ref "f"
+let opt_entry_func = ref ""
 let opt_external_filename = ref path
-let opt_generator = ref ""
 
-let opt_fix = ref false (* FixML *)
+let opt_run = ref false (* Run test cases *)
+let opt_fix = ref false (* FixML or CAFE *)
 let opt_gentest = ref false (* TestML *)
-let opt_dd = ref false (* Data-driven FixML *)
+let opt_prog = ref false (* Program-level SARFGEN *)
+let opt_func = ref false (* Function-level SARFGEN *)
 let opt_preproc = ref false (* Preprocessing solution *)
-
-(* Other experiments *)
-let opt_run = ref false
-let opt_execute = ref false 
-let opt_qcheck = ref false
-let opt_cfg = ref false 
 
 let options =
   [
@@ -43,15 +37,12 @@ let options =
     ("-grading", Arg.String (fun fname -> opt_grading_filename := fname), " Grading filename");
     ("-entry", Arg.String (fun f -> opt_entry_func := f), " Name of the entry function (default: f)");
     ("-external", Arg.String (fun fname -> opt_external_filename := fname), " moduleSpec path");
-    ("-generator", Arg.String (fun fname -> opt_generator := fname), " qcheck_generator path");
     ("-fix", Arg.Set opt_fix, " Fix submission");
     ("-gentest", Arg.Set opt_gentest, " Generate testcases");
-    ("-dd", Arg.Set opt_dd, " Fix submission using solutions");
+    ("-prog", Arg.Set opt_prog, " Fix submission with SARFGEN");
+    ("-func", Arg.Set opt_func, " Fix submission with SARFGEN");
     ("-preproc", Arg.Set opt_preproc, " Conduct preprocessing");
     ("-run", Arg.Set opt_run, " Run submission");
-    ("-execute",Arg.Set opt_execute, " Execute submission");
-    ("-qcheck", Arg.Set opt_qcheck, " Qcheck testing");
-    ("-cfg", Arg.Set opt_cfg, " CFG testing");
   ]
   |> Arg.align
 

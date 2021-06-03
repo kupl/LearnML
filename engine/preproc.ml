@@ -22,10 +22,7 @@ let parse_file : string -> examples * prog
     |> Parser.prog Lexer.token
   with _ -> raise (Failure ("Parsing error : " ^ f))
 
-let read_prog : string -> prog option
-= fun filename -> if Sys.file_exists filename then Some (snd (parse_file filename)) else None 
-
-let read_prog_debug : string -> (string * prog) option
+let read_pgm : string -> (string * prog) option
 = fun filename -> if Sys.file_exists filename then Some (filename, snd (parse_file filename)) else None 
 
 (* Read set of programs from directory *)
@@ -36,38 +33,34 @@ let dir_contents : string -> string list
   |> List.map (Filename.concat dir)
   |> List.sort compare 
 
-let read_pgms : string -> prog list
+let read_pgms : string -> (string * prog) list
 = fun problem ->
   if Sys.file_exists problem then 
-    let dirs = dir_contents problem in
-    let pgms = List.fold_left (fun pgms dir ->
-      if Sys.is_directory dir then
-        let files = dir_contents dir in
-        List.fold_left (fun pgms f -> 
-          match read_prog f with
-          | Some pgm -> pgm::pgms
-          | None -> pgms
-        ) pgms files
-      else pgms
-    ) [] dirs 
+    let (pgms) = List.fold_left (fun pgms f ->
+        match read_pgm f with
+        | Some pgm -> 
+          (* Sort benchmarks by increasing order *)
+          let file_name = 
+            List.hd (List.rev (Str.split (Str.regexp "/+") f)) 
+            |> Str.replace_first (Str.regexp ".ml$") ""
+          in
+          if Str.string_match (Str.regexp "sol+[1-9]*[0-9]$") file_name 0 then
+            let idx = Str.search_forward (Str.regexp "[1-9]*[0-9]$") file_name 0 in
+            let benchmark_number = Str.string_after file_name idx in
+            (int_of_string benchmark_number, pgm)::pgms
+          else
+            (-1, pgm)::pgms
+        | None -> pgms
+      ) [] (dir_contents problem)
     in
-    List.rev pgms
+    List.rev (List.sort compare pgms |> List.map snd)
   else []
 
-let read_pgms_debug : string -> (string * prog) list
- = fun problem ->
-   if Sys.file_exists problem then
-     let dirs = dir_contents problem in
-     let pgms = List.fold_left
-       (fun pgms dir -> if Sys.is_directory dir then
-         let files = dir_contents dir in
-         List.fold_left (fun pgms f ->
-           match read_prog f with
-           | Some pgm -> (f,pgm)::pgms
-           | None -> pgms) pgms files
-         else pgms) [] dirs 
-    in pgms 
-    else []
+let read_external : string -> prog 
+= fun filename -> 
+  match read_pgm filename with
+  | Some (fname, pgm) -> pgm 
+  | None -> []
 
 (* Read testcases *)
 let read_testcases : string -> examples
@@ -76,14 +69,3 @@ let read_testcases : string -> examples
   else 
     try fst (parse_file file_name) 
     with e -> raise e
-
-(* Read external library *)
-let read_external : string -> prog 
-= fun filename -> if Sys.file_exists filename then snd (parse_file filename) else []
-
-(* Read / Write preprosecessed data *)
-let get_file_path : string -> string
-= fun filename ->
-  let end_idx = Str.search_forward (Str.regexp "\.ml$") filename 0 in
-  Str.replace_first (Str.regexp "../benchmarks_correct") "" (String.sub filename 0 end_idx)
-

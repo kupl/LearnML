@@ -333,6 +333,15 @@ let rec find_first_set : ('a -> bool) -> 'a BatSet.t -> 'a
     let (candidate, remains) = BatSet.pop set in
     if pred candidate then candidate else find_first_set pred remains
 
+let rec compare_set : 'a BatSet.t -> 'a BatSet.t -> ('a -> 'a -> bool) -> bool
+= fun set1 set2 comp -> 
+	if BatSet.is_empty (BatSet.union set1 set2) then true
+	else 
+		let (elem1, set1) = BatSet.pop set1 in
+		let matched = BatSet.filter (fun elem2 -> comp elem1 elem2) set2 in
+		if BatSet.cardinal matched = 1 then compare_set set1 (BatSet.diff set2 matched) comp
+		else false
+
 (* Map operation *)
 let keys : ('a, 'b) BatMap.t -> 'a BatSet.t
 = fun map -> BatMap.foldi (fun a b set -> BatSet.add a set) map BatSet.empty

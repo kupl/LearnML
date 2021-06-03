@@ -2,7 +2,19 @@ open Lang
 open Util
 open Symbol_lang
 
+let poly_count = ref (Char.code 'a')
+let poly_map = ref (BatMap.empty)
+
+
+
 (******** Format **********)
+let rec insert_tab tab_size str =
+  let rec make_tab tab_size = if tab_size <= 0 then "" else "  " ^ make_tab (tab_size - 1) in
+  List.fold_left (fun acc str -> 
+    let s = (make_tab tab_size) ^ str in
+    if acc = "" then s else acc ^ "\n" ^ s
+  ) "" (Str.split (Str.regexp "\n") str)
+  
 let link_by_sep sep s acc = if acc = "" then s else acc ^ sep ^ s
 
 let string_of_list ?(first="[") ?(last="]") ?(sep=";") : ('a -> string) -> ('a list) -> string
@@ -71,6 +83,7 @@ let rec pat_to_string : pat -> string
   | PUnder -> "_"
   | PCons (p1, p2) -> pat_to_string p1 ^ "::" ^ pat_to_string p2
 
+
 let rec type_to_string : typ -> string
 = fun ty -> 
   match ty with
@@ -83,7 +96,15 @@ let rec type_to_string : typ -> string
   | TTuple l -> if(l=[]) then "unit" else pp_star_tuple type_to_string l
   | TCtor (t, l) -> type_to_string t ^ (if(l=[]) then "" else pp_tuple type_to_string l)
   | TArr (t1,t2) -> "(" ^ type_to_string t1 ^ " -> " ^ type_to_string t2 ^ ")"
-  | TVar x -> x
+  | TVar x -> 
+    if (BatMap.mem x !poly_map) then BatMap.find x !poly_map
+    else
+      let t = "'"^Char.escaped(Char.chr(!poly_count)) in
+      let _ = 
+        poly_count:= (!poly_count)+1;
+        poly_map:= BatMap.add x t (!poly_map)
+      in
+      t
   | TExn -> "exn"
   | TRef typ -> type_to_string typ ^ " " ^ "ref"
 
@@ -131,8 +152,8 @@ let library_functions = [
   ("__list_length__", "List.length");
   ("__list_nth__", "List.nth");
   ("__list_rev__", "List.rev");
-  ("__list_fold_left__", "List.fold_left");
-  ("__list_fold_right__", "List.fold_right");
+  ("__list_foldl__", "List.fold_left");
+  ("__list_foldr__", "List.fold_right");
   ("__list_sort__", "List.sort");
   ("__list_rev_map__", "List.rev_map");
   ("__list_memq__", "List.memq");
@@ -212,8 +233,6 @@ let rec exp_to_string : lexp -> string
   | EDref e -> "!" ^ exp_to_string e
   | EAssign (e1, e2) -> "(" ^ exp_to_string e1 ^ " := " ^ exp_to_string e2 ^ ")"
 
-
-  
 and binding_to_string : binding -> string
 = fun (f, is_rec, args, typ, exp) ->
     (let_to_string f) ^ " " ^ args_to_string args "" ^
@@ -251,7 +270,12 @@ and type_decl_to_string : decl -> string
   | _ -> raise (Failure "Invalid type decl")
 
 let program_to_string : prog -> string
-= fun prog -> list_fold decl_to_string prog ""
+= fun prog -> 
+  let _ = 
+    poly_count := (Char.code 'a');
+    poly_map := BatMap.empty
+  in
+  list_fold decl_to_string prog ""
 
 (* Labeled version printer *)
 let rec lexp_to_string : lexp -> string
@@ -442,8 +466,6 @@ let print_header str =
  let _ = print_endline str in
  let _ = print_endline "-----------------------------" in
    ()
-
-let poly_count = ref (Char.code 'a')
 
 let rec pp_polymorphic t env =
   match t with

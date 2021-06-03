@@ -1,11 +1,8 @@
-true: package(batteries), package(str)
+true: package(batteries)
 true: package(str)
-true: thread
 true: package(aez)
 true: package(Z3)
-true: package(qcheck)
 
-<QCheck_generators/**>: include
 <Data_driven/**>: include
 <FixML/**>: include
 <TestML/**>: include
