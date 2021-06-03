@@ -1,6 +1,6 @@
 profile = conventional
 let-binding-spacing = sparse
-margin = 100
-version = 0.15.0
+margin = 80
+version = 0.15.1
 break-infix = fit-or-vertical
 break-sequences = true

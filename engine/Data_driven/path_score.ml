@@ -84,7 +84,7 @@ module Z3_Translator = struct
       tuple_sort ctx tuple_name sorts
     | TVar tx -> Z3.Sort.mk_uninterpreted_s ctx "poly" (* Polymorphic *)
     | TArr (t1, t2) -> Z3.Sort.mk_uninterpreted_s ctx (Print.type_to_string typ) (* Function *)
-    | _ -> raise (Failure ("Invalid sort : " ^ Print.type_to_string typ)) 
+    | _ -> raise (Failure ("Fail to convert " ^ Print.type_to_string typ ^ " type to Z3 sort")) 
 
   let rec has_ctor_name : typ -> string -> bool
   = fun typ name ->
@@ -213,7 +213,6 @@ module Z3_Translator = struct
   (* Translate given path into an equation *)
   let rec translate : ctor_map -> Z3.context -> path -> (Z3.Expr.expr * Z3.Expr.expr list)
   = fun ctor_map ctx path ->
-    (* let _ = print_endline (string_of_path path) in *)
     match path with
     | Var (x, typ) ->
       let sort = typ_to_sort ctor_map ctx typ in
@@ -375,6 +374,7 @@ module Z3_Translator = struct
       let id = mk_symbol ctx list_sort in
       let expr = mk_append ctx list_sort expr1 expr2 in
       (id, (mk_eq ctx id expr)::(eqns1@eqns2))
+    | _ -> raise (Failure ("Fail to convert " ^ string_of_path path ^ " to a Z3 expression"))
  
   (* PP *)
   let print_formula : Z3.Expr.expr list -> unit
@@ -399,8 +399,6 @@ let check_sat : CtorTable.t -> path -> bool
     let (id, eqns) = Z3_Translator.translate ctor_map ctx path in
     let eqns = (Z3_Translator.mk_eq ctx id (Z3.Boolean.mk_true ctx))::eqns in
     let _ = Z3.Solver.add solver eqns in
-    (* let _ = print_endline (string_of_path path) in *)
-    (* print_endline (Z3.Solver.to_string solver); *)
     match (Z3.Solver.check solver []) with
     | UNSATISFIABLE -> (* print_endline ("UNSAT"); *) false
     | UNKNOWN -> (* print_endline ("UNSAT"); *) false

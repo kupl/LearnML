@@ -47,6 +47,50 @@ and eq = Eq | NEq
 
 type graph = { nodes : node BatSet.t; edges : edge BatSet.t }
 
+(* Utility functions *)
+let is_grading = ref false
+let id_num = ref 0
+let fresh_id () = 
+  id_num := !id_num + 1; 
+  if !is_grading then -(!id_num) else !id_num
+
+let symbol_num = ref 0
+let fresh_symbol () = symbol_num := !symbol_num + 1; !symbol_num
+
+let get_node_by_id : node_id -> graph -> node
+= fun id cg -> try List.find (fun node -> id = node.id) (BatSet.to_list cg.nodes) with Not_found -> raise UndefinedNode
+
+let get_node_by_name : id -> graph -> node
+= fun name cg -> try List.find (fun node -> name = node.name) (BatSet.to_list cg.nodes) with Not_found -> raise UndefinedNode
+
+let update_node : node -> graph -> graph
+= fun node cg -> { nodes = BatSet.add node cg.nodes; edges = cg.edges }
+
+let update_edge : edge -> graph -> graph
+= fun edge cg -> { nodes = cg.nodes; edges = BatSet.add edge cg.edges }
+
+let rec size_of_path : path -> int
+= fun path -> 
+  match path with
+  | Aop (_, p1, p2) | Bop (_, p1, p2) | ABop (_, p1, p2) | EQop (_, p1, p2) 
+  | Strcon (p1, p2) | Append (p1, p2) | Concat (p1, p2) -> 1 + size_of_path p1 + size_of_path p2
+  | Minus p | Not p -> 1 + size_of_path p
+  | Tuple ps | List (ps, _) | Ctor (_, ps) -> List.fold_left (fun acc p -> acc + size_of_path p) 1 ps
+  | _ -> 1 
+  
+let rec extract_clauses : path -> path list
+= fun path ->
+  match path with
+  | Bop (And, p1, p2) -> (extract_clauses p1)@(extract_clauses p2)
+  | _ -> [path]
+  
+let compare_node : node -> node -> bool
+= fun node1 node2 -> (Type.check_typs node1.typ node2.typ) && (Normalize.normalize_exp node1.body = Normalize.normalize_exp node2.body)
+
+let compare_path : path -> path -> bool
+= fun p1 p2 ->
+	(BatSet.equal (BatSet.of_list (extract_clauses p1)) (BatSet.of_list (extract_clauses p2)))
+
 (* To string *)
 let string_of_node node =
   "-------------(" ^ string_of_int node.id ^ ")-------------\n" ^
@@ -99,37 +143,6 @@ let string_of_graph cg =
   "\nEdge : \n" ^ string_of_set ~first:"" ~last:"" ~sep:"\n" string_of_edge cg.edges
 
 let print_graph cg = print_endline (string_of_graph cg)
-
-(* Utility functions *)
-let is_grading = ref false
-let id_num = ref 0
-let fresh_id () = 
-  id_num := !id_num + 1; 
-  if !is_grading then -(!id_num) else !id_num
-
-let symbol_num = ref 0
-let fresh_symbol () = symbol_num := !symbol_num + 1; !symbol_num
-
-let get_node_by_id : node_id -> graph -> node
-= fun id cg -> try List.find (fun node -> id = node.id) (BatSet.to_list cg.nodes) with Not_found -> raise UndefinedNode
-
-let get_node_by_name : id -> graph -> node
-= fun name cg -> try List.find (fun node -> name = node.name) (BatSet.to_list cg.nodes) with Not_found -> raise UndefinedNode
-
-let update_node : node -> graph -> graph
-= fun node cg -> { nodes = BatSet.add node cg.nodes; edges = cg.edges }
-
-let update_edge : edge -> graph -> graph
-= fun edge cg -> { nodes = cg.nodes; edges = BatSet.add edge cg.edges }
-
-let rec size_of_path : path -> int 
-= fun path ->
-  match path with
-  | Aop (_ , p1, p2) | Bop (_, p1, p2) | ABop (_, p1, p2) | EQop (_, p1, p2)
-  | Strcon (p1, p2) | Append (p1, p2) | Concat (p1, p2) -> 1 + size_of_path p1 + size_of_path p2
-  | Minus p | Not p -> 1 + size_of_path p
-  | List (ps, _) | Tuple ps | Ctor (_, ps) -> 1 + List.fold_left (fun acc p -> acc + size_of_path p) 0 ps
-  | _ -> 1 
 
 (* Path encoding *)
 let h_t = ref BatMap.empty 
@@ -219,7 +232,7 @@ let rec exp_to_path : lexp -> path
   | DOUBLECOLON (e1, e2) -> Concat (exp_to_path e1, exp_to_path e2)
   | STRCON (e1, e2) -> Strcon (exp_to_path e1, exp_to_path e2)
   | EApp (e1, e2) -> Symbol (fresh_symbol (), BatMap.find l !h_t)
-  | EAssign _ | Raise _ | ERef _ | EDref _ | EFun _ | ELet _ | EBlock _ | EMatch _ | IF _ -> Symbol (fresh_symbol (), BatMap.find l !h_t)
+  | Raise _ | EFun _ | ELet _ | EBlock _ | EMatch _ | IF _ -> Symbol (fresh_symbol (), BatMap.find l !h_t)
   | _ -> raise (Failure ("Call graph : invalid exp (" ^ exp_to_string (l, exp) ^ ") while encoding path"))
 
 (* Extract functions body by unrolling the nested function definition *)
@@ -238,11 +251,11 @@ let rec extract_body : lexp -> lexp
   | ECtor (x, es) -> (l, ECtor (x, List.map (fun e -> extract_body e) es))
   | ETuple es -> (l, ETuple (List.map (fun e -> extract_body e) es))
   | EFun (arg, e) -> (l, EFun (arg, extract_body e))
-  | MINUS e | NOT e | Raise e | ERef e | EDref e -> (l, update_unary exp (extract_body e))
+  | MINUS e | NOT e | Raise e -> (l, update_unary exp (extract_body e))
   | ADD (e1, e2) | SUB (e1, e2) | MUL (e1, e2) | DIV (e1, e2) | MOD (e1, e2) 
   | OR (e1, e2) | AND (e1, e2) | LESS (e1, e2) | LARGER (e1, e2) | LESSEQ (e1, e2) 
   | LARGEREQ (e1, e2) | EQUAL (e1, e2) | NOTEQ (e1, e2) | AT (e1, e2) | DOUBLECOLON (e1, e2) 
-  | STRCON (e1, e2) | EApp (e1, e2) | EAssign (e1, e2) -> (l, update_binary exp (extract_body e1, extract_body e2))
+  | STRCON (e1, e2) | EApp (e1, e2) -> (l, update_binary exp (extract_body e1, extract_body e2))
   | ELet (f, is_rec, args, typ, e1, e2) ->
     if (args <> [] || is_fun typ) then
       extract_body e2
@@ -276,10 +289,10 @@ let rec exp_to_cg : graph -> node_id -> path -> lexp -> graph
     let cg = exp_to_cg cg id path e2 in
     call_to_cg cg id path [e2] e1  
   | EList es | ECtor (_, es) | ETuple es -> List.fold_left (fun cg e -> exp_to_cg cg id path e) cg es
-  | EFun (_, e) | MINUS e | NOT e | Raise e | ERef e | EDref e -> exp_to_cg cg id path e
+  | EFun (_, e) | MINUS e | NOT e | Raise e -> exp_to_cg cg id path e
   | ADD (e1, e2) | SUB (e1, e2) | MUL (e1, e2) | DIV (e1, e2) | MOD (e1, e2) 
   | OR (e1, e2) | AND (e1, e2) | LESS (e1, e2) | LARGER (e1, e2) | LESSEQ (e1, e2) | LARGEREQ (e1, e2) 
-  | EQUAL (e1, e2) | NOTEQ (e1, e2) | AT (e1, e2) | DOUBLECOLON (e1, e2) | STRCON (e1, e2) | EAssign (e1, e2) -> 
+  | EQUAL (e1, e2) | NOTEQ (e1, e2) | AT (e1, e2) | DOUBLECOLON (e1, e2) | STRCON (e1, e2) -> 
     let cg1 = exp_to_cg cg id path e1 in
     exp_to_cg cg1 id path e2
   | ELet (f, is_rec, args, typ, e1, e2) ->

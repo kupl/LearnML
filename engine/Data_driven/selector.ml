@@ -4,29 +4,58 @@ open Print
 open Type
 open CallGraph
 
-(* Function summary *)
-type summary = {
-  node : node; (* Call-graph node *)
-  incomming : calling_ctx BatSet.t; (* Incomming edge from other nodes *)
-  outgoing : calling_ctx BatSet.t  (* Outgoing edge to other nodes *)
-}
 (* Calling context : (caller info, calling path of caller * callee info) *)
-and calling_ctx = {
+type calling_ctx = {
   caller_typ : typ;
   caller_args : arg list;
   path : path; 
   callee_typ : typ;
   callee_args : arg list
 }
+
+let compare_ctx : calling_ctx -> calling_ctx -> bool 
+= fun ctx1 ctx2 -> 
+	(check_typs ctx1.caller_typ ctx2.caller_typ) &&
+	(ctx1.caller_args = ctx2.caller_args) &&
+	(compare_path ctx1.path ctx2.path) &&
+	(check_typs ctx1.callee_typ ctx2.callee_typ) &&
+	(ctx1.callee_args = ctx2.callee_args) 
+
+let compare_ctxs : calling_ctx BatSet.t -> calling_ctx BatSet.t -> bool
+= fun ctxs1 ctxs2 -> compare_set ctxs1 ctxs2 compare_ctx
+
+(* Function summary *)
+type summary = {
+  node : node; (* Call-graph node *)
+  incomming : calling_ctx BatSet.t; (* Incomming edge from other nodes *)
+  outgoing : calling_ctx BatSet.t  (* Outgoing edge to other nodes *)
+}
+
 type summaries = summary BatSet.t
 
+let compare_summary : summary -> summary -> bool
+= fun s1 s2 -> 
+	(compare_node s1.node s2.node) && (compare_ctxs s1.incomming s2.incomming) && (compare_ctxs s1.outgoing s2.outgoing)
+
+(* Reference *)
 type reference = {
   source : string; (* Source file of reference function *)
   summary : summary; (* Funciton summary for patch *)
   usecase : lexp BatSet.t; (* Use case of reference function *)
   helpers : reference BatSet.t (* Helper functions *)
 }
+
 type references = reference BatSet.t
+
+let compare_ref : reference -> reference -> bool
+= fun ref1 ref2 ->	
+	try
+		(compare_summary ref1.summary ref2.summary) && (BatSet.equal ref1.usecase ref2.usecase)
+	with _ -> (* print_endline ("Compare " ^ ref1.source ^ ", " ^ ref2.source); *) false
+
+let rec compare_refs : references -> references -> bool
+= fun refs1 refs2 -> compare_set refs1 refs2 compare_ref 
+
 (* Matching *)
 type matching = (summary, (reference * int * float)) BatMap.t
 
@@ -63,6 +92,7 @@ let string_of_matching matching =
     if acc = "" then s else acc ^ "\n---------------------------\n" ^ s
   ) matching ""
 
+(* Get summary from the extracted call graph *)
 let rec is_passing_edge : CallGraph.path -> bool
 = fun path ->
   match path with
@@ -72,7 +102,6 @@ let rec is_passing_edge : CallGraph.path -> bool
   | Bool true -> true
   | _ -> false
 
-(* Get summary from the extracted call graph *)
 let rec get_incomming_edges : node_id -> graph -> calling_ctx BatSet.t
 = fun id cg ->
   let calling_edges = BatSet.filter (fun edge -> id = edge.sink) cg.edges in
@@ -221,6 +250,7 @@ let get_usecase : summary -> graph -> lexp BatSet.t
   BatSet.fold (fun node acc ->
     BatSet.union acc (get_usecase_exp target_node.name [] node.body)
   ) nodes BatSet.empty 
+
 let rec get_helpers : reference BatSet.t -> graph -> reference BatSet.t 
 = fun references cg ->
   let references' = BatSet.fold (fun reference acc ->
@@ -257,74 +287,8 @@ let get_references : string -> graph -> references
   ) references in
   (* let references = get_helpers references cg in *)
   references
-
-(* Compute syntactic difference *)
-let rec match_pat : pat -> pat -> bool
-= fun p1 p2 ->
-  match (p1, p2) with
-  | PInt n1, PInt n2 -> n1 = n2
-  | PBool b1, PBool b2 -> b1 = b2
-  | PList ps1, PList ps2 | PTuple ps1, PTuple ps2 -> (try List.for_all2 match_pat ps1 ps2 with _ -> false)
-  | PCtor (x, ps1), PCtor (y, ps2) -> (x = y) && (try List.for_all2 match_pat ps1 ps2 with _ -> false)
-  | PCons (phd1, ptl1), PCons (phd2, ptl2) -> match_pat phd1 phd2 && match_pat ptl1 ptl2
-  | Pats ps, _ | _, Pats ps -> raise (Failure "Nomalized programs do not have this pattern")
-  | PUnit, PUnit | PUnder, PUnder | PVar _, PVar _ -> true
-  | _ -> false
-
-let rec syntactic_distance : lexp -> lexp -> float
-= fun exp1 exp2 ->
-  match (snd exp1, snd exp2) with
-  | SInt _, SInt _ | SStr _, SStr _ | Hole _, Hole _ -> 0.
-  (* Constant *)
-  | EUnit, EUnit | TRUE, TRUE | FALSE, FALSE | EVar _, EVar _ -> 0.
-  | Const n1, Const n2 when n1 = n2 -> 0.
-  | String s1, String s2 when s1 = s2 -> 0.
-  (* List *)
-  | EList es1, EList es2 | ETuple es1, ETuple es2 ->
-    begin 
-      try List.fold_left2 (fun acc e1 e2 -> acc +. syntactic_distance e1 e2) 0. es1 es2 
-      with _ -> float_of_int (exp_size exp1 + exp_size exp2)
-    end
-  | ECtor (x1, es1), ECtor (x2, es2) when x1 = x2 ->
-    begin 
-      try List.fold_left2 (fun acc e1 e2 -> acc +. syntactic_distance e1 e2) 0. es1 es2 
-      with _ -> float_of_int (exp_size exp1 + exp_size exp2)
-    end
-  (* Unary *)
-  | MINUS e1, MINUS e2 | NOT e1, NOT e2 | ERef e1, ERef e2 | EDref e1, EDref e2 | Raise e1, Raise e2 | EFun (_, e1), EFun (_, e2) -> syntactic_distance e1 e2
-  (* Binary *)
-  | ADD (e1, e2), ADD (e1', e2') | SUB (e1, e2), SUB (e1', e2') | MUL (e1, e2), MUL (e1', e2') | DIV (e1, e2), DIV (e1', e2') | MOD (e1, e2), MOD (e1', e2') 
-  | OR (e1, e2), OR (e1', e2') | AND (e1, e2), AND (e1', e2') | LESS (e1, e2), LESS (e1', e2') | LESSEQ (e1, e2), LESSEQ (e1', e2')
-  | LARGER (e1, e2), LARGER (e1', e2') | LARGEREQ (e1, e2), LARGEREQ (e1', e2') | EQUAL (e1, e2), EQUAL (e1', e2') | NOTEQ(e1, e2), NOTEQ (e1', e2') 
-  | DOUBLECOLON (e1, e2), DOUBLECOLON (e1', e2') | AT (e1, e2), AT (e1', e2') | STRCON (e1, e2), STRCON (e1', e2') | EAssign (e1, e2), EAssign (e1', e2') 
-  | EApp (e1, e2), EApp (e1', e2') | ELet (_, _, _, _, e1, e2), ELet (_, _, _, _, e1', e2') -> syntactic_distance e1 e1' +. syntactic_distance e2 e2'
-  (* Condition *)
-  | IF (e1, e2, e3), IF (e1', e2', e3') -> syntactic_distance e1 e1' +. syntactic_distance e2 e2' +. syntactic_distance e3 e3'
-  | EMatch (e1, bs1), EMatch (e2, bs2) ->
-    (* Distance between matched branches *)
-    let (d1, unmatches) = List.fold_left (fun (d1, unmatches) (p, e) ->
-      try 
-        let (p', e') = List.find (fun (p', e') -> match_pat p p') unmatches in
-        (d1 +. syntactic_distance e e', List.remove_assoc p' unmatches)
-      with _ -> (d1 +. float_of_int (exp_size e), unmatches)
-    ) (0., bs2) bs1 in
-    (* Distance of unmatches branches *)
-    let d2 = List.fold_left (fun acc (p, e) -> acc +. float_of_int (exp_size e)) 0. unmatches in
-    syntactic_distance e1 e2 +. d1 +. d2
-  (* Binding block *)
-  | EBlock (_, bs1, e1), EBlock (_, bs2, e2) ->
-    let (es1, es2) = (List.map (fun (_, _, _, _, e) -> e) bs1, List.map (fun (_, _, _, _, e) -> e) bs2) in
-    begin 
-      try List.fold_left2 (fun acc e1 e2 -> acc +. syntactic_distance e1 e2) (syntactic_distance e1 e2) es1 es2 
-      with _ -> (syntactic_distance e1 e2) +. (List.fold_left (fun acc e -> float_of_int (exp_size e)) 0. es1) +. (List.fold_left (fun acc e -> float_of_int (exp_size e)) 0. es2)
-    end
-  (* Syntatically different *)
-  | _ -> float_of_int (exp_size exp1 + exp_size exp2)
-
-let rec syntactic_distance : lexp -> lexp -> float
-= fun e1 e2 -> Syntactic_dist.syntactic_distance e1 e2
-
-(* Path similarity *)
+  
+(* Context-aware-matching *)
 let unsat_score = 100 
 
 let rec gen_path_eqn : CallGraph.path -> typ -> Type.typ_eqn
@@ -404,21 +368,6 @@ let rec abstract_path : CallGraph.path -> CallGraph.path
   | Var (_, typ) | Symbol (_, typ) -> Var ("x", typ)
   | _ -> path
 
-let rec size_of_path : CallGraph.path -> int
-= fun path -> 
-  match path with
-  | Aop (_, p1, p2) | Bop (_, p1, p2) | ABop (_, p1, p2) | EQop (_, p1, p2) 
-  | Strcon (p1, p2) | Append (p1, p2) | Concat (p1, p2) -> 1 + size_of_path p1 + size_of_path p2
-  | Minus p | Not p -> 1 + size_of_path p
-  | Tuple ps | List (ps, _) | Ctor (_, ps) -> List.fold_left (fun acc p -> acc + size_of_path p) 1 ps
-  | _ -> 1
-
-let rec extract_clauses : CallGraph.path -> CallGraph.path list
-= fun path ->
-  match path with
-  | Bop (And, p1, p2) -> (extract_clauses p1)@(extract_clauses p2)
-  | _ -> [path]
-
 let rec path_similarity : CallGraph.path -> CallGraph.path -> int
 = fun path_sub path_sol -> 
   let clauses_sub = extract_clauses (abstract_path path_sub) in
@@ -453,7 +402,7 @@ let compute_path_score : calling_ctx -> calling_ctx -> int
         path_similarity (apply_subst vc_subst ctx_sub.path) (apply_subst vc_subst ctx_sol.path)
       else -1
     else -1
-  with Type.TypeError | Invalid_argument ("List.fold_left2") -> -1
+  with _ -> -1
 
 let rec semantic_distance_ctx : calling_ctx BatSet.t -> calling_ctx BatSet.t -> int
 = fun ctxs_sub ctxs_sol ->
@@ -485,43 +434,17 @@ let rec semantic_distance_ctx : calling_ctx BatSet.t -> calling_ctx BatSet.t -> 
 
 let rec semantic_distance : summary -> summary -> int
 = fun summary_sub summary_sol -> 
-  (* Semantic distance of incomming edges *)
+  (* Semantic distance of incomming contexts *)
   let (incomming_sub, incomming_sol) = (summary_sub.incomming, summary_sol.incomming) in
   let incomming_distance = semantic_distance_ctx incomming_sub incomming_sol in
-  (* Semantic distance of outgoing edges *)
+  (* Semantic distance of outgoing contexts *)
   let (outgoing_sub, outgoing_sol) = (summary_sub.outgoing, summary_sol.outgoing) in
   let outgoing_distance = semantic_distance_ctx outgoing_sub outgoing_sol in
   2 * incomming_distance + outgoing_distance
 
-(* Compute (local)matching result *)
-let rec find_matching : summaries -> references -> matching
-= fun summaries references ->
-  BatSet.fold (fun summary matching -> 
-    (* Find a solution functions whose type is the same with the type of the submission *)
-    let candidates = BatSet.filter (fun reference -> 
-      check_typs summary.node.typ reference.summary.node.typ
-    ) references in
-    (* Select solution functions with the minimal semantic distance *)
-    let (sem_dist, candidates) = BatSet.fold (fun reference (score, candidates) ->
-      let score' = semantic_distance summary reference.summary in
-      if score' < score then (score', BatSet.singleton reference)
-      else if score' = score then (score, BatSet.add reference candidates)
-      else (score, candidates)
-    ) candidates (max_int, BatSet.empty) in
-    if BatSet.is_empty candidates then
-      (* If there are no matched solutions, do not change the matching relation *)
-      matching
-    else
-      (* Pick the most similar ones in candidates *)
-      let (candidate, remains) = BatSet.pop candidates in
-      let (syn_dist, reference) = BatSet.fold (fun reference (score, acc) -> 
-        let score' = syntactic_distance summary.node.body reference.summary.node.body in
-        if score' < score then (score', reference)
-        else (score, acc)
-      ) remains (syntactic_distance summary.node.body candidate.summary.node.body, candidate) in
-      BatMap.add summary (reference, sem_dist, syn_dist) matching
-  ) summaries empty_matching
+let syntactic_distance = Syntactic_dist.syntactic_distance
 
+(* Main procedure *)
 let rec find_refs_by_prototype : summary -> references -> references
 = fun summary references -> BatSet.filter (fun reference -> 
     (List.length summary.node.args) = (List.length reference.summary.node.args) &&
@@ -535,7 +458,7 @@ let rec find_matching : matching -> summaries -> references -> matching
     let (summary, summaries) = BatSet.pop summaries in 
     if BatMap.mem summary matching then 
       let (reference, sem_dist, syn_dist) = BatMap.find summary matching in
-      if sem_dist = 0 (* && syn_dist = 0. *) then find_matching matching summaries references
+      if sem_dist = 0 then find_matching matching summaries references
       else
         (* Find a solution functions whose type is the same with the type of the submission *)
         let candidates = find_refs_by_prototype summary references in
@@ -578,11 +501,12 @@ let select_solutions : prog -> references list -> matching
     library_pgm := Preprocessor.Type_annotate.run !library_pgm
     |> Preprocessor.Decapsulation.run
   in
-  let summaries = get_summaries (extract_graph (!library_pgm@pgm)) in
-  BatSet.iter (fun summary -> print_endline (string_of_summary summary)) summaries;
+  let cg_sub = extract_graph (!library_pgm@pgm) in 
+  let summaries = get_summaries (cg_sub) in
   let _ = ctor_table := Path_score.CtorTable.gen_ctor_table BatMap.empty pgm in
   List.fold_left (fun acc reference -> find_matching acc summaries reference) empty_matching references
 
+(* Syntactic matchign (SARFGEN) *)
 let rec find_matching_syn : matching -> summaries -> references -> matching
 = fun matching summaries references ->
   if BatSet.is_empty summaries then matching
@@ -619,7 +543,6 @@ let select_solutions_syn : prog -> references list -> matching
     |> Preprocessor.Decapsulation.run
   in
   let summaries = get_summaries (extract_graph (!library_pgm@pgm)) in
-  BatSet.iter (fun summary -> print_endline (string_of_summary summary)) summaries;
   let _ = ctor_table := Path_score.CtorTable.gen_ctor_table BatMap.empty pgm in
   List.fold_left (fun acc reference -> find_matching_syn acc summaries reference) empty_matching references
 
@@ -630,21 +553,13 @@ let select_solution_syn : prog -> references list -> matching
     |> Preprocessor.Decapsulation.run
   in
   let summaries = get_summaries (extract_graph (!library_pgm@pgm)) in
-  BatSet.iter (fun summary -> print_endline (string_of_summary summary)) summaries;
   let _ = ctor_table := Path_score.CtorTable.gen_ctor_table BatMap.empty pgm in
   List.fold_left (fun acc reference -> 
-    (* Mode 1 = score / cardinal *)
-    (* Mode 2 = cardinal -> sum of score *)
     let new_matching = find_matching_syn BatMap.empty summaries reference in
     if BatMap.cardinal acc = 0 then new_matching
     else if BatMap.cardinal new_matching = 0 then acc
     else
     let score1 = (BatMap.fold (fun (r, sem, syn) acc -> acc +. syn) acc 0.) /. float_of_int (BatMap.cardinal acc) in
     let score2 = (BatMap.fold (fun (r, sem, syn) acc -> acc +. syn) new_matching 0.) /. float_of_int (BatMap.cardinal new_matching)in
-    (*
-    if BatMap.cardinal acc > BatMap.cardinal new_matching then acc 
-    else if BatMap.cardinal acc < BatMap.cardinal new_matching then new_matching
-    else 
-    *)
-      if score1 < score2 then acc else new_matching
+    if score1 < score2 then acc else new_matching
   ) empty_matching references

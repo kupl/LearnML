@@ -17,7 +17,7 @@ module Workset = struct
     | ModifyExp (_, e) | InsertBranch (_, (_, e)) | DeleteBranch (_, (_, e)) | InsertFunction ((_, _, _, _, e), _) -> exp_cost e
 
   let cost : repair_templates -> int
-  = fun temps -> BatSet.fold (fun temp acc -> acc + (cost_of_template temp)) temps 0 
+  = fun temps -> BatSet.fold (fun temp acc -> acc + (cost_of_template temp)) (BatSet.map fst temps) 0 
 
   module OrderedType = struct
     type t = work
@@ -60,7 +60,7 @@ module Workset = struct
     ) (Heap.to_list heap)
 end
 
-(* Check the template has invalid function call *)
+(* Function call replacement (modifying invalid function call to proper one) *)
 let rec is_valid_call : Type.HoleType.t -> Type.VariableType.t -> lexp -> bool
 = fun h_t v_t (l, exp) ->
   match exp with
@@ -102,13 +102,9 @@ let rec replace_call : Type.HoleType.t -> Type.VariableType.t -> repair_template
   | InsertBranch (l, (p, e)) -> InsertBranch (l, (p, replace_call_exp h_t v_t e))
   | _ -> e_temp
 
-(* Main Procedure *)
-let time_out = 60.0
-let start_time = ref 0.0
-let debug_mode = false
-let debug = ref (open_out "log.txt")
 
-let cache = ref BatSet.empty (* Cacheing for stroing redundant candidate programs *)
+(* Optimazation : Memorize redundant candidate programs and prune out *)
+let cache = ref BatSet.empty 
 let update_cache s_pgm = cache := BatSet.add s_pgm (!cache)
 let check_cache s_pgm = 
   if BatSet.mem s_pgm (!cache) then true 
@@ -126,16 +122,20 @@ let rec get_modified_labels : prog -> repair_template -> label BatSet.t
     end
   | _ -> BatSet.empty
 
+(* Main Procedure *)
+let time_out = 60.0
+let start_time = ref 0.0
+
 let rec next : prog -> Workset.t -> Workset.work -> Workset.t
-= fun pgm t (a, na) -> BatSet.fold (fun temp t -> 
-    let labels_applied = BatSet.fold (fun temp acc -> BatSet.union acc (get_modified_labels pgm temp)) a BatSet.empty in
+= fun pgm t (a, na) -> BatSet.fold (fun (temp, src) t -> 
+    let labels_applied = BatSet.fold (fun (temp, src) acc -> BatSet.union acc (get_modified_labels pgm temp)) a BatSet.empty in
     let labels_not_applied = get_modified_labels pgm temp in
     if BatSet.disjoint labels_applied labels_not_applied then
-      Workset.add (BatSet.add temp a, BatSet.remove temp na) t
+      Workset.add (BatSet.add (temp, src) a, BatSet.remove (temp, src) na) t
     else t
   ) na t 
 
-let rec find_patch : prog -> repair_templates BatSet.t -> examples -> prog option
+let rec find_patch : prog -> repair_templates BatSet.t -> examples -> (prog * repair_templates) option
 = fun pgm candidates testcases ->
   if BatSet.is_empty candidates then None
   else
@@ -143,40 +143,10 @@ let rec find_patch : prog -> repair_templates BatSet.t -> examples -> prog optio
     let pgm' = apply_templates pgm cand in  
     let s_pgm = program_to_string (Normalize.normalize pgm') in
     if not (check_cache s_pgm) then
-      let _ = 
-        if debug_mode then 
-          let s = 
-            "------------------------\nPatch Candidate\n------------------------\n" ^
-            string_of_templates cand ^ "\n" ^
-            "------------------------\nResult\n------------------------\n" ^
-            Print.program_to_string pgm' ^ "\n"
-          in
-          print_endline s;
-          Printf.fprintf (!debug) "%s\n" s
-        else 
-          ()
-      in
       if Infinite.Static.run pgm' then find_patch pgm remains testcases
-      else if Eval.is_solution pgm' testcases then Some pgm' 
       else 
-        let _ = 
-          if debug_mode then 
-            let score = List.fold_left (fun score (inputs, output) ->
-              try
-                let result_value = Eval.get_output pgm' inputs in
-                if try (Eval.value_equality result_value output) with _ -> false then score+1 else score
-              with 
-                | EExcept v -> 
-                  if try (Eval.value_equality v output) with _ -> false then score+1 else score
-                | except -> score
-            ) 0 testcases in
-            let s = "Score : " ^ (string_of_int score) in
-          print_endline s;
-          Printf.fprintf (!debug) "%s\n" s
-        else 
-          ()
-        in
-        find_patch pgm remains testcases
+        if Eval.is_solution pgm' testcases then Some (pgm', cand)
+        else find_patch pgm remains testcases
     else find_patch pgm remains testcases
 
 let rec extend_workset : repair_templates -> repair_templates BatSet.t -> repair_templates BatSet.t
@@ -192,57 +162,34 @@ let rec extend_workset : repair_templates -> repair_templates BatSet.t -> repair
       BatSet.union work_set acc
     ) acc BatSet.empty
 
-let rec work : prog -> call_templates -> Workset.t -> examples -> prog option
+let rec work : prog -> call_templates -> Workset.t -> examples -> (prog * repair_templates) option
 = fun pgm call_temps workset testcases ->
   if (Unix.gettimeofday()) -. (!start_time) > time_out then None
   else 
     match Workset.choose workset with
     | None -> None
     | Some ((a, na), remain) ->
-      if debug_mode then (
-        print_header "Apply"; print_endline (string_of_templates a);
-        print_header "Not-Apply"; print_endline (string_of_templates na)
-      );
       (try
         (* Replace invalid function calls in templates by speicial hole *)
         let (_, h_t, v_t, _) = Type.run (apply_templates pgm a) in
-        let a = BatSet.map (fun temp -> replace_call h_t v_t temp) a in
-        if debug_mode then (
-          print_header "Before Updating"; 
-          BatSet.iter (fun temp -> print_endline (string_of_template temp)) a;
-        );
+        let a = BatSet.map (fun (temp, src) -> (replace_call h_t v_t temp, src)) a in
         (* Update templates having function call using call information *)
         let (_, h_t, v_t, subst) = Type.run (apply_templates pgm a) in
         let candidates = BatSet.fold (fun temp candidates -> 
           let temps = Update.update_call_templates call_temps h_t v_t subst temp in
           extend_workset temps candidates
         ) a BatSet.empty in
-        (* Find patch by applying possible templates *)
-        if debug_mode then (
-          print_header "Updating"; 
-          BatSet.iter (fun cands -> print_endline (string_of_templates cands)) candidates;
-        );
+        (* Instantiating remaining holes with proper program variables *)
         let candidates = BatSet.fold (fun a acc ->
           (* Get the type information, when all tempaltes are applied *)
           let (_, h_t, v_t, subst) = Type.run (apply_templates pgm a) in
-          let candidates = BatSet.fold (fun temp candidates ->
-            if debug_mode then (
-              print_header "Completing before"; 
-              print_endline (string_of_template temp)
-            );
-            let temps = Complete.complete_template h_t v_t subst temp in
-            if debug_mode then (
-              print_header "Completing After"; 
-              print_endline (string_of_templates temps)
-            );
+          let candidates = BatSet.fold (fun (temp, src) candidates ->
+            let temps = Complete.complete_template h_t v_t subst (temp, src) in
             extend_workset temps candidates
           ) a BatSet.empty in
           BatSet.union candidates acc
         ) candidates BatSet.empty in
-        if debug_mode then (
-          print_header "Completing"; 
-          BatSet.iter (fun cands -> print_endline (string_of_templates cands)) candidates;
-        );
+        (* Find patch by applying possible templates *)
         begin match find_patch pgm candidates testcases with
         | None ->
           let next = next pgm remain (a, na) in
@@ -253,11 +200,11 @@ let rec work : prog -> call_templates -> Workset.t -> examples -> prog option
         let next = next pgm remain (a, na) in
         work pgm call_temps next testcases)
 
-let run : prog -> call_templates -> repair_templates -> examples -> prog option
+let run : prog -> call_templates -> repair_templates -> examples -> (prog * repair_templates) option
 = fun pgm call_temps temps testcases ->
   start_time := Unix.gettimeofday();
   update_cache (program_to_string (Normalize.normalize pgm));
   let repair = work pgm call_temps (Workset.init temps) testcases in
   match repair with
   | Some pgm' -> Some pgm'
-  | None -> None
+  | None -> None 

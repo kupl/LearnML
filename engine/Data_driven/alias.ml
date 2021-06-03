@@ -93,91 +93,91 @@ let rec gen_data : analysis -> lexp -> data
 	| FALSE -> Bool false 
 	| String s -> Str s 
 	| EVar x -> find_map x map
-  | EFun (_, e) | ERef e | EDref e | Raise e -> Unknown
-  | MINUS e ->
-  	begin match gen_data map e with
-  	| Int n -> Int (-n)
-  	| _ -> Unknown
-  	end
-  | NOT e -> 
-  	begin match gen_data map e with
-  	| Bool b -> Bool (not b)
-  	| _ -> Unknown
-  	end
-  | ADD (e1, e2) ->
-  	begin match (gen_data map e1, gen_data map e2) with
-  	| Int n1, Int n2 -> Int (n1 + n2)
-  	| _ -> Unknown
-  	end
-  | SUB (e1, e2) ->
-  	begin match (gen_data map e1, gen_data map e2) with
-  	| Int n1, Int n2 -> Int (n1 - n2)
-  	| _ -> Unknown
-  	end
+	| EFun (_, e) | ERef e | EDref e | Raise e -> Unknown
+	| MINUS e ->
+		begin match gen_data map e with
+		| Int n -> Int (-n)
+		| _ -> Unknown
+		end
+	| NOT e -> 
+		begin match gen_data map e with
+		| Bool b -> Bool (not b)
+		| _ -> Unknown
+		end
+	| ADD (e1, e2) ->
+		begin match (gen_data map e1, gen_data map e2) with
+		| Int n1, Int n2 -> Int (n1 + n2)
+		| _ -> Unknown
+		end
+	| SUB (e1, e2) ->
+		begin match (gen_data map e1, gen_data map e2) with
+		| Int n1, Int n2 -> Int (n1 - n2)
+		| _ -> Unknown
+		end
  	| MUL (e1, e2) ->
  		begin match (gen_data map e1, gen_data map e2) with
-  	| Int n1, Int n2 -> Int (n1 * n2)
-  	| _ -> Unknown
-  	end
-  | DIV (e1, e2) ->
-  	begin match (gen_data map e1, gen_data map e2) with
-  	| Int n1, Int n2 -> Int (n1 / n2)
-  	| _ -> Unknown
-  	end
-  | MOD (e1, e2) ->
-  	begin match (gen_data map e1, gen_data map e2) with
-  	| Int n1, Int n2 -> Int (n1 mod n2)
-  	| _ -> Unknown
-  	end
-  | OR (e1, e2) ->
-  	begin match (gen_data map e1, gen_data map e2) with
-  	| Bool b1, Bool b2 -> Bool (b1 || b2)
-  	| _ -> Unknown
-  	end
-  | AND (e1, e2) ->
-  	begin match (gen_data map e1, gen_data map e2) with
-  	| Bool b1, Bool b2 -> Bool (b1 && b2)
-  	| _ -> Unknown
-  	end
-  | LESS (e1, e2) ->
-  	begin match (gen_data map e1, gen_data map e2) with
-  	| Int n1, Int n2 -> Bool (n1 < n2)
-  	| _ -> Unknown
-  	end
-  | LESSEQ (e1, e2) ->
-  	begin match (gen_data map e1, gen_data map e2) with
-  	| Int n1, Int n2 -> Bool (n1 <= n2)
-  	| _ -> Unknown
-  	end
-  | LARGER (e1, e2) ->
-  	begin match (gen_data map e1, gen_data map e2) with
-  	| Int n1, Int n2 -> Bool (n1 > n2)
-  	| _ -> Unknown
-  	end
-  | LARGEREQ (e1, e2) ->
-  	begin match (gen_data map e1, gen_data map e2) with
-  	| Int n1, Int n2 -> Bool (n1 >= n2)
-  	| _ -> Unknown
-  	end
-  | EQUAL (e1, e2) | NOTEQ (e1, e2) -> Unknown
-  | DOUBLECOLON (e1, e2) | AT (e1, e2) | STRCON (e1, e2) -> Unknown
-  | EApp (e1, e2) -> Unknown
-  | EAssign (e1, e2) -> Unknown
-  | EList es -> List (List.map (fun e -> gen_data map e) es)
-  | ETuple es -> Tuple (List.map (fun e -> gen_data map e) es)
-  | ECtor (c, es) -> Ctor (c, (List.map (fun e -> gen_data map e) es))
-  | IF (e1, e2, e3) -> Unknown
-  | EMatch (e, bs) -> Unknown
-  | ELet (f, is_rec, args, typ, e1, e2) -> Unknown
-  | EBlock (is_rec, ds, e) -> Unknown
-  | _ -> raise (Failure ("Data-flow analysis : invalid exp (" ^ exp_to_string (l, exp)))
+		| Int n1, Int n2 -> Int (n1 * n2)
+		| _ -> Unknown
+		end
+	| DIV (e1, e2) ->
+		begin match (gen_data map e1, gen_data map e2) with
+		| Int n1, Int n2 -> Int (n1 / n2)
+		| _ -> Unknown
+		end
+	| MOD (e1, e2) ->
+		begin match (gen_data map e1, gen_data map e2) with
+		| Int n1, Int n2 -> Int (n1 mod n2)
+		| _ -> Unknown
+		end
+	| OR (e1, e2) ->
+		begin match (gen_data map e1, gen_data map e2) with
+		| Bool b1, Bool b2 -> Bool (b1 || b2)
+		| _ -> Unknown
+		end
+	| AND (e1, e2) ->
+		begin match (gen_data map e1, gen_data map e2) with
+		| Bool b1, Bool b2 -> Bool (b1 && b2)
+		| _ -> Unknown
+		end
+	| LESS (e1, e2) ->
+		begin match (gen_data map e1, gen_data map e2) with
+		| Int n1, Int n2 -> Bool (n1 < n2)
+		| _ -> Unknown
+		end
+	| LESSEQ (e1, e2) ->
+		begin match (gen_data map e1, gen_data map e2) with
+		| Int n1, Int n2 -> Bool (n1 <= n2)
+		| _ -> Unknown
+		end
+	| LARGER (e1, e2) ->
+		begin match (gen_data map e1, gen_data map e2) with
+		| Int n1, Int n2 -> Bool (n1 > n2)
+		| _ -> Unknown
+		end
+	| LARGEREQ (e1, e2) ->
+		begin match (gen_data map e1, gen_data map e2) with
+		| Int n1, Int n2 -> Bool (n1 >= n2)
+		| _ -> Unknown
+		end
+	| EQUAL (e1, e2) | NOTEQ (e1, e2) -> Unknown
+	| DOUBLECOLON (e1, e2) | AT (e1, e2) | STRCON (e1, e2) -> Unknown
+	| EApp (e1, e2) -> Unknown
+	| EAssign (e1, e2) -> Unknown
+	| EList es -> List (List.map (fun e -> gen_data map e) es)
+	| ETuple es -> Tuple (List.map (fun e -> gen_data map e) es)
+	| ECtor (c, es) -> Ctor (c, (List.map (fun e -> gen_data map e) es))
+	| IF (e1, e2, e3) -> Unknown
+	| EMatch (e, bs) -> Unknown
+	| ELet (f, is_rec, args, typ, e1, e2) -> Unknown
+	| EBlock (is_rec, ds, e) -> Unknown
+	| _ -> raise (Failure ("Data-flow analysis : invalid exp (" ^ exp_to_string (l, exp)))
 
 let rec update_arg : arg -> analysis -> analysis
 = fun arg map ->
 	match arg with
 	| ArgUnder typ -> map
 	| ArgOne (x, typ) -> BatMap.add x (Param typ) map
-  | ArgTuple args -> update_args args map
+	| ArgTuple args -> update_args args map
 
 and update_args : arg list -> analysis -> analysis
 = fun args map -> 
@@ -189,25 +189,25 @@ let rec update_pat : analysis -> pat -> data -> analysis
 = fun map p d ->
 	match p with
 	| PVar x -> BatMap.add x d map
-  | PList ps ->	
-  	let (map, idx) = List.fold_left (fun (map, idx) p -> 
-  		let idx = idx + 1 in
-  		(update_pat map p (ListElem (idx, d)), idx)
+	| PList ps ->	
+		let (map, idx) = List.fold_left (fun (map, idx) p -> 
+			let idx = idx + 1 in
+			(update_pat map p (ListElem (idx, d)), idx)
 		) (map, 0) ps in
 		map
-  | PCons (phd, ptl) -> 
+	| PCons (phd, ptl) -> 
 		let map = update_pat map phd (Head d) in
-    update_pat map ptl (Tail d)
-  | PTuple ps -> 
-  	let (map, idx) = List.fold_left (fun (map, idx) p -> 
-  		let idx = idx + 1 in
-  		(update_pat map p (TupleElem (idx, d)), idx)
+		update_pat map ptl (Tail d)
+	| PTuple ps -> 
+		let (map, idx) = List.fold_left (fun (map, idx) p -> 
+			let idx = idx + 1 in
+			(update_pat map p (TupleElem (idx, d)), idx)
 		) (map, 0) ps in 
 		map
-  | PCtor (x, ps) -> 
-  	let (map, idx) = List.fold_left (fun (map, idx) p -> 
-  		let idx = idx + 1 in
-  		(update_pat map p (CtorElem (x, d)), idx)
+	| PCtor (x, ps) -> 
+		let (map, idx) = List.fold_left (fun (map, idx) p -> 
+			let idx = idx + 1 in
+			(update_pat map p (CtorElem (x, d)), idx)
 		) (map, 0) ps in
 		map
 	| PUnit | PUnder | PInt _ | PBool _ -> map
@@ -218,44 +218,44 @@ let rec update_binding : analysis -> let_bind -> data -> analysis
 	match binding with
 	| BindUnder -> map
 	| BindOne x -> BatMap.add x d map
-  | BindTuple bs ->
-  	begin match d with
-  	| Tuple ds -> List.fold_left2 (fun map b d -> update_binding map b d) map bs ds
-  	| _ -> 
-  		let (map, idx) = List.fold_left (fun (map, idx) b -> 
-	  		let idx = idx + 1 in
-	  		(update_binding map b (TupleElem (idx, d)), idx)
+	| BindTuple bs ->
+		begin match d with
+		| Tuple ds -> List.fold_left2 (fun map b d -> update_binding map b d) map bs ds
+		| _ -> 
+			let (map, idx) = List.fold_left (fun (map, idx) b -> 
+				let idx = idx + 1 in
+				(update_binding map b (TupleElem (idx, d)), idx)
 			) (map, 0) bs in 
 			map
-  	end
+		end
 
 let rec analysis_exp : analysis -> lexp -> t
 = fun map (l, exp) ->	
 	match exp with
 	| EUnit | Const _ | TRUE | FALSE | String _ | EVar _ -> BatMap.singleton l map 
 	(*
-  | EFun (arg, e) -> 
-  	let t = analysis_fun map [arg] e in
+	| EFun (arg, e) -> 
+		let t = analysis_fun map [arg] e in
 		BatMap.add l map t
 	*)
-  | ERef e | EDref e | Raise e | MINUS e | NOT e | EFun (_, e) -> 
-  	let t = analysis_exp map e in
-  	BatMap.add l map t 
-  | ADD (e1, e2) | SUB (e1, e2) | MUL (e1, e2) | DIV (e1, e2) | MOD (e1, e2) 
-  | OR (e1, e2) | AND (e1, e2) | LESS (e1, e2) | LESSEQ (e1, e2) | LARGER (e1, e2) | LARGEREQ (e1, e2) 
-  | EQUAL (e1, e2) | NOTEQ (e1, e2) | DOUBLECOLON (e1, e2) | AT (e1, e2) | STRCON (e1, e2) | EApp (e1, e2) 
-  | EAssign (e1, e2) -> 
-  	let (t1, t2) = (analysis_exp map e1, analysis_exp map e2) in
-  	let t = BatMap.union t1 t2 in
-  	BatMap.add l map t 
-  | EList es | ETuple es | ECtor (_, es) -> 
+	| ERef e | EDref e | Raise e | MINUS e | NOT e | EFun (_, e) -> 
+		let t = analysis_exp map e in
+		BatMap.add l map t 
+	| ADD (e1, e2) | SUB (e1, e2) | MUL (e1, e2) | DIV (e1, e2) | MOD (e1, e2) 
+	| OR (e1, e2) | AND (e1, e2) | LESS (e1, e2) | LESSEQ (e1, e2) | LARGER (e1, e2) | LARGEREQ (e1, e2) 
+	| EQUAL (e1, e2) | NOTEQ (e1, e2) | DOUBLECOLON (e1, e2) | AT (e1, e2) | STRCON (e1, e2) | EApp (e1, e2) 
+	| EAssign (e1, e2) -> 
+		let (t1, t2) = (analysis_exp map e1, analysis_exp map e2) in
+		let t = BatMap.union t1 t2 in
+		BatMap.add l map t 
+	| EList es | ETuple es | ECtor (_, es) -> 
 		let t = List.fold_left (fun t e -> BatMap.union t (analysis_exp map e)) BatMap.empty es in
 		BatMap.add l map t
-  | IF (e1, e2, e3) -> 
-  	let (t1, t2, t3) = (analysis_exp map e1, analysis_exp map e2, analysis_exp map e3) in
-  	let t = BatMap.union t1 (BatMap.union t2 t3) in
-  	BatMap.add l map t 
-  | EMatch (e, bs) -> 
+	| IF (e1, e2, e3) -> 
+		let (t1, t2, t3) = (analysis_exp map e1, analysis_exp map e2, analysis_exp map e3) in
+		let t = BatMap.union t1 (BatMap.union t2 t3) in
+		BatMap.add l map t 
+	| EMatch (e, bs) -> 
 		let t = analysis_exp map e in
 		let data = gen_data map e in
 		let t = List.fold_left (fun t (pi, ei) -> 
@@ -264,10 +264,10 @@ let rec analysis_exp : analysis -> lexp -> t
 		) t bs in
 		BatMap.add l map t
 	(* There are no function definitions in binding expression *)
-  | ELet (f, is_rec, args, typ, e1, e2) ->
-  	let t1 = analysis_exp (update_args args map) e1 in 
-  	let t2 = analysis_exp (update_binding map f (gen_data map e1)) e2 in
-  	BatMap.add l map (BatMap.union t1 t2)
+	| ELet (f, is_rec, args, typ, e1, e2) ->
+		let t1 = analysis_exp (update_args args map) e1 in 
+		let t2 = analysis_exp (update_binding map f (gen_data map e1)) e2 in
+		BatMap.add l map (BatMap.union t1 t2)
 	| EBlock (is_rec, ds, e2) -> 
 		let (t, map) = List.fold_left (fun (t, map) (f, is_rec, args, typ, e) -> 
 			let t' = analysis_exp (update_args args map) e in
@@ -275,7 +275,7 @@ let rec analysis_exp : analysis -> lexp -> t
 		) (BatMap.empty, map) ds in
 		let t = BatMap.union t (analysis_exp map e2) in
 		BatMap.add l map t
-  | _ -> raise (Failure ("Data-flow analysis : invalid exp (" ^ exp_to_string (l, exp)))
+	| _ -> raise (Failure ("Data-flow analysis : invalid exp (" ^ exp_to_string (l, exp)))
 
 and analysis_fun : analysis -> arg list -> lexp -> t
 = fun map args (l, exp) ->
@@ -285,8 +285,8 @@ and analysis_fun : analysis -> arg list -> lexp -> t
 
 let rec analysis_node : node -> t
 = fun node -> 
-  let init_condition = if node.is_rec then (BatMap.singleton node.name (Func node.typ)) else BatMap.empty in
-  analysis_exp (update_args node.args init_condition) node.body
+	let init_condition = if node.is_rec then (BatMap.singleton node.name (Func node.typ)) else BatMap.empty in
+	analysis_exp (update_args node.args init_condition) node.body
 
 (*
 let rec analysis_decl : decl -> t
