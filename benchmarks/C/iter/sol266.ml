@@ -1,0 +1,1 @@
+let rec iter(n, f) a = if (n < 1) then a else f(iter(n - 1, f) a)
