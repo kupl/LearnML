@@ -2,9 +2,9 @@
 
 LearnML is a framework for providing personalized feedbacks on functional programming assignments written by OCaml. Our framework consists of the following three tools:
 
-* **FixML** ([OOPSLA_18](papers/OOPSLA_18.pdf)) : **search-based** automated feedback generator
-* **TestML** ([OOPSLA_19](papers/OOPSLA_19.pdf)): logical error detector using **counter-example generation**
-* **CAFE** ([FSE_21](papers/FSE_21.pdf)): **context-aware** and **data-driven** feedback generator
+* **FixML** ([OOPSLA_18](https://dl.acm.org/doi/10.1145/3276528)) : **search-based** automated feedback generator
+* **TestML** ([OOPSLA_19](https://dl.acm.org/doi/10.1145/3360614)): logical error detector using **counter-example generation**
+* **CAFE** ([FSE_21]): **context-aware** and **data-driven** feedback generator
 
 All the tools are licensed under the [MIT license](LICENSE.txt).
 
