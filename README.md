@@ -19,16 +19,16 @@ Please see [INSTALL.md](./INSTALL.md) for full installation instructions.
 
 The VirtualBox image contains the following contents in the directory `~/FSE21_artifacts/`
 1. `benchmarks` contains our benchmarks consisting of submissions for 10 programming exercises, TA's golden solution, and test cases with test driver:
-    1. `C` contains 3,547 reference solutions which pass test cases.
-    2. `I` contains 664 incorrect submissions which cannot pass test cases.
-    3. `ta_solutions` contains TA's reference solutions that are used as inputs for FixML and TestML.
-    4. `testcases` contains test cases used in evaluation, and testing driver files.
+    * `C` contains 3,547 reference solutions which pass test cases.
+    * `I` contains 664 incorrect submissions which cannot pass test cases.
+    * `ta_solutions` contains TA's reference solutions that are used as inputs for FixML and TestML.
+    * `testcases` contains test cases used in evaluation, and testing driver files.
  
 2. `engine` contains all several common source codes (e.g., main-driver, language definition, utility functions, etc) and four subdirectories: 
-    1. `FixML` contains the implementation of FixML.
-    2. `TestML` contains the implementation of TestML.
-    3. `Data-driven` contains the implementation of three data-driven approaches (CAFE, fucntion-level SARFGEN, and program-level SARFGEN).
-    4. `models` contains the preprocessed data (call-graph) of reference solutions. When new solutions are given to our data-driven feedback generator, it stores the obtained call-graph in here.
+    * `FixML` contains the implementation of FixML.
+    * `TestML` contains the implementation of TestML.
+    * `Data-driven` contains the implementation of three data-driven approaches (CAFE, fucntion-level SARFGEN, and program-level SARFGEN).
+    * `models` contains the preprocessed data (call-graph) of reference solutions. When new solutions are given to our data-driven feedback generator, it stores the obtained call-graph in here.
     
 3. `run.py` is a python script for running all benchmarks by several options.
 4. `table.py` is a python script for visualizing evaluation result.
