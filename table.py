@@ -83,6 +83,7 @@ def construct_table1 (result_dir):
     fixml_problem_path = os.path.join(fixml_path, problem)
     
     if os.path.exists(cafe_problem_path) and os.path.exists(fixml_problem_path):
+      print("[Info]:construct the " + str(no) + "-th row of Table 1")
       # Basic information of benchmark set
       incorrect_num = len(find_files(os.path.join(INCORRECT_DIR, problem)))
       correct_num = len(find_files(os.path.join(CORRECT_DIR, problem)))
@@ -136,9 +137,9 @@ def construct_table1 (result_dir):
         str(incorrect_num), 
         str(correct_num), 
         str(round(loc_sum / incorrect_num)) + "(" + str(loc_min) + "-" + str(loc_max) + ")",
-        str(time_sum_fixml / fix_sum_fixml),
+        str(round(time_sum_fixml / fix_sum_fixml, 2)),
         str(fix_sum_fixml),
-        str(time_sum_cafe / fix_sum_cafe),
+        str(round(time_sum_cafe / fix_sum_cafe, 2)),
         str(fix_sum_cafe)])
 
   result_table.append(
@@ -147,9 +148,9 @@ def construct_table1 (result_dir):
     str(incorrect_total),
     str(correct_total), 
     str(round(loc_total / incorrect_total)) + "(" + str(loc_min_total) + "-" + str(loc_max_total) + ")",
-    str(time_total_fixml / fix_total_fixml),
+    str(round(time_total_fixml / fix_total_fixml, 2)),
     str(fix_total_fixml),
-    str(time_total_cafe / fix_total_cafe),
+    str(round(time_total_cafe / fix_total_cafe, 2)),
     str(fix_total_cafe)])
 
   # Construct resulting table
@@ -182,6 +183,7 @@ def construct_figure6 (result_dir):
     cafe_problem_path = os.path.join(cafe_path, problem)
     
     if os.path.exists(cafe_problem_path) and os.path.exists(func_problem_path) and os.path.exists(prog_problem_path):
+      print("[Info]:construct the " + str(no) + "-th col of Figure 6")
       incorrect_num = len(find_files(os.path.join(INCORRECT_DIR, problem)))
       
       # Parsing Prog results 
@@ -243,6 +245,6 @@ def reproduce(result_dir):
   result_dir = result_dir.strip("/")
   construct_table1(result_dir)
   construct_figure6(result_dir)
-  
+
 if __name__ == '__main__':
   reproduce(sys.argv[1])

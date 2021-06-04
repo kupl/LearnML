@@ -1,0 +1,2 @@
+Function-level SARFGEN fails to generate a patch
+Time elappsed  : 66.968280077

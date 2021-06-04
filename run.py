@@ -207,7 +207,7 @@ def main():
 
   # Create a directory for storing evaluation result
   curr_time = datetime.datetime.now().strftime("%H:%M:%S")
-  result_dir= "result"# + curr_time
+  result_dir= "result" + curr_time
   make_dir(result_dir)
 
   # Default : run all programs with FixML, CAFE, and SARFGEN

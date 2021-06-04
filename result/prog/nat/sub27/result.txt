@@ -1,0 +1,2 @@
+Program-level SARFGEN fails to generate a patch
+Time elappsed  : 59.0701670647

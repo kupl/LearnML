@@ -1,0 +1,3 @@
+Size of removed expressions : 5
+Size of applied templates : 11
+Time elappsed  : 0.0184059143066
