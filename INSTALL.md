@@ -10,6 +10,6 @@ We provide a full VirtualBox image to install LearnML. This image contains all b
 
 *NOTE:*
 
-- The size of the VM image: The size is about **TODO**. When decompressing it, you obtain about **TODO** `.vdi` file.
+- The size of the VM image: The size is about 4.6GB. When decompressing it, you obtain about 20GB `.vdi` file.
 - **The experiement setting: In our paper, we conducted all experiments on n an iMac with Intel i5 CPU and 16GB memory.** 
 Therefore, when running LearnML by using the virtualbox with the different settings, it may differ from the experimental results on our paper. We recommand to run LearnML with **the VM image having 8GB memory and four virtual processors**.
