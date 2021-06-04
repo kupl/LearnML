@@ -78,7 +78,11 @@ let fix_with_solution : (string * prog) -> (string * prog) -> examples -> unit
   let components = Comp.extract_component cpgm in
   (* Patch Generation *)
   match Synthesize.hole_synthesize pgm initial_set components examples with
-  | None -> print_endline ("FixML fails to generate a patch")
+  | None -> 
+		print_header ("Generated patch by FixML"); print_endline ("None"); 
+		print_header "Results"; 
+		print_endline ("FixML fails to generate a patch");
+		print_endline ("Time elappsed :" ^ string_of_float (Sys.time() -. !Synthesize.start_time))
   | Some pgm' ->
     Print.print_header "Generated patch by FixML"; Print.print_pgm pgm';
     Print.print_header "Result"; print_endline ("Time elappsed :" ^ string_of_float (Sys.time() -. !Synthesize.start_time))

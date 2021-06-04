@@ -1,10 +1,11 @@
+(* Extracting binary's path *)
 let rec path_to_str : string list -> string
 = fun str_lst ->
 	match str_lst with
 	|[] -> ""
 	|hd::tl -> (path_to_str tl)^hd^"/"
 
-let path =
+let lib_path =
 	let executable_path = Sys.argv.(0) in
 	let str_list = String.split_on_char '/' executable_path in
 	let str_list = List.rev str_list in
@@ -13,13 +14,23 @@ let path =
 	|[hd] -> "./moduleSpec.ml"
 	|hd::tl -> (path_to_str tl)^"moduleSpec.ml"
 
+let model_path =
+	let executable_path = Sys.argv.(0) in 
+	let str_list = String.split_on_char '/' executable_path in
+	let str_list = List.rev str_list in
+	match str_list with
+	|[] -> raise(Failure "external path is incorrect")
+	|[hd] -> "/models/"
+  |hd::tl -> (path_to_str tl)^ "models/"
+  
 let opt_solution_filename = ref ""
 let opt_solution_dirname = ref ""
 let opt_submission_filename = ref ""
 let opt_testcases_filename = ref ""
 let opt_grading_filename = ref ""
 let opt_entry_func = ref ""
-let opt_external_filename = ref path
+let opt_external_filename = ref lib_path
+let opt_model_path = ref model_path
 
 let opt_run = ref false (* Run test cases *)
 let opt_fix = ref false (* FixML or CAFE *)

@@ -24,7 +24,7 @@ let check_and_create_dir : string -> bool
 
 let rec save_data ?(logging_flag=false) : (string * prog) -> unit
 = fun (f_name, pgm) -> 
-	let model_path = "../models" in
+	let model_path = Options.(!opt_model_path) in
 	if check_and_create_dir model_path then
 		let problem_name = List.hd (List.tl (List.rev (Str.split (Str.regexp "/+") f_name))) in 
 		let problem_path = model_path ^ "/" ^ problem_name in
@@ -56,7 +56,7 @@ let rec load_data : (string * prog) -> references
 		List.hd (List.rev (Str.split (Str.regexp "/+") f_name)) 
 		|> Str.replace_first (Str.regexp ".ml$") ""
 	in
-	let data_path = "../models/" ^ problem_name ^ "/" ^ file_name ^ ".marshalled" in
+	let data_path = Options.(!opt_model_path) ^ problem_name ^ "/" ^ file_name ^ ".marshalled" in
 	if Sys.file_exists data_path then
 		let data_in = open_in data_path in
 		let reference = Marshal.from_channel data_in in
@@ -84,6 +84,12 @@ let run : (string * prog) -> (string * prog) list -> examples -> unit
 	let references = List.map load_data cpgms in
 	let uniq_refs = remove_redundant_refs references in
 	(* Find mapping according to given matching algorithm option *)
+	let tool_name = 
+		if Options.(!opt_fix) then "CAFE"
+		else if Options.(!opt_func) then "Function-level SARFGEN"
+		else if Options.(!opt_prog) then "Program-level SARFGEN"
+		else raise (Failure "Invalid matching algorithm")
+	in
 	let matching = 
 		if Options.(!opt_fix) then select_solutions pgm uniq_refs (* Function-level context-aware matching *)
 		else if Options.(!opt_func) then select_solutions_syn pgm uniq_refs (* Function-level SARFGEN *)
@@ -118,15 +124,13 @@ let run : (string * prog) -> (string * prog) list -> examples -> unit
 			| None -> acc 
 		) removed_labels 0
 		in
-		let tool_name = 
-			if Options.(!opt_fix) then "CAFE"
-			else if Options.(!opt_func) then "Function-level SARFGEN"
-			else if Options.(!opt_prog) then "Program-level SARFGEN"
-			else raise (Failure "Invalid matching algorithm")
-		in
 		print_header ("Generated patch by " ^ tool_name); print_pgm pgm'; 
 		print_header "Results";
 		print_endline ("Size of removed expressions : " ^ string_of_int removed_exps_size);
 		print_endline ("Size of applied templates : " ^ string_of_int (size_of_templates cand));
 		print_endline ("Time elappsed  : " ^ string_of_float (Unix.gettimeofday() -. !start_time))
-	| None -> print_endline "CAFE fails to generate a patch"
+	| None -> 
+		print_header ("Generated patch by " ^ tool_name); print_endline ("None"); 
+		print_header "Results"; 
+		print_endline (tool_name ^ " fails to generate a patch");
+		print_endline ("Time elappsed  : " ^ string_of_float (Unix.gettimeofday() -. !start_time))
