@@ -43,7 +43,7 @@ Here we explain how to reproduce our main results (i.e., Table1 and Figure6).
     * Figure6 is created from  resulting logs in `result/cafe`, `result/func`, and `result/prog`
 2. If it properly done, you can see the following results:
     * `result/table1.txt` shows the following table:
-    * 
+    
     ```
     |   No | Problem   |   # Wrong |   # Correct | LOC (min-max)   |   Time (FixML) |   #Fix (FixML) |   Time (CAFE) |   #Fix (CAFE) |
     |------+-----------+-----------+-------------+-----------------+----------------+----------------+---------------+---------------|
