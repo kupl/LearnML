@@ -85,7 +85,7 @@ If you want to provide a feedback for a specific benchmark with CAFE, you can ru
 engine/main.native -fix -submission [submission_path] -solutoins [solution_dir] -entry [function_name] -testcases [testcase_path] -grading [test_driver](when it exists)
 ```
 
-For example, you can try to generate a feedback for `benchmarks/I/max/sub1.ml"` by using the following command:
+For example, you can try to generate a feedback for `benchmarks/I/max/sub1.ml` by using the following command:
 
 ```
 engine/main.native -fix -submission benchmarks/I/max/sub1.ml -solutoins benchmarks/C/max/ -entry max -testcases benchmarks/testcases/max_testcases
