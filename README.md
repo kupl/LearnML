@@ -69,13 +69,14 @@ Here we explain how to reproduce our main results (i.e., Table1 and Figure6).
 
 ### Running the artifact
 Since someone may want to run our artifact on their own, we also explain how to run the arfifact and show the result. 
-1. Go to the directory: `~/FSE21_artifacts/` and run the script by: ``` python3 run.py ```
+1. To build our engine type the command:```cd engine; ./build```
+2. Go to the directory: `~/FSE21_artifacts/` and run the script by: ``` python3 run.py ```
     * This script runs all submission with four feedback generators (CAFE, FixML, function-level SARFGEN, and program-level SARFGEN)
     * The results is generated in `result[time]/[tool_name]/[problem]/[submission]`:
       * `original.ml` is original submssion.
       * `patch.ml` is a patch obtained by modifying original.ml. If a system fails to repair, only None is written.
       * `result.txt` contains elapsed time and size of patch (if it calculated).
-2. After running `run.py`, type the script: ``` python3 table.py [result_directory] ```. It will show the table and graph according to the evaluation result.
+3. After running `run.py`, type the script: ``` python3 table.py [result_directory] ```. It will show the table and graph according to the evaluation result.
 
 ### Testing a specific bernchmark using CAFE
 If you want to provide a feedback for a specific benchmark with CAFE, you can run our engine with the following command:
