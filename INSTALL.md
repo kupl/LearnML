@@ -9,7 +9,7 @@ Please see [REQUIREMENTS.md](./REQUIREMENTS.md) for requirements to installation
 1. Download and install Oracle VM VirtualBox at [here](https://www.virtualbox.org/wiki/Downloads)
 2. Download the VM image: [FSE21_CAFE_artifacts.tar.gz](https://drive.google.com/file/d/1JRLXfOugQd7al5jUwkTpWH4pIWF0Bowh/view?usp=sharing) 
 3. Install the `.vdi` file with VirtualBox.
-
+   * Ubuntu ID/PW: cafe/cafe
 *NOTE:*
 
 - The size of the VM image: The size is about 4.3GB. When decompressing it, you obtain about 20GB `.vdi` file.
