@@ -26,7 +26,7 @@ The artifact requires these packages.
 | OCamlbuild        |  ^0.14.0  |
 | OCamlfind         |  ^1.9.1   |
 | Z3                |  =4.8.1   |
-| Zarith            |   ^1.10   |
+| Zarith            |   ^1.12   |
 
 ### Clone, Build
 
