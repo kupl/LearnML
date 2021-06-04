@@ -22,13 +22,13 @@ If you want to provide a feedback for a specific benchmark with CAFE, build our 
 After finshing the compilation you can run our engine with the following command:
 
 ```
-engine/main.native -fix -submission [submission_path] -solutoins [solution_dir] -entry [function_name] -testcases [testcase_path] -grading [test_driver](when it exists)
+engine/main.native -fix -submission [submission_path] -solutions [solution_dir] -entry [function_name] -testcases [testcase_path] -grading [test_driver](when it exists)
 ```
 
 For example, you can try to generate a feedback for `benchmarks/I/max/sub1.ml` by using the following command:
 
 ```
-engine/main.native -fix -submission benchmarks/I/max/sub1.ml -solutoins benchmarks/C/max/ -entry max -testcases benchmarks/testcases/max_testcases
+engine/main.native -fix -submission benchmarks/I/max/sub1.ml -solutions benchmarks/C/max/ -entry max -testcases benchmarks/testcases/max_testcases
 ```
 
 The diff problem (Problem 10 in Table 1) in our benchmark requires a test driver. To generate a feedback for `benchmarks/I/diff/sub1.ml`, run the following script:
