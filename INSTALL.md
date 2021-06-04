@@ -2,7 +2,7 @@
 
 We provide a full VirtualBox image to install LearnML. This image contains all benchmarks, dependencies, and a data-driven feedback generator, modeling version of [SARFGEN](https://dl.acm.org/doi/10.1145/3192366.3192384), for comparison as well as our framework, LearnML. 
 
-Please see [./REQUIREMENTS.md](./REQUIREMENTS.md) for requirements to installation.
+Please see [REQUIREMENTS.md](./REQUIREMENTS.md) for requirements to installation.
 
 ## Installing a Virtual Machine Image
 
