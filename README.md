@@ -4,7 +4,7 @@ LearnML is a framework for providing personalized feedbacks on functional progra
 
 * **FixML** ([OOPSLA_18](https://dl.acm.org/doi/10.1145/3276528)) : **search-based** automated feedback generator
 * **TestML** ([OOPSLA_19](https://dl.acm.org/doi/10.1145/3360614)): logical error detector using **counter-example generation**
-* **CAFE** ([FSE_21](TODO)): **context-aware** and **data-driven** feedback generator
+* **CAFE** ([FSE_21](./FSE21.pdf)): **context-aware** and **data-driven** feedback generator
 
 All the tools are licensed under the [MIT license](LICENSE.txt).
 
@@ -77,22 +77,3 @@ Since someone may want to run our artifact on their own, we also explain how to 
       * `patch.ml` is a patch obtained by modifying original.ml. If a system fails to repair, only None is written.
       * `result.txt` contains elapsed time and size of patch (if it calculated).
 3. After running `run.py`, type the script: ``` python3 table.py [result_directory] ```. It will show the table and graph according to the evaluation result.
-
-### Testing a specific bernchmark using CAFE
-If you want to provide a feedback for a specific benchmark with CAFE, you can run our engine with the following command:
-
-```
-engine/main.native -fix -submission [submission_path] -solutoins [solution_dir] -entry [function_name] -testcases [testcase_path] -grading [test_driver](when it exists)
-```
-
-For example, you can try to generate a feedback for `benchmarks/I/max/sub1.ml` by using the following command:
-
-```
-engine/main.native -fix -submission benchmarks/I/max/sub1.ml -solutoins benchmarks/C/max/ -entry max -testcases benchmarks/testcases/max_testcases
-```
-
-The diff problem (Problem 10 in Table 1) in our benchmark requires a test driver. To generate a feedback for `benchmarks/I/diff/sub1.ml`, run the following script:
-
-```
-engine/main.native -fix -submission benchmarks/I/diff/sub1.ml -solutions benchmarks/C/diff/ -entry grading -testcases benchmarks/testcases/diff_testcases -grading benchmarks/testcases/diff_grading.ml
-```
