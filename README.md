@@ -27,7 +27,12 @@ The VirtualBox image contains the following contents in the directory `~/FSE21_a
 2. `engine` contains all several common source codes (e.g., main-driver, language definition, utility functions, etc) and four subdirectories: 
     * `FixML` contains the implementation of FixML.
     * `TestML` contains the implementation of TestML.
-    * `Data-driven` contains the implementation of three data-driven approaches (CAFE, fucntion-level SARFGEN, and program-level SARFGEN).
+    * `Data-driven` contains the implementation of three data-driven approaches (CAFE, fucntion-level SARFGEN, and program-level SARFGEN). The most important tasks of CAFE is included in the following file:
+      * `callGraph.ml` contains the implementation of our 0-CFA call graph extraction (Section 4.1)
+      * `selector.ml` contains the implementation of function context-aware matching (Section 4.1)
+      * `repair_template.ml` and `extractor.ml` contains the definition of repair template and implementation of template extraction (Section 4.2.1)
+      * `alias.ml`, `complete.ml`, and `update.ml` are about edit scripts generation (Section 4.2.2)
+      * `repairer.ml` contains the overall patch generation algorithm of CAFE (section 4.2.3)
     * `models` contains the preprocessed data (call-graph) of reference solutions. When new solutions are given to our data-driven feedback generator, it stores the obtained call-graph in here.
     
 3. `run.py` is a python script for running all benchmarks by several options.
