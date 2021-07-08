@@ -28,6 +28,17 @@ The artifact requires these packages.
 | Z3                |  =4.8.1   |
 | Zarith            |   ^1.12   |
 
+### Dependencies of Python
+
+The artifact provides a python script for runnning CAFE and visualizing the results.
+The script uses the following packages:
+
+| Python Package Name |  Version  |
+| :------------------ | :-------: |
+| numpy               |  =1.19.5  |
+| tabulate            |  =0.8.3   |
+| matplotlib          |  =3.3.4   |
+
 ### Clone, Build
 
 We are not providing the version build file now.
