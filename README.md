@@ -40,9 +40,9 @@ The VirtualBox image contains the following contents in the directory `~/FSE21_a
 5. `result` contains all results obtained by running `run.py`. Since running the script takes a long time, we also provide the pre-excuted results on our experiemntal environment (**iMac with Intel i5 CPU and 16GB memory**).
 
 ## Reproducing the results presented in the paper
-Here we explain how to reproduce our main results (i.e., Table1 and Figure6).
+Here we explain how to reproduce our main results (i.e., Table1, Table2, and Figure6). We do not provide the user study result because of the privacy issues.
 
-### Table1 and Figure6
+### Reproducing the results via provided results
 1. To reproduce the evaluation results, go to the directory: `~/FSE21_artifacts/` and run the script by: ``` python3 table.py result ``` 
     * Table1 is created from resulting logs in `result/cafe` and `result/fixml`
     * Figure6 is created from  resulting logs in `result/cafe`, `result/func`, and `result/prog`
