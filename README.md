@@ -45,6 +45,7 @@ Here we explain how to reproduce our main results (i.e., Table1, Table2, and Fig
 ### Reproducing the results via provided results
 1. To reproduce the evaluation results, go to the directory: `~/FSE21_artifacts/` and run the script by: ``` python3 table.py result ``` 
     * Table1 is created from resulting logs in `result/cafe` and `result/fixml`
+    * Table2 is created from resulting logs in `result/cafe` and `result/cafe2`
     * Figure6 is created from  resulting logs in `result/cafe`, `result/func`, and `result/prog`
 2. If it is properly done, you can see the following results:
     * `result/table1.txt` shows the following table:
