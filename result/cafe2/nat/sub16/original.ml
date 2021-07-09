@@ -1,0 +1,16 @@
+type nat = ZERO | SUCC of nat
+
+let rec natadd (n1 : nat) (n2 : nat) : nat =
+  match n2 with ZERO -> n1 | SUCC k2 -> SUCC (natadd n1 k2)
+
+
+let rec natmul (n1 : nat) (n2 : nat) : nat =
+  match n2 with
+  | ZERO -> n1
+  | SUCC k -> if k = ZERO then n1 else natadd n1 (natmul n1 k)
+
+
+let rec natexp (n1 : nat) (n2 : nat) : nat =
+  match n2 with
+  | ZERO -> SUCC ZERO
+  | SUCC k -> if k = ZERO then SUCC ZERO else natmul (natmul n1 k) n1

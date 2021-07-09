@@ -1,0 +1,2 @@
+CAFE fails to generate a patch
+Time elappsed  : 16.0106368065

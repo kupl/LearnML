@@ -33,7 +33,7 @@ def parsing_arguments():
   parser = argparse.ArgumentParser(description = "This script is written for reproducing tables in the paper")
 
   parser.add_argument("-option", type = str, default = "all",
-    choices = ["all", "cafe", "fixml", "func", "prog"],
+    choices = ["all", "cafe", "fixml", "func", "prog", "cafe2"],
     help = "Input an option of [all, cafe, fixml, func, prog]\n the default option is \'all\'"
     )
 
@@ -77,7 +77,7 @@ def make_dir(directory):
 def execute_command(command):
   p = subprocess.Popen(command,stdout=subprocess.PIPE,stderr=subprocess.PIPE,shell=True)
   try: 
-    out, err = p.communicate (timeout=70)
+    out, err = p.communicate (timeout=1800)
     out = out.decode()
     return (out, err)
   except subprocess.TimeoutExpired:
@@ -128,10 +128,12 @@ def run_opt_with_submission (result_dir, problem, entry, submission_path, opt):
 
   if opt == "fixml":
     opt_solution = " -solution " + os.path.join(TA_DIR, problem + "_solution.ml")
+  elif opt == "cafe2":
+    opt_solution = " -solution " + os.path.join(TA_DIR, problem + "_solution.ml") + " -solutions " + os.path.join(CORRECT_DIR, problem)
   else:
     opt_solution = " -solutions " + os.path.join(CORRECT_DIR, problem)
 
-  if opt == "fixml" or opt == "cafe":
+  if opt == "fixml" or opt == "cafe" or opt == "cafe2":
     opt_run = " -fix"
   elif opt == "prog":
     opt_run = " -prog"
@@ -216,6 +218,7 @@ def main():
     run_opt_all (result_dir, "fixml")
     run_opt_all (result_dir, "prog")
     run_opt_all (result_dir, "func")
+    run_opt_all (result_dir, "cafe2")
 
   # Run all submissions of one problem by all options
   if opt == "all" and not problem == None:
@@ -223,6 +226,7 @@ def main():
     run_opt_with_problem (result_dir, problem, "fixml")
     run_opt_with_problem (result_dir, problem, "prog")
     run_opt_with_problem (result_dir, problem, "func")
+    run_opt_with_problem (result_dir, problem, "cafe2")
 
   # Run all submissions by specific option 
   if not opt == "all" and problem == None:

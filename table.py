@@ -23,6 +23,7 @@ BENCHMARK = [
 
 BENCHMARK_DIR = "benchmarks"
 CORRECT_DIR = os.path.join(BENCHMARK_DIR, "C")
+TEST_DIR = os.path.join(BENCHMARK_DIR, "testcases")
 INCORRECT_DIR = os.path.join(BENCHMARK_DIR, "I")
 ##################################################################
 #  The subfunctions for utility. e.g., find directory lists etc. #
@@ -137,9 +138,9 @@ def construct_table1 (result_dir):
         str(incorrect_num), 
         str(correct_num), 
         str(round(loc_sum / incorrect_num)) + "(" + str(loc_min) + "-" + str(loc_max) + ")",
-        str(round(time_sum_fixml / fix_sum_fixml, 2)),
+        str(round(time_sum_fixml / fix_sum_fixml, 1)),
         str(fix_sum_fixml),
-        str(round(time_sum_cafe / fix_sum_cafe, 2)),
+        str(round(time_sum_cafe / fix_sum_cafe, 1)),
         str(fix_sum_cafe)])
 
   result_table.append(
@@ -148,9 +149,9 @@ def construct_table1 (result_dir):
     str(incorrect_total),
     str(correct_total), 
     str(round(loc_total / incorrect_total)) + "(" + str(loc_min_total) + "-" + str(loc_max_total) + ")",
-    str(round(time_total_fixml / fix_total_fixml, 2)),
+    str(round(time_total_fixml / fix_total_fixml, 1)),
     str(fix_total_fixml),
-    str(round(time_total_cafe / fix_total_cafe, 2)),
+    str(round(time_total_cafe / fix_total_cafe, 1)),
     str(fix_total_cafe)])
 
   # Construct resulting table
@@ -163,7 +164,79 @@ def construct_table1 (result_dir):
   print(table)
   with open (os.path.join(result_dir, "table1.txt"), "w") as table1:
     table1.write(table)
- 
+
+#####################################
+# Construct the Table 1 with result #
+#####################################
+def construct_table2 (result_dir):
+  #No #Problem #Test(CAFE1) #Fix(CAFE1) Time(CAFE1) #TEST(CAFE2) #Fix(CAFE2) Time(CAFE2) 
+  result_table = []
+  
+  cafe1_path = os.path.join(result_dir, "cafe")
+  cafe2_path = os.path.join(result_dir, "cafe2")
+  
+  for (no, problem) in BENCHMARK:
+    cafe1_problem_path = os.path.join(cafe1_path, problem)
+    cafe2_problem_path = os.path.join(cafe2_path, problem)
+    
+    if os.path.exists(cafe1_problem_path) and os.path.exists(cafe2_problem_path):
+      print("[Info]:construct the " + str(no) + "-th row of Table 2")
+
+      # Parsing CAFE1 results 
+      results_cafe1 = find_files(cafe1_problem_path)
+      test_cafe1 = 0
+      time_sum_cafe1 = 0.0
+      fix_sum_cafe1 = 0
+
+      with open(os.path.join(TEST_DIR, problem + "_testcases"), "r") as test:
+        test_cafe1 = test.read().count("=>")
+      
+      for result in results_cafe1:
+        # Check that if a patch is generated
+        with open(os.path.join(result, "result.txt"), "r") as log:
+          text = log.read()
+          if not ("fails to" in text):
+            fix_sum_cafe1 += 1
+            time_sum_cafe1 += float(text.split(":")[-1].strip("\n"))
+      
+      # Parsing CAFE2 results 
+      results_cafe2 = find_files(cafe2_problem_path)
+      test_cafe2 = 0
+      time_sum_cafe2 = 0.0
+      fix_sum_cafe2 = 0
+
+      for result in results_cafe2:
+        # Check that if a patch is generated
+        with open(os.path.join(result, "result.txt"), "r") as log:
+          text = log.read()
+          if not ("fails to" in text):
+            fix_sum_cafe2 += 1
+            test_cafe2 += int(text.split(":")[1].split("\n")[0])
+            time_sum_cafe2 += float(text.split(":")[-1].strip("\n"))
+
+      result_table.append(
+        [str(no), 
+        problem, 
+        str(test_cafe1), 
+        str(fix_sum_cafe1),
+        str(round(time_sum_cafe1 / fix_sum_cafe1, 1)),
+        str(round(test_cafe2 / fix_sum_cafe2, 0)), 
+        str(fix_sum_cafe2),
+        str(round(time_sum_cafe2 / fix_sum_cafe2, 1))]
+        )
+
+  # Construct resulting table
+  table = tabulate(result_table, 
+    headers=[
+      "No", "Problem", "#Test (w/ test)", "#Fix (w/ test)", "Time (w/ test)", 
+      "#Test (w/o test)", "#Fix (w/o test)", "Time (w/o test)"
+    ], 
+    tablefmt='orgtbl'
+  ) 
+  print(table)
+  with open (os.path.join(result_dir, "table2.txt"), "w") as table2:
+    table2.write(table)
+
 ###############################################
 # Construct the graph in Figure 6 with result #
 ###############################################
@@ -176,6 +249,10 @@ def construct_figure6 (result_dir):
   cafe = []
   prog = []
   func = []
+
+  (cafe_sum_fix, cafe_sum_time) = (0, 0.0)
+  (prog_sum_fix, prog_sum_time) = (0, 0.0)
+  (func_sum_fix, func_sum_time) = (0, 0.0)
 
   for (no, problem) in BENCHMARK:
     prog_problem_path = os.path.join(prog_path, problem)
@@ -194,6 +271,8 @@ def construct_figure6 (result_dir):
           text = log.read()
           if not ("fails to" in text):
             fix_prog += 1
+            prog_sum_fix += 1
+            prog_sum_time += float(text.split(":")[-1].strip("\n"))
 
       # Parsing Func results 
       results_func = find_files(func_problem_path)
@@ -203,6 +282,8 @@ def construct_figure6 (result_dir):
           text = log.read()
           if not ("fails to" in text):
             fix_func += 1
+            func_sum_fix += 1
+            func_sum_time += float(text.split(":")[-1].strip("\n"))
       
       # Parsing CAFE results 
       results_cafe = find_files(cafe_problem_path)
@@ -213,6 +294,8 @@ def construct_figure6 (result_dir):
           text = log.read()
           if not ("fails to" in text):
             fix_cafe += 1
+            cafe_sum_fix += 1
+            cafe_sum_time += float(text.split(":")[-1].strip("\n"))
 
       # Insert new data
       label.insert(len(label), "P"+str(no))
@@ -220,6 +303,9 @@ def construct_figure6 (result_dir):
       func.insert(len(func), fix_func/incorrect_num)
       cafe.insert(len(cafe), fix_cafe/incorrect_num)
 
+  print("Prog : ", prog, "Fix rate : ", prog_sum_fix / 664, "Average time : ", prog_sum_time / prog_sum_fix)
+  print("Func : ", func,  "Fix rate : ", func_sum_fix / 664, "Average time : ", func_sum_time / func_sum_fix)
+  print("Prog : ", cafe,  "Fix rate : ", cafe_sum_fix / 664, "Average time : ", cafe_sum_time / cafe_sum_fix)
   ### Draw graph
   fig = plt.figure()
 
@@ -244,6 +330,7 @@ def construct_figure6 (result_dir):
 def reproduce(result_dir):
   result_dir = result_dir.strip("/")
   construct_table1(result_dir)
+  construct_table2(result_dir)
   construct_figure6(result_dir)
 
 if __name__ == '__main__':

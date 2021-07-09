@@ -127,7 +127,8 @@ let main () =
       match submission, solution, solutions with
       | None, _, _ -> raise (Failure (!opt_submission_filename ^ " does not exist"))
       | Some sub, Some sol, [] -> fix_with_solution sub sol testcases
-      | Some sub, _, (hd::tl as sols) -> Data_driven.run sub sols testcases
+      | Some sub, None, (hd::tl as sols) -> Data_driven.run sub sols testcases
+      | Some sub, Some sol, (hd::tl as sols) -> Data_driven.run2 sub sols (snd sol)
       | _ -> raise (Failure "Submission or solution files are not provided")
     end
   else if !opt_prog || !opt_func then (* SARFGEN (modeled) *)

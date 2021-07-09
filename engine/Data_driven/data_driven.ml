@@ -134,3 +134,53 @@ let run : (string * prog) -> (string * prog) list -> examples -> unit
 		print_header "Results"; 
 		print_endline (tool_name ^ " fails to generate a patch");
 		print_endline ("Time elappsed  : " ^ string_of_float (Unix.gettimeofday() -. !start_time))
+
+(* CAFE with automated test generation *)
+let run2 : (string * prog) -> (string * prog) list -> prog -> unit
+= fun (f_sub, pgm) cpgms ta_sol -> 
+	(* Load preprocessed references *)
+	let (r_env, pgm) = Preprocessor.run (append_grading pgm) in
+	let references = List.map load_data cpgms in
+	let uniq_refs = remove_redundant_refs references in
+	(* Find mapping according to given matching algorithm option *)
+	let matching = 
+		if Options.(!opt_fix) then select_solutions pgm uniq_refs (* Function-level context-aware matching *)
+		else if Options.(!opt_func) then select_solutions_syn pgm uniq_refs (* Function-level SARFGEN *)
+		else if Options.(!opt_prog) then select_solution_syn pgm uniq_refs (* Program-level SARFGEN *) 
+		else raise (Failure "Fail to run data-driven feedback generator")
+	in
+	(* Extracting repair templates *)
+	let (repair_templates, call_temps) = Extractor.extract_templates matching in
+	let repair_templates = 
+		BatSet.filter (fun (temp, source) -> not (check_redundant_template pgm temp)) repair_templates 
+		|> BatSet.map (fun (temp, source) -> (Preprocessor.Renaming.apply_template r_env temp, source))
+	in
+	let call_temps = BatMap.foldi (fun x es acc -> 
+		BatMap.add (Preprocessor.Renaming.apply_env x r_env) (BatSet.map (Preprocessor.Renaming.apply_exp r_env) es) acc
+	) call_temps BatMap.empty in
+	(* Patch generation *)
+	let pgm = Preprocessor.Renaming.apply_pgm r_env (remove_grading pgm) in
+	let _ = 
+		start_time := Unix.gettimeofday();
+		Print.print_header ("Submission (" ^ f_sub ^ ")"); Print.print_pgm pgm;
+	in
+	(* Iterative loop *)
+	let rec iter : prog -> call_templates -> repair_templates -> examples -> unit
+	= fun pgm' call_temps repair_templates testcases ->
+		match TestGenerator.gen_counter_example pgm' ta_sol with
+		| Some t -> 
+			begin match Repairer.run pgm call_temps repair_templates testcases with
+			| Some (pgm', _) -> iter pgm' call_temps repair_templates (t::testcases)
+			| None -> 
+				print_header ("Generated patch by advanced CAFE"); print_endline ("None"); 
+				print_header "Results"; 
+				print_endline ("CAFE fails to generate a patch");
+				print_endline ("Time elappsed  : " ^ string_of_float (Unix.gettimeofday() -. !start_time))
+			end
+		| None -> 
+			print_header ("Generated patch by by advanced CAFE"); print_pgm pgm'; 
+			print_header "Results";
+			print_endline ("# of generated tests : " ^ string_of_int (List.length testcases));
+			print_endline ("Time elappsed  : " ^ string_of_float (Unix.gettimeofday() -. !start_time))
+	in
+	iter pgm call_temps repair_templates []
