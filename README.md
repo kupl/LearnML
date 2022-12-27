@@ -10,7 +10,7 @@ All the tools are licensed under the [MIT license](LICENSE).
 
 ## Installation
 We provide a simple way to install LearnML:
-* A VirtualBox image containing all resources to reproduce the main results (Table1 and Figure6) of our paper: [FSE21_CAFE_artifacts.tar.gz](https://drive.google.com/file/d/1aqHfwld88AiZTy5Dcu0Th3nmnaVd5eyZ/view?usp=sharing) ([Zenodo DOI](https://zenodo.org/record/5084000#.YOvg65MzaBQ))
+* A VirtualBox image containing all resources to reproduce the main results (Table1 and Figure6) of our paper: ([Zenodo DOI](https://zenodo.org/record/5084000#.YOvg65MzaBQ))
    * Ubuntu ID/PW: cafe/cafe
    
 Please see [INSTALL.md](./INSTALL.md) for full installation instructions.
