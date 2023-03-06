@@ -1,14 +1,14 @@
 # Installation
 
-We provide a full VirtualBox image to install LearnML. This image contains all benchmarks, dependencies, and a data-driven feedback generator, modeling version of [SARFGEN](https://dl.acm.org/doi/10.1145/3192366.3192384), for comparison as well as our framework, LearnML. 
+We provide a full VirtualBox image (Ubuntu 20.04) to install LearnML. This image contains all benchmarks, dependencies, and a data-driven feedback generator, modeling version of [SARFGEN](https://dl.acm.org/doi/10.1145/3192366.3192384), for comparison as well as our framework, LearnML. 
 
 Please see [REQUIREMENTS.md](./REQUIREMENTS.md) for requirements to installation.
 
 ## Installing a Virtual Machine Image
 
 1. Download and install Oracle VM VirtualBox at [here](https://www.virtualbox.org/wiki/Downloads)
-2. Download the VM image: [FSE21_CAFE_artifacts.tar.gz](https://drive.google.com/file/d/1JRLXfOugQd7al5jUwkTpWH4pIWF0Bowh/view?usp=sharing) 
-3. Install the `.vdi` file with VirtualBox.
+2. Download the VM image: [FSE21_CAFE_artifacts.tar.gz](https://drive.google.com/file/d/1aqHfwld88AiZTy5Dcu0Th3nmnaVd5eyZ/view?usp=sharing) ([Zenodo DOI](https://zenodo.org/record/5084000#.YOvg65MzaBQ))
+3. Create a new virtual machine and choose the installed `.vdi` file with VirtualBox.
    * Ubuntu ID/PW: cafe/cafe
 *NOTE:*
 
