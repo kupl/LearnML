@@ -562,13 +562,12 @@ let rec work : Workset.t -> components -> examples -> prog option
         let _ = count := !count +1 in
         if is_solution prog examples then Some prog
         else work remaining_workset exp_set examples
-      else if Smt_pruning.smt_pruning prog examples then
+      else 
         let exp_set = BatSet.map update_components exp_set in
         let nextstates = next (rank,prog,h_t,h_e) exp_set in
         let new_workset = BatSet.fold Workset.add nextstates remaining_workset in
         work new_workset exp_set examples
-      else work remaining_workset exp_set examples
-
+      
 let hole_synthesize : prog -> Workset.work BatSet.t -> components -> examples -> prog option
 = fun pgm pgm_set components examples -> 
   (*Print.print_header "expression component set is below";

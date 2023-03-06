@@ -1,6 +1,5 @@
 true: package(batteries)
 true: package(str)
-true: package(aez)
 true: package(Z3)
 
 <Data_driven/**>: include
